@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gestión 3D - Aplicación Web
 
-## Getting Started
+Aplicación web completa, profesional y escalable para la gestión de un negocio de fabricación 3D y venta de insertos. Diseñada para ejecutarse 100% en capas gratuitas.
 
-First, run the development server:
+## Tecnologías Utilizadas
+- **Frontend**: Next.js 14+ (App Router), React, Tailwind CSS, Shadcn/UI, Lucide Icons, Recharts.
+- **Backend**: Next.js Server Actions, Prisma ORM.
+- **Base de Datos**: PostgreSQL (optimizado para Supabase/Neon).
 
+## Guía de Despliegue (100% Capa Gratuita)
+
+Esta aplicación está construida para tener un **costo mensual de $0**. Sigue estos pasos para desplegarla en producción.
+
+### 1. Configurar la Base de Datos en Neon o Supabase
+1. Crea una cuenta gratuita en [Neon.tech](https://neon.tech/) o [Supabase](https://supabase.com/).
+2. Crea un nuevo proyecto/base de datos PostgreSQL.
+3. Copia el `DATABASE_URL` (Connection String). Asegúrate de que termina en `?sslmode=require` si estás en Neon.
+
+### 2. Despliegue en Vercel
+1. Sube tu código a un repositorio en GitHub.
+2. Inicia sesión en [Vercel](https://vercel.com/) y dale clic a "Add New Project".
+3. Importa tu repositorio de GitHub.
+4. En la sección de **Environment Variables**, añade:
+   - `DATABASE_URL` = (Pega aquí la URL que obtuviste en el paso 1)
+5. En los ajustes de Build (Build Settings), asegúrate de que el "Build Command" sea `npm run build` o que reconozca el framework Next.js automáticamente. Prisma generará el cliente automáticamente en Vercel durante el build (gracias al paso `prisma generate` que corre antes).
+6. Haz clic en **Deploy**.
+
+### 3. Sincronizar el Esquema de Base de Datos
+Una vez desplegado (o localmente antes de desplegar), necesitas construir las tablas en tu base de datos:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npx prisma db push
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 4. Poblar Datos Iniciales (Seed)
+Para agregar los datos por defecto (Inversiones base y catálogo de 18 productos):
+```bash
+npm run prisma -- seed
+```
+*(Si no funciona localmente en Windows, puedes correr: `npx tsx prisma/seed.ts`)*
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+¡Listo! Tu aplicación estará funcionando en tu dominio `.vercel.app` sin costo alguno.

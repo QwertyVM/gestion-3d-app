@@ -1,0 +1,78 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum CategoriaInversion {
+  ACTIVO_FIJO
+  INSUMO
+  SERVICIO
+}
+
+enum EstadoVenta {
+  PENDIENTE
+  EN_PRODUCCION
+  ENTREGADO
+  CANCELADO
+}
+
+enum TipoPrecio {
+  AMIGOS
+  MERCADO
+  COMUNIDAD
+  PERSONALIZADO
+}
+
+model Inversion {
+  id                  String             @id @default(uuid())
+  persona             String             @default("Víctor")
+  categoria           CategoriaInversion
+  itemConcepto        String
+  especificacionColor String?
+  presentacion        String?
+  cantidad            Int                @default(1)
+  costoUnitario       Decimal            @db.Decimal(10, 2)
+  costoEnvio          Decimal?           @default(0.00) @db.Decimal(10, 2)
+  costoTotal          Decimal            @db.Decimal(10, 2)
+  costoPorGramo       Decimal?           @db.Decimal(10, 4)
+  loteRegistro        String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model Producto {
+  id               String   @id @default(uuid())
+  lineaCategoria   String
+  nombreModelo     String   @unique
+  costoBase        Decimal  @db.Decimal(10, 2)
+  precioAmigos     Decimal  @db.Decimal(10, 2)
+  precioMercado    Decimal  @db.Decimal(10, 2)
+  precioComunidad  Decimal  @db.Decimal(10, 2)
+  ventas           Venta[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Venta {
+  id                  String      @id @default(uuid())
+  fecha               DateTime    @default(now())
+  cliente             String
+  productoId          String
+  producto            Producto    @relation(fields: [productoId], references: [id])
+  cantidad            Int         @default(1)
+  tipoPrecio          TipoPrecio  @default(COMUNIDAD)
+  precioUnitario      Decimal     @db.Decimal(10, 2)
+  total               Decimal     @db.Decimal(10, 2)
+  montoPagado         Decimal     @db.Decimal(10, 2)
+  saldoPendiente      Decimal     @db.Decimal(10, 2)
+  estado              EstadoVenta @default(PENDIENTE)
+  diaEntregaPrometida String?
+  destinoEnvio        String?
+  canalVenta          String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+}
