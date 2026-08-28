@@ -90,6 +90,10 @@ function GroupedProductCard({ item, formatCurrency }: { item: any, formatCurrenc
   )
 }
 
+interface CatalogoClientProps {
+  productos: any[]
+}
+
 export function CatalogoClient({ productos }: CatalogoClientProps) {
   const [search, setSearch] = useState('')
 
@@ -97,7 +101,7 @@ export function CatalogoClient({ productos }: CatalogoClientProps) {
   const groupedMap = new Map<string, any>()
   const normalProducts: any[] = []
 
-  productos.forEach(prod => {
+  productos.forEach((prod: any) => {
     // Manejar caso en el que la categoría esté en minúsculas en la búsqueda
     if (prod.lineaCategoria.toUpperCase() === 'JUEGOS DE MESA') {
       const parts = prod.nombreModelo.split(' - ')
