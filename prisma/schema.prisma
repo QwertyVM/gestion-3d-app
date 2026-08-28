@@ -11,6 +11,7 @@ enum CategoriaInversion {
   ACTIVO_FIJO
   INSUMO
   SERVICIO
+  APORTE_CAPITAL
 }
 
 enum EstadoVenta {
@@ -40,6 +41,8 @@ model Inversion {
   costoTotal          Decimal            @db.Decimal(10, 2)
   costoPorGramo       Decimal?           @db.Decimal(10, 4)
   loteRegistro        String?
+  numeroCuotas        Int?
+  montoCuota          Decimal?           @db.Decimal(10, 2)
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 }

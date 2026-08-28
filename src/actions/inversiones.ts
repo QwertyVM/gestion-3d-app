@@ -15,6 +15,7 @@ export async function getInversiones() {
     costoEnvio: inv.costoEnvio ? Number(inv.costoEnvio) : null,
     costoTotal: Number(inv.costoTotal),
     costoPorGramo: inv.costoPorGramo ? Number(inv.costoPorGramo) : null,
+    montoCuota: inv.montoCuota ? Number(inv.montoCuota) : null,
     createdAt: inv.createdAt.toISOString(),
     updatedAt: inv.updatedAt.toISOString(),
   }))
@@ -30,9 +31,15 @@ export async function createInversion(data: {
   costoUnitario: number
   costoEnvio?: number
   loteRegistro?: string
+  numeroCuotas?: number
 }) {
   const costoTotal = (data.cantidad * data.costoUnitario) + (data.costoEnvio || 0)
   
+  let montoCuota = null
+  if (data.numeroCuotas && data.numeroCuotas > 0) {
+    montoCuota = costoTotal / data.numeroCuotas
+  }
+
   // Asumiendo que presentación contiene "g" o "kg" para calcular costo por gramo si aplica
   let costoPorGramo = null
   if (data.presentacion && data.categoria === 'INSUMO') {
@@ -60,7 +67,9 @@ export async function createInversion(data: {
       costoEnvio: data.costoEnvio || 0,
       costoTotal,
       costoPorGramo,
-      loteRegistro: data.loteRegistro
+      loteRegistro: data.loteRegistro,
+      numeroCuotas: data.numeroCuotas,
+      montoCuota
     }
   })
 
