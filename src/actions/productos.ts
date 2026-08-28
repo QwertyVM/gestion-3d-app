@@ -4,9 +4,19 @@ import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
 export async function getProductos() {
-  return await prisma.producto.findMany({
+  const productos = await prisma.producto.findMany({
     orderBy: { lineaCategoria: 'asc' }
   })
+
+  return productos.map(p => ({
+    ...p,
+    costoBase: Number(p.costoBase),
+    precioAmigos: Number(p.precioAmigos),
+    precioMercado: Number(p.precioMercado),
+    precioComunidad: Number(p.precioComunidad),
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  }))
 }
 
 export async function createProducto(data: {
@@ -29,7 +39,15 @@ export async function createProducto(data: {
   })
 
   revalidatePath('/catalogo')
-  return producto
+  return {
+    ...producto,
+    costoBase: Number(producto.costoBase),
+    precioAmigos: Number(producto.precioAmigos),
+    precioMercado: Number(producto.precioMercado),
+    precioComunidad: Number(producto.precioComunidad),
+    createdAt: producto.createdAt.toISOString(),
+    updatedAt: producto.updatedAt.toISOString(),
+  }
 }
 
 export async function updateProducto(id: string, data: {
@@ -53,7 +71,15 @@ export async function updateProducto(id: string, data: {
   })
 
   revalidatePath('/catalogo')
-  return producto
+  return {
+    ...producto,
+    costoBase: Number(producto.costoBase),
+    precioAmigos: Number(producto.precioAmigos),
+    precioMercado: Number(producto.precioMercado),
+    precioComunidad: Number(producto.precioComunidad),
+    createdAt: producto.createdAt.toISOString(),
+    updatedAt: producto.updatedAt.toISOString(),
+  }
 }
 
 export async function deleteProducto(id: string) {

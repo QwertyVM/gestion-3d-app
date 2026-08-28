@@ -28,7 +28,7 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
 
   const filtered = inversiones.filter(inv => {
     const matchSearch = inv.itemConcepto.toLowerCase().includes(search.toLowerCase()) 
-      || (inv.loteRegistro && inv.loteRegistro.toLowerCase().includes(search.toLowerCase()))
+      || (inv.especificacionColor && inv.especificacionColor.toLowerCase().includes(search.toLowerCase()))
       || (inv.persona && inv.persona.toLowerCase().includes(search.toLowerCase()))
     const matchCat = categoriaFilter === 'TODOS' || inv.categoria === categoriaFilter
     return matchSearch && matchCat
@@ -57,11 +57,11 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
         persona: formData.get('persona') as string,
         categoria: formCategoria,
         itemConcepto: formData.get('itemConcepto') as string,
+        especificacionColor: formData.get('especificacionColor') as string || undefined,
         cantidad: Number(formData.get('cantidad')) || 1,
         costoUnitario: Number(formData.get('costoUnitario')),
         costoEnvio: Number(formData.get('costoEnvio')) || 0,
         numeroCuotas: Number(formData.get('numeroCuotas')) || undefined,
-        loteRegistro: formData.get('loteRegistro') as string || undefined,
         presentacion: formData.get('presentacion') as string || undefined,
       })
       toast.success('Inversión registrada exitosamente')
@@ -145,15 +145,9 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
                       <Input name="costoEnvio" type="number" step="0.01" defaultValue="0" className="bg-zinc-900 border-zinc-700" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Presentación</Label>
-                      <Input name="presentacion" placeholder="Ej: Bobina 1Kg" className="bg-zinc-900 border-zinc-700" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Lote / Factura</Label>
-                      <Input name="loteRegistro" placeholder="Ej: Lote 1" className="bg-zinc-900 border-zinc-700" />
-                    </div>
+                  <div className="space-y-2">
+                    <Label>Presentación</Label>
+                    <Input name="presentacion" placeholder="Ej: Bobina 1Kg, Pack 100u, etc." className="bg-zinc-900 border-zinc-700" />
                   </div>
                 </>
               )}
@@ -172,7 +166,7 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
           <CardTitle className="text-zinc-100 text-lg">Registro de Gastos y Capital</CardTitle>
           <div className="flex gap-4 pt-4">
             <Input 
-              placeholder="Buscar por concepto o lote..." 
+              placeholder="Buscar por concepto, persona o detalle..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="max-w-xs bg-zinc-900 border-zinc-700 text-white"
@@ -209,7 +203,8 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
                   <TableRow key={inv.id} className="border-zinc-800 hover:bg-zinc-800/30">
                     <TableCell className="font-medium text-zinc-200">
                       {inv.itemConcepto}
-                      {inv.loteRegistro && <span className="block text-xs text-zinc-500">Lote: {inv.loteRegistro}</span>}
+                      {inv.especificacionColor && <span className="block text-xs text-zinc-400">{inv.especificacionColor}</span>}
+                      {inv.presentacion && <span className="block text-xs text-zinc-500">{inv.presentacion}</span>}
                       {inv.numeroCuotas && <span className="block text-xs text-blue-400 font-semibold">{inv.numeroCuotas} Cuotas de {formatCurrency(Number(inv.montoCuota))}</span>}
                     </TableCell>
                     <TableCell className="text-zinc-300">

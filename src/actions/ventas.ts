@@ -5,12 +5,32 @@ import { EstadoVenta, TipoPrecio } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 
 export async function getVentas() {
-  return await prisma.venta.findMany({
+  const ventas = await prisma.venta.findMany({
     include: {
       producto: true
     },
     orderBy: { fecha: 'desc' }
   })
+
+  return ventas.map(v => ({
+    ...v,
+    precioUnitario: Number(v.precioUnitario),
+    total: Number(v.total),
+    montoPagado: Number(v.montoPagado),
+    saldoPendiente: Number(v.saldoPendiente),
+    fecha: v.fecha.toISOString(),
+    createdAt: v.createdAt.toISOString(),
+    updatedAt: v.updatedAt.toISOString(),
+    producto: {
+      ...v.producto,
+      costoBase: Number(v.producto.costoBase),
+      precioAmigos: Number(v.producto.precioAmigos),
+      precioMercado: Number(v.producto.precioMercado),
+      precioComunidad: Number(v.producto.precioComunidad),
+      createdAt: v.producto.createdAt.toISOString(),
+      updatedAt: v.producto.updatedAt.toISOString(),
+    }
+  }))
 }
 
 export async function createVenta(data: {
@@ -47,7 +67,16 @@ export async function createVenta(data: {
 
   revalidatePath('/ventas')
   revalidatePath('/')
-  return venta
+  return {
+    ...venta,
+    precioUnitario: Number(venta.precioUnitario),
+    total: Number(venta.total),
+    montoPagado: Number(venta.montoPagado),
+    saldoPendiente: Number(venta.saldoPendiente),
+    fecha: venta.fecha.toISOString(),
+    createdAt: venta.createdAt.toISOString(),
+    updatedAt: venta.updatedAt.toISOString(),
+  }
 }
 
 export async function updateEstadoVenta(id: string, estado: EstadoVenta) {
@@ -56,7 +85,16 @@ export async function updateEstadoVenta(id: string, estado: EstadoVenta) {
     data: { estado }
   })
   revalidatePath('/ventas')
-  return venta
+  return {
+    ...venta,
+    precioUnitario: Number(venta.precioUnitario),
+    total: Number(venta.total),
+    montoPagado: Number(venta.montoPagado),
+    saldoPendiente: Number(venta.saldoPendiente),
+    fecha: venta.fecha.toISOString(),
+    createdAt: venta.createdAt.toISOString(),
+    updatedAt: venta.updatedAt.toISOString(),
+  }
 }
 
 export async function registrarAbono(id: string, montoAbono: number) {
@@ -77,7 +115,16 @@ export async function registrarAbono(id: string, montoAbono: number) {
 
   revalidatePath('/ventas')
   revalidatePath('/')
-  return updatedVenta
+  return {
+    ...updatedVenta,
+    precioUnitario: Number(updatedVenta.precioUnitario),
+    total: Number(updatedVenta.total),
+    montoPagado: Number(updatedVenta.montoPagado),
+    saldoPendiente: Number(updatedVenta.saldoPendiente),
+    fecha: updatedVenta.fecha.toISOString(),
+    createdAt: updatedVenta.createdAt.toISOString(),
+    updatedAt: updatedVenta.updatedAt.toISOString(),
+  }
 }
 
 export async function deleteVenta(id: string) {

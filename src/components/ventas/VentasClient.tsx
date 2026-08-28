@@ -10,6 +10,7 @@ import { Plus, Check, MoreVertical } from 'lucide-react'
 import { updateEstadoVenta, registrarAbono } from '@/actions/ventas'
 import { toast } from 'sonner'
 import { EstadoVenta } from '@prisma/client'
+import { formatDate } from '@/lib/utils'
 
 interface VentasClientProps {
   ventas: any[]
@@ -83,7 +84,7 @@ export function VentasClient({ ventas }: VentasClientProps) {
                 {filtered.map((venta) => (
                   <TableRow key={venta.id} className="border-zinc-800 hover:bg-zinc-800/30">
                     <TableCell className="text-zinc-300">
-                      {new Date(venta.fecha).toLocaleDateString()}
+                      {formatDate(venta.fecha)}
                     </TableCell>
                     <TableCell className="font-medium text-zinc-200">
                       {venta.cliente}

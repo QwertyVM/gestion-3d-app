@@ -30,7 +30,6 @@ export async function createInversion(data: {
   cantidad: number
   costoUnitario: number
   costoEnvio?: number
-  loteRegistro?: string
   numeroCuotas?: number
 }) {
   const costoTotal = (data.cantidad * data.costoUnitario) + (data.costoEnvio || 0)
@@ -67,7 +66,6 @@ export async function createInversion(data: {
       costoEnvio: data.costoEnvio || 0,
       costoTotal,
       costoPorGramo,
-      loteRegistro: data.loteRegistro,
       numeroCuotas: data.numeroCuotas,
       montoCuota
     }
@@ -75,7 +73,16 @@ export async function createInversion(data: {
 
   revalidatePath('/inversiones')
   revalidatePath('/')
-  return inversion
+  return {
+    ...inversion,
+    costoUnitario: Number(inversion.costoUnitario),
+    costoEnvio: inversion.costoEnvio ? Number(inversion.costoEnvio) : null,
+    costoTotal: Number(inversion.costoTotal),
+    costoPorGramo: inversion.costoPorGramo ? Number(inversion.costoPorGramo) : null,
+    montoCuota: inversion.montoCuota ? Number(inversion.montoCuota) : null,
+    createdAt: inversion.createdAt.toISOString(),
+    updatedAt: inversion.updatedAt.toISOString(),
+  }
 }
 
 export async function deleteInversion(id: string) {

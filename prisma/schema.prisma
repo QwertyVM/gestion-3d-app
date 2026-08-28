@@ -40,7 +40,6 @@ model Inversion {
   costoEnvio          Decimal?           @default(0.00) @db.Decimal(10, 2)
   costoTotal          Decimal            @db.Decimal(10, 2)
   costoPorGramo       Decimal?           @db.Decimal(10, 4)
-  loteRegistro        String?
   numeroCuotas        Int?
   montoCuota          Decimal?           @db.Decimal(10, 2)
   createdAt           DateTime           @default(now())

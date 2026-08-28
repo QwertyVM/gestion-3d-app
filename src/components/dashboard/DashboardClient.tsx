@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Wallet, TrendingUp, DollarSign, Activity, ShoppingBag } from 'lucide-react'
 
+import { formatDate } from '@/lib/utils'
+
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6']
 
 interface DashboardClientProps {
@@ -157,7 +159,7 @@ export function DashboardClient({ kpis, graficoEvolucion, graficoInversion, cuen
                 <div key={cuenta.id} className="flex items-center justify-between p-4 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
                   <div>
                     <p className="text-sm font-medium text-white">{cuenta.cliente}</p>
-                    <p className="text-xs text-zinc-400">{new Date(cuenta.fecha).toLocaleDateString()}</p>
+                    <p className="text-xs text-zinc-400">{formatDate(cuenta.fecha)}</p>
                   </div>
                   <div className="flex items-center gap-4">
                     <Badge variant="outline" className="text-orange-400 border-orange-500/20 bg-orange-500/10">
