@@ -1349,8 +1349,8 @@ export function CatalogoClient({
                   Sugerir Precios
                 </Button>
               </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+              <div className="relative flex items-center w-full">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                 <Input 
                   type="number"
                   step="0.01"
@@ -1364,7 +1364,7 @@ export function CatalogoClient({
                   }}
                   placeholder="0.00"
                   required
-                  className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>
             </div>
@@ -1376,8 +1376,8 @@ export function CatalogoClient({
                   <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
                   P. Amigos
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                   <Input 
                     type="number"
                     step="0.01"
@@ -1386,7 +1386,7 @@ export function CatalogoClient({
                     onChange={(e) => setFormPrecioAmigos(e.target.value)}
                     placeholder="0.00"
                     required
-                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
                   />
                 </div>
               </div>
@@ -1396,8 +1396,8 @@ export function CatalogoClient({
                   <span className="w-1.5 h-1.5 rounded-full bg-[#944917]"></span>
                   P. Mercado
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                   <Input 
                     type="number"
                     step="0.01"
@@ -1406,7 +1406,7 @@ export function CatalogoClient({
                     onChange={(e) => setFormPrecioMercado(e.target.value)}
                     placeholder="0.00"
                     required
-                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
                   />
                 </div>
               </div>
@@ -1416,8 +1416,8 @@ export function CatalogoClient({
                   <span className="w-1.5 h-1.5 rounded-full bg-[#A36F4C]"></span>
                   P. Comunidad
                 </Label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                   <Input 
                     type="number"
                     step="0.01"
@@ -1426,7 +1426,7 @@ export function CatalogoClient({
                     onChange={(e) => setFormPrecioComunidad(e.target.value)}
                     placeholder="0.00"
                     required
-                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
                   />
                 </div>
               </div>
@@ -1594,8 +1594,8 @@ export function CatalogoClient({
                   Recalcular Sugeridos
                 </Button>
               </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+              <div className="relative flex items-center w-full">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                 <Input 
                   type="number"
                   step="0.01"
@@ -1603,7 +1603,7 @@ export function CatalogoClient({
                   value={formCostoBase}
                   onChange={(e) => setFormCostoBase(e.target.value)}
                   required
-                  className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>
             </div>
@@ -1612,8 +1612,8 @@ export function CatalogoClient({
             <div className="grid grid-cols-3 gap-3 pt-1">
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#1E5E3A] font-bold">P. Amigos</Label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                   <Input 
                     type="number"
                     step="0.01"
@@ -1621,15 +1621,15 @@ export function CatalogoClient({
                     value={formPrecioAmigos}
                     onChange={(e) => setFormPrecioAmigos(e.target.value)}
                     required
-                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#944917] font-bold">P. Mercado</Label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                   <Input 
                     type="number"
                     step="0.01"
@@ -1637,15 +1637,15 @@ export function CatalogoClient({
                     value={formPrecioMercado}
                     onChange={(e) => setFormPrecioMercado(e.target.value)}
                     required
-                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#A36F4C] font-bold">P. Comunidad</Label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                   <Input 
                     type="number"
                     step="0.01"
@@ -1653,7 +1653,7 @@ export function CatalogoClient({
                     value={formPrecioComunidad}
                     onChange={(e) => setFormPrecioComunidad(e.target.value)}
                     required
-                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
                   />
                 </div>
               </div>

@@ -574,8 +574,8 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
             <div className="space-y-1.5">
               <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Cobrado (S/) *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-mono font-bold text-[#75695D]">S/</span>
+              <div className="relative flex items-center w-full">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                 <Input 
                   type="number"
                   step="0.01"
@@ -584,7 +584,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                   onChange={(e) => setFormMonto(e.target.value)}
                   placeholder="0.00"
                   required
-                  className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-extrabold text-base rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
                 />
               </div>
             </div>

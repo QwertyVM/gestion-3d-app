@@ -203,20 +203,20 @@ export function SearchableCombobox({
     }
   }
 
-  // Sizing tokens
+  // Sizing tokens with explicit non-conflicting padding
   const sizeClasses = {
-    sm: 'h-9 text-xs rounded-xl px-3',
-    default: 'min-h-[44px] h-11 text-sm rounded-xl px-3.5',
-    lg: 'min-h-[48px] h-12 text-base rounded-xl px-4',
+    sm: 'h-9 text-xs rounded-xl pl-10 pr-12',
+    default: 'min-h-[44px] h-11 text-sm rounded-xl pl-11 pr-14',
+    lg: 'min-h-[48px] h-12 text-base rounded-xl pl-12 pr-16',
   }
 
   return (
     <div ref={containerRef} className={cn('relative w-full text-left select-none', className)}>
       {/* Search Input Container */}
       <div className="relative w-full flex items-center">
-        {/* Leading Search Icon */}
-        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#75695D] transition-colors">
-          <LeadingIcon className="h-4 w-4" />
+        {/* Leading Search / Package / Tag Icon */}
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#75695D] flex items-center justify-center">
+          <LeadingIcon className="h-5 w-5" />
         </div>
 
         {/* Input */}
@@ -245,17 +245,16 @@ export function SearchableCombobox({
           }}
           onKeyDown={handleKeyDown}
           className={cn(
-            'w-full bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] font-medium shadow-sm transition-all outline-none',
+            'w-full bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] font-medium shadow-sm transition-all outline-none truncate',
             'focus:border-[#A36F4C] focus:ring-2 focus:ring-[#A36F4C]/20 focus:bg-[#FFFFFF]',
             'disabled:opacity-50 disabled:bg-[#F4EFEA] disabled:cursor-not-allowed',
-            'pl-10 pr-16',
             sizeClasses[size],
             inputClassName
           )}
         />
 
         {/* Trailing Controls (Clear X + Chevron) */}
-        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[#75695D]">
           {clearable && query && !disabled && (
             <button
               type="button"

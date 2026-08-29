@@ -1266,8 +1266,8 @@ export function VentasClient({
                         <span>Usar promedio ({formatCurrency(promedioPackaging)})</span>
                       </button>
                     </div>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                    <div className="relative flex items-center w-full">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                       <Input
                         type="number"
                         step="0.10"
@@ -1285,7 +1285,7 @@ export function VentasClient({
                           }
                         }}
                         placeholder={promedioPackaging.toFixed(2)}
-                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#8C6D1F] font-mono text-sm font-bold h-8 rounded-xl"
+                        className="pl-10 bg-[#FFFFFF] border-[#DCD3C6] text-[#8C6D1F] font-mono text-sm font-bold h-9 rounded-xl"
                       />
                     </div>
                   </div>
@@ -1359,8 +1359,8 @@ export function VentasClient({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Precio Unitario Final (S/) *</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                   <Input 
                     type="number"
                     step="0.01"
@@ -1368,15 +1368,15 @@ export function VentasClient({
                     value={formPrecioUnitario}
                     onChange={(e) => handlePrecioUnitarioChange(e.target.value)}
                     required
-                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#1E5E3A] font-bold uppercase tracking-wider">Pago Inicial / Anticipo (S/)</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                   <Input 
                     type="number"
                     step="0.01"
@@ -1384,7 +1384,7 @@ export function VentasClient({
                     value={formMontoPagado}
                     onChange={(e) => setFormMontoPagado(e.target.value)}
                     placeholder="0.00"
-                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                   />
                 </div>
               </div>
