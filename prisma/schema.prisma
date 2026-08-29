@@ -113,3 +113,45 @@ model Ingreso {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model CierreMes {
+  id                       String   @id @default(uuid())
+  mes                      Int      // 1-12 (ej. 8 para Agosto)
+  anio                     Int      // ej. 2026
+  nombrePeriodo            String   // "Agosto 2026"
+  fechaCierre              DateTime @default(now())
+  
+  // Métricas del Mes
+  totalIngresosVentas      Decimal  @db.Decimal(10, 2)
+  totalIngresosDirectos    Decimal  @db.Decimal(10, 2)
+  totalIngresos            Decimal  @db.Decimal(10, 2)
+  
+  totalEgresosInsumos      Decimal  @db.Decimal(10, 2)
+  totalEgresosMaquinaria   Decimal  @db.Decimal(10, 2)
+  totalEgresosServicios    Decimal  @db.Decimal(10, 2)
+  totalEgresos             Decimal  @db.Decimal(10, 2)
+  
+  flujoNetoMes             Decimal  @db.Decimal(10, 2)
+  
+  // Arqueo y Conciliación
+  saldoSistema             Decimal  @db.Decimal(10, 2)
+  saldoRealBCP             Decimal  @default(0.00) @db.Decimal(10, 2)
+  saldoRealYape            Decimal  @default(0.00) @db.Decimal(10, 2)
+  saldoRealTotal           Decimal  @db.Decimal(10, 2)
+  descuadreCaja            Decimal  @default(0.00) @db.Decimal(10, 2)
+  
+  // Asignación y Blindaje de Fondos
+  montoCuotaPrestamo       Decimal  @default(0.00) @db.Decimal(10, 2)
+  montoReservaMaquina      Decimal  @default(0.00) @db.Decimal(10, 2)
+  montoColchonEmergencia   Decimal  @default(0.00) @db.Decimal(10, 2)
+  totalFondosBlindados     Decimal  @db.Decimal(10, 2)
+  liquidezLibreFinal       Decimal  @db.Decimal(10, 2)
+  
+  cuentasPorCobrarTraspaso Decimal  @default(0.00) @db.Decimal(10, 2)
+  totalPedidosMes          Int      @default(0)
+  
+  notas                    String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+

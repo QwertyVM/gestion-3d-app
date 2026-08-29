@@ -15,7 +15,8 @@ import {
   ArrowDownRight,
   TrendingUp,
   Tag,
-  Receipt
+  Receipt,
+  FileCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -112,20 +113,6 @@ export function Sidebar() {
               >
                 <DollarSign className="h-3.5 w-3.5 text-[#1E5E3A]" />
                 <span>Flujo de Caja</span>
-              </Link>
-
-              {/* Caja Chica & Proyecciones */}
-              <Link
-                href="/finanzas/proyecciones"
-                className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
-                  pathname === '/finanzas/proyecciones' || pathname === '/finanzas/caja-chica'
-                    ? 'bg-[#EFE5D8] text-[#633E20] font-semibold border border-[#D4BEA7]'
-                    : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
-                )}
-              >
-                <TrendingUp className="h-3.5 w-3.5 text-[#A36F4C]" />
-                <span>Caja Chica & Proyecciones</span>
               </Link>
 
               {/* Ingresos */}
@@ -255,6 +242,56 @@ export function Sidebar() {
               </Link>
             </div>
           )}
+        </div>
+
+        {/* 5. Módulos de Prueba */}
+        <div className="space-y-1 pt-1">
+          <div
+            className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]"
+          >
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-4 w-4 text-[#A36F4C]" />
+              <span>Módulos de Prueba</span>
+            </div>
+          </div>
+
+          <div className="pl-4 pr-1 space-y-1 transition-all">
+            <Link
+              href="/finanzas/proyecciones"
+              className={cn(
+                'flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
+                pathname === '/finanzas/proyecciones' || pathname === '/finanzas/caja-chica'
+                  ? 'bg-[#EFE5D8] text-[#633E20] font-semibold border border-[#D4BEA7]'
+                  : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-3.5 w-3.5 text-[#A36F4C]" />
+                <span>Tesorería & Asignación</span>
+              </div>
+              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#F4EFEA] text-[#75695D] border border-[#E2D9CC]">
+                Prueba
+              </span>
+            </Link>
+
+            <Link
+              href="/finanzas/cierres"
+              className={cn(
+                'flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
+                pathname === '/finanzas/cierres'
+                  ? 'bg-[#EFE5D8] text-[#633E20] font-semibold border border-[#D4BEA7]'
+                  : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <FileCheck className="h-3.5 w-3.5 text-[#633E20]" />
+                <span>Cierres de Mes</span>
+              </div>
+              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#F4EFEA] text-[#75695D] border border-[#E2D9CC]">
+                Prueba
+              </span>
+            </Link>
+          </div>
         </div>
       </div>
 

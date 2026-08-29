@@ -305,103 +305,105 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
       {/* Tags Table Light Mode */}
       <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-        <Table className="w-full">
-          <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
-            <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Tag / Subcategoría</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Categoría Asociada</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Descripción / Uso</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Insumos Registrados</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Gasto Acumulado</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTags.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-36 text-center text-[#75695D]">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <Tag className="h-8 w-8 text-[#A89B8D]" />
-                    <span>No hay tags registrados con los filtros actuales.</span>
-                  </div>
-                </TableCell>
+        <div className="overflow-x-auto scrollbar-thin">
+          <Table className="w-full min-w-[650px]">
+            <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+              <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Tag / Subcategoría</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Categoría Asociada</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Descripción / Uso</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Insumos Registrados</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Gasto Acumulado</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Acciones</TableHead>
               </TableRow>
-            ) : (
-              filteredTags.map((tag) => (
-                <TableRow 
-                  key={tag.id}
-                  className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors"
-                >
-                  {/* Tag Name with Color Badge */}
-                  <TableCell className="px-4 py-3 font-semibold">
-                    <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(tag.color)}`}>
-                      <Tag className="h-3 w-3" />
-                      {tag.nombre}
-                    </Badge>
-                  </TableCell>
-
-                  {/* Categoría Asociada */}
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                    {tag.categoria === 'ACTIVO_FIJO' ? (
-                      <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-semibold">
-                        Maquinaria & Equipos
-                      </Badge>
-                    ) : tag.categoria === 'SERVICIO' ? (
-                      <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-xs font-semibold">
-                        Servicios & Operativos
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-semibold">
-                        Insumos & Materiales
-                      </Badge>
-                    )}
-                  </TableCell>
-
-                  {/* Description */}
-                  <TableCell className="px-4 py-3 text-xs text-[#75695D]">
-                    {tag.descripcion || <span className="text-[#A89B8D] italic">Sin descripción</span>}
-                  </TableCell>
-
-                  {/* Total Insumos */}
-                  <TableCell className="px-4 py-3 text-center font-mono text-xs">
-                    <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#241C15] font-semibold">
-                      {tag.totalEgresos} {tag.totalEgresos === 1 ? 'ítem' : 'ítems'}
-                    </Badge>
-                  </TableCell>
-
-                  {/* Gasto Total */}
-                  <TableCell className="px-4 py-3 text-right font-mono font-bold text-[#A36F4C] text-xs">
-                    {formatCurrency(tag.gastoAcumulado)}
-                  </TableCell>
-
-                  {/* Actions */}
-                  <TableCell className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleOpenEdit(tag)}
-                        className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
-                        title="Editar tag"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDelete(tag.id, tag.nombre)}
-                        className="h-8 w-8 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                        title="Eliminar tag"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+            </TableHeader>
+            <TableBody>
+              {filteredTags.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-36 text-center text-[#75695D]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Tag className="h-8 w-8 text-[#A89B8D]" />
+                      <span>No hay tags registrados con los filtros actuales.</span>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredTags.map((tag) => (
+                  <TableRow 
+                    key={tag.id}
+                    className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors"
+                  >
+                    {/* Tag Name with Color Badge */}
+                    <TableCell className="px-4 py-3 font-semibold">
+                      <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(tag.color)}`}>
+                        <Tag className="h-3 w-3" />
+                        {tag.nombre}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Categoría Asociada */}
+                    <TableCell className="px-4 py-3 whitespace-nowrap">
+                      {tag.categoria === 'ACTIVO_FIJO' ? (
+                        <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-semibold">
+                          Maquinaria & Equipos
+                        </Badge>
+                      ) : tag.categoria === 'SERVICIO' ? (
+                        <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-xs font-semibold">
+                          Servicios & Operativos
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-semibold">
+                          Insumos & Materiales
+                        </Badge>
+                      )}
+                    </TableCell>
+
+                    {/* Description */}
+                    <TableCell className="px-4 py-3 text-xs text-[#75695D]">
+                      {tag.descripcion || <span className="text-[#A89B8D] italic">Sin descripción</span>}
+                    </TableCell>
+
+                    {/* Total Insumos */}
+                    <TableCell className="px-4 py-3 text-center font-mono text-xs">
+                      <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#241C15] font-semibold">
+                        {tag.totalEgresos} {tag.totalEgresos === 1 ? 'ítem' : 'ítems'}
+                      </Badge>
+                    </TableCell>
+
+                    {/* Gasto Total */}
+                    <TableCell className="px-4 py-3 text-right font-mono font-bold text-[#A36F4C] text-xs">
+                      {formatCurrency(tag.gastoAcumulado)}
+                    </TableCell>
+
+                    {/* Actions */}
+                    <TableCell className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleOpenEdit(tag)}
+                          className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
+                          title="Editar tag"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(tag.id, tag.nombre)}
+                          className="h-8 w-8 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                          title="Eliminar tag"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </Card>
 
       {/* ========================================================================= */}

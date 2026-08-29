@@ -12,12 +12,25 @@ import {
   DollarSign, 
   Calendar, 
   RotateCcw, 
-  Sliders, 
+  ShieldCheck, 
+  Clock, 
+  Layers, 
   Sparkles,
-  ShieldCheck,
-  Clock,
-  Layers,
-  Scale
+  ShoppingBag,
+  Megaphone,
+  Box,
+  AlertTriangle,
+  CheckCircle2,
+  Lock,
+  Unlock,
+  Sliders,
+  Wallet,
+  Landmark,
+  Target,
+  LifeBuoy,
+  CreditCard,
+  Settings2,
+  ArrowRight
 } from 'lucide-react'
 import { 
   AreaChart, 
@@ -27,7 +40,7 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  ReferenceLine
+  ReferenceLine 
 } from 'recharts'
 import { DatosCajaChica } from '@/actions/proyecciones'
 
@@ -35,87 +48,131 @@ interface ProyeccionesClientProps {
   datos: DatosCajaChica
 }
 
-type HorizonteTiempo = 3 | 6 | 12
-type TipoEscenario = 'CONSERVADOR' | 'BASE' | 'OPTIMISTA' | 'PERSONALIZADO'
+type HorizonteTiempo = 'MENSUAL' | 'TRIMESTRAL' | 'SEMESTRAL'
 
 export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
-  // Horizonte de proyección (3, 6, 12 meses)
-  const [horizonte, setHorizonte] = useState<HorizonteTiempo>(6)
-  const [escenario, setEscenario] = useState<TipoEscenario>('BASE')
+  // 1. Selector Temporal de Horizonte (Mensual, Trimestral, Semestral)
+  const [horizonte, setHorizonte] = useState<HorizonteTiempo>('TRIMESTRAL')
 
-  // Parámetros de simulación interactiva
-  const [fondoReserva, setFondoReserva] = useState<number>(1500)
+  const mesesHorizonte = useMemo(() => {
+    switch (horizonte) {
+      case 'MENSUAL': return 1
+      case 'TRIMESTRAL': return 3
+      case 'SEMESTRAL': return 6
+      default: return 3
+    }
+  }, [horizonte])
+
+  // 2. PASO 1: DEFINICIÓN DE METAS DE RESERVA Y COLCHÓN DE EMERGENCIA
+  const [metaReservaConcepto, setMetaReservaConcepto] = useState<string>('Preventa Nueva Máquina (A2L / Bambu Lab)')
+  const [metaReservaTotal, setMetaReservaTotal] = useState<number>(2400.00)
+  const [fondoReservaApartado, setFondoReservaApartado] = useState<number>(800.00)
+
+  const [fondoColchonEmergencia, setFondoColchonEmergencia] = useState<number>(350.00)
+  const [apartarCuotaPrestamo, setApartarCuotaPrestamo] = useState<boolean>(true)
+  const [cuotaPrestamoMonto, setCuotaPrestamoMonto] = useState<number>(datos.cuotaPrestamoMensual || 368.88)
+  const [gastosFijosOperativos, setGastosFijosOperativos] = useState<number>(datos.gastosFijosEstimadosMensual || 250.00)
+
+  // 3. Variables de proyección mensual (igual al dashboard)
   const [pedidosMensuales, setPedidosMensuales] = useState<number>(18)
-  const [ticketPromedio, setTicketPromedio] = useState<number>(datos.ticketPromedioVenta || 135)
-  const [costoMaterialPorPedido, setCostoMaterialPorPedido] = useState<number>(datos.costoPromedioFabricacionPorPedido || 38)
-  const [cuotaPrestamo, setCuotaPrestamo] = useState<number>(datos.cuotaPrestamoMensual || 363.10)
-  const [gastosFijos, setGastosFijos] = useState<number>(datos.gastosFijosEstimadosMensual || 250)
+  const [ticketPromedio, setTicketPromedio] = useState<number>(datos.ticketPromedioVenta || 135.00)
+  const [costoMaterialPorPedido, setCostoMaterialPorPedido] = useState<number>(datos.costoPromedioFabricacionPorPedido || 38.00)
   const [crecimientoMensualPct, setCrecimientoMensualPct] = useState<number>(5)
-  
-  // Inversión extraordinaria
-  const [inversionExtraMonto, setInversionExtraMonto] = useState<number>(0)
-  const [inversionExtraMes, setInversionExtraMes] = useState<number>(3)
-  const [inversionExtraConcepto, setInversionExtraConcepto] = useState<string>('Nueva Impresora 3D')
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // Aplicar presets de escenarios
-  const handleSelectEscenario = (tipo: TipoEscenario) => {
-    setEscenario(tipo)
-    if (tipo === 'CONSERVADOR') {
-      setPedidosMensuales(8)
-      setCrecimientoMensualPct(0)
-      setTicketPromedio(120)
-    } else if (tipo === 'BASE') {
-      setPedidosMensuales(18)
-      setCrecimientoMensualPct(5)
-      setTicketPromedio(datos.ticketPromedioVenta || 135)
-    } else if (tipo === 'OPTIMISTA') {
-      setPedidosMensuales(35)
-      setCrecimientoMensualPct(12)
-      setTicketPromedio(150)
-    }
-  }
-
-  // Resetear a valores base del taller
-  const handleReset = () => {
-    setHorizonte(6)
-    setEscenario('BASE')
-    setFondoReserva(1500)
-    setPedidosMensuales(18)
-    setTicketPromedio(datos.ticketPromedioVenta || 135)
-    setCostoMaterialPorPedido(datos.costoPromedioFabricacionPorPedido || 38)
-    setCuotaPrestamo(datos.cuotaPrestamoMensual || 363.10)
-    setGastosFijos(datos.gastosFijosEstimadosMensual || 250)
-    setCrecimientoMensualPct(5)
-    setInversionExtraMonto(0)
-    setInversionExtraMes(3)
-  }
-
-  // Cálculos actuales
-  const saldoActual = datos.saldoActualCajaChica
+  // 4. Cálculos de Segregación de Fondos y Liquidez
+  const saldoTotalCaja = datos.saldoActualCajaChica
   const cuentasPorCobrar = datos.cuentasPorCobrar
-  const gastosFijosTotalesMensuales = cuotaPrestamo + gastosFijos
-  const margenUnitarioPorPedido = ticketPromedio - costoMaterialPorPedido
 
-  // Punto de equilibrio mensual
-  const pedidosPuntoEquilibrio = margenUnitarioPorPedido > 0 
-    ? Math.ceil(gastosFijosTotalesMensuales / margenUnitarioPorPedido) 
+  // Desglose estimado de cuentas
+  const saldoBCP = Number((saldoTotalCaja * 0.65).toFixed(2))
+  const saldoYape = Number((saldoTotalCaja * 0.35).toFixed(2))
+
+  // Fondos Comprometidos / Blindados
+  const montoCuotaApartada = apartarCuotaPrestamo ? cuotaPrestamoMonto : 0
+  const totalFondosApartados = montoCuotaApartada + fondoReservaApartado + fondoColchonEmergencia
+  const liquidezLibre = Math.max(0, saldoTotalCaja - totalFondosApartados)
+
+  // Avance hacia la meta de reserva definida
+  const avanceMetaReservaPct = metaReservaTotal > 0 
+    ? Math.min(100, (fondoReservaApartado / metaReservaTotal) * 100) 
     : 0
 
-  const montoVentasPuntoEquilibrio = pedidosPuntoEquilibrio * ticketPromedio
-
-  // Runway de caja chica
+  // Runway Operativo
+  const gastosFijosTotalesMensuales = cuotaPrestamoMonto + gastosFijosOperativos
   const runwayMeses = gastosFijosTotalesMensuales > 0 
-    ? Math.max(0, Number((saldoActual / gastosFijosTotalesMensuales).toFixed(1))) 
+    ? Math.max(0, Number((saldoTotalCaja / gastosFijosTotalesMensuales).toFixed(1))) 
     : 99
 
-  // GENERACIÓN DE LA PROYECCIÓN MES A MES
+  // Porcentajes para Stacked Bar (Distribución de Caja)
+  const pctPrestamo = saldoTotalCaja > 0 ? (montoCuotaApartada / saldoTotalCaja) * 100 : 0
+  const pctReserva = saldoTotalCaja > 0 ? (fondoReservaApartado / saldoTotalCaja) * 100 : 0
+  const pctEmergencia = saldoTotalCaja > 0 ? (fondoColchonEmergencia / saldoTotalCaja) * 100 : 0
+  const pctLibre = saldoTotalCaja > 0 ? (liquidezLibre / saldoTotalCaja) * 100 : 0
+
+  // Capacidad de Compra Inmediata
+  const bobinasFilamento = Math.floor(liquidezLibre / 48)
+  const diasPautaMeta = Math.floor(liquidezLibre / 15)
+  const packsPackaging = Math.floor(liquidezLibre / 25)
+
+  // Estado del Semáforo
+  const semaforoEstado = useMemo(() => {
+    if (liquidezLibre >= 500) {
+      return {
+        tipo: 'verde',
+        titulo: 'Disponibilidad Holgada (Excelente Salud)',
+        desc: 'Cuentas con liquidez libre suficiente para adquirir insumos, reponer stock o invertir en pauta publicitaria sin comprometer cuotas ni reservas.',
+        badge: 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]',
+        bg: 'bg-[#F4FAF5] border-[#B4E3C0]',
+        icon: CheckCircle2,
+        iconColor: 'text-[#1E5E3A]'
+      }
+    } else if (liquidezLibre >= 150) {
+      return {
+        tipo: 'amarillo',
+        titulo: 'Liquidez Moderada (Precaución)',
+        desc: 'Se recomienda priorizar compras de estricta necesidad para pedidos en firme y evitar retiros de capital o gastos discrecionales.',
+        badge: 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]',
+        bg: 'bg-[#FEFAF0] border-[#E8D49B]',
+        icon: AlertTriangle,
+        iconColor: 'text-[#8C6D1F]'
+      }
+    } else {
+      return {
+        tipo: 'rojo',
+        titulo: 'Alerta: Liquidez Ajustada',
+        desc: 'El saldo disponible está casi totalmente comprometido en deudas y reservas fijas. Espera el ingreso de nuevos cobros de ventas antes de realizar compras.',
+        badge: 'bg-[#FDF0EE] text-[#A34335] border-[#F2C0B8]',
+        bg: 'bg-[#FFF6F5] border-[#F2C0B8]',
+        icon: AlertTriangle,
+        iconColor: 'text-[#A34335]'
+      }
+    }
+  }, [liquidezLibre])
+
+  // Restablecer valores
+  const handleReset = () => {
+    setHorizonte('TRIMESTRAL')
+    setMetaReservaConcepto('Preventa Nueva Máquina (A2L / Bambu Lab)')
+    setMetaReservaTotal(2400.00)
+    setFondoReservaApartado(800.00)
+    setFondoColchonEmergencia(350.00)
+    setApartarCuotaPrestamo(true)
+    setCuotaPrestamoMonto(datos.cuotaPrestamoMensual || 368.88)
+    setGastosFijosOperativos(datos.gastosFijosEstimadosMensual || 250.00)
+    setPedidosMensuales(18)
+    setTicketPromedio(datos.ticketPromedioVenta || 135.00)
+    setCostoMaterialPorPedido(datos.costoPromedioFabricacionPorPedido || 38.00)
+    setCrecimientoMensualPct(5)
+  }
+
+  // 5. Proyección Mensual (Mes a Mes: 1, 3 o 6 Meses)
   const proyeccionMeses = useMemo(() => {
     const mesesData = []
-    let saldoAcumulado = saldoActual
+    let saldoAcumulado = saldoTotalCaja
 
-    for (let i = 1; i <= horizonte; i++) {
+    for (let i = 1; i <= mesesHorizonte; i++) {
       const factorCrecimiento = Math.pow(1 + crecimientoMensualPct / 100, i - 1)
       const pedidosMes = Math.round(pedidosMensuales * factorCrecimiento)
 
@@ -124,11 +181,10 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
       const totalIngresosMes = ventasEstimadasMes + cobroCuentasPendientes
 
       const costoMaterialesMes = pedidosMes * costoMaterialPorPedido
-      const cuotaBancoMes = cuotaPrestamo
-      const gastosOperativosMes = gastosFijos
-      const gastoExtraordinarioMes = (inversionExtraMonto > 0 && inversionExtraMes === i) ? inversionExtraMonto : 0
+      const cuotaBancoMes = montoCuotaApartada
+      const gastosOperativosMes = gastosFijosOperativos
 
-      const totalEgresosMes = costoMaterialesMes + cuotaBancoMes + gastosOperativosMes + gastoExtraordinarioMes
+      const totalEgresosMes = costoMaterialesMes + cuotaBancoMes + gastosOperativosMes
       const flujoNetoMes = totalIngresosMes - totalEgresosMes
 
       const saldoInicial = saldoAcumulado
@@ -136,7 +192,7 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
 
       mesesData.push({
         mesNumero: i,
-        nombreMes: `Mes +${i}`,
+        nombreMes: i === 1 ? 'Mes Actual' : `Mes +${i}`,
         pedidosEstimados: pedidosMes,
         ventasEstimadas: ventasEstimadasMes,
         ingresosExtras: cobroCuentasPendientes,
@@ -144,575 +200,752 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
         costoMateriales: costoMaterialesMes,
         cuotaBanco: cuotaBancoMes,
         gastosOperativos: gastosOperativosMes,
-        gastoExtraordinario: gastoExtraordinarioMes,
         totalEgresos: totalEgresosMes,
         flujoNeto: flujoNetoMes,
         saldoInicial: saldoInicial,
         saldoFinalCaja: saldoAcumulado,
-        fondoReserva: fondoReserva,
+        fondoBlindado: totalFondosApartados,
+        liquidezLibreProyectada: Math.max(0, saldoAcumulado - totalFondosApartados)
       })
     }
 
     return mesesData
   }, [
-    horizonte, 
-    saldoActual, 
+    mesesHorizonte, 
+    saldoTotalCaja, 
     cuentasPorCobrar, 
     pedidosMensuales, 
     ticketPromedio, 
     costoMaterialPorPedido, 
-    cuotaPrestamo, 
-    gastosFijos, 
+    montoCuotaApartada, 
+    gastosFijosOperativos, 
     crecimientoMensualPct, 
-    fondoReserva, 
-    inversionExtraMonto, 
-    inversionExtraMes
+    totalFondosApartados
   ])
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header */}
+      {/* ========================================================================= */}
+      {/* 1. CABECERA & FILTRO DE HORIZONTE: MENSUAL / TRIMESTRAL / SEMESTRAL      */}
+      {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
-              <TrendingUp className="h-6 w-6 stroke-[2.5]" />
+              <Landmark className="h-6 w-6 stroke-[2.5]" />
             </div>
-            Caja Chica & Proyecciones Financieras
+            Tesorería & Disponibilidad de Caja
           </h1>
           <p className="text-sm text-[#75695D] mt-1">
-            Simulador de supervivencia (runway), amortización de préstamo bancario y escenarios de crecimiento.
+            Control de fondos asignados, blindaje de cuotas y capital de trabajo disponible.
           </p>
         </div>
 
-        {/* Horizonte Selector */}
-        <div className="flex items-center gap-1.5 bg-[#FFFFFF] border border-[#E2D9CC] p-1 rounded-2xl shadow-sm">
-          {[3, 6, 12].map((m) => (
-            <button
-              key={m}
-              onClick={() => setHorizonte(m as HorizonteTiempo)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                horizonte === m
-                  ? 'bg-[#A36F4C] text-white shadow-sm'
-                  : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
-              }`}
-            >
-              {m} Meses
-            </button>
-          ))}
+        {/* Switch de horizonte temporal (Mensual / Trimestral / Semestral) */}
+        <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] shadow-sm">
+          <button
+            onClick={() => setHorizonte('MENSUAL')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              horizonte === 'MENSUAL'
+                ? 'bg-[#A36F4C] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            Mensual (1 Mes)
+          </button>
+          <button
+            onClick={() => setHorizonte('TRIMESTRAL')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              horizonte === 'TRIMESTRAL'
+                ? 'bg-[#A36F4C] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            Trimestral (3 Meses)
+          </button>
+          <button
+            onClick={() => setHorizonte('SEMESTRAL')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              horizonte === 'SEMESTRAL'
+                ? 'bg-[#A36F4C] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            Semestral (6 Meses)
+          </button>
         </div>
       </div>
 
-      {/* KPI Overview Cards */}
+      {/* ========================================================================= */}
+      {/* 2. FILA PRINCIPAL DE KPIS (SEGREGACIÓN DE FONDOS)                        */}
+      {/* ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Saldo Actual Caja Chica */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden">
+        {/* TARJETA 1: Saldo Total en Caja */}
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#241C15] flex items-center gap-1.5">
+                <Wallet className="h-4 w-4 text-[#A36F4C]" />
+                Saldo Total en Caja
+              </span>
+              <span className="text-[11px] text-[#75695D] font-mono">100% fondos</span>
+            </div>
+            <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1.5">
+              {formatCurrency(saldoTotalCaja)}
+            </div>
+          </div>
+          
+          <div className="pt-3 mt-3 border-t border-[#E2D9CC]/70 flex items-center justify-between text-xs">
+            <span className="text-[#75695D]">Desglose:</span>
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-[10px] font-mono px-2 py-0.5">
+                BCP: {formatCurrency(saldoBCP)}
+              </Badge>
+              <Badge variant="outline" className="bg-[#F4EFEA] border-[#DCD3C6] text-[#633E20] text-[10px] font-mono px-2 py-0.5">
+                Yape: {formatCurrency(saldoYape)}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* TARJETA 2: Fondos Comprometidos / Blindados */}
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between hover:border-[#944917] transition-colors">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#944917]" />
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#944917] flex items-center gap-1.5">
+                <Lock className="h-4 w-4 stroke-[2.5]" />
+                Fondos Blindados
+              </span>
+              <Badge variant="outline" className="bg-[#FDF0EE] text-[#A34335] border-[#F2C0B8] text-[10px] font-bold">
+                Intocables
+              </Badge>
+            </div>
+            <div className="text-2xl font-extrabold text-[#944917] font-mono mt-1.5">
+              {formatCurrency(totalFondosApartados)}
+            </div>
+          </div>
+
+          <div className="pt-3 mt-3 border-t border-[#E2D9CC]/70 text-[11px] text-[#75695D]">
+            <span>Cuota ({formatCurrency(montoCuotaApartada)}) + Reserva & Colchón ({formatCurrency(fondoReservaApartado + fondoColchonEmergencia)})</span>
+          </div>
+        </div>
+
+        {/* TARJETA 3: Liquidez Libre Disponible (DESTACADA EN VERDE ESMERALDA) */}
+        <div className="bg-[#FFFFFF] border-2 border-[#1E5E3A] rounded-2xl p-4 shadow-md relative overflow-hidden flex flex-col justify-between bg-gradient-to-b from-[#FFFFFF] to-[#F4FAF5]">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-1.5">
-            <DollarSign className="h-4 w-4 stroke-[2.5]" />
-            Saldo Real en Caja
-          </span>
-          <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
-            {formatCurrency(saldoActual)}
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-1.5">
+                <Unlock className="h-4 w-4 stroke-[2.5]" />
+                Liquidez Libre Disponible
+              </span>
+              <span className="text-xs font-extrabold text-[#1E5E3A] font-mono bg-[#EBF7EE] border border-[#B4E3C0] px-2 py-0.5 rounded-full">
+                {saldoTotalCaja > 0 ? `${((liquidezLibre / saldoTotalCaja) * 100).toFixed(0)}% libre` : '0%'}
+              </span>
+            </div>
+            <div className="text-3xl font-extrabold text-[#1E5E3A] font-mono mt-1.5">
+              {formatCurrency(liquidezLibre)}
+            </div>
           </div>
-          <span className="text-xs text-[#75695D] mt-1 block">
-            {saldoActual >= fondoReserva 
-              ? '✅ Por encima del fondo de reserva' 
-              : '⚠️ Bajo nivel mínimo de seguridad'}
-          </span>
+
+          <div className="pt-3 mt-3 border-t border-[#B4E3C0] text-[11px] text-[#1E5E3A] font-medium">
+            Capital neto para nuevos filamentos, pauta o libre disposición.
+          </div>
         </div>
 
-        {/* Compromisos Fijos Mensuales */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#944917] flex items-center gap-1.5">
-            <Layers className="h-4 w-4 stroke-[2.5]" />
-            Compromisos Mensuales
-          </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {formatCurrency(gastosFijosTotalesMensuales)}
+        {/* TARJETA 4: Runway Operativo (Métrica de Riesgo) */}
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
+                <Clock className="h-4 w-4 stroke-[2.5]" />
+                Runway Operativo
+              </span>
+              <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold">
+                Cobertura
+              </Badge>
+            </div>
+            <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1.5">
+              {runwayMeses} <span className="text-sm font-normal text-[#75695D]">meses</span>
+            </div>
           </div>
-          <span className="text-xs text-[#75695D] mt-1 block">
-            Cuota Banco ({formatCurrency(cuotaPrestamo)}) + Fijos ({formatCurrency(gastosFijos)})
-          </span>
-        </div>
 
-        {/* Runway de Supervivencia */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-            <Clock className="h-4 w-4 stroke-[2.5]" />
-            Runway (Supervivencia)
-          </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {runwayMeses} <span className="text-sm font-normal text-[#75695D]">meses</span>
+          <div className="pt-3 mt-3 border-t border-[#E2D9CC]/70 text-[11px] text-[#75695D]">
+            Cubre gastos fijos ({formatCurrency(gastosFijosTotalesMensuales)}/mes) sin requerir nuevas ventas.
           </div>
-          <span className="text-xs text-[#75695D] mt-1 block">
-            Capacidad de cubrir fijos sin ventas
-          </span>
-        </div>
-
-        {/* Punto de Equilibrio */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center gap-1.5">
-            <Scale className="h-4 w-4 stroke-[2.5]" />
-            Punto de Equilibrio
-          </span>
-          <div className="text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
-            {pedidosPuntoEquilibrio} <span className="text-sm font-normal text-[#75695D]">pedidos/mes</span>
-          </div>
-          <span className="text-xs text-[#75695D] mt-1 block">
-            {formatCurrency(montoVentasPuntoEquilibrio)} de facturación mínima
-          </span>
         </div>
       </div>
 
-      {/* Simulador Interactivo de Parámetros */}
+      {/* ========================================================================= */}
+      {/* 3. PASO 1: DEFINICIÓN DE METAS DE RESERVA Y COLCHÓN DE EMERGENCIA        */}
+      {/* ========================================================================= */}
       <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
-        <CardHeader className="pb-3 border-b border-[#E2D9CC]">
+        <CardHeader className="pb-3 border-b border-[#E2D9CC] bg-[#FDFBF7]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base font-bold text-[#241C15] flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-[#A36F4C]" />
-                Simulador de Parámetros & Escenarios del Taller
+                <Settings2 className="h-5 w-5 text-[#A36F4C]" />
+                1. Definición de Políticas de Reserva & Colchón de Emergencia
               </CardTitle>
               <CardDescription className="text-xs text-[#75695D] mt-0.5">
-                Ajusta las variables de producción y ventas para proyectar el flujo de caja en tiempo real.
+                Define tus metas financieras antes de aplicar el blindaje de capital. Estos valores rigen la asignación de liquidez.
               </CardDescription>
             </div>
 
-            {/* Escenarios Presets */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[#75695D] mr-1 font-bold">Escenario:</span>
-              <button
-                onClick={() => handleSelectEscenario('CONSERVADOR')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  escenario === 'CONSERVADOR'
-                    ? 'bg-[#8C6D1F] text-white shadow-sm'
-                    : 'bg-[#F4EFEA] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15]'
-                }`}
-              >
-                Conservador
-              </button>
-              <button
-                onClick={() => handleSelectEscenario('BASE')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  escenario === 'BASE'
-                    ? 'bg-[#A36F4C] text-white shadow-sm'
-                    : 'bg-[#F4EFEA] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15]'
-                }`}
-              >
-                Base (Real)
-              </button>
-              <button
-                onClick={() => handleSelectEscenario('OPTIMISTA')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  escenario === 'OPTIMISTA'
-                    ? 'bg-[#1E5E3A] text-white shadow-sm'
-                    : 'bg-[#F4EFEA] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15]'
-                }`}
-              >
-                Optimista
-              </button>
-              <button
-                onClick={handleReset}
-                title="Restablecer valores originales"
-                className="p-1.5 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] cursor-pointer"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] text-xs rounded-xl self-start sm:self-auto cursor-pointer"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1 text-[#75695D]" />
+              Restablecer Valores
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-5 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            {/* DEFINICIÓN 1: Meta de Reserva para Máquina / Equipamiento */}
+            <div className="p-4 rounded-2xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
+                  <Target className="h-4 w-4 text-[#A36F4C]" />
+                  Meta de Reserva: Máquina / Stock
+                </span>
+                <Badge variant="outline" className="bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] text-[10px] font-bold">
+                  {avanceMetaReservaPct.toFixed(0)}% de la meta
+                </Badge>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-[#75695D] font-medium">Concepto u Objetivo:</Label>
+                <Input
+                  value={metaReservaConcepto}
+                  onChange={(e) => setMetaReservaConcepto(e.target.value)}
+                  placeholder="Ej: Preventa Bambu Lab A2L..."
+                  className="bg-[#FFFFFF] border-[#DCD3C6] text-xs text-[#241C15] h-8 rounded-xl"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#75695D] font-medium">Meta Total S/:</Label>
+                  <Input
+                    type="number"
+                    step="100"
+                    value={metaReservaTotal}
+                    onChange={(e) => setMetaReservaTotal(parseFloat(e.target.value) || 0)}
+                    className="bg-[#FFFFFF] border-[#DCD3C6] text-xs font-mono font-bold text-[#241C15] h-8 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-[#A36F4C] font-bold">Apartar este mes:</Label>
+                  <Input
+                    type="number"
+                    step="50"
+                    value={fondoReservaApartado}
+                    onChange={(e) => setFondoReservaApartado(parseFloat(e.target.value) || 0)}
+                    className="bg-[#FFFFFF] border-[#A36F4C] text-xs font-mono font-bold text-[#A36F4C] h-8 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              {/* Barra de avance hacia la meta total */}
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between text-[10px] text-[#75695D]">
+                  <span>Progreso hacia Meta Total:</span>
+                  <span className="font-mono font-bold text-[#241C15]">{formatCurrency(fondoReservaApartado)} / {formatCurrency(metaReservaTotal)}</span>
+                </div>
+                <div className="h-2 w-full bg-[#E2D9CC] rounded-full overflow-hidden">
+                  <div 
+                    style={{ width: `${avanceMetaReservaPct}%` }}
+                    className="h-full bg-[#A36F4C] rounded-full transition-all duration-300"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* DEFINICIÓN 2: Colchón de Emergencia */}
+            <div className="p-4 rounded-2xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
+                  <LifeBuoy className="h-4 w-4 text-[#8C6D1F]" />
+                  Fondo Colchón de Emergencia
+                </span>
+                <Badge variant="outline" className="bg-[#FDF6E2] border-[#E8D49B] text-[#8C6D1F] text-[10px] font-bold">
+                  Respaldo
+                </Badge>
+              </div>
+
+              <p className="text-[11px] text-[#75695D] leading-relaxed">
+                Dinero destinado a cubrir roturas de boquillas, garantías de clientes o fletes imprevistos sin tocar capital de trabajo.
+              </p>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label className="text-[11px] text-[#75695D] font-medium">Monto a Mantener en Colchón:</Label>
+                  <span className="text-xs font-bold font-mono text-[#8C6D1F]">
+                    {formatCurrency(fondoColchonEmergencia)}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  step="25"
+                  value={fondoColchonEmergencia}
+                  onChange={(e) => setFondoColchonEmergencia(parseFloat(e.target.value) || 0)}
+                  className="bg-[#FFFFFF] border-[#DCD3C6] text-xs font-mono font-bold text-[#241C15] h-8 rounded-xl"
+                />
+              </div>
+
+              {/* Botones de configuración rápida */}
+              <div className="flex items-center gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setFondoColchonEmergencia(250.00)}
+                  className="px-2 py-1 bg-[#FFFFFF] border border-[#E2D9CC] rounded-lg text-[10px] text-[#75695D] hover:text-[#241C15] cursor-pointer"
+                >
+                  S/ 250 (1x Fijo)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFondoColchonEmergencia(350.00)}
+                  className="px-2 py-1 bg-[#FFFFFF] border border-[#E2D9CC] rounded-lg text-[10px] text-[#75695D] hover:text-[#241C15] cursor-pointer"
+                >
+                  S/ 350 (Recomendado)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFondoColchonEmergencia(500.00)}
+                  className="px-2 py-1 bg-[#FFFFFF] border border-[#E2D9CC] rounded-lg text-[10px] text-[#75695D] hover:text-[#241C15] cursor-pointer"
+                >
+                  S/ 500 (2x Fijo)
+                </button>
+              </div>
+            </div>
+
+            {/* DEFINICIÓN 3: Cuota Bancaria y Gastos Fijos */}
+            <div className={`p-4 rounded-2xl border space-y-3 transition-all ${
+              apartarCuotaPrestamo 
+                ? 'bg-[#FDFBF7] border-[#944917]/50 ring-1 ring-[#944917]/20' 
+                : 'bg-[#F8F6F2] border-[#E2D9CC]'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
+                  <CreditCard className="h-4 w-4 text-[#944917]" />
+                  Obligación Cuota Préstamo
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-[#75695D]">Blindar:</span>
+                  <input
+                    type="checkbox"
+                    checked={apartarCuotaPrestamo}
+                    onChange={(e) => setApartarCuotaPrestamo(e.target.checked)}
+                    className="h-4 w-4 rounded border-[#DCD3C6] text-[#944917] focus:ring-[#944917] cursor-pointer accent-[#944917]"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[11px] text-[#75695D] leading-relaxed">
+                Préstamo bancario del taller (24 cuotas programadas). Se aparta automáticamente cada período.
+              </p>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <Label className="text-[11px] text-[#75695D] font-medium">Cuota Mensual:</Label>
+                  <span className="text-xs font-bold font-mono text-[#944917]">
+                    {apartarCuotaPrestamo ? formatCurrency(cuotaPrestamoMonto) : 'S/ 0.00 (No apartada)'}
+                  </span>
+                </div>
+                <Input
+                  type="number"
+                  step="10"
+                  disabled={!apartarCuotaPrestamo}
+                  value={cuotaPrestamoMonto}
+                  onChange={(e) => setCuotaPrestamoMonto(parseFloat(e.target.value) || 0)}
+                  className="bg-[#FFFFFF] border-[#DCD3C6] text-xs font-mono font-bold text-[#241C15] h-8 rounded-xl disabled:opacity-50"
+                />
+              </div>
+
+              <div className="pt-1 text-[11px] text-[#75695D] flex items-center justify-between border-t border-[#E2D9CC]/70">
+                <span>Gastos fijos taller (Luz/Int):</span>
+                <span className="font-mono font-bold text-[#241C15]">{formatCurrency(gastosFijosOperativos)}/mes</span>
+              </div>
+            </div>
+
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ========================================================================= */}
+      {/* 4. PASO 2: ASIGNACIÓN & BLINDAJE EN TIEMPO REAL (STACKED BAR)            */}
+      {/* ========================================================================= */}
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
+        <CardHeader className="pb-3 border-b border-[#E2D9CC] bg-[#FDFBF7]">
+          <CardTitle className="text-base font-bold text-[#241C15] flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-[#1E5E3A]" />
+            2. Asignación y Blindaje de Fondos en Tiempo Real
+          </CardTitle>
+          <CardDescription className="text-xs text-[#75695D] mt-0.5">
+            Distribución exacta de la caja actual según las metas y colchón configurados arriba.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-[#241C15]">Distribución del 100% de la Caja:</span>
+            <span className="font-mono text-[#75695D]">
+              Total disponible en banco: <strong className="text-[#241C15] font-mono">{formatCurrency(saldoTotalCaja)}</strong>
+            </span>
+          </div>
+
+          {/* Stacked Bar */}
+          <div className="h-6 w-full rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] overflow-hidden flex shadow-inner">
+            {pctPrestamo > 0 && (
+              <div 
+                style={{ width: `${Math.min(100, pctPrestamo)}%` }} 
+                className="bg-[#944917] h-full transition-all duration-300 relative group"
+                title={`Cuota Préstamo: ${formatCurrency(montoCuotaApartada)} (${pctPrestamo.toFixed(1)}%)`}
+              />
+            )}
+            {pctReserva > 0 && (
+              <div 
+                style={{ width: `${Math.min(100, pctReserva)}%` }} 
+                className="bg-[#A36F4C] h-full transition-all duration-300 relative group"
+                title={`Reserva Máquina: ${formatCurrency(fondoReservaApartado)} (${pctReserva.toFixed(1)}%)`}
+              />
+            )}
+            {pctEmergencia > 0 && (
+              <div 
+                style={{ width: `${Math.min(100, pctEmergencia)}%` }} 
+                className="bg-[#8C6D1F] h-full transition-all duration-300 relative group"
+                title={`Colchón Emergencia: ${formatCurrency(fondoColchonEmergencia)} (${pctEmergencia.toFixed(1)}%)`}
+              />
+            )}
+            {pctLibre > 0 && (
+              <div 
+                style={{ width: `${Math.min(100, pctLibre)}%` }} 
+                className="bg-[#1E5E3A] h-full transition-all duration-300 relative group"
+                title={`Liquidez Libre: ${formatCurrency(liquidezLibre)} (${pctLibre.toFixed(1)}%)`}
+              />
+            )}
+          </div>
+
+          {/* Leyenda de la Barra */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+              <span className="w-3 h-3 rounded-md bg-[#944917] flex-shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[11px] text-[#75695D] block truncate">Cuota Préstamo</span>
+                <span className="font-bold text-[#241C15] font-mono">{formatCurrency(montoCuotaApartada)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+              <span className="w-3 h-3 rounded-md bg-[#A36F4C] flex-shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[11px] text-[#75695D] block truncate">Reserva Máquina</span>
+                <span className="font-bold text-[#241C15] font-mono">{formatCurrency(fondoReservaApartado)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+              <span className="w-3 h-3 rounded-md bg-[#8C6D1F] flex-shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[11px] text-[#75695D] block truncate">Colchón Emergencia</span>
+                <span className="font-bold text-[#241C15] font-mono">{formatCurrency(fondoColchonEmergencia)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#F4FAF5] border-2 border-[#1E5E3A]/40 shadow-sm">
+              <span className="w-3 h-3 rounded-md bg-[#1E5E3A] flex-shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[11px] text-[#1E5E3A] font-bold block truncate">Liquidez Libre</span>
+                <span className="font-extrabold text-[#1E5E3A] font-mono">{formatCurrency(liquidezLibre)}</span>
+              </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ========================================================================= */}
+      {/* 5. SIMULADOR DE CAPACIDAD DE GASTO INMEDIATO                             */}
+      {/* ========================================================================= */}
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
+        <CardHeader className="pb-3 border-b border-[#E2D9CC]">
+          <CardTitle className="text-base font-bold text-[#241C15] flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-[#A36F4C]" />
+            ¿Cuánto puedo gastar hoy sin comprometer el taller?
+          </CardTitle>
+          <CardDescription className="text-xs text-[#75695D]">
+            Cálculo en vivo de capacidad de compra y semáforo de riesgo basado exclusivamente en tu Liquidez Libre.
+          </CardDescription>
         </CardHeader>
 
         <CardContent className="p-4 space-y-4">
-          {/* Controles de Simulación */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-            <div className="space-y-1.5 p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-              <div className="flex justify-between items-center">
-                <Label className="text-[#241C15] font-bold">Pedidos por Mes</Label>
-                <span className="text-[#A36F4C] font-mono font-bold">{pedidosMensuales}</span>
-              </div>
-              <Input
-                type="number"
-                min="0"
-                max="200"
-                value={pedidosMensuales}
-                onChange={(e) => {
-                  setPedidosMensuales(parseInt(e.target.value) || 0)
-                  setEscenario('PERSONALIZADO')
-                }}
-                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] font-mono text-sm h-8 rounded-xl"
-              />
-              <span className="text-[11px] text-[#75695D] block">Volumen de ventas mensuales</span>
-            </div>
-
-            <div className="space-y-1.5 p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-              <div className="flex justify-between items-center">
-                <Label className="text-[#241C15] font-bold">Ticket Promedio (S/)</Label>
-                <span className="text-[#1E5E3A] font-mono font-bold">{formatCurrency(ticketPromedio)}</span>
-              </div>
-              <Input
-                type="number"
-                step="5"
-                min="10"
-                value={ticketPromedio}
-                onChange={(e) => {
-                  setTicketPromedio(parseFloat(e.target.value) || 0)
-                  setEscenario('PERSONALIZADO')
-                }}
-                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] font-mono text-sm h-8 rounded-xl"
-              />
-              <span className="text-[11px] text-[#75695D] block">Precio promedio por modelo</span>
-            </div>
-
-            <div className="space-y-1.5 p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-              <div className="flex justify-between items-center">
-                <Label className="text-[#241C15] font-bold">Costo Material (S/)</Label>
-                <span className="text-[#944917] font-mono font-bold">{formatCurrency(costoMaterialPorPedido)}</span>
-              </div>
-              <Input
-                type="number"
-                step="1"
-                min="0"
-                value={costoMaterialPorPedido}
-                onChange={(e) => {
-                  setCostoMaterialPorPedido(parseFloat(e.target.value) || 0)
-                  setEscenario('PERSONALIZADO')
-                }}
-                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] font-mono text-sm h-8 rounded-xl"
-              />
-              <span className="text-[11px] text-[#75695D] block">Filamento + Packaging</span>
-            </div>
-
-            <div className="space-y-1.5 p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-              <div className="flex justify-between items-center">
-                <Label className="text-[#241C15] font-bold">Crecimiento Mensual (%)</Label>
-                <span className="text-[#A36F4C] font-mono font-bold">+{crecimientoMensualPct}%</span>
-              </div>
-              <Input
-                type="number"
-                step="1"
-                min="-20"
-                max="50"
-                value={crecimientoMensualPct}
-                onChange={(e) => {
-                  setCrecimientoMensualPct(parseFloat(e.target.value) || 0)
-                  setEscenario('PERSONALIZADO')
-                }}
-                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] font-mono text-sm h-8 rounded-xl"
-              />
-              <span className="text-[11px] text-[#75695D] block">Tasa de aumento mensual</span>
-            </div>
-          </div>
-
-          {/* Gastos Fijos y Fondo de Reserva */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="space-y-1.5 p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-              <div className="flex justify-between items-center">
-                <Label className="text-[#241C15] font-bold">Cuota Préstamo Bancario (S/)</Label>
-                <span className="text-[#75695D] font-mono">{formatCurrency(cuotaPrestamo)}/mes</span>
-              </div>
-              <Input
-                type="number"
-                step="10"
-                value={cuotaPrestamo}
-                onChange={(e) => setCuotaPrestamo(parseFloat(e.target.value) || 0)}
-                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] font-mono text-sm h-8 rounded-xl"
-              />
-              <span className="text-[11px] text-[#75695D] block">Préstamo bancario (24 cuotas)</span>
-            </div>
-
-            <div className="space-y-1.5 p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-              <div className="flex justify-between items-center">
-                <Label className="text-[#241C15] font-bold">Gastos Fijos Taller (S/)</Label>
-                <span className="text-[#75695D] font-mono">{formatCurrency(gastosFijos)}/mes</span>
-              </div>
-              <Input
-                type="number"
-                step="10"
-                value={gastosFijos}
-                onChange={(e) => setGastosFijos(parseFloat(e.target.value) || 0)}
-                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] font-mono text-sm h-8 rounded-xl"
-              />
-              <span className="text-[11px] text-[#75695D] block">Luz, internet y servicios</span>
-            </div>
-
-            <div className="space-y-1.5 p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-              <div className="flex justify-between items-center">
-                <Label className="text-[#241C15] font-bold">Fondo Mínimo de Seguridad (S/)</Label>
-                <span className="text-[#8C6D1F] font-mono font-bold">{formatCurrency(fondoReserva)}</span>
-              </div>
-              <Input
-                type="number"
-                step="100"
-                value={fondoReserva}
-                onChange={(e) => setFondoReserva(parseFloat(e.target.value) || 0)}
-                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] font-mono text-sm h-8 rounded-xl"
-              />
-              <span className="text-[11px] text-[#75695D] block">Colchón de reserva bancario</span>
-            </div>
-          </div>
-
-          {/* Inversión Extraordinaria Planificada */}
-          <div className="p-3.5 rounded-xl bg-[#FDFBF7] border border-[#D4BEA7] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          {/* Semáforo Financiero */}
+          <div className={`p-4 rounded-2xl border ${semaforoEstado.bg} space-y-1.5`}>
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-[#A36F4C]" />
-              <span className="font-bold text-[#241C15]">
-                Simular Inversión Extraordinaria (Ej: Nueva Máquina / Stock Masivo):
+              <semaforoEstado.icon className={`h-5 w-5 ${semaforoEstado.iconColor}`} />
+              <span className="font-extrabold text-sm text-[#241C15]">
+                {semaforoEstado.titulo}
               </span>
             </div>
+            <p className="text-xs text-[#75695D] leading-relaxed">
+              {semaforoEstado.desc}
+            </p>
+          </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Input
-                placeholder="Concepto (ej. Bambu Lab P1S)"
-                value={inversionExtraConcepto}
-                onChange={(e) => setInversionExtraConcepto(e.target.value)}
-                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs h-8 w-44 rounded-xl"
-              />
-              <div className="flex items-center gap-1">
-                <span className="text-[#75695D] font-medium">Monto S/:</span>
-                <Input
-                  type="number"
-                  step="100"
-                  min="0"
-                  value={inversionExtraMonto}
-                  onChange={(e) => setInversionExtraMonto(parseFloat(e.target.value) || 0)}
-                  placeholder="0.00"
-                  className="bg-[#FFFFFF] border-[#DCD3C6] text-[#A36F4C] font-mono text-xs font-bold h-8 w-24 rounded-xl"
-                />
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[#75695D] font-medium">En Mes:</span>
-                <select
-                  value={inversionExtraMes}
-                  onChange={(e) => setInversionExtraMes(parseInt(e.target.value))}
-                  className="bg-[#FFFFFF] border border-[#DCD3C6] text-[#241C15] rounded-xl px-2 py-1 text-xs h-8 focus:outline-none"
-                >
-                  {Array.from({ length: horizonte }, (_, i) => i + 1).map(m => (
-                    <option key={m} value={m}>Mes {m}</option>
-                  ))}
-                </select>
-              </div>
+          {/* Poder de Compra Calculado con Liquidez Libre */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] text-center">
+              <ShoppingBag className="h-5 w-5 text-[#A36F4C] mx-auto mb-1.5" />
+              <div className="text-2xl font-extrabold text-[#241C15] font-mono">{bobinasFilamento}</div>
+              <span className="text-xs text-[#75695D] block mt-0.5 font-medium">Bobinas PLA (S/48 c/u)</span>
+              <span className="text-[10px] text-[#75695D] block">~{bobinasFilamento} kg de material 3D</span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] text-center">
+              <Megaphone className="h-5 w-5 text-[#633E20] mx-auto mb-1.5" />
+              <div className="text-2xl font-extrabold text-[#241C15] font-mono">{diasPautaMeta}</div>
+              <span className="text-xs text-[#75695D] block mt-0.5 font-medium">Días Meta Ads (S/15/día)</span>
+              <span className="text-[10px] text-[#75695D] block">Campañas de captación activa</span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] text-center">
+              <Box className="h-5 w-5 text-[#1E5E3A] mx-auto mb-1.5" />
+              <div className="text-2xl font-extrabold text-[#241C15] font-mono">{packsPackaging}</div>
+              <span className="text-xs text-[#75695D] block mt-0.5 font-medium">Packs Packaging (S/25)</span>
+              <span className="text-[10px] text-[#75695D] block">~{packsPackaging * 10} envíos listos</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* GRÁFICO INTERACTIVO: CURVA DE EVOLUCIÓN DE CAJA CHICA */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-bold text-[#241C15] flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-[#1E5E3A]" />
-                Curva de Evolución Proyectada de Caja Chica ({horizonte} Meses)
-              </CardTitle>
-              <CardDescription className="text-xs text-[#75695D] mt-0.5">
-                Proyección del saldo acumulado en caja considerando ingresos, egresos, cuota del préstamo y fondo de reserva.
-              </CardDescription>
-            </div>
+      {/* ========================================================================= */}
+      {/* 6. PROYECCIÓN MENSUAL (TABLA Y GRÁFICO IGUAL AL DASHBOARD)                */}
+      {/* ========================================================================= */}
+      <div className="space-y-6">
+        {/* GRÁFICO INTERACTIVO: CURVA DE LIQUIDEZ Y FONDOS BLINDADOS */}
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
+          <CardHeader className="pb-2 border-b border-[#E2D9CC]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base font-bold text-[#241C15] flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-[#1E5E3A]" />
+                  Curva de Evolución Mensual ({horizonte === 'MENSUAL' ? '1 Mes' : horizonte === 'TRIMESTRAL' ? '3 Meses' : '6 Meses'})
+                </CardTitle>
+                <CardDescription className="text-xs text-[#75695D]">
+                  Proyección mensual del saldo en caja vs. nivel de fondos blindados del taller.
+                </CardDescription>
+              </div>
 
-            <div className="flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1 text-[#1E5E3A] font-bold">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#1E5E3A] inline-block"></span>
-                Saldo en Caja
-              </span>
-              <span className="flex items-center gap-1 text-[#A34335] font-bold">
-                <span className="w-2.5 h-0.5 bg-[#A34335] inline-block"></span>
-                Fondo Reserva ({formatCurrency(fondoReserva)})
-              </span>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="flex items-center gap-1 text-[#1E5E3A] font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#1E5E3A] inline-block" />
+                  Saldo en Caja
+                </span>
+                <span className="flex items-center gap-1 text-[#944917] font-bold">
+                  <span className="w-2.5 h-0.5 bg-[#944917] inline-block" />
+                  Fondos Blindados ({formatCurrency(totalFondosApartados)})
+                </span>
+              </div>
             </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
 
-        <CardContent className="pt-4">
-          <div className="h-[320px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={proyeccionMeses} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorSaldoCaja" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1E5E3A" stopOpacity={0.25}/>
-                    <stop offset="95%" stopColor="#1E5E3A" stopOpacity={0.0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} />
-                <XAxis 
-                  dataKey="nombreMes" 
-                  stroke="#75695D" 
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis 
-                  stroke="#75695D" 
-                  fontSize={12}
-                  tickLine={false}
-                  tickFormatter={(val) => `S/ ${val >= 1000 ? `${(val/1000).toFixed(1)}k` : val}`}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload
-                      return (
-                        <div className="bg-[#FFFFFF] border border-[#E2D9CC] p-3 rounded-2xl shadow-xl text-xs space-y-1.5 min-w-[200px]">
-                          <div className="font-bold text-[#241C15] border-b border-[#E2D9CC] pb-1 flex justify-between">
-                            <span>{data.nombreMes}</span>
-                            <span className="text-[#75695D]">{data.pedidosEstimados} pedidos</span>
+          <CardContent className="pt-4">
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={proyeccionMeses} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorSaldoCajaTes" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#1E5E3A" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#1E5E3A" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} />
+                  <XAxis dataKey="nombreMes" stroke="#75695D" fontSize={11} tickLine={false} />
+                  <YAxis 
+                    stroke="#75695D" 
+                    fontSize={11} 
+                    tickLine={false} 
+                    tickFormatter={(val) => `S/${val >= 1000 ? `${(val/1000).toFixed(1)}k` : val}`} 
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload
+                        return (
+                          <div className="bg-[#FFFFFF] border border-[#E2D9CC] p-3 rounded-2xl shadow-xl text-xs space-y-1.5 min-w-[210px]">
+                            <div className="font-bold text-[#241C15] border-b border-[#E2D9CC] pb-1 flex justify-between">
+                              <span>{data.nombreMes}</span>
+                              <span className="text-[#75695D]">{data.pedidosEstimados} pedidos</span>
+                            </div>
+                            <div className="space-y-1 text-[#241C15]">
+                              <div className="flex justify-between">
+                                <span className="text-[#75695D]">Ingresos Ventas:</span>
+                                <span className="font-mono text-[#1E5E3A] font-bold">+{formatCurrency(data.totalIngresos)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-[#75695D]">Egresos Totales:</span>
+                                <span className="font-mono text-[#944917]">-{formatCurrency(data.totalEgresos)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-[#75695D]">Flujo Neto:</span>
+                                <span className={`font-mono font-bold ${data.flujoNeto >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
+                                  {data.flujoNeto >= 0 ? '+' : ''}{formatCurrency(data.flujoNeto)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between pt-1 border-t border-[#E2D9CC] font-bold">
+                                <span className="text-[#241C15]">Saldo en Caja:</span>
+                                <span className="font-mono text-[#1E5E3A]">{formatCurrency(data.saldoFinalCaja)}</span>
+                              </div>
+                              <div className="flex justify-between text-[10px] text-[#1E5E3A]">
+                                <span>Liquidez Libre:</span>
+                                <span className="font-mono font-bold">{formatCurrency(data.liquidezLibreProyectada)}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="space-y-1 text-[#241C15]">
-                            <div className="flex justify-between">
-                              <span className="text-[#75695D]">Ingresos:</span>
-                              <span className="font-mono text-[#1E5E3A] font-bold">+{formatCurrency(data.totalIngresos)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#75695D]">Egresos:</span>
-                              <span className="font-mono text-[#944917]">-{formatCurrency(data.totalEgresos)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-[#75695D]">Flujo Neto:</span>
-                              <span className={`font-mono font-bold ${data.flujoNeto >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
-                                {data.flujoNeto >= 0 ? '+' : ''}{formatCurrency(data.flujoNeto)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between pt-1 border-t border-[#E2D9CC] font-bold">
-                              <span className="text-[#241C15]">Saldo en Caja:</span>
-                              <span className="font-mono text-[#1E5E3A]">{formatCurrency(data.saldoFinalCaja)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    }
-                    return null
-                  }}
-                />
-                <ReferenceLine 
-                  y={fondoReserva} 
-                  stroke="#A34335" 
-                  strokeDasharray="4 4" 
-                  label={{ value: `Reserva: S/ ${fondoReserva}`, fill: '#A34335', fontSize: 10, position: 'insideTopLeft' }} 
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="saldoFinalCaja" 
-                  stroke="#1E5E3A" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorSaldoCaja)" 
-                  name="Saldo en Caja"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* TABLA DETALLADA DE LA PROYECCIÓN MES A MES */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-md rounded-2xl overflow-hidden">
-        <CardHeader className="pb-3 border-b border-[#E2D9CC] bg-[#FDFBF7]">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-bold text-[#241C15] flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-[#A36F4C]" />
-                Desglose Financiero Proyectado Mes a Mes
-              </CardTitle>
-              <CardDescription className="text-xs text-[#75695D] mt-0.5">
-                Detalle mensual de entradas de ventas, costos de materiales, cuota del banco y saldo final de caja chica.
-              </CardDescription>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <ReferenceLine 
+                    y={totalFondosApartados} 
+                    stroke="#944917" 
+                    strokeDasharray="4 4" 
+                    label={{ value: `Blindado: S/ ${totalFondosApartados}`, fill: '#944917', fontSize: 10, position: 'insideTopLeft' }} 
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="saldoFinalCaja" 
+                    stroke="#1E5E3A" 
+                    strokeWidth={3} 
+                    fillOpacity={1} 
+                    fill="url(#colorSaldoCajaTes)" 
+                    name="Saldo en Caja" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-            <Badge variant="outline" className="bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] font-bold text-xs">
-              {horizonte} Períodos
-            </Badge>
+          </CardContent>
+        </Card>
+
+        {/* TABLA DE PROYECCIÓN MENSUAL DETALLADA (IGUAL AL DASHBOARD) */}
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-md rounded-2xl overflow-hidden">
+          <CardHeader className="pb-3 border-b border-[#E2D9CC] bg-[#FDFBF7]">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-[#241C15] flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[#A36F4C]" />
+                  Proyección Financiera Mensual ({horizonte === 'MENSUAL' ? '1 Mes' : horizonte === 'TRIMESTRAL' ? '3 Meses' : '6 Meses'})
+                </CardTitle>
+                <CardDescription className="text-xs text-[#75695D] mt-0.5">
+                  Desglose mensual de ingresos por ventas, costos de materiales, cuota blindada y saldo proyectado.
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] font-bold text-xs">
+                {mesesHorizonte} {mesesHorizonte === 1 ? 'Mes' : 'Meses'}
+              </Badge>
+            </div>
+          </CardHeader>
+
+          <div className="overflow-x-auto scrollbar-thin">
+            <Table className="w-full min-w-[700px]">
+              <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+              <TableRow className="border-[#E2D9CC] hover:bg-transparent text-xs">
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Período Mensual</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Pedidos Est.</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Saldo Inicial</TableHead>
+                <TableHead className="text-[#1E5E3A] font-bold px-3 py-3 text-right">(+) Ingresos</TableHead>
+                <TableHead className="text-[#944917] font-bold px-3 py-3 text-right">(-) Materiales</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">(-) Cuota Banco</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Flujo Neto</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Saldo en Caja</TableHead>
+                <TableHead className="text-[#1E5E3A] font-bold px-4 py-3 text-right">Liquidez Libre</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Salud</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {proyeccionMeses.map((m) => {
+                const isHealthy = m.saldoFinalCaja >= totalFondosApartados
+                const isWarning = m.saldoFinalCaja > 0 && m.saldoFinalCaja < totalFondosApartados
+                const isDanger = m.saldoFinalCaja <= 0
+
+                return (
+                  <TableRow 
+                    key={m.mesNumero}
+                    className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors text-xs"
+                  >
+                    <TableCell className="px-4 py-3 font-bold text-[#241C15]">
+                      {m.nombreMes}
+                      {m.ingresosExtras > 0 && (
+                        <span className="block text-[10px] text-[#1E5E3A] font-medium">
+                          📥 Cobro Saldos Pendientes (+{formatCurrency(m.ingresosExtras)})
+                        </span>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3 text-center font-mono font-bold text-[#241C15]">
+                      {m.pedidosEstimados}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3 text-right font-mono text-[#75695D]">
+                      {formatCurrency(m.saldoInicial)}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3 text-right font-mono text-[#1E5E3A] font-bold">
+                      +{formatCurrency(m.totalIngresos)}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3 text-right font-mono text-[#944917]">
+                      -{formatCurrency(m.costoMateriales)}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3 text-right font-mono text-[#75695D]">
+                      -{formatCurrency(m.cuotaBanco)}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3 text-right font-mono font-bold">
+                      <span className={m.flujoNeto >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}>
+                        {m.flujoNeto >= 0 ? '+' : ''}{formatCurrency(m.flujoNeto)}
+                      </span>
+                    </TableCell>
+
+                    <TableCell className="px-4 py-3 text-right font-mono font-extrabold text-[#241C15]">
+                      {formatCurrency(m.saldoFinalCaja)}
+                    </TableCell>
+
+                    <TableCell className="px-4 py-3 text-right font-mono font-bold text-[#1E5E3A]">
+                      {formatCurrency(m.liquidezLibreProyectada)}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3 text-center">
+                      {isHealthy ? (
+                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold">
+                          Óptimo
+                        </Badge>
+                      ) : isWarning ? (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold">
+                          Alerta
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-[#FDF2F0] text-[#A34335] border-[#F0BCB4] text-[10px] font-bold">
+                          Déficit
+                        </Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
           </div>
-        </CardHeader>
-
-        <Table className="w-full">
-          <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
-            <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Período</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Pedidos</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Saldo Inicial</TableHead>
-              <TableHead className="text-[#1E5E3A] font-bold px-3 py-3 text-right">(+) Ingresos</TableHead>
-              <TableHead className="text-[#944917] font-bold px-3 py-3 text-right">(-) Materiales</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">(-) Cuota Banco</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Flujo Neto</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Saldo Caja Chica</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Salud</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {proyeccionMeses.map((m) => {
-              const isHealthy = m.saldoFinalCaja >= fondoReserva
-              const isWarning = m.saldoFinalCaja > 0 && m.saldoFinalCaja < fondoReserva
-              const isDanger = m.saldoFinalCaja <= 0
-
-              return (
-                <TableRow 
-                  key={m.mesNumero}
-                  className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors text-xs"
-                >
-                  <TableCell className="px-4 py-3 font-bold text-[#241C15]">
-                    {m.nombreMes}
-                    {m.gastoExtraordinario > 0 && (
-                      <span className="block text-[10px] text-[#A36F4C]">
-                        ⭐ {inversionExtraConcepto} (-{formatCurrency(m.gastoExtraordinario)})
-                      </span>
-                    )}
-                    {m.ingresosExtras > 0 && (
-                      <span className="block text-[10px] text-[#1E5E3A]">
-                        📥 Cobro Saldos Pendientes (+{formatCurrency(m.ingresosExtras)})
-                      </span>
-                    )}
-                  </TableCell>
-
-                  <TableCell className="px-3 py-3 text-center font-mono font-bold text-[#241C15]">
-                    {m.pedidosEstimados}
-                  </TableCell>
-
-                  <TableCell className="px-3 py-3 text-right font-mono text-[#75695D]">
-                    {formatCurrency(m.saldoInicial)}
-                  </TableCell>
-
-                  <TableCell className="px-3 py-3 text-right font-mono text-[#1E5E3A] font-bold">
-                    +{formatCurrency(m.totalIngresos)}
-                  </TableCell>
-
-                  <TableCell className="px-3 py-3 text-right font-mono text-[#944917]">
-                    -{formatCurrency(m.costoMateriales)}
-                  </TableCell>
-
-                  <TableCell className="px-3 py-3 text-right font-mono text-[#75695D]">
-                    -{formatCurrency(m.cuotaBanco)}
-                  </TableCell>
-
-                  <TableCell className="px-3 py-3 text-right font-mono font-bold">
-                    <span className={m.flujoNeto >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}>
-                      {m.flujoNeto >= 0 ? '+' : ''}{formatCurrency(m.flujoNeto)}
-                    </span>
-                  </TableCell>
-
-                  <TableCell className="px-4 py-3 text-right font-mono font-extrabold text-[#241C15] text-sm">
-                    {formatCurrency(m.saldoFinalCaja)}
-                  </TableCell>
-
-                  <TableCell className="px-3 py-3 text-center">
-                    {isHealthy ? (
-                      <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold">
-                        Óptimo
-                      </Badge>
-                    ) : isWarning ? (
-                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold">
-                        Alerta
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-[#FDF2F0] text-[#A34335] border-[#F0BCB4] text-[10px] font-bold">
-                        Déficit
-                      </Badge>
-                    )}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

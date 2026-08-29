@@ -524,8 +524,9 @@ export function VentasClient({
 
       {/* Main Orders Table Light Mode */}
       <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-        <Table className="w-full">
-          <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+        <div className="overflow-x-auto scrollbar-thin">
+          <Table className="w-full min-w-[700px]">
+            <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
             <TableRow className="border-[#E2D9CC] hover:bg-transparent">
               <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Fecha</TableHead>
               <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Cliente & Canal</TableHead>
@@ -672,6 +673,7 @@ export function VentasClient({
             )}
           </TableBody>
         </Table>
+        </div>
 
         {/* Pagination Footer */}
         {totalPages > 1 && (

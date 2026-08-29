@@ -72,7 +72,7 @@ export function DashboardClient({
       </div>
 
       {/* KPIs Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* 1. GANANCIA NETA EN VENTAS */}
         <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#1E5E3A] transition-all relative overflow-hidden rounded-2xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />

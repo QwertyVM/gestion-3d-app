@@ -44,8 +44,8 @@ export async function getDatosCajaChica(): Promise<DatosCajaChica> {
     ? Number((totalCostoFabricacion / totalPedidosHistoricos).toFixed(2)) 
     : 38.00
 
-  // Cuota bancaria identificada de las 24 cuotas (S/ 363.10)
-  const cuotaPrestamoMensual = 363.10
+  // Cuota bancaria identificada de las 24 cuotas (S/ 368.88)
+  const cuotaPrestamoMensual = 368.88
 
   // Gastos fijos estimados de taller (Luz, internet, mantenimiento base)
   const gastosFijosEstimadosMensual = 250.00
