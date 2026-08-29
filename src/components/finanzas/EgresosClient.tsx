@@ -21,6 +21,8 @@ import {
   Truck, 
   ChevronLeft, 
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Pencil,
   Tag,
   Sparkles,
@@ -28,7 +30,7 @@ import {
   Loader2,
   ExternalLink
 } from 'lucide-react'
-import { createInversion, updateInversion, deleteInversion } from '@/actions/inversiones'
+import { createInversion, updateInversion, deleteInversion, swapInversionOrder } from '@/actions/inversiones'
 import { TagInsumoItem } from '@/actions/tagsInsumos'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
@@ -385,6 +387,28 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     }
   }
 
+  // Reorder within the same day
+  const handleMoveEgreso = async (idCurrent: string, idTarget: string, direction: 'up' | 'down') => {
+    const currentItem = items.find(i => i.id === idCurrent)
+    const targetItem = items.find(i => i.id === idTarget)
+    if (!currentItem || !targetItem) return
+
+    // Optimistic UI update
+    setItems(prev => prev.map(item => {
+      if (item.id === idCurrent) return { ...item, createdAt: targetItem.createdAt }
+      if (item.id === idTarget) return { ...item, createdAt: currentItem.createdAt }
+      return item
+    }))
+
+    try {
+      await swapInversionOrder(idCurrent, idTarget)
+      toast.success(direction === 'up' ? 'Posición subida' : 'Posición bajada')
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al reordenar')
+      router.refresh()
+    }
+  }
+
   // Tag Badge Renderer con estilo Light Mode
   const renderTagBadge = (tagText?: string | null) => {
     if (!tagText) return null
@@ -611,87 +635,127 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedEgresos.map((eg) => (
-                <TableRow 
-                  key={eg.id} 
-                  onClick={() => handleOpenEdit(eg)}
-                  className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors cursor-pointer group"
-                >
-                  {/* Fecha */}
-                  <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
-                    {formatDate(eg.createdAt)}
-                  </TableCell>
+              paginatedEgresos.map((eg) => {
+                const globalIndex = filteredEgresos.findIndex(item => item.id === eg.id)
+                const prevNeighbor = globalIndex > 0 ? filteredEgresos[globalIndex - 1] : null
+                const nextNeighbor = globalIndex < filteredEgresos.length - 1 ? filteredEgresos[globalIndex + 1] : null
 
-                  {/* Categoría Principal */}
-                  <TableCell className="px-3 py-3 whitespace-nowrap">
-                    {eg.categoria === 'ACTIVO_FIJO' ? (
-                      <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-semibold">
-                        Maquinaria
-                      </Badge>
-                    ) : eg.categoria === 'INSUMO' ? (
-                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-semibold">
-                        Insumo
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-xs font-semibold">
-                        Servicio
-                      </Badge>
-                    )}
-                  </TableCell>
+                const egDay = eg.createdAt.split('T')[0]
+                const canMoveUp = !!prevNeighbor && prevNeighbor.createdAt.split('T')[0] === egDay
+                const canMoveDown = !!nextNeighbor && nextNeighbor.createdAt.split('T')[0] === egDay
 
-                  {/* Tag / Subcategoría */}
-                  <TableCell className="px-3 py-3 whitespace-nowrap">
-                    {eg.subcategoria ? (
-                      renderTagBadge(eg.subcategoria)
-                    ) : (
-                      <span className="text-xs text-[#75695D] italic">—</span>
-                    )}
-                  </TableCell>
+                return (
+                  <TableRow 
+                    key={eg.id} 
+                    onClick={() => handleOpenEdit(eg)}
+                    className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors cursor-pointer group"
+                  >
+                    {/* Fecha */}
+                    <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
+                      {formatDate(eg.createdAt)}
+                    </TableCell>
 
-                  {/* Concepto / Nombre */}
-                  <TableCell className="px-4 py-3 font-medium text-[#241C15]">
-                    <span className="text-sm font-bold group-hover:text-[#A36F4C] transition-colors">{eg.itemConcepto}</span>
-                  </TableCell>
+                    {/* Categoría Principal */}
+                    <TableCell className="px-3 py-3 whitespace-nowrap">
+                      {eg.categoria === 'ACTIVO_FIJO' ? (
+                        <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-semibold">
+                          Maquinaria
+                        </Badge>
+                      ) : eg.categoria === 'INSUMO' ? (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-semibold">
+                          Insumo
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-xs font-semibold">
+                          Servicio
+                        </Badge>
+                      )}
+                    </TableCell>
 
-                  {/* Costo Unitario */}
-                  <TableCell className="px-3 py-3 text-right font-mono text-[#241C15] font-semibold whitespace-nowrap">
-                    {eg.cantidad > 1 && <span className="text-xs text-[#75695D] font-normal mr-1">{eg.cantidad}x</span>}
-                    {formatCurrency(eg.costoUnitario)}
-                    {eg.costoEnvio && eg.costoEnvio > 0 ? (
-                      <span className="block text-[10px] text-[#75695D] font-normal">+ {formatCurrency(eg.costoEnvio)} flete</span>
-                    ) : null}
-                  </TableCell>
+                    {/* Tag / Subcategoría */}
+                    <TableCell className="px-3 py-3 whitespace-nowrap">
+                      {eg.subcategoria ? (
+                        renderTagBadge(eg.subcategoria)
+                      ) : (
+                        <span className="text-xs text-[#75695D] italic">—</span>
+                      )}
+                    </TableCell>
 
-                  {/* Total Egreso */}
-                  <TableCell className="px-4 py-3 text-right font-mono font-bold text-[#A34335] whitespace-nowrap">
-                    -{formatCurrency(eg.costoTotal)}
-                  </TableCell>
+                    {/* Concepto / Nombre */}
+                    <TableCell className="px-4 py-3 font-medium text-[#241C15]">
+                      <span className="text-sm font-bold group-hover:text-[#A36F4C] transition-colors">{eg.itemConcepto}</span>
+                    </TableCell>
 
-                  {/* Acciones */}
-                  <TableCell className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={(e) => handleOpenEdit(eg, e)}
-                        className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
-                        title="Editar egreso"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
-                        className="h-8 w-8 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                        title="Eliminar egreso"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                    {/* Costo Unitario */}
+                    <TableCell className="px-3 py-3 text-right font-mono text-[#241C15] font-semibold whitespace-nowrap">
+                      {eg.cantidad > 1 && <span className="text-xs text-[#75695D] font-normal mr-1">{eg.cantidad}x</span>}
+                      {formatCurrency(eg.costoUnitario)}
+                      {eg.costoEnvio && eg.costoEnvio > 0 ? (
+                        <span className="block text-[10px] text-[#75695D] font-normal">+ {formatCurrency(eg.costoEnvio)} flete</span>
+                      ) : null}
+                    </TableCell>
+
+                    {/* Total Egreso */}
+                    <TableCell className="px-4 py-3 text-right font-mono font-bold text-[#A34335] whitespace-nowrap">
+                      -{formatCurrency(eg.costoTotal)}
+                    </TableCell>
+
+                    {/* Acciones */}
+                    <TableCell className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1.5">
+                        {/* Botones para subir/bajar posición en el día */}
+                        <div className="flex items-center bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5 shadow-xs">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={!canMoveUp}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (prevNeighbor) handleMoveEgreso(eg.id, prevNeighbor.id, 'up')
+                            }}
+                            className="h-7 w-7 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer rounded transition-colors"
+                            title={canMoveUp ? "Subir posición en este día" : "Límite superior del día"}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={!canMoveDown}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (nextNeighbor) handleMoveEgreso(eg.id, nextNeighbor.id, 'down')
+                            }}
+                            className="h-7 w-7 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer rounded transition-colors"
+                            title={canMoveDown ? "Bajar posición en este día" : "Límite inferior del día"}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => handleOpenEdit(eg, e)}
+                          className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
+                          title="Editar egreso"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
+                          className="h-8 w-8 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                          title="Eliminar egreso"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>

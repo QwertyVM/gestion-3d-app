@@ -35,11 +35,17 @@ export async function getIngresos() {
 }
 
 function parseDateInput(fecha?: string | Date) {
-  if (!fecha) return undefined
+  if (!fecha) return new Date()
   if (fecha instanceof Date) return fecha
   if (typeof fecha === 'string') {
     if (fecha.includes('T')) return new Date(fecha)
-    return new Date(`${fecha}T12:00:00.000Z`)
+    const [year, month, day] = fecha.split('-').map(Number)
+    if (year && month && day) {
+      const target = new Date()
+      target.setFullYear(year, month - 1, day)
+      return target
+    }
+    return new Date(fecha)
   }
   return new Date(fecha)
 }
@@ -93,6 +99,20 @@ export async function updateIngreso(id: string, data: {
   const current = await prisma.ingreso.findUnique({ where: { id } })
   if (!current) throw new Error("Ingreso no encontrado")
 
+  let newFecha = current.fecha
+  if (data.fecha) {
+    const currentFechaStr = current.fecha.toISOString().split('T')[0]
+    const inputFechaStr = typeof data.fecha === 'string' ? data.fecha.split('T')[0] : data.fecha.toISOString().split('T')[0]
+    if (inputFechaStr !== currentFechaStr) {
+      const [year, month, day] = inputFechaStr.split('-').map(Number)
+      if (year && month && day) {
+        const target = new Date(current.fecha)
+        target.setFullYear(year, month - 1, day)
+        newFecha = target
+      }
+    }
+  }
+
   const updated = await prisma.ingreso.update({
     where: { id },
     data: {
@@ -102,7 +122,7 @@ export async function updateIngreso(id: string, data: {
       monto: data.monto !== undefined ? data.monto : current.monto,
       metodoPago: data.metodoPago !== undefined ? data.metodoPago : current.metodoPago,
       notas: data.notas !== undefined ? data.notas : current.notas,
-      fecha: data.fecha ? parseDateInput(data.fecha) : undefined,
+      fecha: newFecha,
     }
   })
 

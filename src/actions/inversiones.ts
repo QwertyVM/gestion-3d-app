@@ -36,11 +36,17 @@ export async function getInversiones() {
 }
 
 function parseDateInput(fecha?: string | Date) {
-  if (!fecha) return undefined
+  if (!fecha) return new Date()
   if (fecha instanceof Date) return fecha
   if (typeof fecha === 'string') {
     if (fecha.includes('T')) return new Date(fecha)
-    return new Date(`${fecha}T12:00:00.000Z`)
+    const [year, month, day] = fecha.split('-').map(Number)
+    if (year && month && day) {
+      const target = new Date()
+      target.setFullYear(year, month - 1, day)
+      return target
+    }
+    return new Date(fecha)
   }
   return new Date(fecha)
 }
@@ -157,6 +163,20 @@ export async function updateInversion(id: string, data: {
     }
   }
 
+  let newCreatedAt = current.createdAt
+  if (data.fecha) {
+    const currentFechaStr = current.createdAt.toISOString().split('T')[0]
+    const inputFechaStr = typeof data.fecha === 'string' ? data.fecha.split('T')[0] : data.fecha.toISOString().split('T')[0]
+    if (inputFechaStr !== currentFechaStr) {
+      const [year, month, day] = inputFechaStr.split('-').map(Number)
+      if (year && month && day) {
+        const target = new Date(current.createdAt)
+        target.setFullYear(year, month - 1, day)
+        newCreatedAt = target
+      }
+    }
+  }
+
   const updated = await prisma.inversion.update({
     where: { id },
     data: {
@@ -173,7 +193,7 @@ export async function updateInversion(id: string, data: {
       costoPorGramo,
       numeroCuotas: data.numeroCuotas !== undefined ? data.numeroCuotas : current.numeroCuotas,
       montoCuota,
-      createdAt: data.fecha ? parseDateInput(data.fecha) : undefined
+      createdAt: newCreatedAt
     }
   })
 
@@ -195,4 +215,43 @@ export async function updateInversion(id: string, data: {
 export async function deleteInversion(id: string) {
   await prisma.inversion.delete({ where: { id } })
   safeRevalidate()
+}
+
+export async function swapInversionOrder(id1: string, id2: string) {
+  const [inv1, inv2] = await Promise.all([
+    prisma.inversion.findUnique({ where: { id: id1 } }),
+    prisma.inversion.findUnique({ where: { id: id2 } })
+  ])
+
+  if (!inv1 || !inv2) throw new Error("Registros no encontrados")
+
+  // Ensure both belong to the exact same calendar day
+  const dateStr1 = inv1.createdAt.toISOString().split('T')[0]
+  const dateStr2 = inv2.createdAt.toISOString().split('T')[0]
+
+  if (dateStr1 !== dateStr2) {
+    throw new Error("No se puede mover un registro fuera de su fecha de egreso")
+  }
+
+  let time1 = new Date(inv1.createdAt)
+  let time2 = new Date(inv2.createdAt)
+
+  // If their timestamps are identical, separate them by 1 second
+  if (time1.getTime() === time2.getTime()) {
+    time1 = new Date(time1.getTime() + 1000)
+  }
+
+  await prisma.$transaction([
+    prisma.inversion.update({
+      where: { id: id1 },
+      data: { createdAt: time2 }
+    }),
+    prisma.inversion.update({
+      where: { id: id2 },
+      data: { createdAt: time1 }
+    })
+  ])
+
+  safeRevalidate()
+  return { success: true }
 }
