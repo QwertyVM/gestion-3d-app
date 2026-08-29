@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -18,15 +19,18 @@ import {
   CheckCircle2, 
   ChevronLeft, 
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Package,
   DollarSign,
   Loader2,
   Landmark,
   CreditCard,
   Tag,
-  Pencil
+  Pencil,
+  ExternalLink
 } from 'lucide-react'
-import { createIngreso, deleteIngreso, updateIngreso } from '@/actions/ingresos'
+import { createIngreso, deleteIngreso, updateIngreso, swapIngresoOrder } from '@/actions/ingresos'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -51,10 +55,12 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
   const [search, setSearch] = useState('')
   const [tipoFilter, setTipoFilter] = useState<'TODOS' | 'VENTAS' | 'DIRECTOS'>('TODOS')
   const [openModal, setOpenModal] = useState(false)
+  const [openEditModal, setOpenEditModal] = useState(false)
+  const [editingItem, setEditingItem] = useState<IngresoDirectoItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Form states
+  // Form states (Create & Edit)
   const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
   const [formCliente, setFormCliente] = useState('')
   const [formConcepto, setFormConcepto] = useState('')
@@ -98,7 +104,9 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
       totalOriginal?: number
       saldoPendiente?: number
       metodoPago?: string
+      notas?: string
       canDelete: boolean
+      rawItem?: IngresoDirectoItem
     }> = []
 
     // From Sales
@@ -131,7 +139,9 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
         categoria: i.categoria,
         montoCobrado: i.monto,
         metodoPago: i.metodoPago,
+        notas: i.notas,
         canDelete: true,
+        rawItem: i,
       })
     })
 
@@ -161,6 +171,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
     return filteredIngresos.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredIngresos, currentPage])
 
+  // Open Create Modal
   const handleOpenCreate = () => {
     setFormFecha(new Date().toISOString().split('T')[0])
     setFormCliente('')
@@ -172,7 +183,22 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
     setOpenModal(true)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Open Edit Modal for direct income
+  const handleOpenEdit = (item: IngresoDirectoItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setEditingItem(item)
+    setFormFecha(item.fecha ? item.fecha.split('T')[0] : new Date().toISOString().split('T')[0])
+    setFormCliente(item.cliente || '')
+    setFormConcepto(item.concepto || '')
+    setFormCategoria(item.categoria || 'Servicio de Impresión 3D')
+    setFormMonto(item.monto ? item.monto.toString() : '')
+    setFormMetodoPago(item.metodoPago || 'YAPE')
+    setFormNotas(item.notas || '')
+    setOpenEditModal(true)
+  }
+
+  // Submit Create
+  const handleSubmitCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formCliente.trim() || !formConcepto.trim() || !formMonto) {
       toast.error('Por favor completa los campos obligatorios')
@@ -201,16 +227,74 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
     }
   }
 
-  const handleDeleteDirect = async (id: string, concepto: string) => {
+  // Submit Edit
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingItem) return
+    if (!formCliente.trim() || !formConcepto.trim() || !formMonto) {
+      toast.error('Por favor completa los campos obligatorios')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const updated = await updateIngreso(editingItem.id, {
+        fecha: formFecha || undefined,
+        cliente: formCliente.trim(),
+        concepto: formConcepto.trim(),
+        categoria: formCategoria,
+        monto: parseFloat(formMonto) || 0,
+        metodoPago: formMetodoPago,
+        notas: formNotas.trim() || undefined,
+      })
+
+      setDirectos(prev => prev.map(item => item.id === editingItem.id ? (updated as any) : item))
+      toast.success('Ingreso actualizado exitosamente')
+      setOpenEditModal(false)
+      setEditingItem(null)
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al actualizar ingreso')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Delete Direct Income
+  const handleDeleteDirect = async (id: string, concepto: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
     if (confirm(`¿Seguro que deseas eliminar el ingreso "${concepto}"?`)) {
       try {
         await deleteIngreso(id)
         setDirectos(prev => prev.filter(item => item.id !== id))
         toast.success('Ingreso eliminado')
+        if (openEditModal) setOpenEditModal(false)
         router.refresh()
       } catch (err) {
         toast.error('Error al eliminar ingreso')
       }
+    }
+  }
+
+  // Reorder within the same day
+  const handleMoveIngreso = async (idCurrent: string, idTarget: string, direction: 'up' | 'down') => {
+    const currentItem = directos.find(i => i.id === idCurrent)
+    const targetItem = directos.find(i => i.id === idTarget)
+    if (!currentItem || !targetItem) return
+
+    // Optimistic UI update
+    setDirectos(prev => prev.map(item => {
+      if (item.id === idCurrent) return { ...item, fecha: targetItem.fecha }
+      if (item.id === idTarget) return { ...item, fecha: currentItem.fecha }
+      return item
+    }))
+
+    try {
+      await swapIngresoOrder(idCurrent, idTarget)
+      toast.success(direction === 'up' ? 'Posición subida' : 'Posición bajada')
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al reordenar')
+      router.refresh()
     }
   }
 
@@ -232,7 +316,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
         <Button 
           onClick={handleOpenCreate}
-          className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold rounded-xl shadow-md shadow-[#1E5E3A]/20 transition-all cursor-pointer h-10 px-4 text-xs"
+          className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold rounded-xl shadow-md shadow-[#1E5E3A]/20 transition-all cursor-pointer h-10 px-4 text-xs active:scale-[0.98]"
         >
           <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
           Registrar Ingreso Directo
@@ -351,7 +435,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
             <TableRow className="border-[#E2D9CC] hover:bg-transparent">
               <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Fecha</TableHead>
               <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Origen / Tipo</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Cliente</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Cliente / Entidad</TableHead>
               <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Concepto / Detalle</TableHead>
               <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center hidden sm:table-cell">Método</TableHead>
               <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Monto Cobrado</TableHead>
@@ -366,68 +450,143 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedIngresos.map((ing) => (
-                <TableRow key={ing.id} className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors">
-                  <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
-                    {formatDate(ing.fecha)}
-                  </TableCell>
+              paginatedIngresos.map((ing) => {
+                const isDirect = ing.origen === 'INGRESO_DIRECTO' && ing.rawItem
+                const globalDirectIndex = isDirect ? directos.findIndex(d => d.id === ing.rawId) : -1
+                const prevNeighbor = globalDirectIndex > 0 ? directos[globalDirectIndex - 1] : null
+                const nextNeighbor = globalDirectIndex >= 0 && globalDirectIndex < directos.length - 1 ? directos[globalDirectIndex + 1] : null
 
-                  <TableCell className="px-3 py-3 whitespace-nowrap">
-                    {ing.origen === 'VENTA_CATALOGO' ? (
-                      <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-bold">
-                        Venta Catálogo
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold">
-                        Servicio Directo
-                      </Badge>
-                    )}
-                  </TableCell>
+                const ingDay = ing.fecha ? ing.fecha.split('T')[0] : ''
+                const canMoveUp = isDirect && !!prevNeighbor && prevNeighbor.fecha.split('T')[0] === ingDay
+                const canMoveDown = isDirect && !!nextNeighbor && nextNeighbor.fecha.split('T')[0] === ingDay
 
-                  <TableCell className="px-3 py-3 font-bold text-[#241C15] whitespace-nowrap">
-                    {ing.cliente}
-                  </TableCell>
+                return (
+                  <TableRow 
+                    key={ing.id} 
+                    onClick={() => {
+                      if (isDirect && ing.rawItem) handleOpenEdit(ing.rawItem)
+                    }}
+                    className={`border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors ${isDirect ? 'cursor-pointer group' : ''}`}
+                  >
+                    <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
+                      {formatDate(ing.fecha)}
+                    </TableCell>
 
-                  <TableCell className="px-3 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-[#241C15]">
-                        {ing.concepto}
+                    <TableCell className="px-3 py-3 whitespace-nowrap">
+                      {ing.origen === 'VENTA_CATALOGO' ? (
+                        <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-bold">
+                          Venta Catálogo
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold">
+                          Servicio Directo
+                        </Badge>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3 font-bold text-[#241C15] whitespace-nowrap">
+                      <span className={isDirect ? "group-hover:text-[#1E5E3A] transition-colors" : ""}>
+                        {ing.cliente}
                       </span>
-                      {ing.saldoPendiente && ing.saldoPendiente > 0 ? (
-                        <span className="text-[11px] text-[#8C6D1F] font-bold">
-                          Saldo pendiente: {formatCurrency(ing.saldoPendiente)}
+                    </TableCell>
+
+                    <TableCell className="px-3 py-3">
+                      <div className="flex flex-col">
+                        <span className={`text-sm font-semibold text-[#241C15] ${isDirect ? 'group-hover:text-[#1E5E3A] transition-colors' : ''}`}>
+                          {ing.concepto}
                         </span>
-                      ) : null}
-                    </div>
-                  </TableCell>
+                        {ing.saldoPendiente && ing.saldoPendiente > 0 ? (
+                          <span className="text-[11px] text-[#8C6D1F] font-bold">
+                            Saldo pendiente: {formatCurrency(ing.saldoPendiente)}
+                          </span>
+                        ) : null}
+                        {ing.notas ? (
+                          <span className="text-[11px] text-[#75695D] italic">
+                            {ing.notas}
+                          </span>
+                        ) : null}
+                      </div>
+                    </TableCell>
 
-                  <TableCell className="px-3 py-3 text-center hidden sm:table-cell whitespace-nowrap">
-                    <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] text-xs">
-                      {ing.metodoPago || 'Yape'}
-                    </Badge>
-                  </TableCell>
+                    <TableCell className="px-3 py-3 text-center hidden sm:table-cell whitespace-nowrap">
+                      <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] text-xs font-medium">
+                        {ing.metodoPago || 'Yape'}
+                      </Badge>
+                    </TableCell>
 
-                  <TableCell className="px-4 py-3 text-right font-mono font-extrabold text-[#1E5E3A] whitespace-nowrap">
-                    +{formatCurrency(ing.montoCobrado)}
-                  </TableCell>
+                    <TableCell className="px-4 py-3 text-right font-mono font-extrabold text-[#1E5E3A] whitespace-nowrap">
+                      +{formatCurrency(ing.montoCobrado)}
+                    </TableCell>
 
-                  <TableCell className="px-3 py-3 text-center whitespace-nowrap">
-                    {ing.canDelete ? (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDeleteDirect(ing.rawId, ing.concepto)}
-                        className="h-8 w-8 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-xl cursor-pointer"
-                        title="Eliminar ingreso directo"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <span className="text-[11px] text-[#75695D] font-medium">Desde Ventas</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
+                    <TableCell className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      {isDirect && ing.rawItem ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          {/* Reorder Buttons (Up / Down in same day) */}
+                          <div className="flex items-center bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5 shadow-xs">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              disabled={!canMoveUp}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (prevNeighbor) handleMoveIngreso(ing.rawId, prevNeighbor.id, 'up')
+                              }}
+                              className="h-7 w-7 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer rounded transition-colors"
+                              title={canMoveUp ? "Subir posición en este día" : "Límite superior del día"}
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              disabled={!canMoveDown}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (nextNeighbor) handleMoveIngreso(ing.rawId, nextNeighbor.id, 'down')
+                              }}
+                              className="h-7 w-7 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer rounded transition-colors"
+                              title={canMoveDown ? "Bajar posición en este día" : "Límite inferior del día"}
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => handleOpenEdit(ing.rawItem!, e)}
+                            className="h-8 w-8 text-[#75695D] hover:text-[#1E5E3A] hover:bg-emerald-50 rounded-lg cursor-pointer"
+                            title="Editar ingreso directo"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => handleDeleteDirect(ing.rawId, ing.concepto, e)}
+                            className="h-8 w-8 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer"
+                            title="Eliminar ingreso directo"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Link href="/ventas">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-[11px] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] rounded-lg cursor-pointer font-medium gap-1"
+                          >
+                            <span>Ver Pedido</span>
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>
@@ -454,17 +613,19 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
+                  <Button
                     key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      currentPage === page
-                        ? 'bg-[#1E5E3A] text-white shadow-sm'
-                        : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                    className={`h-8 w-8 p-0 cursor-pointer shadow-sm ${
+                      currentPage === page 
+                        ? "bg-[#1E5E3A] text-white hover:bg-[#16472C] font-bold" 
+                        : "border-[#E2D9CC] bg-[#FFFFFF] text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15]"
                     }`}
                   >
                     {page}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
@@ -485,18 +646,18 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
       {/* Modal: Registrar Ingreso Directo */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+        <DialogContent className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] max-w-lg p-0 overflow-hidden shadow-2xl rounded-3xl">
+          <div className="p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] flex items-center justify-center text-[#1E5E3A] shadow-sm">
-                <ArrowUpRight className="h-5 w-5 stroke-[2.5]" />
+              <div className="p-2.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
+                <DollarSign className="h-5 w-5 stroke-[2.5]" />
               </div>
               <div>
-                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                  Registrar Nuevo Ingreso Directo
+                <DialogTitle className="text-lg font-extrabold text-[#241C15]">
+                  Registrar Ingreso Directo
                 </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D]">
-                  Ingresos por servicios de impresión, diseño 3D o aportes a caja.
+                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                  Servicios de impresión externa, modelado 3D, préstamos o aportes de capital.
                 </DialogDescription>
               </div>
             </div>
@@ -509,10 +670,10 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmitCreate} className="p-6 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Ingreso *</Label>
                 <Input 
                   type="date"
                   value={formFecha}
@@ -523,11 +684,11 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Empresa *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Entidad *</Label>
                 <Input 
                   value={formCliente}
                   onChange={(e) => setFormCliente(e.target.value)}
-                  placeholder="Ej: Juan Pérez / Empresa ABC"
+                  placeholder="Ej: Banco BCP / Juan Pérez"
                   required
                   className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
                 />
@@ -539,7 +700,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
               <Input 
                 value={formConcepto}
                 onChange={(e) => setFormConcepto(e.target.value)}
-                placeholder="Ej: Impresión pieza técnica en PETG, Modelado 3D..."
+                placeholder="Ej: Desembolso Préstamo, Impresión pieza PETG, Modelado CAD..."
                 required
                 className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
               />
@@ -611,7 +772,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
               <Input 
                 value={formNotas}
                 onChange={(e) => setFormNotas(e.target.value)}
-                placeholder="Ej: Pago adelantado del 100%"
+                placeholder="Ej: Pago adelantado del 100%, 24 cuotas..."
                 className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
               />
             </div>
@@ -639,6 +800,180 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                   'Guardar Ingreso'
                 )}
               </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Editar Ingreso Directo */}
+      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
+        <DialogContent className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] max-w-lg p-0 overflow-hidden shadow-2xl rounded-3xl">
+          <div className="p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
+                <Pencil className="h-5 w-5 stroke-[2.5]" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-extrabold text-[#241C15]">
+                  Editar Ingreso Directo
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                  Modifica la fecha, monto, concepto o categoría del ingreso registrado.
+                </DialogDescription>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpenEditModal(false)}
+              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmitEdit} className="p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Ingreso *</Label>
+                <Input 
+                  type="date"
+                  value={formFecha}
+                  onChange={(e) => setFormFecha(e.target.value)}
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Entidad *</Label>
+                <Input 
+                  value={formCliente}
+                  onChange={(e) => setFormCliente(e.target.value)}
+                  placeholder="Ej: Banco BCP / Juan Pérez"
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto / Servicio Realizado *</Label>
+              <Input 
+                value={formConcepto}
+                onChange={(e) => setFormConcepto(e.target.value)}
+                placeholder="Ej: Desembolso Préstamo, Impresión pieza PETG, Modelado CAD..."
+                required
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Categoría *</Label>
+                <SearchableCombobox
+                  items={[
+                    { id: 'Servicio de Impresión 3D', label: 'Servicio de Impresión 3D', sublabel: 'Fabricación a pedido', icon: Package },
+                    { id: 'Diseño & Modelado CAD', label: 'Diseño & Modelado CAD', sublabel: 'Modelado 3D y prototipado', icon: Tag },
+                    { id: 'Préstamo Bancario / Financiamiento', label: 'Préstamo Bancario / Financiamiento', sublabel: 'Inyección de liquidez', icon: Landmark },
+                    { id: 'Venta Directa', label: 'Venta Directa / Feria', sublabel: 'Venta de stock presencial', icon: DollarSign },
+                    { id: 'Servicio Técnico', label: 'Servicio Técnico / Calibración', sublabel: 'Mantenimiento de impresoras', icon: Package },
+                    { id: 'Aporte de Capital', label: 'Aporte de Capital', sublabel: 'Fondos propios', icon: Landmark },
+                    { id: 'Otros Ingresos', label: 'Otros Ingresos', sublabel: 'Ingresos varios no clasificados' },
+                  ]}
+                  value={formCategoria}
+                  onChange={(val) => setFormCategoria(val)}
+                  allowCustomInput={true}
+                  customCreateLabel="Usar categoría:"
+                  placeholder="Seleccionar categoría..."
+                  icon={Tag}
+                  inputClassName="bg-[#F4EFEA]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Método de Pago *</Label>
+                <SearchableCombobox
+                  items={[
+                    { id: 'YAPE', label: 'Yape', sublabel: 'Billetera digital BCP', badge: 'Digital' },
+                    { id: 'PLIN', label: 'Plin', sublabel: 'Billetera digital BBVA/Interbank', badge: 'Digital' },
+                    { id: 'TRANSFERENCIA_BCP', label: 'Transferencia BCP', sublabel: 'Cuenta bancaria BCP', badge: 'Banco' },
+                    { id: 'TRANSFERENCIA_BBVA', label: 'Transferencia BBVA', sublabel: 'Cuenta bancaria BBVA', badge: 'Banco' },
+                    { id: 'TRANSFERENCIA_INTERBANK', label: 'Transferencia Interbank', sublabel: 'Cuenta bancaria Interbank', badge: 'Banco' },
+                    { id: 'EFECTIVO', label: 'Efectivo', sublabel: 'Dinero en mano física', badge: 'Caja física' },
+                  ]}
+                  value={formMetodoPago}
+                  onChange={(val) => setFormMetodoPago(val)}
+                  placeholder="Seleccionar método..."
+                  icon={CreditCard}
+                  clearable={false}
+                  inputClassName="bg-[#F4EFEA]"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Cobrado (S/) *</Label>
+              <div className="relative flex items-center w-full">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formMonto}
+                  onChange={(e) => setFormMonto(e.target.value)}
+                  placeholder="0.00"
+                  required
+                  className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Notas / Observaciones (Opcional)</Label>
+              <Input 
+                value={formNotas}
+                onChange={(e) => setFormNotas(e.target.value)}
+                placeholder="Ej: Pago adelantado del 100%, 24 cuotas..."
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+              />
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#E2D9CC]">
+              {editingItem && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => handleDeleteDirect(editingItem.id, editingItem.concepto)}
+                  className="text-[#A34335] hover:bg-red-50 text-xs px-3 py-2 rounded-xl cursor-pointer font-semibold gap-1.5"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Eliminar Ingreso
+                </Button>
+              )}
+              <div className="flex justify-end gap-3 ml-auto">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => setOpenEditModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#1E5E3A]/20 cursor-pointer disabled:opacity-50 transition-all"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      Actualizando...
+                    </>
+                  ) : (
+                    'Guardar Cambios'
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </DialogContent>

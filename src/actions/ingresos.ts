@@ -146,3 +146,41 @@ export async function deleteIngreso(id: string) {
   await prisma.ingreso.delete({ where: { id } })
   safeRevalidate()
 }
+
+export async function swapIngresoOrder(id1: string, id2: string) {
+  const [ing1, ing2] = await Promise.all([
+    prisma.ingreso.findUnique({ where: { id: id1 } }),
+    prisma.ingreso.findUnique({ where: { id: id2 } })
+  ])
+
+  if (!ing1 || !ing2) throw new Error("Registros de ingreso no encontrados")
+
+  // Ensure both belong to the exact same calendar day
+  const dateStr1 = ing1.fecha.toISOString().split('T')[0]
+  const dateStr2 = ing2.fecha.toISOString().split('T')[0]
+
+  if (dateStr1 !== dateStr2) {
+    throw new Error("No se puede mover un registro fuera de su fecha de ingreso")
+  }
+
+  let time1 = new Date(ing1.fecha)
+  let time2 = new Date(ing2.fecha)
+
+  if (time1.getTime() === time2.getTime()) {
+    time1 = new Date(time1.getTime() + 1000)
+  }
+
+  await prisma.$transaction([
+    prisma.ingreso.update({
+      where: { id: id1 },
+      data: { fecha: time2 }
+    }),
+    prisma.ingreso.update({
+      where: { id: id2 },
+      data: { fecha: time1 }
+    })
+  ])
+
+  safeRevalidate()
+  return { success: true }
+}
