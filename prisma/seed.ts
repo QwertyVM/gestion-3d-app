@@ -38,6 +38,20 @@ async function main() {
   // Limpiar ventas previas para evitar conflictos de Foreign Key al limpiar productos
   await prisma.venta.deleteMany()
   await prisma.producto.deleteMany()
+  await prisma.categoria.deleteMany()
+
+  // 1.5 Categorías
+  const categoriasBase = [
+    { nombre: 'Insertos y Organizadores', descripcion: 'Insertos personalizados para cajas de juegos de mesa' },
+    { nombre: 'JUEGOS DE MESA', descripcion: 'Accesorios y tableros para juegos de mesa' },
+    { nombre: 'Juegos de Rol & Accesorios', descripcion: 'Torres de dados, contadores y bandejas de rol' },
+    { nombre: 'Miniaturas & Decoración', descripcion: 'Figuras, cuadros y elementos decorativos 3D' },
+    { nombre: 'Hogar & Oficina', descripcion: 'Soportes, posavasos y utilitarios impresos en 3D' },
+  ]
+
+  for (const cat of categoriasBase) {
+    await prisma.categoria.create({ data: cat })
+  }
 
   // 2. Catálogo de Productos (Agrupados por Categoría)
   const productosBase = [
@@ -139,6 +153,31 @@ async function main() {
       ]
     })
   }
+
+  // 4. Ingresos Directos (Aporte de Capital Inicial + Préstamo Bancario)
+  await prisma.ingreso.deleteMany()
+  await prisma.ingreso.createMany({
+    data: [
+      {
+        cliente: 'Víctor (Fondos Propios)',
+        concepto: 'Aporte de Capital Inicial para Taller (Impresora, Secador e Insumos)',
+        categoria: 'Aporte de Capital',
+        monto: 3790.02,
+        metodoPago: 'EFECTIVO / TRANSFERENCIA PROPIA',
+        notas: 'Inversión inicial cubierta al 100% con fondos propios de Víctor para la puesta en marcha del taller',
+        fecha: new Date('2026-08-01T10:00:00Z')
+      },
+      {
+        cliente: 'Banco (Préstamo Bancario)',
+        concepto: 'Desembolso Préstamo Capital de Trabajo (24 cuotas)',
+        categoria: 'Préstamo Bancario / Financiamiento',
+        monto: 8000.00,
+        metodoPago: 'TRANSFERENCIA_BCP',
+        notas: 'Préstamo de S/ 8,000 a 24 cuotas con TEA 8.70% (Cuota mensual estimada S/ 363.10)',
+        fecha: new Date('2026-08-10T10:00:00Z')
+      }
+    ]
+  })
 
   console.log('Seed exitoso!')
 }

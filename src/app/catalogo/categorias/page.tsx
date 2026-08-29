@@ -4,12 +4,11 @@ import { CatalogoClient } from '@/components/catalogo/CatalogoClient'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CatalogoPage() {
+export default async function CategoriasPage() {
   const [productos, categorias] = await Promise.all([
     getProductos(),
     getCategorias(),
   ])
 
-  return <CatalogoClient productos={productos} categoriasIniciales={categorias} />
+  return <CatalogoClient productos={productos} categoriasIniciales={categorias} initialTab="categorias" />
 }
-

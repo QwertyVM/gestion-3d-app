@@ -1,10 +1,5 @@
-import { getInversiones } from '@/actions/inversiones'
-import { InversionesClient } from '@/components/inversiones/InversionesClient'
+import { redirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
-export default async function InversionesPage() {
-  const inversiones = await getInversiones()
-
-  return <InversionesClient inversiones={inversiones} />
+export default function InversionesRedirectPage() {
+  redirect('/finanzas/flujo-caja')
 }
