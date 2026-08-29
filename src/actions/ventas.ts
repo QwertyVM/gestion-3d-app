@@ -74,6 +74,16 @@ export async function getVentas() {
   }))
 }
 
+function parseDateInput(fecha?: string | Date) {
+  if (!fecha) return undefined
+  if (fecha instanceof Date) return fecha
+  if (typeof fecha === 'string') {
+    if (fecha.includes('T')) return new Date(fecha)
+    return new Date(`${fecha}T12:00:00.000Z`)
+  }
+  return new Date(fecha)
+}
+
 export async function createVenta(data: {
   cliente: string
   productoId: string
@@ -87,6 +97,7 @@ export async function createVenta(data: {
   diaEntregaPrometida?: string
   destinoEnvio?: string
   canalVenta?: string
+  fecha?: string | Date
 }) {
   const total = data.cantidad * data.precioUnitario
   const saldoPendiente = total - data.montoPagado
@@ -114,6 +125,7 @@ export async function createVenta(data: {
       diaEntregaPrometida: data.diaEntregaPrometida,
       destinoEnvio: data.destinoEnvio,
       canalVenta: data.canalVenta,
+      fecha: parseDateInput(data.fecha) || new Date(),
     }
   })
 
@@ -130,6 +142,96 @@ export async function createVenta(data: {
     fecha: venta.fecha.toISOString(),
     createdAt: venta.createdAt.toISOString(),
     updatedAt: venta.updatedAt.toISOString(),
+  }
+}
+
+export async function updateVenta(id: string, data: {
+  cliente?: string
+  productoId?: string
+  cantidad?: number
+  tipoPrecio?: TipoPrecio
+  precioUnitario?: number
+  montoPagado?: number
+  costoPackaging?: number
+  porcentajeAdicional?: number
+  estado?: EstadoVenta
+  diaEntregaPrometida?: string | null
+  destinoEnvio?: string | null
+  canalVenta?: string | null
+  fecha?: string | Date
+}) {
+  const current = await prisma.venta.findUnique({ where: { id }, include: { producto: true } })
+  if (!current) throw new Error("Venta no encontrada")
+
+  const cantidad = data.cantidad !== undefined ? data.cantidad : current.cantidad
+  const precioUnitario = data.precioUnitario !== undefined ? data.precioUnitario : Number(current.precioUnitario)
+  const total = cantidad * precioUnitario
+  const montoPagado = data.montoPagado !== undefined ? data.montoPagado : Number(current.montoPagado)
+  const saldoPendiente = Math.max(0, total - montoPagado)
+
+  let productoId = current.productoId
+  let nombreSnapshot = current.nombreProductoSnapshot
+  let costoSnapshot = current.costoBaseSnapshot
+
+  if (data.productoId && data.productoId !== current.productoId) {
+    const newProd = await prisma.producto.findUnique({ where: { id: data.productoId } })
+    if (newProd) {
+      productoId = newProd.id
+      nombreSnapshot = newProd.nombreModelo
+      costoSnapshot = newProd.costoBase
+    }
+  }
+
+  const updated = await prisma.venta.update({
+    where: { id },
+    data: {
+      cliente: data.cliente !== undefined ? data.cliente : current.cliente,
+      productoId,
+      nombreProductoSnapshot: nombreSnapshot,
+      costoBaseSnapshot: costoSnapshot,
+      cantidad,
+      tipoPrecio: data.tipoPrecio !== undefined ? data.tipoPrecio : current.tipoPrecio,
+      precioUnitario,
+      total,
+      montoPagado,
+      saldoPendiente,
+      costoPackaging: data.costoPackaging !== undefined ? data.costoPackaging : current.costoPackaging,
+      porcentajeAdicional: data.porcentajeAdicional !== undefined ? data.porcentajeAdicional : current.porcentajeAdicional,
+      estado: data.estado !== undefined ? data.estado : current.estado,
+      diaEntregaPrometida: data.diaEntregaPrometida !== undefined ? data.diaEntregaPrometida : current.diaEntregaPrometida,
+      destinoEnvio: data.destinoEnvio !== undefined ? data.destinoEnvio : current.destinoEnvio,
+      canalVenta: data.canalVenta !== undefined ? data.canalVenta : current.canalVenta,
+      fecha: data.fecha ? parseDateInput(data.fecha) : undefined,
+    },
+    include: {
+      producto: true
+    }
+  })
+
+  safeRevalidate()
+
+  return {
+    ...updated,
+    precioUnitario: Number(updated.precioUnitario),
+    total: Number(updated.total),
+    montoPagado: Number(updated.montoPagado),
+    saldoPendiente: Number(updated.saldoPendiente),
+    costoPackaging: updated.costoPackaging ? Number(updated.costoPackaging) : 0,
+    porcentajeAdicional: updated.porcentajeAdicional ? Number(updated.porcentajeAdicional) : 0,
+    costoBaseSnapshot: updated.costoBaseSnapshot != null ? Number(updated.costoBaseSnapshot) : (updated.producto ? Number(updated.producto.costoBase) : 0),
+    nombreProductoSnapshot: updated.nombreProductoSnapshot || updated.producto?.nombreModelo || '',
+    fecha: updated.fecha.toISOString(),
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
+    producto: {
+      ...updated.producto,
+      costoBase: Number(updated.producto.costoBase),
+      precioAmigos: Number(updated.producto.precioAmigos),
+      precioMercado: Number(updated.producto.precioMercado),
+      precioComunidad: Number(updated.producto.precioComunidad),
+      createdAt: updated.producto.createdAt.toISOString(),
+      updatedAt: updated.producto.updatedAt.toISOString(),
+    }
   }
 }
 

@@ -41,7 +41,7 @@ interface EgresosClientProps {
   tags?: TagInsumoItem[]
 }
 
-const ITEMS_PER_PAGE = 7
+const ITEMS_PER_PAGE = 5
 
 // Categorías principales de gasto con metadatos visuales
 const CATEGORIAS_CONFIG = [
@@ -126,6 +126,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
   const [formCantidad, setFormCantidad] = useState('1')
   const [formCostoUnitario, setFormCostoUnitario] = useState('')
   const [formCostoEnvio, setFormCostoEnvio] = useState('0')
+  const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
 
   // Obtener estilo de color asignado a un tag
   const getTagColor = (tagText?: string | null) => {
@@ -220,18 +221,20 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
       .reduce((acc, e) => acc + e.costoTotal, 0)
   }, [items])
 
-  // Filtered List
+  // Filtered & Sorted List (Descendente por fecha de creación createdAt)
   const filteredEgresos = useMemo(() => {
-    return items.filter(eg => {
-      const matchSearch = 
-        eg.itemConcepto.toLowerCase().includes(search.toLowerCase()) ||
-        (eg.subcategoria && eg.subcategoria.toLowerCase().includes(search.toLowerCase()))
+    return items
+      .filter(eg => {
+        const matchSearch = 
+          eg.itemConcepto.toLowerCase().includes(search.toLowerCase()) ||
+          (eg.subcategoria && eg.subcategoria.toLowerCase().includes(search.toLowerCase()))
 
-      const matchCat = categoriaFilter === 'TODOS' || eg.categoria === categoriaFilter
-      const matchTag = tagFilter === 'TODOS' || eg.subcategoria?.trim().toLowerCase() === tagFilter.trim().toLowerCase()
+        const matchCat = categoriaFilter === 'TODOS' || eg.categoria === categoriaFilter
+        const matchTag = tagFilter === 'TODOS' || eg.subcategoria?.trim().toLowerCase() === tagFilter.trim().toLowerCase()
 
-      return matchSearch && matchCat && matchTag
-    })
+        return matchSearch && matchCat && matchTag
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [items, search, categoriaFilter, tagFilter])
 
   // Pagination
@@ -262,6 +265,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     setFormCantidad('1')
     setFormCostoUnitario('')
     setFormCostoEnvio('0')
+    setFormFecha(new Date().toISOString().split('T')[0])
     setOpenModal(true)
   }
 
@@ -278,6 +282,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     setFormCantidad(eg.cantidad.toString())
     setFormCostoUnitario(eg.costoUnitario.toString())
     setFormCostoEnvio(eg.costoEnvio ? eg.costoEnvio.toString() : '0')
+    setFormFecha(eg.createdAt ? new Date(eg.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])
     setOpenEditModal(true)
   }
 
@@ -314,6 +319,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
         cantidad: parseInt(formCantidad) || 1,
         costoUnitario: parseFloat(formCostoUnitario) || 0,
         costoEnvio: parseFloat(formCostoEnvio) || 0,
+        fecha: formFecha || undefined,
       })
 
       setItems(prev => [created as any, ...prev])
@@ -348,6 +354,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
         cantidad: parseInt(formCantidad) || 1,
         costoUnitario: parseFloat(formCostoUnitario) || 0,
         costoEnvio: parseFloat(formCostoEnvio) || 0,
+        fecha: formFecha || undefined,
       })
 
       setItems(prev => prev.map(item => item.id === editingItem.id ? (updated as any) : item))
@@ -806,7 +813,22 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
               </div>
             </div>
 
-            {/* 2. Concepto / Nombre del Insumo (ARRIBA DEL TAG) */}
+            {/* 2. Fecha del Registro / Compra */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
+                <span>Fecha del Egreso <span className="text-[#A36F4C]">*</span></span>
+                <span className="text-[11px] text-[#75695D] font-normal">Modificable</span>
+              </Label>
+              <Input 
+                type="date"
+                value={formFecha}
+                onChange={(e) => setFormFecha(e.target.value)}
+                required
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+              />
+            </div>
+
+            {/* 3. Concepto / Nombre del Insumo (ARRIBA DEL TAG) */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold text-[#241C15]">
                 Concepto / Nombre del Insumo <span className="text-[#A36F4C]">*</span>
@@ -1075,7 +1097,22 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
               </div>
             </div>
 
-            {/* 2. Concepto / Nombre del Insumo (ARRIBA DEL TAG) */}
+            {/* 2. Fecha del Registro / Compra */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
+                <span>Fecha del Egreso <span className="text-[#A36F4C]">*</span></span>
+                <span className="text-[11px] text-[#75695D] font-normal">Modificable</span>
+              </Label>
+              <Input 
+                type="date"
+                value={formFecha}
+                onChange={(e) => setFormFecha(e.target.value)}
+                required
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+              />
+            </div>
+
+            {/* 3. Concepto / Nombre del Insumo (ARRIBA DEL TAG) */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold text-[#241C15]">
                 Concepto / Nombre del Insumo <span className="text-[#A36F4C]">*</span>

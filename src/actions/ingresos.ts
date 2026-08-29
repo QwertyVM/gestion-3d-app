@@ -34,6 +34,16 @@ export async function getIngresos() {
   }))
 }
 
+function parseDateInput(fecha?: string | Date) {
+  if (!fecha) return undefined
+  if (fecha instanceof Date) return fecha
+  if (typeof fecha === 'string') {
+    if (fecha.includes('T')) return new Date(fecha)
+    return new Date(`${fecha}T12:00:00.000Z`)
+  }
+  return new Date(fecha)
+}
+
 export async function createIngreso(data: {
   cliente: string
   concepto: string
@@ -51,7 +61,7 @@ export async function createIngreso(data: {
       monto: data.monto,
       metodoPago: data.metodoPago || 'YAPE',
       notas: data.notas || null,
-      fecha: data.fecha ? new Date(data.fecha) : new Date(),
+      fecha: parseDateInput(data.fecha) || new Date(),
     }
   })
 
@@ -68,6 +78,47 @@ export async function createIngreso(data: {
     notas: ingreso.notas || '',
     createdAt: ingreso.createdAt.toISOString(),
     updatedAt: ingreso.updatedAt.toISOString(),
+  }
+}
+
+export async function updateIngreso(id: string, data: {
+  cliente?: string
+  concepto?: string
+  categoria?: string
+  monto?: number
+  metodoPago?: string
+  notas?: string
+  fecha?: string | Date
+}) {
+  const current = await prisma.ingreso.findUnique({ where: { id } })
+  if (!current) throw new Error("Ingreso no encontrado")
+
+  const updated = await prisma.ingreso.update({
+    where: { id },
+    data: {
+      cliente: data.cliente !== undefined ? data.cliente : current.cliente,
+      concepto: data.concepto !== undefined ? data.concepto : current.concepto,
+      categoria: data.categoria !== undefined ? data.categoria : current.categoria,
+      monto: data.monto !== undefined ? data.monto : current.monto,
+      metodoPago: data.metodoPago !== undefined ? data.metodoPago : current.metodoPago,
+      notas: data.notas !== undefined ? data.notas : current.notas,
+      fecha: data.fecha ? parseDateInput(data.fecha) : undefined,
+    }
+  })
+
+  safeRevalidate()
+
+  return {
+    id: updated.id,
+    fecha: updated.fecha.toISOString(),
+    cliente: updated.cliente,
+    concepto: updated.concepto,
+    categoria: updated.categoria,
+    monto: Number(updated.monto),
+    metodoPago: updated.metodoPago || 'YAPE',
+    notas: updated.notas || '',
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString(),
   }
 }
 

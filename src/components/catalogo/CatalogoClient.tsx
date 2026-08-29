@@ -75,7 +75,7 @@ interface CatalogoClientProps {
   initialTab?: 'productos' | 'categorias'
 }
 
-const ITEMS_PER_PAGE = 7
+const ITEMS_PER_PAGE = 5
 
 export function CatalogoClient({ 
   productos, 
@@ -934,7 +934,7 @@ export function CatalogoClient({
                     No se encontraron categorías registradas.
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#E2D9CC]/70">
+                  <div className="divide-y divide-[#E2D9CC]/70 max-h-[360px] overflow-y-auto">
                     {filteredCategorias.map((cat) => {
                       const isEditing = editingCatId === cat.id
                       const prodCount = productos.filter(p => p.lineaCategoria === cat.nombre).length

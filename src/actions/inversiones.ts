@@ -35,6 +35,16 @@ export async function getInversiones() {
   }))
 }
 
+function parseDateInput(fecha?: string | Date) {
+  if (!fecha) return undefined
+  if (fecha instanceof Date) return fecha
+  if (typeof fecha === 'string') {
+    if (fecha.includes('T')) return new Date(fecha)
+    return new Date(`${fecha}T12:00:00.000Z`)
+  }
+  return new Date(fecha)
+}
+
 export async function createInversion(data: {
   persona?: string
   categoria: CategoriaInversion
@@ -46,6 +56,7 @@ export async function createInversion(data: {
   costoUnitario: number
   costoEnvio?: number
   numeroCuotas?: number | null
+  fecha?: string | Date
 }) {
   const costoTotal = (data.cantidad * data.costoUnitario) + (data.costoEnvio || 0)
   
@@ -82,7 +93,8 @@ export async function createInversion(data: {
       costoTotal,
       costoPorGramo,
       numeroCuotas: data.numeroCuotas,
-      montoCuota
+      montoCuota,
+      createdAt: parseDateInput(data.fecha)
     }
   })
 
@@ -112,6 +124,7 @@ export async function updateInversion(id: string, data: {
   costoUnitario?: number
   costoEnvio?: number
   numeroCuotas?: number | null
+  fecha?: string | Date
 }) {
   const current = await prisma.inversion.findUnique({ where: { id } })
   if (!current) throw new Error("Registro de egreso no encontrado")
@@ -159,7 +172,8 @@ export async function updateInversion(id: string, data: {
       costoTotal,
       costoPorGramo,
       numeroCuotas: data.numeroCuotas !== undefined ? data.numeroCuotas : current.numeroCuotas,
-      montoCuota
+      montoCuota,
+      createdAt: data.fecha ? parseDateInput(data.fecha) : undefined
     }
   })
 

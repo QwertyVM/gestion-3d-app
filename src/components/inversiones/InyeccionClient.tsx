@@ -30,7 +30,7 @@ interface InyeccionClientProps {
   inversiones: InversionItem[]
 }
 
-const ITEMS_PER_PAGE = 7
+const ITEMS_PER_PAGE = 5
 
 export function InyeccionClient({ inversiones }: InyeccionClientProps) {
   const [search, setSearch] = useState('')
@@ -70,17 +70,19 @@ export function InyeccionClient({ inversiones }: InyeccionClientProps) {
 
   const totalInvertido = totalAportesCapital + totalActivoFijo
 
-  // Filtered List
+  // Filtered & Sorted List
   const filteredInyecciones = useMemo(() => {
-    return inyecciones.filter(inv => {
-      const matchSearch = 
-        inv.itemConcepto.toLowerCase().includes(search.toLowerCase()) ||
-        inv.persona.toLowerCase().includes(search.toLowerCase())
+    return inyecciones
+      .filter(inv => {
+        const matchSearch = 
+          inv.itemConcepto.toLowerCase().includes(search.toLowerCase()) ||
+          inv.persona.toLowerCase().includes(search.toLowerCase())
 
-      const matchTipo = tipoFilter === 'TODOS' || inv.categoria === tipoFilter
+        const matchTipo = tipoFilter === 'TODOS' || inv.categoria === tipoFilter
 
-      return matchSearch && matchTipo
-    })
+        return matchSearch && matchTipo
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [inyecciones, search, tipoFilter])
 
   // Pagination
@@ -90,7 +92,10 @@ export function InyeccionClient({ inversiones }: InyeccionClientProps) {
     return filteredInyecciones.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredInyecciones, currentPage])
 
+  const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
+
   const handleOpenCreate = () => {
+    setFormFecha(new Date().toISOString().split('T')[0])
     setFormPersona('Víctor')
     setFormCategoria('ACTIVO_FIJO')
     setFormConcepto('')
@@ -111,6 +116,7 @@ export function InyeccionClient({ inversiones }: InyeccionClientProps) {
     setIsSubmitting(true)
     try {
       await createInversion({
+        fecha: formFecha || undefined,
         persona: formPersona.trim() || 'Víctor',
         categoria: formCategoria,
         itemConcepto: formConcepto.trim(),
@@ -421,7 +427,18 @@ export function InyeccionClient({ inversiones }: InyeccionClientProps) {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-zinc-400">Fecha *</Label>
+                <Input 
+                  type="date"
+                  value={formFecha}
+                  onChange={(e) => setFormFecha(e.target.value)}
+                  required
+                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-xs text-zinc-400">Tipo de Registro *</Label>
                 <select
@@ -429,17 +446,17 @@ export function InyeccionClient({ inversiones }: InyeccionClientProps) {
                   onChange={(e) => setFormCategoria(e.target.value as any)}
                   className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                 >
-                  <option value="ACTIVO_FIJO">Activo Fijo (Maquinaria/Equipo)</option>
-                  <option value="APORTE_CAPITAL">Aporte Directo de Capital</option>
+                  <option value="ACTIVO_FIJO">Activo Fijo</option>
+                  <option value="APORTE_CAPITAL">Aporte Capital</option>
                 </select>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Persona / Aportante *</Label>
+                <Label className="text-xs text-zinc-400">Persona *</Label>
                 <Input 
                   value={formPersona}
                   onChange={(e) => setFormPersona(e.target.value)}
-                  placeholder="Ej: Víctor"
+                  placeholder="Víctor"
                   required
                   className="bg-zinc-900 border-zinc-700 text-white text-sm"
                 />

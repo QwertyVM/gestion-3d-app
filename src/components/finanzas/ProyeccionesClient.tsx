@@ -853,7 +853,7 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
             </div>
           </CardHeader>
 
-          <div className="overflow-x-auto scrollbar-thin">
+          <div className="overflow-x-auto max-h-[350px] overflow-y-auto scrollbar-thin">
             <Table className="w-full min-w-[700px]">
               <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent text-xs">

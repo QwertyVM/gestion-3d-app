@@ -27,13 +27,17 @@ import {
   Loader2,
   Tag,
   ArrowDownRight,
-  Minus
+  Minus,
+  Trash2,
+  Calendar
 } from 'lucide-react'
 import { 
   updateEstadoVenta, 
   registrarAbono, 
   liquidarSaldoTotal, 
-  createVenta 
+  createVenta,
+  deleteVenta,
+  updateVenta
 } from '@/actions/ventas'
 import { toast } from 'sonner'
 import { EstadoVenta, TipoPrecio } from '@prisma/client'
@@ -90,7 +94,7 @@ interface VentasClientProps {
   promedioPackaging?: number
 }
 
-const ITEMS_PER_PAGE = 7
+const ITEMS_PER_PAGE = 5
 
 export function VentasClient({ 
   ventas, 
@@ -120,6 +124,7 @@ export function VentasClient({
   const [montoAbono, setMontoAbono] = useState('')
 
   // Create order form state
+  const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
   const [formCliente, setFormCliente] = useState('')
   const [formProductoId, setFormProductoId] = useState(productos[0]?.id || '')
   const [formCantidad, setFormCantidad] = useState('1')
@@ -274,6 +279,27 @@ export function VentasClient({
     }
   }
 
+  // Delete Sale / Order
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const handleDeleteVenta = async (id: string, cliente?: string) => {
+    if (confirm(`¿Estás seguro de que deseas eliminar permanentemente el pedido de "${cliente || 'este cliente'}"? Esta acción no se puede deshacer.`)) {
+      try {
+        setDeletingId(id)
+        await deleteVenta(id)
+        setItems(prev => prev.filter(v => v.id !== id))
+        toast.success(`Pedido de ${cliente || 'cliente'} eliminado correctamente`)
+        setOpenDetailsModal(false)
+        router.refresh()
+      } catch (err: any) {
+        console.error(err)
+        toast.error(err?.message || 'Error al eliminar el pedido')
+      } finally {
+        setDeletingId(null)
+      }
+    }
+  }
+
   // Open Abono Modal
   const handleOpenAbono = (v: VentaItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
@@ -384,10 +410,26 @@ export function VentasClient({
     }
   }
 
+  // Update Sale Date
+  const handleUpdateFechaVenta = async (id: string, newFechaStr: string) => {
+    if (!newFechaStr) return
+    try {
+      const updated = await updateVenta(id, { fecha: newFechaStr })
+      setItems(prev => prev.map(v => v.id === id ? { ...v, fecha: updated.fecha } : v))
+      setSelectedVenta(prev => prev ? { ...prev, fecha: updated.fecha } : null)
+      toast.success('Fecha de pedido actualizada correctamente')
+      router.refresh()
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err?.message || 'Error al actualizar la fecha')
+    }
+  }
+
   // Open Create Modal
   const handleOpenCreate = () => {
     const firstProd = productos[0]
     const defaultPrice = firstProd?.precioComunidad || 135
+    setFormFecha(new Date().toISOString().split('T')[0])
     setFormCliente('')
     setFormProductoId(firstProd?.id || '')
     setFormCantidad('1')
@@ -425,6 +467,7 @@ export function VentasClient({
     setIsSubmitting(true)
     try {
       const created = await createVenta({
+        fecha: formFecha || undefined,
         cliente: formCliente.trim(),
         productoId: formProductoId,
         cantidad: parseInt(formCantidad) || 1,
@@ -635,7 +678,7 @@ export function VentasClient({
               <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Estado Pedido</TableHead>
               <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Total</TableHead>
               <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Cobranza / Saldo</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Acciones de Pago</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -738,35 +781,52 @@ export function VentasClient({
                       </div>
                     </TableCell>
 
-                    {/* Acciones de Pago */}
+                    {/* Acciones */}
                     <TableCell className="px-4 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      {isPaid ? (
-                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs gap-1 font-bold">
-                          <Check className="h-3 w-3 stroke-[2.5]" />
-                          Pagado
-                        </Badge>
-                      ) : (
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Button
-                            size="sm"
-                            onClick={(e) => handleOpenAbono(v, e)}
-                            className="h-7 px-2.5 bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                            title="Registrar abono de dinero"
-                          >
-                            <DollarSign className="h-3.5 w-3.5 mr-0.5" />
-                            Abonar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={(e) => handleLiquidarTotal(v.id, e)}
-                            className="h-7 px-2.5 bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                            title="Marcar como 100% Pagado"
-                          >
-                            <Check className="h-3.5 w-3.5 mr-0.5 stroke-[2.5]" />
-                            Ya pagó
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-center gap-1.5">
+                        {isPaid ? (
+                          <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs gap-1 font-bold py-1">
+                            <Check className="h-3 w-3 stroke-[2.5]" />
+                            Pagado
+                          </Badge>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={(e) => handleOpenAbono(v, e)}
+                              className="h-7 px-2.5 bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+                              title="Registrar abono de dinero"
+                            >
+                              <DollarSign className="h-3.5 w-3.5 mr-0.5" />
+                              Abonar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={(e) => handleLiquidarTotal(v.id, e)}
+                              className="h-7 px-2.5 bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+                              title="Marcar como 100% Pagado"
+                            >
+                              <Check className="h-3.5 w-3.5 mr-0.5 stroke-[2.5]" />
+                              Ya pagó
+                            </Button>
+                          </>
+                        )}
+
+                        {/* Botón Eliminar Pedido */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteVenta(v.id, v.cliente)
+                          }}
+                          disabled={deletingId === v.id}
+                          className="h-7 w-7 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                          title="Eliminar pedido / venta"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
@@ -874,6 +934,21 @@ export function VentasClient({
               </div>
 
               <div className="p-6 space-y-4">
+                {/* Fecha del Pedido modificable */}
+                <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-[#A36F4C]" />
+                    <span className="font-bold text-[#241C15]">Fecha de Venta:</span>
+                  </div>
+                  <input
+                    type="date"
+                    value={selectedVenta.fecha ? new Date(selectedVenta.fecha).toISOString().split('T')[0] : ''}
+                    onChange={(e) => handleUpdateFechaVenta(selectedVenta.id, e.target.value)}
+                    className="bg-[#FFFFFF] border border-[#DCD3C6] text-[#241C15] font-mono text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-[#A36F4C] cursor-pointer"
+                    title="Modificar fecha del pedido"
+                  />
+                </div>
+
                 {/* Resumen Financiero */}
                 <div className="grid grid-cols-3 gap-3 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
                   <div>
@@ -965,44 +1040,58 @@ export function VentasClient({
                   </div>
                 </div>
 
-                {/* Botones de Gestión de Pago */}
+                {/* Botones de Gestión de Pago y Acciones */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-[#E2D9CC]">
-                  {selectedVenta.saldoPendiente > 0 ? (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setMontoAbono(selectedVenta.saldoPendiente.toString())
-                          setOpenAbonoModal(true)
-                        }}
-                        className="bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                      >
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        Registrar Abono
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => handleLiquidarTotal(selectedVenta.id)}
-                        className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                      >
-                        <Check className="h-4 w-4 mr-1 stroke-[2.5]" />
-                        Liquidar 100% (Ya Pagó)
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
-                      <CheckCircle2 className="h-4 w-4" /> Pago Completado
-                    </span>
-                  )}
-
+                  {/* Botón de eliminar en el modal */}
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => setOpenDetailsModal(false)}
-                    className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs rounded-xl cursor-pointer font-medium"
+                    onClick={() => handleDeleteVenta(selectedVenta.id, selectedVenta.cliente)}
+                    disabled={deletingId === selectedVenta.id}
+                    className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs font-bold rounded-xl cursor-pointer self-start sm:self-auto"
                   >
-                    Cerrar
+                    <Trash2 className="h-4 w-4 mr-1.5" />
+                    Eliminar Pedido
                   </Button>
+
+                  <div className="flex items-center gap-2">
+                    {selectedVenta.saldoPendiente > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setMontoAbono(selectedVenta.saldoPendiente.toString())
+                            setOpenAbonoModal(true)
+                          }}
+                          className="bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+                        >
+                          <DollarSign className="h-4 w-4 mr-1" />
+                          Registrar Abono
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => handleLiquidarTotal(selectedVenta.id)}
+                          className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+                        >
+                          <Check className="h-4 w-4 mr-1 stroke-[2.5]" />
+                          Liquidar 100% (Ya Pagó)
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
+                        <CheckCircle2 className="h-4 w-4" /> Pago Completado
+                      </span>
+                    )}
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setOpenDetailsModal(false)}
+                      className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs rounded-xl cursor-pointer font-medium"
+                    >
+                      Cerrar
+                    </Button>
+                  </div>
                 </div>
               </div>
             </>
@@ -1122,7 +1211,18 @@ export function VentasClient({
           </div>
 
           <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
+                <Input 
+                  type="date"
+                  value={formFecha}
+                  onChange={(e) => setFormFecha(e.target.value)}
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente *</Label>
                 <Input 
@@ -1139,7 +1239,7 @@ export function VentasClient({
                 <Input 
                   value={formCanalVenta}
                   onChange={(e) => setFormCanalVenta(e.target.value)}
-                  placeholder="Ej: Instagram, WhatsApp, Feria..."
+                  placeholder="Ej: Instagram, WhatsApp..."
                   className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>

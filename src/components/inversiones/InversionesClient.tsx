@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, Trash2, Loader2, X, Wallet } from 'lucide-react'
+import { Plus, Trash2, Loader2, X, Wallet, ChevronLeft, ChevronRight } from 'lucide-react'
 import { deleteInversion, createInversion } from '@/actions/inversiones'
 import { toast } from 'sonner'
 import { CategoriaInversion } from '@prisma/client'
@@ -17,22 +17,39 @@ interface InversionesClientProps {
   inversiones: any[]
 }
 
+const ITEMS_PER_PAGE = 5
+
 export function InversionesClient({ inversiones }: InversionesClientProps) {
   const [search, setSearch] = useState('')
   const [categoriaFilter, setCategoriaFilter] = useState<string>('TODOS')
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, categoriaFilter])
 
   // Form states
   const [formCategoria, setFormCategoria] = useState<CategoriaInversion>('INSUMO')
 
-  const filtered = inversiones.filter(inv => {
-    const matchSearch = inv.itemConcepto.toLowerCase().includes(search.toLowerCase()) 
-      || (inv.especificacionColor && inv.especificacionColor.toLowerCase().includes(search.toLowerCase()))
-      || (inv.persona && inv.persona.toLowerCase().includes(search.toLowerCase()))
-    const matchCat = categoriaFilter === 'TODOS' || inv.categoria === categoriaFilter
-    return matchSearch && matchCat
-  })
+  const filtered = useMemo(() => {
+    return inversiones
+      .filter(inv => {
+        const matchSearch = inv.itemConcepto.toLowerCase().includes(search.toLowerCase()) 
+          || (inv.especificacionColor && inv.especificacionColor.toLowerCase().includes(search.toLowerCase()))
+          || (inv.persona && inv.persona.toLowerCase().includes(search.toLowerCase()))
+        const matchCat = categoriaFilter === 'TODOS' || inv.categoria === categoriaFilter
+        return matchSearch && matchCat
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [inversiones, search, categoriaFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+  const paginatedInversiones = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return filtered.slice(start, start + ITEMS_PER_PAGE)
+  }, [filtered, currentPage])
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -54,6 +71,7 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
     
     try {
       await createInversion({
+        fecha: formData.get('fecha') as string || undefined,
         persona: formData.get('persona') as string,
         categoria: formCategoria,
         itemConcepto: formData.get('itemConcepto') as string,
@@ -119,10 +137,22 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Tipo de Registro</Label>
-              <select 
-                name="categoria"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
+                <Input 
+                  type="date"
+                  name="fecha"
+                  defaultValue={new Date().toISOString().split('T')[0]}
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Tipo de Registro</Label>
+                <select 
+                  name="categoria"
                 value={formCategoria}
                 onChange={(e) => setFormCategoria(e.target.value as CategoriaInversion)}
                 className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:border-[#A36F4C]"
@@ -133,6 +163,7 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
                 <option value="APORTE_CAPITAL">Aporte de Capital / Préstamo</option>
               </select>
             </div>
+          </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -249,7 +280,7 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((inv) => (
+              {paginatedInversiones.map((inv) => (
                 <TableRow key={inv.id} className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors">
                   <TableCell className="font-bold text-[#241C15] px-4 py-3">
                     {inv.itemConcepto}
@@ -287,6 +318,52 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
               ))}
             </TableBody>
           </Table>
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <div className="p-4 bg-[#FDFBF7] border-t border-[#E2D9CC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <span className="text-[#75695D]">
+                Mostrando página <strong className="text-[#241C15]">{currentPage}</strong> de <strong className="text-[#241C15]">{totalPages}</strong> ({filtered.length} registros)
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        currentPage === page
+                          ? 'bg-[#A36F4C] text-[#FFFFFF] shadow-sm'
+                          : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

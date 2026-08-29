@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
@@ -22,7 +22,9 @@ import {
   Wrench,
   Truck,
   Check,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { createTagInsumo, updateTagInsumo, deleteTagInsumo, TagInsumoItem, CategoriaTag } from '@/actions/tagsInsumos'
@@ -31,6 +33,8 @@ import { toast } from 'sonner'
 interface TagsInsumosClientProps {
   tags: TagInsumoItem[]
 }
+
+const ITEMS_PER_PAGE = 5
 
 const CATEGORIAS_TAG: { id: CategoriaTag; label: string; icon: any; desc: string }[] = [
   { id: 'INSUMO', label: 'Insumos & Materiales', icon: ShoppingBag, desc: 'Filamentos, Packaging, Consumibles' },
@@ -54,6 +58,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
   const [categoriaFilter, setCategoriaFilter] = useState<'TODOS' | CategoriaTag>('TODOS')
   const [openModal, setOpenModal] = useState(false)
   const [editingTag, setEditingTag] = useState<TagInsumoItem | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Form states
   const [formNombre, setFormNombre] = useState('')
@@ -65,15 +70,28 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
   const formatCurrency = (val: number) => 
     `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, categoriaFilter])
+
   // Filtered tags
-  const filteredTags = items.filter(t => {
-    const matchSearch = 
-      t.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      (t.descripcion && t.descripcion.toLowerCase().includes(search.toLowerCase()))
-    
-    const matchCat = categoriaFilter === 'TODOS' || t.categoria === categoriaFilter
-    return matchSearch && matchCat
-  })
+  const filteredTags = useMemo(() => {
+    return items.filter(t => {
+      const matchSearch = 
+        t.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        (t.descripcion && t.descripcion.toLowerCase().includes(search.toLowerCase()))
+      
+      const matchCat = categoriaFilter === 'TODOS' || t.categoria === categoriaFilter
+      return matchSearch && matchCat
+    })
+  }, [items, search, categoriaFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filteredTags.length / ITEMS_PER_PAGE))
+  const paginatedTags = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return filteredTags.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredTags, currentPage])
 
   const totalGastoGeneral = items.reduce((acc, t) => acc + t.gastoAcumulado, 0)
   const totalItemsRegistrados = items.reduce((acc, t) => acc + t.totalEgresos, 0)
@@ -328,7 +346,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTags.map((tag) => (
+                paginatedTags.map((tag) => (
                   <TableRow 
                     key={tag.id}
                     className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors"
@@ -403,6 +421,52 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
               )}
             </TableBody>
           </Table>
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <div className="p-4 bg-[#FDFBF7] border-t border-[#E2D9CC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <span className="text-[#75695D]">
+                Mostrando página <strong className="text-[#241C15]">{currentPage}</strong> de <strong className="text-[#241C15]">{totalPages}</strong> ({filteredTags.length} tags)
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        currentPage === page
+                          ? 'bg-[#A36F4C] text-[#FFFFFF] shadow-sm'
+                          : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 

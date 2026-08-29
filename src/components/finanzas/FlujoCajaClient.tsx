@@ -71,7 +71,7 @@ interface FlujoCajaClientProps {
   ingresosDirectos?: IngresoDirectoItem[]
 }
 
-const ITEMS_PER_PAGE = 8
+const ITEMS_PER_PAGE = 5
 
 export function FlujoCajaClient({ 
   egresos, 

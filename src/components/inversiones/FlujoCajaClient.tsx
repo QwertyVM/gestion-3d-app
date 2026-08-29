@@ -60,7 +60,7 @@ interface FlujoCajaClientProps {
   ventas: VentaItem[]
 }
 
-const ITEMS_PER_PAGE = 8
+const ITEMS_PER_PAGE = 5
 
 export function FlujoCajaClient({ inversiones, ventas }: FlujoCajaClientProps) {
   const [search, setSearch] = useState('')

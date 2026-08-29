@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -27,7 +27,9 @@ import {
   Wallet,
   Sparkles,
   FileCheck,
-  RotateCcw
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { CierreMesItem, DatosPreCierre, createCierreMes, deleteCierreMes } from '@/actions/cierres'
@@ -39,11 +41,20 @@ interface CierresClientProps {
   datosPreCierre: DatosPreCierre
 }
 
+const ITEMS_PER_PAGE = 5
+
 export function CierresClient({ cierres: initialCierres, datosPreCierre }: CierresClientProps) {
   const router = useRouter()
   const [cierres, setCierres] = useState<CierreMesItem[]>(initialCierres)
   const [openModal, setOpenModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const totalPages = Math.max(1, Math.ceil(cierres.length / ITEMS_PER_PAGE))
+  const paginatedCierres = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    return cierres.slice(start, start + ITEMS_PER_PAGE)
+  }, [cierres, currentPage])
 
   // Wizard state (Paso 1: Rendimiento, Paso 2: Arqueo, Paso 3: Blindaje)
   const [pasoWizard, setPasoWizard] = useState<1 | 2 | 3>(1)
@@ -274,89 +285,137 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
             </Button>
           </div>
         ) : (
-          <div className="divide-y divide-[#E2D9CC]/70">
-            {cierres.map((c) => (
-              <div key={c.id} className="p-5 hover:bg-[#FDFBF7] transition-colors space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#633E20]">
-                      <Calendar className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-base text-[#241C15]">{c.nombrePeriodo}</span>
-                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold">
-                          Cierre Oficial
-                        </Badge>
+          <>
+            <div className="divide-y divide-[#E2D9CC]/70">
+              {paginatedCierres.map((c) => (
+                <div key={c.id} className="p-5 hover:bg-[#FDFBF7] transition-colors space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#633E20]">
+                        <Calendar className="h-5 w-5" />
                       </div>
-                      <span className="text-xs text-[#75695D]">
-                        Cerrado el {formatDate(c.fechaCierre)} • {c.totalPedidosMes} pedidos producidos
-                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-base text-[#241C15]">{c.nombrePeriodo}</span>
+                          <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold">
+                            Cierre Oficial
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-[#75695D]">
+                          Cerrado el {formatDate(c.fechaCierre)} • {c.totalPedidosMes} pedidos producidos
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDeleteCierre(c.id, c.nombrePeriodo)}
+                        className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs rounded-xl cursor-pointer"
+                        title="Eliminar registro de prueba"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        Eliminar Prueba
+                      </Button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDeleteCierre(c.id, c.nombrePeriodo)}
-                      className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs rounded-xl cursor-pointer"
-                      title="Eliminar registro de prueba"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />
-                      Eliminar Prueba
-                    </Button>
+                  {/* Grid de métricas del cierre */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+                      <span className="text-[11px] text-[#75695D] block font-medium">Ingresos Cobrados:</span>
+                      <span className="text-sm font-bold font-mono text-[#1E5E3A]">+{formatCurrency(c.totalIngresos)}</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+                      <span className="text-[11px] text-[#75695D] block font-medium">Egresos Totales:</span>
+                      <span className="text-sm font-bold font-mono text-[#944917]">-{formatCurrency(c.totalEgresos)}</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+                      <span className="text-[11px] text-[#75695D] block font-medium">Fondos Blindados:</span>
+                      <span className="text-sm font-bold font-mono text-[#633E20]">{formatCurrency(c.totalFondosBlindados)}</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#F4FAF5] border border-[#B4E3C0]">
+                      <span className="text-[11px] text-[#1E5E3A] block font-bold">Liquidez Libre de Cierre:</span>
+                      <span className="text-sm font-extrabold font-mono text-[#1E5E3A]">{formatCurrency(c.liquidezLibreFinal)}</span>
+                    </div>
                   </div>
+
+                  {/* Conciliación bancaria */}
+                  <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-[#1E5E3A]" />
+                      <span className="text-[#241C15] font-bold">Conciliación Bancaria:</span>
+                      <span className="font-mono text-[#75695D]">BCP: {formatCurrency(c.saldoRealBCP)} | Yape: {formatCurrency(c.saldoRealYape)}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`font-mono text-[10px] font-bold ${
+                        c.descuadreCaja === 0 ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]' : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
+                      }`}>
+                        Descuadre: {formatCurrency(c.descuadreCaja)}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {c.notas && (
+                    <p className="text-xs text-[#75695D] bg-[#FFFFFF] p-2.5 rounded-xl border border-[#E2D9CC]">
+                      <strong>Notas del cierre:</strong> {c.notas}
+                    </p>
+                  )}
                 </div>
+              ))}
+            </div>
 
-                {/* Grid de métricas del cierre */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                  <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-                    <span className="text-[11px] text-[#75695D] block font-medium">Ingresos Cobrados:</span>
-                    <span className="text-sm font-bold font-mono text-[#1E5E3A]">+{formatCurrency(c.totalIngresos)}</span>
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="p-4 bg-[#FDFBF7] border-t border-[#E2D9CC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <span className="text-[#75695D]">
+                  Mostrando página <strong className="text-[#241C15]">{currentPage}</strong> de <strong className="text-[#241C15]">{totalPages}</strong> ({cierres.length} periodos)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Anterior
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          currentPage === page
+                            ? 'bg-[#A36F4C] text-[#FFFFFF] shadow-sm'
+                            : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
                   </div>
-
-                  <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-                    <span className="text-[11px] text-[#75695D] block font-medium">Egresos Totales:</span>
-                    <span className="text-sm font-bold font-mono text-[#944917]">-{formatCurrency(c.totalEgresos)}</span>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-                    <span className="text-[11px] text-[#75695D] block font-medium">Fondos Blindados:</span>
-                    <span className="text-sm font-bold font-mono text-[#633E20]">{formatCurrency(c.totalFondosBlindados)}</span>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-[#F4FAF5] border border-[#B4E3C0]">
-                    <span className="text-[11px] text-[#1E5E3A] block font-bold">Liquidez Libre de Cierre:</span>
-                    <span className="text-sm font-extrabold font-mono text-[#1E5E3A]">{formatCurrency(c.liquidezLibreFinal)}</span>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+                  >
+                    Siguiente
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
                 </div>
-
-                {/* Conciliación bancaria */}
-                <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[#1E5E3A]" />
-                    <span className="text-[#241C15] font-bold">Conciliación Bancaria:</span>
-                    <span className="font-mono text-[#75695D]">BCP: {formatCurrency(c.saldoRealBCP)} | Yape: {formatCurrency(c.saldoRealYape)}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={`font-mono text-[10px] font-bold ${
-                      c.descuadreCaja === 0 ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]' : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
-                    }`}>
-                      Descuadre: {formatCurrency(c.descuadreCaja)}
-                    </Badge>
-                  </div>
-                </div>
-
-                {c.notas && (
-                  <p className="text-xs text-[#75695D] bg-[#FFFFFF] p-2.5 rounded-xl border border-[#E2D9CC]">
-                    <strong>Notas del cierre:</strong> {c.notas}
-                  </p>
-                )}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </Card>
 

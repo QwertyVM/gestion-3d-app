@@ -23,9 +23,10 @@ import {
   Loader2,
   Landmark,
   CreditCard,
-  Tag
+  Tag,
+  Pencil
 } from 'lucide-react'
-import { createIngreso, deleteIngreso } from '@/actions/ingresos'
+import { createIngreso, deleteIngreso, updateIngreso } from '@/actions/ingresos'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -37,7 +38,7 @@ interface IngresosClientProps {
   ingresosDirectos: IngresoDirectoItem[]
 }
 
-const ITEMS_PER_PAGE = 7
+const ITEMS_PER_PAGE = 5
 
 export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps) {
   const router = useRouter()
@@ -54,6 +55,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
   const [currentPage, setCurrentPage] = useState(1)
 
   // Form states
+  const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
   const [formCliente, setFormCliente] = useState('')
   const [formConcepto, setFormConcepto] = useState('')
   const [formCategoria, setFormCategoria] = useState('Servicio de Impresión 3D')
@@ -160,6 +162,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
   }, [filteredIngresos, currentPage])
 
   const handleOpenCreate = () => {
+    setFormFecha(new Date().toISOString().split('T')[0])
     setFormCliente('')
     setFormConcepto('')
     setFormCategoria('Servicio de Impresión 3D')
@@ -179,6 +182,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
     setIsSubmitting(true)
     try {
       const created = await createIngreso({
+        fecha: formFecha || undefined,
         cliente: formCliente.trim(),
         concepto: formConcepto.trim(),
         categoria: formCategoria,
@@ -506,15 +510,28 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
           </div>
 
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Empresa *</Label>
-              <Input 
-                value={formCliente}
-                onChange={(e) => setFormCliente(e.target.value)}
-                placeholder="Ej: Juan Pérez / Empresa ABC"
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
+                <Input 
+                  type="date"
+                  value={formFecha}
+                  onChange={(e) => setFormFecha(e.target.value)}
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Empresa *</Label>
+                <Input 
+                  value={formCliente}
+                  onChange={(e) => setFormCliente(e.target.value)}
+                  placeholder="Ej: Juan Pérez / Empresa ABC"
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">

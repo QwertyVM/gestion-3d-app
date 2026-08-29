@@ -3,44 +3,79 @@ import { PrismaClient, CategoriaInversion, EstadoVenta, TipoPrecio } from '@pris
 const prisma = new PrismaClient()
 
 async function main() {
-  // Limpiar datos previos si se desea ejecutar el seed de cero
-  await prisma.inversion.deleteMany()
+  console.log('Restaurando data completa al estado de ayer a las 10:29 PM...')
 
-  // 1. Inversiones Base
-  await prisma.inversion.createMany({
-    data: [
-      { persona: 'Víctor', categoria: CategoriaInversion.ACTIVO_FIJO, itemConcepto: 'Impresora 3D', especificacionColor: 'Equipo Principal', presentacion: 'Unidad', cantidad: 1, costoUnitario: 2099, costoEnvio: 0, costoTotal: 2099 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA', especificacionColor: 'Color Mate', presentacion: 'Bobina 1Kg', cantidad: 1, costoUnitario: 75.59, costoEnvio: 0, costoTotal: 75.59, costoPorGramo: 0.0756 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA', especificacionColor: 'Negro', presentacion: 'Bobina 1Kg', cantidad: 1, costoUnitario: 75.59, costoEnvio: 0, costoTotal: 75.59, costoPorGramo: 0.0756 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA', especificacionColor: 'Verde Agua', presentacion: 'Bobina 1Kg', cantidad: 1, costoUnitario: 75.59, costoEnvio: 0, costoTotal: 75.59, costoPorGramo: 0.0756 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Blanco Hueso', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 7, costoTotal: 67, costoPorGramo: 0.067 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Carbón', presentacion: 'Con Bobina Reutilizable (BR) 1Kg', cantidad: 1, costoUnitario: 79, costoEnvio: 7, costoTotal: 86, costoPorGramo: 0.086 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Gris Ceniza', presentacion: 'Con Bobina Reutilizable (BR) 1Kg', cantidad: 1, costoUnitario: 79, costoEnvio: 7, costoTotal: 86, costoPorGramo: 0.086 },
-      { persona: 'Víctor', categoria: CategoriaInversion.ACTIVO_FIJO, itemConcepto: 'Secador de Filamento TwoTrees', especificacionColor: 'Secador de Filamento', presentacion: 'Unidad', cantidad: 1, costoUnitario: 240, costoEnvio: 0, costoTotal: 240 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Blanco Hueso', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Charcoal', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Gris Ceniza', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Lila Púrpura', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Naranja Mandarina', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Rojo Escarlata', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Verde Grass', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063 },
-      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Filamento 3D', especificacionColor: 'Sale', presentacion: 'Sin bobina', cantidad: 5, costoUnitario: 60, costoEnvio: 0, costoTotal: 300, costoPorGramo: 0.06 },
-      { persona: 'Víctor', categoria: CategoriaInversion.SERVICIO, itemConcepto: 'Publicidad', especificacionColor: '5 días', presentacion: 'Campaña', cantidad: 1, costoUnitario: 123, costoEnvio: 0, costoTotal: 123 },
-      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Cajas', especificacionColor: '-', presentacion: 'Unidad', cantidad: 3, costoUnitario: 9.9, costoEnvio: 0, costoTotal: 29.7 },
-      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Set de sticker', especificacionColor: '-', presentacion: 'Set', cantidad: 2, costoUnitario: 13, costoEnvio: 0, costoTotal: 26 },
-      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Cubierta de plástico con bolsas de aire', especificacionColor: '-', presentacion: '2 metros', cantidad: 2, costoUnitario: 5, costoEnvio: 0, costoTotal: 10 },
-      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Cajas', especificacionColor: '-', presentacion: 'Unidad', cantidad: 1, costoUnitario: 12, costoEnvio: 0, costoTotal: 12 },
-      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, itemConcepto: 'Cajas', especificacionColor: '-', presentacion: 'Unidad', cantidad: 1, costoUnitario: 18, costoEnvio: 0, costoTotal: 18 },
-      { persona: 'Víctor', categoria: CategoriaInversion.SERVICIO, itemConcepto: 'Taxi envío lince', especificacionColor: '', presentacion: '', cantidad: 1, costoUnitario: 25.55, costoEnvio: 0, costoTotal: 25.55 }
-    ]
-  })
-
-  // Limpiar ventas previas para evitar conflictos de Foreign Key al limpiar productos
+  // Limpieza en orden estricto de claves foráneas
+  await prisma.cierreMes.deleteMany()
   await prisma.venta.deleteMany()
   await prisma.producto.deleteMany()
   await prisma.categoria.deleteMany()
+  await prisma.inversion.deleteMany()
+  await prisma.tagInsumo.deleteMany()
+  await prisma.ingreso.deleteMany()
 
-  // 1.5 Categorías
+  // 1. Tags de Insumos completos (incluyendo Herramientas & Taller y Otros)
+  const tagsBase = [
+    { nombre: 'Filamento PLA', descripcion: 'Bobinas y refills de filamento PLA para impresión 3D', color: 'blue', categoria: 'INSUMO' },
+    { nombre: 'Packaging & Envíos', descripcion: 'Cajas de cartón, cinta de embalaje, plástico burbuja y stickers', color: 'amber', categoria: 'INSUMO' },
+    { nombre: 'Maquinaria & Repuestos', descripcion: 'Impresoras 3D, secadores, boquillas, placas y repuestos', color: 'purple', categoria: 'ACTIVO_FIJO' },
+    { nombre: 'Herramientas & Taller', descripcion: 'Soplete, encendedores, bisturí, alicates y herramientas de acabado', color: 'amber', categoria: 'ACTIVO_FIJO' },
+    { nombre: 'Publicidad & Marketing', descripcion: 'Campañas de anuncios Meta / Instagram Ads y contenido', color: 'pink', categoria: 'SERVICIO' },
+    { nombre: 'Logística & Envíos', descripcion: 'Movilidad local, servicios Olva / Shalom y taxis express', color: 'purple', categoria: 'SERVICIO' },
+    { nombre: 'Otros', descripcion: 'Gastos operativos y suministros generales', color: 'indigo', categoria: 'INSUMO' },
+  ]
+
+  for (const tag of tagsBase) {
+    await prisma.tagInsumo.create({ data: tag })
+  }
+
+  // 2. Inversiones / Egresos (Estado completo a las 10:29 PM con Soplete, Encendedor, Papel film, etc.)
+  const fechaEgreso = new Date('2026-08-28T22:20:00Z')
+  await prisma.inversion.createMany({
+    data: [
+      // Maquinaria & Activo Fijo Principal
+      { persona: 'Víctor', categoria: CategoriaInversion.ACTIVO_FIJO, subcategoria: 'Maquinaria & Repuestos', itemConcepto: 'Impresora 3D', especificacionColor: 'Equipo Principal', presentacion: 'Unidad', cantidad: 1, costoUnitario: 2099, costoEnvio: 0, costoTotal: 2099, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.ACTIVO_FIJO, subcategoria: 'Maquinaria & Repuestos', itemConcepto: 'Secador de Filamento TwoTrees', especificacionColor: 'Secador de Filamento', presentacion: 'Unidad', cantidad: 1, costoUnitario: 240, costoEnvio: 0, costoTotal: 240, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.ACTIVO_FIJO, subcategoria: 'Maquinaria & Repuestos', itemConcepto: 'Separa bambu lab A2L', especificacionColor: 'Separador / Accesorio', presentacion: 'Unidad', cantidad: 1, costoUnitario: 45, costoEnvio: 0, costoTotal: 45, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.ACTIVO_FIJO, subcategoria: 'Maquinaria & Repuestos', itemConcepto: 'Maquinaria mas filamentos', especificacionColor: 'Combo taller', presentacion: 'Pack', cantidad: 1, costoUnitario: 150, costoEnvio: 0, costoTotal: 150, createdAt: fechaEgreso },
+      
+      // Herramientas & Taller (Registros de las 10:29 PM)
+      { persona: 'Víctor', categoria: CategoriaInversion.ACTIVO_FIJO, subcategoria: 'Herramientas & Taller', itemConcepto: 'Soplete', especificacionColor: 'Gas butano / Post-procesado 3D', presentacion: 'Unidad', cantidad: 1, costoUnitario: 35, costoEnvio: 0, costoTotal: 35, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Herramientas & Taller', itemConcepto: 'Encendedor', especificacionColor: 'Recargable', presentacion: 'Unidad', cantidad: 1, costoUnitario: 8, costoEnvio: 0, costoTotal: 8, createdAt: fechaEgreso },
+      
+      // Insumos / Filamentos
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA', especificacionColor: 'Color Mate', presentacion: 'Bobina 1Kg', cantidad: 1, costoUnitario: 75.59, costoEnvio: 0, costoTotal: 75.59, costoPorGramo: 0.0756, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA', especificacionColor: 'Negro', presentacion: 'Bobina 1Kg', cantidad: 1, costoUnitario: 75.59, costoEnvio: 0, costoTotal: 75.59, costoPorGramo: 0.0756, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA', especificacionColor: 'Verde Agua', presentacion: 'Bobina 1Kg', cantidad: 1, costoUnitario: 75.59, costoEnvio: 0, costoTotal: 75.59, costoPorGramo: 0.0756, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Blanco Hueso', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 7, costoTotal: 67, costoPorGramo: 0.067, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Carbón', presentacion: 'Con Bobina Reutilizable (BR) 1Kg', cantidad: 1, costoUnitario: 79, costoEnvio: 7, costoTotal: 86, costoPorGramo: 0.086, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Gris Ceniza', presentacion: 'Con Bobina Reutilizable (BR) 1Kg', cantidad: 1, costoUnitario: 79, costoEnvio: 7, costoTotal: 86, costoPorGramo: 0.086, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Blanco Hueso', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Charcoal', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Gris Ceniza', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Lila Púrpura', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Naranja Mandarina', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Rojo Escarlata', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D PLA Matte Bambu Lab', especificacionColor: 'Verde Grass', presentacion: 'Sin bobina (Refill) 1Kg', cantidad: 1, costoUnitario: 60, costoEnvio: 3, costoTotal: 63, costoPorGramo: 0.063, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Filamento 3D', especificacionColor: 'Sale', presentacion: 'Sin bobina', cantidad: 5, costoUnitario: 60, costoEnvio: 0, costoTotal: 300, costoPorGramo: 0.06, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Filamento PLA', itemConcepto: 'Bobina con filamento PLA Matte', especificacionColor: 'Con Bobina Reutilizable (BR) 1Kg', presentacion: 'Bobina 1Kg', cantidad: 3, costoUnitario: 79, costoEnvio: 0, costoTotal: 237, costoPorGramo: 0.079, createdAt: fechaEgreso },
+      
+      // Packaging & Envíos
+      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, subcategoria: 'Packaging & Envíos', itemConcepto: 'Cajas', especificacionColor: '-', presentacion: 'Unidad', cantidad: 3, costoUnitario: 9.9, costoEnvio: 0, costoTotal: 29.7, createdAt: fechaEgreso },
+      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, subcategoria: 'Packaging & Envíos', itemConcepto: 'Set de sticker', especificacionColor: '-', presentacion: 'Set', cantidad: 2, costoUnitario: 13, costoEnvio: 0, costoTotal: 26, createdAt: fechaEgreso },
+      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, subcategoria: 'Packaging & Envíos', itemConcepto: 'Cubierta de plástico con bolsas de aire', especificacionColor: '-', presentacion: '2 metros', cantidad: 2, costoUnitario: 5, costoEnvio: 0, costoTotal: 10, createdAt: fechaEgreso },
+      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, subcategoria: 'Packaging & Envíos', itemConcepto: 'Cajas', especificacionColor: '-', presentacion: 'Unidad', cantidad: 1, costoUnitario: 12, costoEnvio: 0, costoTotal: 12, createdAt: fechaEgreso },
+      { persona: 'Jamile :)', categoria: CategoriaInversion.INSUMO, subcategoria: 'Packaging & Envíos', itemConcepto: 'Cajas', especificacionColor: '-', presentacion: 'Unidad', cantidad: 1, costoUnitario: 18, costoEnvio: 0, costoTotal: 18, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Packaging & Envíos', itemConcepto: 'Papel film', especificacionColor: 'Embalaje protector', presentacion: 'Rollo', cantidad: 1, costoUnitario: 15, costoEnvio: 0, costoTotal: 15, createdAt: fechaEgreso },
+
+      // Servicios & Logística
+      { persona: 'Víctor', categoria: CategoriaInversion.SERVICIO, subcategoria: 'Publicidad & Marketing', itemConcepto: 'Publicidad', especificacionColor: '5 días', presentacion: 'Campaña', cantidad: 1, costoUnitario: 123, costoEnvio: 0, costoTotal: 123, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.SERVICIO, subcategoria: 'Logística & Envíos', itemConcepto: 'Taxi envío lince', especificacionColor: 'Envío express', presentacion: 'Servicio', cantidad: 1, costoUnitario: 25.55, costoEnvio: 0, costoTotal: 25.55, createdAt: fechaEgreso },
+      { persona: 'Víctor', categoria: CategoriaInversion.INSUMO, subcategoria: 'Otros', itemConcepto: 'otros', especificacionColor: 'Varios taller', presentacion: 'Unidad', cantidad: 1, costoUnitario: 20, costoEnvio: 0, costoTotal: 20, createdAt: fechaEgreso },
+    ]
+  })
+
+  // 3. Categorías de Producto
   const categoriasBase = [
     { nombre: 'Insertos y Organizadores', descripcion: 'Insertos personalizados para cajas de juegos de mesa' },
     { nombre: 'JUEGOS DE MESA', descripcion: 'Accesorios y tableros para juegos de mesa' },
@@ -53,7 +88,7 @@ async function main() {
     await prisma.categoria.create({ data: cat })
   }
 
-  // 2. Catálogo de Productos (Agrupados por Categoría)
+  // 4. Catálogo de Productos
   const productosBase = [
     // Insertos y Organizadores
     { lineaCategoria: 'Insertos y Organizadores', nombreModelo: 'Inserto Zombicide 2ª Ed. (10 placas)', costoBase: 78.85, precioAmigos: 105.00, precioMercado: 125.00, precioComunidad: 135.00 },
@@ -88,7 +123,7 @@ async function main() {
     await prisma.producto.create({ data: prod })
   }
 
-  // 3. Ventas Iniciales
+  // 5. Ventas Reales
   const productoSet5J = await prisma.producto.findUnique({ where: { nombreModelo: 'Mansiones de la Locura - Set 5 Jugadores (5 Tableros + 10 Marcadores)' } })
   const productoZombicide = await prisma.producto.findUnique({ where: { nombreModelo: 'Inserto Zombicide 2ª Ed. (10 placas)' } })
 
@@ -99,6 +134,8 @@ async function main() {
           fecha: new Date('2026-08-14T10:00:00Z'),
           cliente: 'Bryan condemarin',
           productoId: productoSet5J.id,
+          nombreProductoSnapshot: productoSet5J.nombreModelo,
+          costoBaseSnapshot: productoSet5J.costoBase,
           cantidad: 1,
           tipoPrecio: TipoPrecio.PERSONALIZADO,
           precioUnitario: 82.00,
@@ -111,6 +148,8 @@ async function main() {
           fecha: new Date('2026-08-20T10:00:00Z'),
           cliente: 'Jalmar Pinedo',
           productoId: productoZombicide.id,
+          nombreProductoSnapshot: productoZombicide.nombreModelo,
+          costoBaseSnapshot: productoZombicide.costoBase,
           cantidad: 1,
           tipoPrecio: TipoPrecio.PERSONALIZADO,
           precioUnitario: 132.00,
@@ -124,6 +163,8 @@ async function main() {
           fecha: new Date('2026-08-23T10:00:00Z'),
           cliente: 'Con Rad',
           productoId: productoZombicide.id,
+          nombreProductoSnapshot: productoZombicide.nombreModelo,
+          costoBaseSnapshot: productoZombicide.costoBase,
           cantidad: 1,
           tipoPrecio: TipoPrecio.COMUNIDAD,
           precioUnitario: 135.00,
@@ -139,6 +180,8 @@ async function main() {
           fecha: new Date('2026-08-24T10:00:00Z'),
           cliente: 'Gianmarco Gamarra',
           productoId: productoZombicide.id,
+          nombreProductoSnapshot: productoZombicide.nombreModelo,
+          costoBaseSnapshot: productoZombicide.costoBase,
           cantidad: 1,
           tipoPrecio: TipoPrecio.COMUNIDAD,
           precioUnitario: 135.00,
@@ -154,19 +197,9 @@ async function main() {
     })
   }
 
-  // 4. Ingresos Directos (Aporte de Capital Inicial + Préstamo Bancario)
-  await prisma.ingreso.deleteMany()
+  // 6. Ingresos Directos
   await prisma.ingreso.createMany({
     data: [
-      {
-        cliente: 'Víctor (Fondos Propios)',
-        concepto: 'Aporte de Capital Inicial para Taller (Impresora, Secador e Insumos)',
-        categoria: 'Aporte de Capital',
-        monto: 3790.02,
-        metodoPago: 'EFECTIVO / TRANSFERENCIA PROPIA',
-        notas: 'Inversión inicial cubierta al 100% con fondos propios de Víctor para la puesta en marcha del taller',
-        fecha: new Date('2026-08-01T10:00:00Z')
-      },
       {
         cliente: 'Banco (Préstamo Bancario)',
         concepto: 'Desembolso Préstamo Capital de Trabajo (24 cuotas)',
@@ -179,7 +212,7 @@ async function main() {
     ]
   })
 
-  console.log('Seed exitoso!')
+  console.log('✔ Todos los registros al estado exacto de las 10:29 PM restaurados exitosamente!')
 }
 
 main()

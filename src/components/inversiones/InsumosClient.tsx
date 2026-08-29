@@ -30,7 +30,7 @@ interface InsumosClientProps {
   inversiones: InversionItem[]
 }
 
-const ITEMS_PER_PAGE = 7
+const ITEMS_PER_PAGE = 5
 
 export function InsumosClient({ inversiones }: InsumosClientProps) {
   const [search, setSearch] = useState('')
@@ -73,16 +73,18 @@ export function InsumosClient({ inversiones }: InsumosClientProps) {
     return suma / conGramo.length
   }, [insumos])
 
-  // Filtered List
+  // Filtered & Sorted List
   const filteredInsumos = useMemo(() => {
-    return insumos.filter(inv => {
-      const matchSearch = 
-        inv.itemConcepto.toLowerCase().includes(search.toLowerCase()) ||
-        (inv.especificacionColor && inv.especificacionColor.toLowerCase().includes(search.toLowerCase())) ||
-        (inv.presentacion && inv.presentacion.toLowerCase().includes(search.toLowerCase()))
+    return insumos
+      .filter(inv => {
+        const matchSearch = 
+          inv.itemConcepto.toLowerCase().includes(search.toLowerCase()) ||
+          (inv.especificacionColor && inv.especificacionColor.toLowerCase().includes(search.toLowerCase())) ||
+          (inv.presentacion && inv.presentacion.toLowerCase().includes(search.toLowerCase()))
 
-      return matchSearch
-    })
+        return matchSearch
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [insumos, search])
 
   // Pagination
@@ -113,7 +115,10 @@ export function InsumosClient({ inversiones }: InsumosClientProps) {
     return null
   }, [formCantidad, formCostoUnitario, formCostoEnvio, formPresentacion])
 
+  const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
+
   const handleOpenCreate = () => {
+    setFormFecha(new Date().toISOString().split('T')[0])
     setFormPersona('Víctor')
     setFormCategoria('INSUMO')
     setFormConcepto('')
@@ -135,6 +140,7 @@ export function InsumosClient({ inversiones }: InsumosClientProps) {
     setIsSubmitting(true)
     try {
       await createInversion({
+        fecha: formFecha || undefined,
         persona: formPersona.trim() || 'Víctor',
         categoria: formCategoria,
         itemConcepto: formConcepto.trim(),
@@ -410,7 +416,18 @@ export function InsumosClient({ inversiones }: InsumosClientProps) {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-zinc-400">Fecha *</Label>
+                <Input 
+                  type="date"
+                  value={formFecha}
+                  onChange={(e) => setFormFecha(e.target.value)}
+                  required
+                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-xs text-zinc-400">Tipo de Insumo *</Label>
                 <select
@@ -418,8 +435,8 @@ export function InsumosClient({ inversiones }: InsumosClientProps) {
                   onChange={(e) => setFormCategoria(e.target.value as any)}
                   className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
                 >
-                  <option value="INSUMO">Insumo / Filamento / Resina</option>
-                  <option value="SERVICIO">Servicio / Mantenimiento / Energía</option>
+                  <option value="INSUMO">Insumo / Filamento</option>
+                  <option value="SERVICIO">Servicio / Mant.</option>
                 </select>
               </div>
 
