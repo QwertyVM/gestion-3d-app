@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -21,11 +21,13 @@ import {
   Package, 
   ChevronLeft,
   ChevronRight,
-  Sparkles,
-  Percent,
   Box,
   Calculator,
-  Tag
+  Percent,
+  Loader2,
+  Tag,
+  ArrowDownRight,
+  Minus
 } from 'lucide-react'
 import { 
   updateEstadoVenta, 
@@ -36,7 +38,7 @@ import {
 import { toast } from 'sonner'
 import { EstadoVenta, TipoPrecio } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 export interface VentaItem {
   id: string
@@ -130,9 +132,9 @@ export function VentasClient({
   // Packaging Base & Percentage states
   const [incluirPackaging, setIncluirPackaging] = useState(false)
   const [montoPackagingBase, setMontoPackagingBase] = useState(promedioPackaging.toFixed(2))
-  const [porcentajePackaging, setPorcentajePackaging] = useState('0')
+  const [porcentajePackaging, setPorcentajePackaging] = useState('10')
 
-  const formatCurrency = (val: number) => `S/ ${val.toFixed(2)}`
+  const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Financial KPIs
   const totalPedidos = items.length
@@ -167,14 +169,14 @@ export function VentasClient({
     return filteredVentas.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredVentas, currentPage])
 
-  // Prorrateo de Packaging: Solo el porcentaje del costo de packaging (sin sumar la base completa)
+  // Prorrateo de Packaging
   const montoProrrateoPackaging = useMemo(() => {
     const packBase = parseFloat(montoPackagingBase) || 0
     const pct = parseFloat(porcentajePackaging) || 0
     return Number(((packBase * pct) / 100).toFixed(2))
   }, [montoPackagingBase, porcentajePackaging])
 
-  // Suggested Unit Price: Base Product Price + Prorrateo del Packaging
+  // Suggested Unit Price
   const precioSugeridoCalculado = useMemo(() => {
     const base = parseFloat(formPrecioBase) || 0
     const packProrrateado = incluirPackaging ? montoProrrateoPackaging : 0
@@ -254,7 +256,7 @@ export function VentasClient({
     setOpenDetailsModal(true)
   }
 
-  // Autocomplete price on product / tier select in Create Modal
+  // Autocomplete price on product / tier select
   const handleProductoOrTierChange = (prodId: string, tier: TipoPrecio) => {
     setFormProductoId(prodId)
     setFormTipoPrecio(tier)
@@ -266,11 +268,22 @@ export function VentasClient({
       else if (tier === 'COMUNIDAD') base = found.precioComunidad
 
       setFormPrecioBase(base.toString())
-
       const pack = incluirPackaging ? montoProrrateoPackaging : 0
       const finalUnit = Number((base + pack).toFixed(2))
-
       setFormPrecioUnitario(finalUnit.toString())
+    }
+  }
+
+  // Steppers for quantity
+  const handleIncrementCantidad = () => {
+    const current = parseInt(formCantidad) || 1
+    setFormCantidad((current + 1).toString())
+  }
+
+  const handleDecrementCantidad = () => {
+    const current = parseInt(formCantidad) || 1
+    if (current > 1) {
+      setFormCantidad((current - 1).toString())
     }
   }
 
@@ -295,7 +308,7 @@ export function VentasClient({
     setOpenCreateModal(true)
   }
 
-  // Apply suggested calculated price to Precio Unitario field
+  // Apply suggested calculated price
   const handleAplicarPrecioSugerido = () => {
     setFormPrecioUnitario(precioSugeridoCalculado.toString())
     toast.success(`Precio unitario actualizado a ${formatCurrency(precioSugeridoCalculado)}`)
@@ -305,7 +318,7 @@ export function VentasClient({
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formCliente.trim() || !formProductoId || !formPrecioUnitario) {
-      toast.error('Por favor completa los campos obligatorios')
+      toast.error('Por favor completa el cliente, producto y precio unitario')
       return
     }
 
@@ -341,7 +354,7 @@ export function VentasClient({
       }
 
       setItems(prev => [fullCreated as any, ...prev])
-      toast.success('Pedido creado exitosamente')
+      toast.success('Pedido registrado exitosamente')
       setOpenCreateModal(false)
       router.refresh()
     } catch (err: any) {
@@ -352,146 +365,185 @@ export function VentasClient({
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-            <ShoppingCart className="h-8 w-8 text-blue-500" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
+              <ShoppingCart className="h-6 w-6 stroke-[2.5]" />
+            </div>
             Ventas y Pedidos
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Gestión de pedidos con prorrateo de packaging, márgenes porcentuales y cobranzas.
+          <p className="text-sm text-[#75695D] mt-1">
+            Gestión comercial de pedidos, cobranzas, entregas y prorrateo de packaging del taller.
           </p>
         </div>
 
         <Button 
           onClick={handleOpenCreate}
-          className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+          className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
           Nuevo Pedido
         </Button>
       </div>
 
-      {/* KPI Overview Cards */}
+      {/* KPI Cards Light Mode */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-400 flex items-center gap-2">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
             <Package className="h-4 w-4" />
             Total Pedidos
           </span>
-          <div className="text-2xl font-extrabold text-white font-mono mt-1">{totalPedidos}</div>
-          <span className="text-xs text-zinc-500 mt-0.5 block">Historial general de ventas</span>
+          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">{totalPedidos}</div>
+          <span className="text-xs text-[#75695D] mt-0.5 block">Historial comercial general</span>
         </div>
 
-        <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4" />
             Total Cobrado
           </span>
-          <div className="text-2xl font-extrabold text-emerald-400 font-mono mt-1">
+          <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
             {formatCurrency(totalCobrado)}
           </div>
-          <span className="text-xs text-zinc-500 mt-0.5 block">Ingreso efectivo a caja</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">Ingreso efectivo a caja</span>
         </div>
 
-        <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-          <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-2">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Saldos por Cobrar
           </span>
-          <div className="text-2xl font-extrabold text-amber-400 font-mono mt-1">
+          <div className="text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
             {formatCurrency(totalSaldoPendiente)}
           </div>
-          <span className="text-xs text-zinc-500 mt-0.5 block">Pendiente de liquidación</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">Pendiente de liquidación</span>
         </div>
 
-        <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-          <span className="text-xs font-semibold uppercase tracking-wider text-purple-400 flex items-center gap-2">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#633E20] flex items-center gap-2">
             <Truck className="h-4 w-4" />
             En Proceso / Entregados
           </span>
-          <div className="text-2xl font-extrabold text-white font-mono mt-1">
-            {enProduccionCount} <span className="text-sm font-normal text-zinc-500">/ {entregadosCount} entregados</span>
+          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+            {enProduccionCount} <span className="text-sm font-normal text-[#75695D]">/ {entregadosCount} entregados</span>
           </div>
-          <span className="text-xs text-zinc-500 mt-0.5 block">Flujo de producción de taller</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">Flujo de producción en taller</span>
         </div>
       </div>
 
-      {/* Toolbar & Filters */}
-      <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-              <Input 
-                placeholder="Buscar por cliente, modelo, canal o destino..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-9 bg-zinc-900/80 border-zinc-800 text-white placeholder:text-zinc-500 text-sm"
-              />
-              {search && (
-                <button 
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+      {/* 1-Row Compact Filter Bar */}
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Lado Izquierdo: Campo de Búsqueda */}
+        <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+          <Input 
+            placeholder="Buscar por cliente, modelo, canal..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
+          />
+          {search && (
+            <button 
+              onClick={() => { setSearch(''); setCurrentPage(1); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
-            {/* Filter Dropdowns */}
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={estadoFilter}
-                onChange={(e) => { setEstadoFilter(e.target.value); setCurrentPage(1); }}
-                className="bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
-              >
-                <option value="TODOS">Todos los Estados</option>
-                <option value="PENDIENTE">Pendientes</option>
-                <option value="EN_PRODUCCION">En Producción</option>
-                <option value="ENTREGADO">Entregados</option>
-                <option value="CANCELADO">Cancelados</option>
-              </select>
+        {/* Lado Derecho: Segmented Control Tabs & Dropdown de Pago */}
+        <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
+          {/* Segmented Control / Tabs */}
+          <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
+            <button
+              onClick={() => { setEstadoFilter('TODOS'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                estadoFilter === 'TODOS'
+                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
+                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+              }`}
+            >
+              Todos ({items.length})
+            </button>
+            <button
+              onClick={() => { setEstadoFilter('PENDIENTE'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                estadoFilter === 'PENDIENTE'
+                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
+                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+              }`}
+            >
+              Pendientes ({items.filter(v => v.estado === 'PENDIENTE').length})
+            </button>
+            <button
+              onClick={() => { setEstadoFilter('EN_PRODUCCION'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                estadoFilter === 'EN_PRODUCCION'
+                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
+                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+              }`}
+            >
+              En Producción ({items.filter(v => v.estado === 'EN_PRODUCCION').length})
+            </button>
+            <button
+              onClick={() => { setEstadoFilter('ENTREGADO'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                estadoFilter === 'ENTREGADO'
+                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
+                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+              }`}
+            >
+              Entregados ({items.filter(v => v.estado === 'ENTREGADO').length})
+            </button>
+          </div>
 
-              <select
-                value={pagoFilter}
-                onChange={(e: any) => { setPagoFilter(e.target.value); setCurrentPage(1); }}
-                className="bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500"
-              >
-                <option value="TODOS">Todos los Pagos</option>
-                <option value="PENDIENTES_PAGO">Con Saldo Pendiente</option>
-                <option value="PAGADOS">100% Pagados</option>
-              </select>
+          {/* Dropdown Select para Estado de Pago */}
+          <div className="relative">
+            <select
+              value={pagoFilter}
+              onChange={(e: any) => { setPagoFilter(e.target.value); setCurrentPage(1); }}
+              className="bg-[#F4EFEA] border border-[#E2D9CC] text-[#241C15] rounded-xl px-3 py-1.5 text-xs font-medium focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] cursor-pointer outline-none h-9 pr-7 appearance-none transition-all shadow-sm"
+            >
+              <option value="TODOS">Todos los Pagos</option>
+              <option value="PENDIENTES_PAGO">Por Cobrar ({items.filter(v => v.saldoPendiente > 0).length})</option>
+              <option value="PAGADOS">100% Pagados ({items.filter(v => v.saldoPendiente <= 0).length})</option>
+            </select>
+            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D]">
+              <DollarSign className="h-3 w-3" />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Orders Table */}
-      <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl overflow-hidden">
+      {/* Main Orders Table Light Mode */}
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
         <Table className="w-full">
-          <TableHeader className="bg-zinc-900/70 border-b border-zinc-800">
-            <TableRow className="border-zinc-800 hover:bg-transparent">
-              <TableHead className="text-zinc-400 font-semibold px-4 py-3 text-left">Fecha</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left">Cliente & Canal</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left">Modelo / Producto</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-center">Estado Pedido</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-right">Total</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-right">Cobranza / Saldo</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-4 py-3 text-center">Acciones de Pago</TableHead>
+          <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+            <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Fecha</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Cliente & Canal</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Modelo / Producto</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Estado Pedido</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Total</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Cobranza / Saldo</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Acciones de Pago</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedVentas.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-zinc-500">
-                  No se encontraron pedidos con los filtros seleccionados.
+                <TableCell colSpan={7} className="h-40 text-center text-[#75695D]">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <ShoppingCart className="h-8 w-8 text-[#A89B8D]" />
+                    <span>No se encontraron pedidos con los filtros seleccionados</span>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
@@ -502,19 +554,19 @@ export function VentasClient({
                   <TableRow 
                     key={v.id} 
                     onClick={() => handleOpenDetails(v)}
-                    className="border-zinc-800/60 hover:bg-zinc-900/50 transition-colors cursor-pointer group"
+                    className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors cursor-pointer group"
                   >
                     {/* Fecha */}
-                    <TableCell className="px-4 py-3 text-xs text-zinc-400 font-mono whitespace-nowrap">
+                    <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
                       {formatDate(v.fecha)}
                     </TableCell>
 
                     {/* Cliente */}
-                    <TableCell className="px-3 py-3 font-semibold text-zinc-100">
+                    <TableCell className="px-3 py-3 font-bold text-[#241C15]">
                       <div className="flex flex-col">
-                        <span className="text-sm group-hover:text-blue-400 transition-colors">{v.cliente}</span>
+                        <span className="text-sm group-hover:text-[#A36F4C] transition-colors">{v.cliente}</span>
                         {v.canalVenta && (
-                          <span className="text-[11px] text-zinc-500">{v.canalVenta}</span>
+                          <span className="text-[11px] text-[#75695D] font-normal">{v.canalVenta}</span>
                         )}
                       </div>
                     </TableCell>
@@ -522,16 +574,16 @@ export function VentasClient({
                     {/* Producto & Extras */}
                     <TableCell className="px-3 py-3">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-zinc-200">{v.producto.nombreModelo}</span>
-                        <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 flex-wrap mt-0.5">
+                        <span className="text-sm font-semibold text-[#241C15]">{v.producto.nombreModelo}</span>
+                        <div className="flex items-center gap-1.5 text-[11px] text-[#75695D] flex-wrap mt-0.5">
                           <span>{v.cantidad}x • {v.tipoPrecio}</span>
                           {v.costoPackaging && v.costoPackaging > 0 ? (
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30 text-[9px] py-0 px-1">
+                            <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[9px] py-0 px-1 font-bold">
                               +Pack S/{v.costoPackaging.toFixed(1)}
                             </Badge>
                           ) : null}
                           {v.porcentajeAdicional && v.porcentajeAdicional > 0 ? (
-                            <Badge variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/30 text-[9px] py-0 px-1">
+                            <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[9px] py-0 px-1 font-bold">
                               +{v.porcentajeAdicional}%
                             </Badge>
                           ) : null}
@@ -544,41 +596,41 @@ export function VentasClient({
                       <select
                         value={v.estado}
                         onChange={(e) => handleCambiarEstado(v.id, e.target.value as EstadoVenta)}
-                        className={`text-xs font-semibold rounded-lg px-2.5 py-1 border transition-all cursor-pointer focus:outline-none ${
+                        className={`text-xs font-bold rounded-xl px-2.5 py-1 border transition-all cursor-pointer focus:outline-none shadow-sm ${
                           v.estado === 'ENTREGADO'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                            ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
                             : v.estado === 'EN_PRODUCCION'
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                            ? 'bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7]'
                             : v.estado === 'PENDIENTE'
-                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                            : 'bg-red-500/10 text-red-400 border-red-500/30'
+                            ? 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
+                            : 'bg-[#FDF2F0] text-[#A34335] border-[#F2C0B8]'
                         }`}
                       >
-                        <option value="PENDIENTE" className="bg-zinc-950 text-amber-400">Pendiente</option>
-                        <option value="EN_PRODUCCION" className="bg-zinc-950 text-blue-400">En Producción</option>
-                        <option value="ENTREGADO" className="bg-zinc-950 text-emerald-400">Entregado</option>
-                        <option value="CANCELADO" className="bg-zinc-950 text-red-400">Cancelado</option>
+                        <option value="PENDIENTE">Pendiente</option>
+                        <option value="EN_PRODUCCION">En Producción</option>
+                        <option value="ENTREGADO">Entregado</option>
+                        <option value="CANCELADO">Cancelado</option>
                       </select>
                     </TableCell>
 
                     {/* Total */}
-                    <TableCell className="px-3 py-3 text-right font-mono font-bold text-white whitespace-nowrap">
+                    <TableCell className="px-3 py-3 text-right font-mono font-extrabold text-[#241C15] whitespace-nowrap">
                       {formatCurrency(v.total)}
                     </TableCell>
 
                     {/* Cobranza y Saldo */}
                     <TableCell className="px-3 py-3 text-right whitespace-nowrap">
                       <div className="flex flex-col items-end">
-                        <span className="font-mono text-xs text-zinc-300">
-                          Pagado: <span className="font-bold text-emerald-400">{formatCurrency(v.montoPagado)}</span>
+                        <span className="font-mono text-xs text-[#75695D]">
+                          Pagado: <span className="font-bold text-[#1E5E3A]">{formatCurrency(v.montoPagado)}</span>
                         </span>
                         {v.saldoPendiente > 0 ? (
-                          <span className="font-mono text-xs text-amber-400 font-bold">
+                          <span className="font-mono text-xs text-[#8C6D1F] font-bold">
                             Debe: {formatCurrency(v.saldoPendiente)}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-0.5">
-                            <Check className="h-3 w-3" /> 100% Pagado
+                          <span className="text-[10px] text-[#1E5E3A] font-bold flex items-center gap-0.5">
+                            <Check className="h-3 w-3 stroke-[2.5]" /> 100% Pagado
                           </span>
                         )}
                       </div>
@@ -587,8 +639,8 @@ export function VentasClient({
                     {/* Acciones de Pago */}
                     <TableCell className="px-4 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                       {isPaid ? (
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs gap-1">
-                          <Check className="h-3 w-3" />
+                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs gap-1 font-bold">
+                          <Check className="h-3 w-3 stroke-[2.5]" />
                           Pagado
                         </Badge>
                       ) : (
@@ -596,7 +648,7 @@ export function VentasClient({
                           <Button
                             size="sm"
                             onClick={(e) => handleOpenAbono(v, e)}
-                            className="h-7 px-2.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 text-xs font-semibold"
+                            className="h-7 px-2.5 bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm"
                             title="Registrar abono de dinero"
                           >
                             <DollarSign className="h-3.5 w-3.5 mr-0.5" />
@@ -605,10 +657,10 @@ export function VentasClient({
                           <Button
                             size="sm"
                             onClick={(e) => handleLiquidarTotal(v.id, e)}
-                            className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm"
-                            title="Marcar como 100% Pagado de inmediato"
+                            className="h-7 px-2.5 bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+                            title="Marcar como 100% Pagado"
                           >
-                            <Check className="h-3.5 w-3.5 mr-0.5" />
+                            <Check className="h-3.5 w-3.5 mr-0.5 stroke-[2.5]" />
                             Ya pagó
                           </Button>
                         </div>
@@ -623,9 +675,9 @@ export function VentasClient({
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-zinc-800/80 bg-zinc-950/70 text-xs text-zinc-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#F4EFEA] text-xs text-[#75695D]">
             <div>
-              Mostrando página <span className="text-white font-medium">{currentPage}</span> de <span className="text-white font-medium">{totalPages}</span> ({filteredVentas.length} pedidos)
+              Mostrando página <span className="text-[#241C15] font-bold">{currentPage}</span> de <span className="text-[#241C15] font-bold">{totalPages}</span> ({filteredVentas.length} pedidos)
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -634,7 +686,7 @@ export function VentasClient({
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Anterior
@@ -645,10 +697,10 @@ export function VentasClient({
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 w-8 rounded-lg text-xs font-medium transition-all ${
+                    className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       currentPage === page
-                        ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20'
-                        : 'bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                        ? 'bg-[#A36F4C] text-white shadow-sm'
+                        : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
                     }`}
                   >
                     {page}
@@ -661,7 +713,7 @@ export function VentasClient({
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
               >
                 Siguiente
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -675,52 +727,67 @@ export function VentasClient({
       {/* MODAL: FICHA Y GESTIÓN COMPLETA DEL PEDIDO                                */}
       {/* ========================================================================= */}
       <Dialog open={openDetailsModal} onOpenChange={setOpenDetailsModal}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[560px]">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[560px] p-0 overflow-hidden shadow-2xl rounded-2xl">
           {selectedVenta && (
             <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="text-zinc-400 border-zinc-700 bg-zinc-900 text-xs">
-                    {selectedVenta.producto.lineaCategoria}
-                  </Badge>
-                  {selectedVenta.saldoPendiente <= 0 ? (
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs gap-1">
-                      <Check className="h-3 w-3" />
-                      100% Pagado
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-xs gap-1">
-                      <Clock className="h-3 w-3" />
-                      Saldo Pendiente: {formatCurrency(selectedVenta.saldoPendiente)}
-                    </Badge>
-                  )}
-                </div>
-                <DialogTitle className="text-2xl font-bold text-white">
-                  Pedido de {selectedVenta.cliente}
-                </DialogTitle>
-                <DialogDescription className="text-xs text-zinc-400">
-                  {selectedVenta.producto.nombreModelo} • {selectedVenta.cantidad} {selectedVenta.cantidad === 1 ? 'unidad' : 'unidades'} ({selectedVenta.tipoPrecio})
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-5 mt-4">
-                {/* Resumen Financiero */}
-                <div className="grid grid-cols-3 gap-3 p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800">
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                    <ShoppingCart className="h-5 w-5 stroke-[2.5]" />
+                  </div>
                   <div>
-                    <span className="text-[11px] text-zinc-400 uppercase font-semibold">Total Pedido</span>
-                    <div className="text-lg font-bold text-white font-mono mt-0.5">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Badge variant="outline" className="text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] text-[10px] font-bold">
+                        {selectedVenta.producto.lineaCategoria}
+                      </Badge>
+                      {selectedVenta.saldoPendiente <= 0 ? (
+                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] gap-1 font-bold">
+                          <Check className="h-3 w-3 stroke-[2.5]" />
+                          100% Pagado
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold">
+                          <Clock className="h-2.5 w-2.5" />
+                          Saldo: {formatCurrency(selectedVenta.saldoPendiente)}
+                        </Badge>
+                      )}
+                    </div>
+                    <DialogTitle className="text-lg font-bold text-[#241C15] tracking-tight">
+                      Pedido de {selectedVenta.cliente}
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-[#75695D]">
+                      {selectedVenta.producto.nombreModelo} • {selectedVenta.cantidad} {selectedVenta.cantidad === 1 ? 'unidad' : 'unidades'} ({selectedVenta.tipoPrecio})
+                    </DialogDescription>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenDetailsModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Resumen Financiero */}
+                <div className="grid grid-cols-3 gap-3 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
+                  <div>
+                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Total Pedido</span>
+                    <div className="text-lg font-extrabold text-[#241C15] font-mono mt-0.5">
                       {formatCurrency(selectedVenta.total)}
                     </div>
                   </div>
                   <div>
-                    <span className="text-[11px] text-emerald-400 uppercase font-semibold">Monto Pagado</span>
-                    <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">
+                    <span className="text-[10px] text-[#1E5E3A] uppercase font-bold">Monto Pagado</span>
+                    <div className="text-lg font-extrabold text-[#1E5E3A] font-mono mt-0.5">
                       {formatCurrency(selectedVenta.montoPagado)}
                     </div>
                   </div>
                   <div>
-                    <span className="text-[11px] text-amber-400 uppercase font-semibold">Saldo Pendiente</span>
-                    <div className="text-lg font-bold text-amber-400 font-mono mt-0.5">
+                    <span className="text-[10px] text-[#8C6D1F] uppercase font-bold">Saldo Pendiente</span>
+                    <div className="text-lg font-extrabold text-[#8C6D1F] font-mono mt-0.5">
                       {formatCurrency(selectedVenta.saldoPendiente)}
                     </div>
                   </div>
@@ -728,47 +795,47 @@ export function VentasClient({
 
                 {/* Prorrateos y Margen Registrado */}
                 {(selectedVenta.costoPackaging || selectedVenta.porcentajeAdicional) ? (
-                  <div className="p-3 rounded-xl bg-zinc-900/40 border border-zinc-800 text-xs space-y-1">
-                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                  <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] text-xs space-y-1">
+                    <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
                       Desglose de Prorrateo & Margen
                     </span>
-                    <div className="flex items-center gap-4 text-zinc-300">
+                    <div className="flex items-center gap-4 text-[#241C15]">
                       {selectedVenta.costoPackaging ? (
-                        <span>Prorrateo Packaging: <strong className="text-amber-400">{formatCurrency(selectedVenta.costoPackaging)}</strong> / ud</span>
+                        <span>Prorrateo Packaging: <strong className="text-[#8C6D1F]">{formatCurrency(selectedVenta.costoPackaging)}</strong> / ud</span>
                       ) : null}
                       {selectedVenta.porcentajeAdicional ? (
-                        <span>Margen Adicional: <strong className="text-blue-400">+{selectedVenta.porcentajeAdicional}%</strong></span>
+                        <span>Margen Adicional: <strong className="text-[#A36F4C]">+{selectedVenta.porcentajeAdicional}%</strong></span>
                       ) : null}
                     </div>
                   </div>
                 ) : null}
 
                 {/* Datos de Entrega y Envío */}
-                <div className="space-y-2 p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-800/80 text-xs">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block mb-1">
+                <div className="space-y-2 p-3.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] text-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#75695D] block mb-1">
                     Logística & Entrega
                   </span>
-                  <div className="grid grid-cols-2 gap-2 text-zinc-300">
+                  <div className="grid grid-cols-2 gap-2 text-[#241C15]">
                     <div>
-                      <span className="text-zinc-500 block">Canal de Venta:</span>
-                      <span className="font-medium">{selectedVenta.canalVenta || 'Directo'}</span>
+                      <span className="text-[#75695D] block text-[11px]">Canal de Venta:</span>
+                      <span className="font-semibold">{selectedVenta.canalVenta || 'Directo'}</span>
                     </div>
                     <div>
-                      <span className="text-zinc-500 block">Destino de Envío:</span>
-                      <span className="font-medium">{selectedVenta.destinoEnvio || 'Recojo en taller'}</span>
+                      <span className="text-[#75695D] block text-[11px]">Destino de Envío:</span>
+                      <span className="font-semibold">{selectedVenta.destinoEnvio || 'Recojo en taller'}</span>
                     </div>
                   </div>
                   {selectedVenta.diaEntregaPrometida && (
-                    <div className="pt-1 text-zinc-300">
-                      <span className="text-zinc-500 block">Promesa de Entrega:</span>
-                      <span className="font-medium text-blue-400">{selectedVenta.diaEntregaPrometida}</span>
+                    <div className="pt-1 text-[#241C15]">
+                      <span className="text-[#75695D] block text-[11px]">Promesa de Entrega:</span>
+                      <span className="font-bold text-[#A36F4C]">{selectedVenta.diaEntregaPrometida}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Cambiar Estado del Pedido */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                     Cambiar Estado del Pedido
                   </Label>
                   <div className="grid grid-cols-4 gap-2">
@@ -777,16 +844,16 @@ export function VentasClient({
                         key={est}
                         type="button"
                         onClick={() => handleCambiarEstado(selectedVenta.id, est)}
-                        className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all ${
+                        className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                           selectedVenta.estado === est
                             ? est === 'ENTREGADO'
-                              ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-500/20'
+                              ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-sm'
                               : est === 'EN_PRODUCCION'
-                              ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-500/20'
+                              ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-sm'
                               : est === 'PENDIENTE'
-                              ? 'bg-amber-600 text-white border-amber-500 shadow-md shadow-amber-500/20'
-                              : 'bg-red-600 text-white border-red-500'
-                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                              ? 'bg-[#8C6D1F] text-white border-[#8C6D1F] shadow-sm'
+                              : 'bg-[#A34335] text-white border-[#A34335]'
+                            : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]'
                         }`}
                       >
                         {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'Producción' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
@@ -796,7 +863,7 @@ export function VentasClient({
                 </div>
 
                 {/* Botones de Gestión de Pago */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-zinc-800">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-[#E2D9CC]">
                   {selectedVenta.saldoPendiente > 0 ? (
                     <div className="flex items-center gap-2">
                       <Button
@@ -805,7 +872,7 @@ export function VentasClient({
                           setMontoAbono(selectedVenta.saldoPendiente.toString())
                           setOpenAbonoModal(true)
                         }}
-                        className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold"
+                        className="bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm"
                       >
                         <DollarSign className="h-4 w-4 mr-1" />
                         Registrar Abono
@@ -813,14 +880,14 @@ export function VentasClient({
                       <Button
                         type="button"
                         onClick={() => handleLiquidarTotal(selectedVenta.id)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                        className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
                       >
-                        <Check className="h-4 w-4 mr-1" />
+                        <Check className="h-4 w-4 mr-1 stroke-[2.5]" />
                         Liquidar 100% (Ya Pagó)
                       </Button>
                     </div>
                   ) : (
-                    <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
+                    <span className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
                       <CheckCircle2 className="h-4 w-4" /> Pago Completado
                     </span>
                   )}
@@ -829,7 +896,7 @@ export function VentasClient({
                     type="button"
                     variant="ghost"
                     onClick={() => setOpenDetailsModal(false)}
-                    className="text-zinc-400 hover:text-white text-xs"
+                    className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs rounded-xl cursor-pointer font-medium"
                   >
                     Cerrar
                   </Button>
@@ -844,59 +911,75 @@ export function VentasClient({
       {/* MODAL: REGISTRAR ABONO / PAGO                                             */}
       {/* ========================================================================= */}
       <Dialog open={openAbonoModal} onOpenChange={setOpenAbonoModal}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[420px]">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[420px] p-0 overflow-hidden shadow-2xl rounded-2xl">
           {selectedVenta && (
             <>
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-emerald-500" />
-                  Registrar Cobro / Abono
-                </DialogTitle>
-                <DialogDescription className="text-xs text-zinc-400">
-                  Cliente: <strong className="text-white">{selectedVenta.cliente}</strong> • Saldo actual: <strong className="text-amber-400">{formatCurrency(selectedVenta.saldoPendiente)}</strong>
-                </DialogDescription>
-              </DialogHeader>
+              <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] flex items-center justify-center text-[#1E5E3A] shadow-sm">
+                    <DollarSign className="h-5 w-5 stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                      Registrar Cobro / Abono
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-[#75695D]">
+                      Cliente: <strong className="text-[#241C15]">{selectedVenta.cliente}</strong> • Saldo: <strong className="text-[#8C6D1F]">{formatCurrency(selectedVenta.saldoPendiente)}</strong>
+                    </DialogDescription>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenAbonoModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
 
-              <form onSubmit={handleRegistrarAbonoSubmit} className="space-y-4 mt-3">
+              <form onSubmit={handleRegistrarAbonoSubmit} className="p-6 space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-zinc-400">Monto a Abonar (S/) *</Label>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max={selectedVenta.saldoPendiente}
-                    value={montoAbono}
-                    onChange={(e) => setMontoAbono(e.target.value)}
-                    placeholder="0.00"
-                    required
-                    autoFocus
-                    className="bg-zinc-900 border-zinc-700 text-emerald-400 font-mono font-bold text-lg"
-                  />
-                  <div className="flex justify-between items-center text-[11px] text-zinc-500 pt-1">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto a Abonar (S/) *</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-mono font-bold text-[#75695D]">S/</span>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      max={selectedVenta.saldoPendiente}
+                      value={montoAbono}
+                      onChange={(e) => setMontoAbono(e.target.value)}
+                      placeholder="0.00"
+                      required
+                      autoFocus
+                      className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-extrabold text-lg rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[11px] text-[#75695D] pt-1">
                     <span>Monto sugerido (100% saldo):</span>
                     <button
                       type="button"
                       onClick={() => setMontoAbono(selectedVenta.saldoPendiente.toString())}
-                      className="text-blue-400 hover:text-blue-300 font-semibold"
+                      className="text-[#A36F4C] hover:underline font-bold cursor-pointer"
                     >
                       Pagar todo ({formatCurrency(selectedVenta.saldoPendiente)})
                     </button>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-[#E2D9CC]">
                   <Button
                     type="button"
                     variant="ghost"
                     onClick={() => setOpenAbonoModal(false)}
-                    className="text-zinc-400 hover:text-white text-xs"
+                    className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
                   >
                     Cancelar
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmitting || !montoAbono || parseFloat(montoAbono) <= 0}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                    className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50"
                   >
                     {isSubmitting ? 'Guardando...' : 'Confirmar Cobro'}
                   </Button>
@@ -911,49 +994,62 @@ export function VentasClient({
       {/* MODAL: NUEVO PEDIDO CON PRORRATEO DE PACKAGING Y MARGEN                   */}
       {/* ========================================================================= */}
       <Dialog open={openCreateModal} onOpenChange={setOpenCreateModal}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[620px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Plus className="h-5 w-5 text-blue-500" />
-              Nuevo Pedido de Venta
-            </DialogTitle>
-            <DialogDescription className="text-xs text-zinc-400">
-              Registra la venta con cálculo automático de prorrateo de packaging y margen adicional.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[620px] max-h-[90vh] overflow-y-auto p-0 shadow-2xl rounded-2xl">
+          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                <ShoppingCart className="h-5 w-5 stroke-[2.5]" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                  Nuevo Pedido de Venta
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#75695D]">
+                  Registra la venta con cálculo automático de prorrateo de packaging y margen adicional.
+                </DialogDescription>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpenCreateModal(false)}
+              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-          <form onSubmit={handleCreateSubmit} className="space-y-4 mt-2">
+          <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Cliente *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente *</Label>
                 <Input 
                   value={formCliente}
                   onChange={(e) => setFormCliente(e.target.value)}
                   placeholder="Ej: Bryan Condemarín"
                   required
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Canal de Venta</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Canal de Venta</Label>
                 <Input 
                   value={formCanalVenta}
                   onChange={(e) => setFormCanalVenta(e.target.value)}
                   placeholder="Ej: Instagram, WhatsApp, Feria..."
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>
             </div>
 
             {/* Producto del Catálogo */}
             <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Producto del Catálogo *</Label>
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Producto del Catálogo *</Label>
               <select
                 value={formProductoId}
                 onChange={(e) => handleProductoOrTierChange(e.target.value, formTipoPrecio)}
                 required
-                className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
               >
                 {productos.map(p => (
                   <option key={p.id} value={p.id}>
@@ -963,14 +1059,14 @@ export function VentasClient({
               </select>
             </div>
 
-            {/* Tipo de Precio & Cantidad */}
+            {/* Tipo de Precio & Cantidad con Stepper */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Nivel de Precio *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Nivel de Precio *</Label>
                 <select
                   value={formTipoPrecio}
                   onChange={(e) => handleProductoOrTierChange(formProductoId, e.target.value as TipoPrecio)}
-                  className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 >
                   <option value="AMIGOS">1. Precio Amigos</option>
                   <option value="MERCADO">2. Precio Mercado</option>
@@ -980,76 +1076,90 @@ export function VentasClient({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Cantidad *</Label>
-                <Input 
-                  type="number"
-                  min="1"
-                  value={formCantidad}
-                  onChange={(e) => setFormCantidad(e.target.value)}
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm font-mono"
-                />
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cantidad *</Label>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={handleDecrementCantidad}
+                    className="h-10 w-10 flex items-center justify-center bg-[#F4EFEA] border border-r-0 border-[#DCD3C6] rounded-l-xl text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15] transition-colors cursor-pointer"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <Input 
+                    type="number"
+                    min="1"
+                    value={formCantidad}
+                    onChange={(e) => setFormCantidad(e.target.value)}
+                    required
+                    className="rounded-none text-center bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm font-mono font-bold h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] focus:z-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleIncrementCantidad}
+                    className="h-10 w-10 flex items-center justify-center bg-[#F4EFEA] border border-l-0 border-[#DCD3C6] rounded-r-xl text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15] transition-colors cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* ========================================================================= */}
-            {/* SECCIÓN: PRORRATEO DE PACKAGING & INCREMENTO DEL EMPAQUE                 */}
-            {/* ========================================================================= */}
-            <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800 space-y-3">
+            {/* SECCIÓN: PRORRATEO DE PACKAGING */}
+            <div className="p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Box className="h-4 w-4 text-amber-400" />
-                  <span className="text-xs font-bold text-zinc-200">
+                  <Box className="h-4 w-4 text-[#A36F4C]" />
+                  <span className="text-xs font-bold text-[#241C15]">
                     Prorrateo de Packaging del Taller
                   </span>
                 </div>
 
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-amber-400 font-semibold">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-[#A36F4C] font-bold">
                   <input
                     type="checkbox"
                     checked={incluirPackaging}
                     onChange={(e) => setIncluirPackaging(e.target.checked)}
-                    className="rounded border-zinc-700 bg-zinc-800 text-amber-500 focus:ring-0 h-4 w-4 cursor-pointer"
+                    className="rounded border-[#DCD3C6] text-[#A36F4C] focus:ring-0 h-4 w-4 cursor-pointer"
                   />
                   <span>Incluir Packaging</span>
                 </label>
               </div>
 
               {incluirPackaging && (
-                <div className="space-y-3 pt-2 border-t border-zinc-800/80">
+                <div className="space-y-3 pt-2 border-t border-[#E2D9CC]">
                   {/* Costo Base de Packaging */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-zinc-400">Costo Base de Packaging (S/):</span>
+                      <span className="text-[#75695D] font-medium">Costo Base de Packaging (S/):</span>
                       <button
                         type="button"
                         onClick={() => setMontoPackagingBase(promedioPackaging.toFixed(2))}
-                        className="text-amber-400 hover:text-amber-300 text-[11px] font-semibold flex items-center gap-1"
+                        className="text-[#A36F4C] hover:underline text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                       >
-                        <span>Usar promedio taller ({formatCurrency(promedioPackaging)})</span>
+                        <span>Usar promedio ({formatCurrency(promedioPackaging)})</span>
                       </button>
                     </div>
-                    <Input
-                      type="number"
-                      step="0.10"
-                      min="0"
-                      value={montoPackagingBase}
-                      onChange={(e) => setMontoPackagingBase(e.target.value)}
-                      placeholder={promedioPackaging.toFixed(2)}
-                      className="bg-zinc-950 border-zinc-700 text-amber-400 font-mono text-sm font-bold h-8"
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <Input
+                        type="number"
+                        step="0.10"
+                        min="0"
+                        value={montoPackagingBase}
+                        onChange={(e) => setMontoPackagingBase(e.target.value)}
+                        placeholder={promedioPackaging.toFixed(2)}
+                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#8C6D1F] font-mono text-sm font-bold h-8 rounded-xl"
+                      />
+                    </div>
                   </div>
 
                   {/* Porcentaje de prorrateo a aplicar */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <Label className="text-zinc-400 flex items-center gap-1 text-xs">
-                        <Percent className="h-3 w-3 text-amber-400" />
-                        Porcentaje del Packaging a Prorratear a la Venta (%):
+                      <Label className="text-[#241C15] flex items-center gap-1 text-xs font-bold">
+                        <Percent className="h-3 w-3 text-[#A36F4C]" />
+                        Porcentaje a Prorratear a la Venta (%):
                       </Label>
-                      <span className="text-[11px] text-zinc-500 font-mono">
-                        (Monto a sumar: {porcentajePackaging}% del packaging)
-                      </span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -1061,7 +1171,7 @@ export function VentasClient({
                         value={porcentajePackaging}
                         onChange={(e) => setPorcentajePackaging(e.target.value)}
                         placeholder="10"
-                        className="bg-zinc-950 border-zinc-700 text-amber-400 font-mono text-sm font-bold h-8 w-24"
+                        className="bg-[#FFFFFF] border-[#DCD3C6] text-[#A36F4C] font-mono text-sm font-bold h-8 w-24 rounded-xl"
                       />
                       <div className="flex items-center gap-1 flex-1">
                         {['5', '10', '15', '20', '30', '50'].map(pct => (
@@ -1069,10 +1179,10 @@ export function VentasClient({
                             key={pct}
                             type="button"
                             onClick={() => setPorcentajePackaging(pct)}
-                            className={`flex-1 py-1 rounded text-[11px] font-semibold transition-all ${
+                            className={`flex-1 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                               porcentajePackaging === pct
-                                ? 'bg-amber-500 text-zinc-950 font-bold shadow-sm'
-                                : 'bg-zinc-800/80 text-zinc-400 hover:text-zinc-200'
+                                ? 'bg-[#A36F4C] text-white shadow-sm'
+                                : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15]'
                             }`}
                           >
                             {pct}%
@@ -1082,16 +1192,15 @@ export function VentasClient({
                     </div>
                   </div>
 
-                  {/* Desglose en vivo de Prorrateo de Packaging */}
-                  <div className="p-2.5 rounded-lg bg-zinc-950/80 border border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-                    <div className="space-y-0.5 text-zinc-400">
+                  {/* Desglose en vivo de Prorrateo */}
+                  <div className="p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                    <div className="space-y-0.5 text-[#75695D]">
                       <div className="text-[11px]">
-                        Pack Base Taller: <strong className="text-zinc-300">{formatCurrency(parseFloat(montoPackagingBase) || 0)}</strong>
-                        <span> • Prorrateo ({porcentajePackaging}%): <strong className="text-amber-400 font-bold">+{formatCurrency(montoProrrateoPackaging)}</strong></span>
+                        Pack Base: <strong className="text-[#241C15]">{formatCurrency(parseFloat(montoPackagingBase) || 0)}</strong>
+                        <span> • Prorrateo ({porcentajePackaging}%): <strong className="text-[#8C6D1F] font-bold">+{formatCurrency(montoProrrateoPackaging)}</strong></span>
                       </div>
                       <div>
-                        Precio Sugerido Final: <strong className="text-emerald-400 font-mono text-sm font-bold">{formatCurrency(precioSugeridoCalculado)}</strong>
-                        <span className="text-[11px] text-zinc-500 ml-1.5">({formatCurrency(parseFloat(formPrecioBase) || 0)} base + {formatCurrency(montoProrrateoPackaging)} prorrateo pack)</span>
+                        Precio Sugerido Final: <strong className="text-[#1E5E3A] font-mono text-sm font-bold">{formatCurrency(precioSugeridoCalculado)}</strong>
                       </div>
                     </div>
 
@@ -1099,7 +1208,7 @@ export function VentasClient({
                       type="button"
                       size="sm"
                       onClick={handleAplicarPrecioSugerido}
-                      className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold whitespace-nowrap"
+                      className="h-7 px-2.5 bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold whitespace-nowrap rounded-xl cursor-pointer shadow-sm"
                     >
                       <Calculator className="h-3.5 w-3.5 mr-1" />
                       Aplicar Precio
@@ -1112,29 +1221,35 @@ export function VentasClient({
             {/* Precio Unitario Final Aplicado */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400 font-bold">Precio Unitario Final (S/) *</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formPrecioUnitario}
-                  onChange={(e) => setFormPrecioUnitario(e.target.value)}
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-emerald-400 font-mono text-base font-bold"
-                />
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Precio Unitario Final (S/) *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formPrecioUnitario}
+                    onChange={(e) => setFormPrecioUnitario(e.target.value)}
+                    required
+                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-emerald-400 font-bold">Pago Inicial / Anticipo (S/)</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formMontoPagado}
-                  onChange={(e) => setFormMontoPagado(e.target.value)}
-                  placeholder="0.00"
-                  className="bg-zinc-900 border-zinc-700 text-emerald-400 font-mono text-base font-bold"
-                />
+                <Label className="text-xs text-[#1E5E3A] font-bold uppercase tracking-wider">Pago Inicial / Anticipo (S/)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formMontoPagado}
+                    onChange={(e) => setFormMontoPagado(e.target.value)}
+                    placeholder="0.00"
+                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
               </div>
             </div>
 
@@ -1147,14 +1262,14 @@ export function VentasClient({
               const saldo = Math.max(0, total - pagado)
 
               return (
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
                   <div>
-                    <span className="text-[10px] text-zinc-400 uppercase font-semibold">Total del Pedido</span>
-                    <div className="text-lg font-bold text-white font-mono">{formatCurrency(total)}</div>
+                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Total del Pedido</span>
+                    <div className="text-lg font-extrabold text-[#241C15] font-mono">{formatCurrency(total)}</div>
                   </div>
                   <div>
-                    <span className="text-[10px] text-amber-400 uppercase font-semibold">Saldo Pendiente</span>
-                    <div className="text-lg font-bold text-amber-400 font-mono">{formatCurrency(saldo)}</div>
+                    <span className="text-[10px] text-[#8C6D1F] uppercase font-bold">Saldo Pendiente</span>
+                    <div className="text-lg font-extrabold text-[#8C6D1F] font-mono">{formatCurrency(saldo)}</div>
                   </div>
                 </div>
               )
@@ -1163,41 +1278,48 @@ export function VentasClient({
             {/* Logística */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Destino de Envío</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Destino de Envío</Label>
                 <Input 
                   value={formDestinoEnvio}
                   onChange={(e) => setFormDestinoEnvio(e.target.value)}
                   placeholder="Ej: Shalom / Lince / Recojo taller"
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Promesa de Entrega</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Promesa de Entrega</Label>
                 <Input 
                   value={formDiaEntrega}
                   onChange={(e) => setFormDiaEntrega(e.target.value)}
                   placeholder="Ej: 28 Viernes en la mañana"
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenCreateModal(false)}
-                className="text-zinc-400 hover:text-white text-xs"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
-                {isSubmitting ? 'Guardando...' : 'Crear Pedido'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Crear Pedido'
+                )}
               </Button>
             </div>
           </form>

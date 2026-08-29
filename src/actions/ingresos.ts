@@ -3,6 +3,18 @@
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
+function safeRevalidate() {
+  try {
+    revalidatePath('/finanzas')
+    revalidatePath('/finanzas/ingresos')
+    revalidatePath('/finanzas/flujo-caja')
+    revalidatePath('/finanzas/proyecciones')
+    revalidatePath('/')
+  } catch (e) {
+    // Ignore outside request context
+  }
+}
+
 export async function getIngresos() {
   const ingresos = await prisma.ingreso.findMany({
     orderBy: { fecha: 'desc' }
@@ -43,10 +55,7 @@ export async function createIngreso(data: {
     }
   })
 
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/ingresos')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/')
+  safeRevalidate()
 
   return {
     id: ingreso.id,
@@ -64,8 +73,5 @@ export async function createIngreso(data: {
 
 export async function deleteIngreso(id: string) {
   await prisma.ingreso.delete({ where: { id } })
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/ingresos')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/')
+  safeRevalidate()
 }

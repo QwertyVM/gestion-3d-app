@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,6 @@ import {
   ArrowUpRight, 
   ArrowDownRight, 
   Wallet, 
-  TrendingUp, 
   Clock, 
   Search, 
   X,
@@ -83,7 +82,7 @@ export function FlujoCajaClient({
   const [tipoFilter, setTipoFilter] = useState<'TODOS' | 'INGRESOS' | 'EGRESOS'>('TODOS')
   const [currentPage, setCurrentPage] = useState(1)
 
-  const formatCurrency = (val: number) => `S/ ${val.toFixed(2)}`
+  const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Financial Metrics Calculation
   const totalIngresosVentas = useMemo(() => {
@@ -164,7 +163,7 @@ export function FlujoCajaClient({
       })
     })
 
-    // 3. Expenses / Egresos (Maquinaria, Insumos, Servicios)
+    // 3. Expenses / Egresos
     egresos.forEach(e => {
       if (e.categoria === 'ACTIVO_FIJO') {
         movements.push({
@@ -230,214 +229,211 @@ export function FlujoCajaClient({
   }, [filteredMovements, currentPage])
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-          <Wallet className="h-8 w-8 text-emerald-500" />
+        <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
+            <Wallet className="h-6 w-6 stroke-[2.5]" />
+          </div>
           Flujo de Caja (Cash Flow)
         </h1>
-        <p className="text-sm text-zinc-400 mt-1">
-          Estado financiero consolidado en tiempo real: balance entre ingresos cobrados y egresos operativos del taller.
+        <p className="text-sm text-[#75695D] mt-1">
+          Balance financiero consolidado entre ingresos efectivamente cobrados y egresos operativos del taller.
         </p>
       </div>
 
       {/* KPI Financial Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Saldo Neto en Caja */}
-        <Card className="bg-zinc-950/60 border-zinc-800 backdrop-blur-xl relative overflow-hidden">
-          <div className={`absolute top-0 left-0 right-0 h-1 ${saldoNetoCaja >= 0 ? 'bg-emerald-500' : 'bg-red-500'}`} />
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
+          <div className={`absolute top-0 left-0 right-0 h-1 ${saldoNetoCaja >= 0 ? 'bg-[#1E5E3A]' : 'bg-[#A34335]'}`} />
           <CardHeader className="pb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#75695D]">
               Saldo Neto en Caja
             </span>
-            <div className={`text-2xl font-extrabold font-mono mt-1 ${saldoNetoCaja >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <div className={`text-2xl font-extrabold font-mono mt-1 ${saldoNetoCaja >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
               {formatCurrency(saldoNetoCaja)}
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-[#75695D]">
               Ingresos Cobrados - Egresos Totales
             </span>
           </CardContent>
         </Card>
 
         {/* Ingresos Cobrados */}
-        <Card className="bg-zinc-950/60 border-zinc-800 backdrop-blur-xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500/60" />
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
           <CardHeader className="pb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-              <ArrowUpRight className="h-3.5 w-3.5" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-1.5">
+              <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
               Total Ingresos
             </span>
-            <div className="text-2xl font-extrabold text-white font-mono mt-1">
+            <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
               {formatCurrency(totalIngresosTotales)}
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-[#75695D]">
               Ventas: {formatCurrency(totalIngresosVentas)} • Servicios: {formatCurrency(totalIngresosDirectos)}
             </span>
           </CardContent>
         </Card>
 
         {/* Egresos Totales */}
-        <Card className="bg-zinc-950/60 border-zinc-800 backdrop-blur-xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500/60" />
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#A36F4C]" />
           <CardHeader className="pb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-              <ArrowDownRight className="h-3.5 w-3.5" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
+              <ArrowDownRight className="h-3.5 w-3.5 stroke-[2.5]" />
               Total Egresos / Gastos
             </span>
-            <div className="text-2xl font-extrabold text-white font-mono mt-1">
+            <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
               {formatCurrency(totalEgresosTotales)}
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-[#75695D]">
               Maquinaria: {formatCurrency(totalEgresosMaquinaria)} • Insumos: {formatCurrency(totalEgresosInsumos)}
             </span>
           </CardContent>
         </Card>
 
         {/* Cuentas por Cobrar */}
-        <Card className="bg-zinc-950/60 border-zinc-800 backdrop-blur-xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500/60" />
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#8C6D1F]" />
           <CardHeader className="pb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5 stroke-[2.5]" />
               Cuentas por Cobrar
             </span>
-            <div className="text-2xl font-extrabold text-white font-mono mt-1">
+            <div className="text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
               {formatCurrency(totalSaldosPorCobrar)}
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-[#75695D]">
               Saldos pendientes de clientes
             </span>
           </CardContent>
         </Card>
       </div>
 
-      {/* Movements Toolbar */}
-      <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-              <Input 
-                placeholder="Buscar por concepto o cliente/persona..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-9 bg-zinc-900/80 border-zinc-800 text-white placeholder:text-zinc-500 text-sm"
-              />
-              {search && (
-                <button 
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+      {/* 1-Row Toolbar & Filters */}
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Search */}
+        <div className="relative w-full md:w-80 flex-shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+          <Input 
+            placeholder="Buscar concepto en caja..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+          />
+          {search && (
+            <button 
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
-            {/* Type Filter Pills */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => { setTipoFilter('TODOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  tipoFilter === 'TODOS'
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                Todos ({allMovements.length})
-              </button>
-              <button
-                onClick={() => { setTipoFilter('INGRESOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  tipoFilter === 'INGRESOS'
-                    ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <ArrowUpRight className="h-3 w-3" />
-                Ingresos (+)
-              </button>
-              <button
-                onClick={() => { setTipoFilter('EGRESOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  tipoFilter === 'EGRESOS'
-                    ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <ArrowDownRight className="h-3 w-3" />
-                Egresos (-)
-              </button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Type Filter Pills */}
+        <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC]">
+          <button
+            onClick={() => { setTipoFilter('TODOS'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              tipoFilter === 'TODOS'
+                ? 'bg-[#A36F4C] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            Todos ({allMovements.length})
+          </button>
+          <button
+            onClick={() => { setTipoFilter('INGRESOS'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              tipoFilter === 'INGRESOS'
+                ? 'bg-[#1E5E3A] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            <ArrowUpRight className="h-3 w-3 stroke-[2.5]" />
+            Ingresos (+)
+          </button>
+          <button
+            onClick={() => { setTipoFilter('EGRESOS'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              tipoFilter === 'EGRESOS'
+                ? 'bg-[#944917] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            <ArrowDownRight className="h-3 w-3 stroke-[2.5]" />
+            Egresos (-)
+          </button>
+        </div>
+      </div>
 
       {/* Movements Table */}
-      <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl overflow-hidden">
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
         <Table className="w-full">
-          <TableHeader className="bg-zinc-900/70 border-b border-zinc-800">
-            <TableRow className="border-zinc-800 hover:bg-transparent">
-              <TableHead className="text-zinc-400 font-semibold px-4 py-3 text-left">Fecha</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left">Tipo</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left">Concepto & Detalle</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left hidden sm:table-cell">Cliente / Responsable</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-4 py-3 text-right">Monto</TableHead>
+          <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+            <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Fecha</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Tipo</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Concepto & Detalle</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Monto</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedMovements.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10 text-zinc-500">
+                <TableCell colSpan={4} className="text-center py-12 text-[#75695D]">
                   No se encontraron movimientos registrados en este periodo.
                 </TableCell>
               </TableRow>
             ) : (
               paginatedMovements.map((mov) => (
-                <TableRow key={mov.id} className="border-zinc-800/60 hover:bg-zinc-900/40 transition-colors">
-                  <TableCell className="px-4 py-3 text-xs text-zinc-400 font-mono whitespace-nowrap">
+                <TableRow key={mov.id} className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors">
+                  <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
                     {formatDate(mov.fecha)}
                   </TableCell>
 
                   <TableCell className="px-3 py-3 whitespace-nowrap">
                     {mov.tipo === 'INGRESO_VENTA' && (
-                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[11px] gap-1">
-                        <ArrowUpRight className="h-3 w-3" />
+                      <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[11px] gap-1 font-bold">
+                        <ArrowUpRight className="h-3 w-3 stroke-[2.5]" />
                         Venta Cobrada
                       </Badge>
                     )}
                     {mov.tipo === 'INGRESO_DIRECTO' && (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-[11px] gap-1">
-                        <DollarSign className="h-3 w-3" />
+                      <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[11px] gap-1 font-bold">
+                        <DollarSign className="h-3 w-3 stroke-[2.5]" />
                         Servicio / Directo
                       </Badge>
                     )}
                     {mov.tipo === 'EGRESO_MAQUINARIA' && (
-                      <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-500/30 text-[11px] gap-1">
+                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[11px] gap-1 font-bold">
                         <Wrench className="h-3 w-3" />
                         Maquinaria / Equipo
                       </Badge>
                     )}
                     {mov.tipo === 'EGRESO_INSUMO' && (
-                      <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-[11px] gap-1">
+                      <Badge variant="outline" className="bg-[#F4EFEA] text-[#A36F4C] border-[#DCD3C6] text-[11px] gap-1 font-bold">
                         <ShoppingBag className="h-3 w-3" />
                         Insumo / Material
                       </Badge>
                     )}
                     {mov.tipo === 'EGRESO_SERVICIO' && (
-                      <Badge variant="outline" className="bg-zinc-800 text-zinc-300 border-zinc-700 text-[11px] gap-1">
+                      <Badge variant="outline" className="bg-[#F4EFEA] text-[#75695D] border-[#E2D9CC] text-[11px] gap-1 font-medium">
                         <Truck className="h-3 w-3" />
                         Gasto Operativo
                       </Badge>
@@ -446,23 +442,19 @@ export function FlujoCajaClient({
 
                   <TableCell className="px-3 py-3">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-zinc-100">
+                      <span className="text-sm font-bold text-[#241C15]">
                         {mov.concepto}
                       </span>
                       {mov.detalle && (
-                        <span className="text-[11px] text-zinc-500">
+                        <span className="text-[11px] text-[#75695D]">
                           {mov.detalle}
                         </span>
                       )}
                     </div>
                   </TableCell>
 
-                  <TableCell className="px-3 py-3 text-xs text-zinc-300 hidden sm:table-cell whitespace-nowrap">
-                    {mov.entidad}
-                  </TableCell>
-
-                  <TableCell className="px-4 py-3 text-right font-mono font-bold whitespace-nowrap">
-                    <span className={mov.isPositive ? 'text-emerald-400' : 'text-red-400'}>
+                  <TableCell className="px-4 py-3 text-right font-mono font-extrabold whitespace-nowrap">
+                    <span className={mov.isPositive ? 'text-[#1E5E3A]' : 'text-[#A34335]'}>
                       {mov.isPositive ? '+' : '-'}{formatCurrency(mov.monto)}
                     </span>
                   </TableCell>
@@ -474,9 +466,9 @@ export function FlujoCajaClient({
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-zinc-800/80 bg-zinc-950/70 text-xs text-zinc-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#F4EFEA] text-xs text-[#75695D]">
             <div>
-              Mostrando página <span className="text-white font-medium">{currentPage}</span> de <span className="text-white font-medium">{totalPages}</span> ({filteredMovements.length} movimientos)
+              Mostrando página <span className="text-[#241C15] font-bold">{currentPage}</span> de <span className="text-[#241C15] font-bold">{totalPages}</span> ({filteredMovements.length} movimientos)
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -485,7 +477,7 @@ export function FlujoCajaClient({
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Anterior
@@ -496,10 +488,10 @@ export function FlujoCajaClient({
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 w-8 rounded-lg text-xs font-medium transition-all ${
+                    className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       currentPage === page
-                        ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20'
-                        : 'bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                        ? 'bg-[#A36F4C] text-white shadow-sm'
+                        : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
                     }`}
                   >
                     {page}
@@ -512,7 +504,7 @@ export function FlujoCajaClient({
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
               >
                 Siguiente
                 <ChevronRight className="h-4 w-4 ml-1" />

@@ -1,14 +1,5 @@
-import { getInversiones } from '@/actions/inversiones'
-import { getVentas } from '@/actions/ventas'
-import { FlujoCajaClient } from '@/components/inversiones/FlujoCajaClient'
+import { redirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
-export default async function FlujoCajaPage() {
-  const [inversiones, ventas] = await Promise.all([
-    getInversiones(),
-    getVentas(),
-  ])
-
-  return <FlujoCajaClient inversiones={inversiones as any} ventas={ventas as any} />
+export default function InversionesFlujoCajaPage() {
+  redirect('/finanzas/flujo-caja')
 }

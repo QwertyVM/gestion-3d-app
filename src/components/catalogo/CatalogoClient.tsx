@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -10,13 +11,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { 
   Plus, 
-  Edit2, 
   Search, 
   Package, 
   Archive, 
   RotateCcw, 
-  LayoutList, 
-  LayoutGrid, 
   Sparkles, 
   X,
   ChevronLeft,
@@ -26,7 +24,9 @@ import {
   Check,
   Tag,
   ArrowRight,
-  Database
+  Database,
+  Loader2,
+  Pencil
 } from 'lucide-react'
 import { 
   createProducto, 
@@ -42,8 +42,8 @@ import { toast } from 'sonner'
 import { 
   Dialog, 
   DialogContent, 
-  DialogHeader, 
-  DialogTitle 
+  DialogTitle,
+  DialogDescription
 } from '@/components/ui/dialog'
 
 export interface ProductoItem {
@@ -106,7 +106,6 @@ export function CatalogoClient({
   const [categoriaFilter, setCategoriaFilter] = useState<string>('TODOS')
   const [estadoFilter, setEstadoFilter] = useState<'TODOS' | 'ACTIVOS' | 'DESCONTINUADOS'>('TODOS')
   const [sortBy, setSortBy] = useState<'categoria' | 'nombre' | 'amigosDesc' | 'mercadoDesc' | 'comunidadDesc'>('categoria')
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [currentPage, setCurrentPage] = useState(1)
 
   // Categorias state
@@ -140,7 +139,7 @@ export function CatalogoClient({
   const [formPrecioComunidad, setFormPrecioComunidad] = useState<string>('')
   const [formActivo, setFormActivo] = useState(true)
 
-  const formatCurrency = (val: number) => `S/ ${val.toFixed(2)}`
+  const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Calculate profit margin percentage
   const calcMargen = (precio: number, costo: number) => {
@@ -232,7 +231,7 @@ export function CatalogoClient({
     return filteredProductos.slice(startIndex, startIndex + ITEMS_PER_PAGE)
   }, [filteredProductos, currentPage])
 
-  // Auto-calculate suggested prices: Amigos, Mercado, Comunidad
+  // Auto-calculate suggested prices
   const handleAutoCalculatePrices = (baseCostStr: string) => {
     const base = parseFloat(baseCostStr)
     if (!isNaN(base) && base > 0) {
@@ -259,7 +258,7 @@ export function CatalogoClient({
       setCategorias(prev => [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre)))
       setNewCatNombre('')
       setNewCatDesc('')
-      toast.success(`Categoría "${created.nombre}" guardada en la base de datos`)
+      toast.success(`Categoría "${created.nombre}" guardada con éxito`)
     } catch (err: any) {
       toast.error(err?.message || 'Error al crear la categoría')
     } finally {
@@ -287,7 +286,7 @@ export function CatalogoClient({
       })
       setCategorias(prev => prev.map(c => c.id === id ? { ...c, ...updated } : c))
       setEditingCatId(null)
-      toast.success('Categoría actualizada en la base de datos')
+      toast.success('Categoría actualizada')
     } catch (err: any) {
       toast.error(err?.message || 'Error al actualizar categoría')
     } finally {
@@ -296,7 +295,7 @@ export function CatalogoClient({
   }
 
   const handleDeleteCat = async (id: string, nombre: string) => {
-    if (confirm(`¿Deseas eliminar la categoría "${nombre}" de la base de datos?`)) {
+    if (confirm(`¿Deseas eliminar la categoría "${nombre}"?`)) {
       try {
         const res = await deleteCategoria(id)
         setCategorias(prev => prev.filter(c => c.id !== id))
@@ -384,6 +383,7 @@ export function CatalogoClient({
       })
       toast.success('Producto creado con éxito')
       setOpenCreate(false)
+      router.refresh()
     } catch (error: any) {
       toast.error(error?.message || 'Error al crear producto (verifica que el nombre no esté duplicado)')
     } finally {
@@ -408,6 +408,7 @@ export function CatalogoClient({
       })
       toast.success('Producto actualizado con éxito')
       setOpenEdit(false)
+      router.refresh()
     } catch (error: any) {
       toast.error(error?.message || 'Error al actualizar producto')
     } finally {
@@ -423,246 +424,220 @@ export function CatalogoClient({
         setSelectedProducto(prev => prev ? { ...prev, activo: !currentlyActive } : null)
       }
       toast.success(currentlyActive ? 'Producto marcado como Descontinuado' : 'Producto Reactivado')
+      router.refresh()
     } catch (error) {
       toast.error('Error al cambiar el estado del producto')
     }
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-            {activeTab === 'productos' ? (
-              <>
-                <Package className="h-8 w-8 text-blue-500" />
-                Catálogo de Productos
-              </>
-            ) : (
-              <>
-                <FolderTree className="h-8 w-8 text-blue-500" />
-                Categorías del Catálogo
-              </>
-            )}
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
+              {activeTab === 'productos' ? (
+                <Package className="h-6 w-6 stroke-[2.5]" />
+              ) : (
+                <FolderTree className="h-6 w-6 stroke-[2.5]" />
+              )}
+            </div>
+            {activeTab === 'productos' ? 'Catálogo de Productos' : 'Gestión de Categorías'}
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
+          <p className="text-sm text-[#75695D] mt-1">
             {activeTab === 'productos' 
-              ? 'Haz clic en cualquier fila para ver información y costos del producto.' 
-              : 'Administración de categorías persistidas en la base de datos.'}
+              ? 'Modelos 3D disponibles con costos base, precios escalonados y control de estado.' 
+              : 'Estructura de clasificación de productos sincronizada en base de datos.'}
           </p>
         </div>
 
-        {activeTab === 'productos' && (
-          <div className="flex items-center gap-3">
-            <Button 
-              onClick={handleOpenCreate}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nuevo Producto
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {activeTab === 'productos' ? (
+            <>
+              <Link href="/catalogo/categorias">
+                <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
+                  <FolderTree className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
+                  Gestionar Categorías
+                </Button>
+              </Link>
+
+              <Button 
+                onClick={handleOpenCreate}
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
+                Nuevo Producto
+              </Button>
+            </>
+          ) : (
+            <Link href="/catalogo">
+              <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
+                <Package className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
+                Ver Productos
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* ========================================================================= */}
       {/* SUBSECTION 1: PRODUCTOS                                                  */}
       {/* ========================================================================= */}
       {activeTab === 'productos' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          {/* KPI Stats Chips */}
+        <div className="space-y-6">
+          {/* KPI Stats Chips Light Mode */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-3.5 backdrop-blur-md">
-              <span className="text-xs font-medium text-zinc-400">Total Productos</span>
-              <div className="text-2xl font-bold text-white mt-0.5">{totalProductsCount}</div>
-            </div>
-            <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-3.5 backdrop-blur-md">
-              <span className="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Activos
+            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
+                <Package className="h-3.5 w-3.5" /> Total Modelos
               </span>
-              <div className="text-2xl font-bold text-emerald-400 mt-0.5">{activeProductsCount}</div>
+              <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">{totalProductsCount}</div>
             </div>
-            <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-3.5 backdrop-blur-md">
-              <span className="text-xs font-medium text-amber-400 flex items-center gap-1.5">
-                <Archive className="w-3.5 h-3.5" />
+
+            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#1E5E3A] animate-pulse"></span>
+                Activos en Venta
+              </span>
+              <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">{activeProductsCount}</div>
+            </div>
+
+            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#75695D] flex items-center gap-1.5">
+                <Archive className="h-3.5 w-3.5" />
                 Descontinuados
               </span>
-              <div className="text-2xl font-bold text-amber-400 mt-0.5">{discontinuedProductsCount}</div>
+              <div className="text-2xl font-extrabold text-[#75695D] font-mono mt-1">{discontinuedProductsCount}</div>
             </div>
+
             <div 
-              onClick={() => handleTabChange('categorias')}
-              className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-3.5 backdrop-blur-md cursor-pointer hover:border-blue-500/50 transition-colors"
+              onClick={() => router.push('/catalogo/categorias')}
+              className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm cursor-pointer hover:border-[#A36F4C] hover:bg-[#FDFBF7] transition-all group"
             >
-              <span className="text-xs font-medium text-blue-400 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
                 Categorías
-                <span className="text-[10px] text-zinc-500">Ver categorías ➔</span>
+                <ArrowRight className="h-3.5 w-3.5 text-[#A36F4C] group-hover:translate-x-0.5 transition-transform" />
               </span>
-              <div className="text-2xl font-bold text-blue-400 mt-0.5">{totalCategoriesCount}</div>
+              <div className="text-2xl font-extrabold text-[#A36F4C] font-mono mt-1">{totalCategoriesCount}</div>
             </div>
           </div>
 
-          {/* Filters Toolbar */}
-          <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl">
-            <CardContent className="p-4 space-y-4">
-              <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
-                {/* Search input */}
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                  <Input 
-                    placeholder="Buscar por modelo o categoría..." 
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 bg-zinc-900/80 border-zinc-800 text-white placeholder:text-zinc-500 focus-visible:ring-blue-500/50"
-                  />
-                  {search && (
-                    <button 
-                      onClick={() => setSearch('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
+          {/* 1-Row Compact Filter Toolbar */}
+          <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+            {/* Lado Izquierdo: Campo de Búsqueda */}
+            <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+              <Input 
+                placeholder="Buscar modelo o categoría..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
+              />
+              {search && (
+                <button 
+                  onClick={() => setSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
 
-                {/* Category dropdown & Sorting */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <select 
-                    className="bg-zinc-900/90 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                    value={categoriaFilter}
-                    onChange={(e) => setCategoriaFilter(e.target.value)}
-                  >
-                    <option value="TODOS">Todas las Categorías ({totalProductsCount})</option>
-                    {categoryNamesList.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+            {/* Lado Derecho: Controles y Selectores */}
+            <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
+              {/* Category Dropdown */}
+              <select 
+                className="bg-[#F4EFEA] border border-[#E2D9CC] text-[#241C15] rounded-xl px-3 py-1.5 text-xs font-medium focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] cursor-pointer outline-none h-9 shadow-sm"
+                value={categoriaFilter}
+                onChange={(e) => setCategoriaFilter(e.target.value)}
+              >
+                <option value="TODOS">Todas las Categorías</option>
+                {categoryNamesList.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
 
-                  <select 
-                    className="bg-zinc-900/90 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                    value={sortBy}
-                    onChange={(e: any) => setSortBy(e.target.value)}
-                  >
-                    <option value="categoria">Ordenar por: Categoría</option>
-                    <option value="nombre">Ordenar por: Nombre (A-Z)</option>
-                    <option value="amigosDesc">Precio Amigos: Mayor a Menor</option>
-                    <option value="mercadoDesc">Precio Mercado: Mayor a Menor</option>
-                    <option value="comunidadDesc">Precio Comunidad: Mayor a Menor</option>
-                  </select>
-
-                  {/* View mode toggle */}
-                  <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1">
-                    <Button 
-                      type="button"
-                      variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
-                      size="sm"
-                      onClick={() => setViewMode('list')}
-                      className={`h-7 px-2.5 ${viewMode === 'list' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'}`}
-                      title="Vista en Lista"
-                    >
-                      <LayoutList className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      type="button"
-                      variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
-                      size="sm"
-                      onClick={() => setViewMode('grid')}
-                      className={`h-7 px-2.5 ${viewMode === 'grid' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'}`}
-                      title="Vista en Tarjetas"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+              {/* Sort Dropdown */}
+              <select 
+                className="bg-[#F4EFEA] border border-[#E2D9CC] text-[#241C15] rounded-xl px-3 py-1.5 text-xs font-medium focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] cursor-pointer outline-none h-9 shadow-sm hidden lg:block"
+                value={sortBy}
+                onChange={(e: any) => setSortBy(e.target.value)}
+              >
+                <option value="categoria">Ordenar: Categoría</option>
+                <option value="nombre">Ordenar: Nombre (A-Z)</option>
+                <option value="amigosDesc">P. Amigos: Mayor a Menor</option>
+                <option value="mercadoDesc">P. Mercado: Mayor a Menor</option>
+                <option value="comunidadDesc">P. Comunidad: Mayor a Menor</option>
+              </select>
 
               {/* Status Tabs Pills */}
-              <div className="flex items-center gap-2 pt-1 border-t border-zinc-900">
-                <span className="text-xs text-zinc-500 mr-1 font-medium">Estado:</span>
+              <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC]">
                 <button
                   onClick={() => setEstadoFilter('TODOS')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                     estadoFilter === 'TODOS'
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                      : 'bg-zinc-900/60 text-zinc-400 border border-zinc-800/80 hover:text-zinc-200'
+                      ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                      : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
                   }`}
                 >
-                  Todos ({totalProductsCount})
+                  Todos
                 </button>
                 <button
                   onClick={() => setEstadoFilter('ACTIVOS')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                     estadoFilter === 'ACTIVOS'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-zinc-900/60 text-zinc-400 border border-zinc-800/80 hover:text-zinc-200'
+                      ? 'bg-[#1E5E3A] text-white font-bold shadow-sm'
+                      : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
                   }`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Activos ({activeProductsCount})
+                  Activos
                 </button>
                 <button
                   onClick={() => setEstadoFilter('DESCONTINUADOS')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                     estadoFilter === 'DESCONTINUADOS'
-                      ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                      : 'bg-zinc-900/60 text-zinc-400 border border-zinc-800/80 hover:text-zinc-200'
+                      ? 'bg-[#75695D] text-white font-bold shadow-sm'
+                      : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
                   }`}
                 >
-                  <Archive className="w-3 h-3" />
-                  Descontinuados ({discontinuedProductsCount})
+                  Descontinuados
                 </button>
-
-                {(search || categoriaFilter !== 'TODOS' || estadoFilter !== 'TODOS') && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSearch('')
-                      setCategoriaFilter('TODOS')
-                      setEstadoFilter('TODOS')
-                    }}
-                    className="ml-auto text-xs text-zinc-400 hover:text-zinc-200 h-7"
-                  >
-                    Limpiar filtros
-                  </Button>
-                )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Main View: List or Grid */}
+          {/* Main Table View (Light Mode NOVA) */}
           {filteredProductos.length === 0 ? (
-            <Card className="bg-zinc-950/40 border-zinc-800/60 p-12 text-center">
+            <Card className="bg-[#FFFFFF] border-[#E2D9CC] p-12 text-center rounded-2xl shadow-sm">
               <div className="flex flex-col items-center justify-center space-y-3">
-                <Package className="h-12 w-12 text-zinc-600" />
-                <h3 className="text-lg font-medium text-zinc-300">No se encontraron productos</h3>
-                <p className="text-sm text-zinc-500 max-w-sm">
+                <Package className="h-12 w-12 text-[#A89B8D]" />
+                <h3 className="text-lg font-bold text-[#241C15]">No se encontraron productos</h3>
+                <p className="text-sm text-[#75695D] max-w-sm">
                   {search || categoriaFilter !== 'TODOS' || estadoFilter !== 'TODOS'
                     ? 'Prueba ajustando los filtros de búsqueda para ver más resultados.'
                     : 'Comienza agregando tu primer producto al catálogo.'}
                 </p>
                 <Button 
                   onClick={handleOpenCreate}
-                  className="mt-2 bg-blue-600 hover:bg-blue-700 text-white"
+                  className="mt-2 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Nuevo Producto
                 </Button>
               </div>
             </Card>
-          ) : viewMode === 'list' ? (
-            /* COMPACT TABLE (No horizontal scroll, 7 items per page) */
-            <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl overflow-hidden">
+          ) : (
+            <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
               <Table className="w-full">
-                <TableHeader className="bg-zinc-900/70 border-b border-zinc-800">
-                  <TableRow className="border-zinc-800 hover:bg-transparent">
-                    <TableHead className="text-zinc-400 font-semibold px-4 py-3 text-left">Producto / Modelo</TableHead>
-                    <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left hidden sm:table-cell">Categoría</TableHead>
-                    <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-center">Estado</TableHead>
-                    <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-right">P. Amigos</TableHead>
-                    <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-right">P. Mercado</TableHead>
-                    <TableHead className="text-zinc-400 font-semibold px-4 py-3 text-right">P. Comunidad</TableHead>
+                <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+                  <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+                    <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Producto / Modelo</TableHead>
+                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left hidden sm:table-cell">Categoría</TableHead>
+                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Estado</TableHead>
+                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">P. Amigos</TableHead>
+                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">P. Mercado</TableHead>
+                    <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">P. Comunidad</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -673,44 +648,44 @@ export function CatalogoClient({
                       <TableRow 
                         key={p.id} 
                         onClick={() => handleOpenDetails(p)}
-                        className={`border-zinc-800/60 transition-colors cursor-pointer group ${
+                        className={`border-[#E2D9CC]/70 transition-colors cursor-pointer group ${
                           isDiscontinued 
-                            ? 'bg-zinc-950/30 opacity-70 hover:opacity-100 hover:bg-zinc-900/40' 
-                            : 'hover:bg-zinc-900/60'
+                            ? 'bg-[#FDFBF7]/50 opacity-70 hover:opacity-100 hover:bg-[#FDFBF7]' 
+                            : 'hover:bg-[#FDFBF7]'
                         }`}
                       >
                         {/* Modelo & mobile category */}
-                        <TableCell className="font-medium text-zinc-100 px-4 py-2.5">
+                        <TableCell className="font-medium text-[#241C15] px-4 py-3">
                           <div className="flex flex-col">
-                            <span className={`text-sm font-semibold transition-colors ${
+                            <span className={`text-sm font-bold transition-colors ${
                               isDiscontinued 
-                                ? 'line-through text-zinc-400' 
-                                : 'text-zinc-100 group-hover:text-blue-400'
+                                ? 'line-through text-[#75695D]' 
+                                : 'text-[#241C15] group-hover:text-[#A36F4C]'
                             }`}>
                               {p.nombreModelo}
                             </span>
-                            <span className="sm:hidden text-[11px] text-zinc-400 mt-0.5">
+                            <span className="sm:hidden text-[11px] text-[#75695D] mt-0.5">
                               {p.lineaCategoria}
                             </span>
                           </div>
                         </TableCell>
 
                         {/* Categoría (Desktop) */}
-                        <TableCell className="px-3 py-2.5 hidden sm:table-cell">
-                          <Badge variant="outline" className="text-zinc-400 border-zinc-700 bg-zinc-900/90 text-xs truncate max-w-[170px]">
+                        <TableCell className="px-3 py-3 hidden sm:table-cell">
+                          <Badge variant="outline" className="text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] text-xs font-semibold truncate max-w-[170px]">
                             {p.lineaCategoria}
                           </Badge>
                         </TableCell>
 
                         {/* Estado */}
-                        <TableCell className="text-center px-3 py-2.5 whitespace-nowrap">
+                        <TableCell className="text-center px-3 py-3 whitespace-nowrap">
                           {p.activo ? (
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs gap-1 inline-flex items-center px-2 py-0.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs gap-1 inline-flex items-center px-2 py-0.5 font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
                               Activo
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-zinc-800 text-zinc-400 border-zinc-700 text-xs gap-1 inline-flex items-center px-2 py-0.5">
+                            <Badge variant="outline" className="bg-[#F4EFEA] text-[#75695D] border-[#E2D9CC] text-xs gap-1 inline-flex items-center px-2 py-0.5 font-medium">
                               <Archive className="w-3 h-3" />
                               Descontinuado
                             </Badge>
@@ -718,36 +693,36 @@ export function CatalogoClient({
                         </TableCell>
 
                         {/* 1. Precio Amigos */}
-                        <TableCell className="text-right px-3 py-2.5 whitespace-nowrap">
+                        <TableCell className="text-right px-3 py-3 whitespace-nowrap">
                           <div className="flex flex-col items-end">
-                            <span className="font-semibold text-emerald-400 text-sm">
+                            <span className="font-semibold text-[#1E5E3A] text-sm font-mono">
                               {formatCurrency(p.precioAmigos)}
                             </span>
-                            <span className="text-[10px] text-emerald-500/80 font-medium">
+                            <span className="text-[10px] text-[#1E5E3A]/80 font-medium">
                               {calcMargen(p.precioAmigos, p.costoBase)} ganancia
                             </span>
                           </div>
                         </TableCell>
 
                         {/* 2. Precio Mercado */}
-                        <TableCell className="text-right px-3 py-2.5 whitespace-nowrap">
+                        <TableCell className="text-right px-3 py-3 whitespace-nowrap">
                           <div className="flex flex-col items-end">
-                            <span className="font-semibold text-purple-300 text-sm">
+                            <span className="font-semibold text-[#944917] text-sm font-mono">
                               {formatCurrency(p.precioMercado)}
                             </span>
-                            <span className="text-[10px] text-purple-400/80 font-medium">
+                            <span className="text-[10px] text-[#944917]/80 font-medium">
                               {calcMargen(p.precioMercado, p.costoBase)} ganancia
                             </span>
                           </div>
                         </TableCell>
 
                         {/* 3. Precio Comunidad */}
-                        <TableCell className="text-right px-4 py-2.5 whitespace-nowrap">
+                        <TableCell className="text-right px-4 py-3 whitespace-nowrap">
                           <div className="flex flex-col items-end">
-                            <span className="font-bold text-blue-400 text-sm">
+                            <span className="font-bold text-[#A36F4C] text-sm font-mono">
                               {formatCurrency(p.precioComunidad)}
                             </span>
-                            <span className="text-[10px] text-blue-400/80 font-medium">
+                            <span className="text-[10px] text-[#A36F4C]/80 font-medium">
                               {calcMargen(p.precioComunidad, p.costoBase)} ganancia
                             </span>
                           </div>
@@ -759,19 +734,9 @@ export function CatalogoClient({
               </Table>
 
               {/* Pagination Footer */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-zinc-800/80 bg-zinc-950/70 text-xs text-zinc-400">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#F4EFEA] text-xs text-[#75695D]">
                 <div>
-                  Mostrando{' '}
-                  <span className="text-white font-medium">
-                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}
-                  </span>{' '}
-                  a{' '}
-                  <span className="text-white font-medium">
-                    {Math.min(currentPage * ITEMS_PER_PAGE, filteredProductos.length)}
-                  </span>{' '}
-                  de{' '}
-                  <span className="text-white font-medium">{filteredProductos.length}</span>{' '}
-                  productos
+                  Mostrando página <span className="text-[#241C15] font-bold">{currentPage}</span> de <span className="text-[#241C15] font-bold">{totalPages}</span> ({filteredProductos.length} modelos)
                 </div>
 
                 {totalPages > 1 && (
@@ -781,7 +746,7 @@ export function CatalogoClient({
                       size="sm"
                       onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
-                      className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
+                      className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
                     >
                       <ChevronLeft className="h-4 w-4 mr-1" />
                       Anterior
@@ -792,10 +757,10 @@ export function CatalogoClient({
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`h-8 w-8 rounded-lg text-xs font-medium transition-all ${
+                          className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             currentPage === page
-                              ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20'
-                              : 'bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                              ? 'bg-[#A36F4C] text-white shadow-sm'
+                              : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
                           }`}
                         >
                           {page}
@@ -808,7 +773,7 @@ export function CatalogoClient({
                       size="sm"
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
-                      className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
+                      className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
                     >
                       Siguiente
                       <ChevronRight className="h-4 w-4 ml-1" />
@@ -817,142 +782,6 @@ export function CatalogoClient({
                 )}
               </div>
             </Card>
-          ) : (
-            /* GRID / CARDS VIEW (7 items per page with Pagination) */
-            <div className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {paginatedProductos.map((item) => {
-                  const isDiscontinued = !item.activo
-
-                  return (
-                    <Card 
-                      key={item.id} 
-                      onClick={() => handleOpenDetails(item)}
-                      className={`border backdrop-blur-xl transition-all cursor-pointer group ${
-                        isDiscontinued
-                          ? 'bg-zinc-950/30 border-zinc-800/50 opacity-75 hover:opacity-100'
-                          : 'bg-zinc-950/60 border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-900/40'
-                      }`}
-                    >
-                      <CardHeader className="pb-3 flex flex-row items-start justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-zinc-400 border-zinc-700 bg-zinc-900 text-xs">
-                              {item.lineaCategoria}
-                            </Badge>
-                            {isDiscontinued && (
-                              <Badge variant="outline" className="text-amber-400 border-amber-500/20 bg-amber-500/10 text-[10px]">
-                                Descontinuado
-                              </Badge>
-                            )}
-                          </div>
-                          <CardTitle className={`text-lg leading-tight transition-colors ${
-                            isDiscontinued ? 'line-through text-zinc-400' : 'text-zinc-100 group-hover:text-blue-400'
-                          }`}>
-                            {item.nombreModelo}
-                          </CardTitle>
-                        </div>
-                      </CardHeader>
-                      
-                      <CardContent className="space-y-3">
-                        <div className="space-y-2">
-                          {/* 1. Amigos */}
-                          <div className="flex justify-between items-center p-2 rounded-lg bg-zinc-900/40 border border-zinc-800/40">
-                            <span className="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                              Amigos
-                            </span>
-                            <div className="text-right">
-                              <span className="text-sm font-bold text-emerald-400">{formatCurrency(item.precioAmigos)}</span>
-                              <span className="block text-[10px] text-emerald-500/80 font-medium">
-                                {calcMargen(item.precioAmigos, item.costoBase)} ganancia
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* 2. Mercado */}
-                          <div className="flex justify-between items-center p-2 rounded-lg bg-purple-950/20 border border-purple-800/30">
-                            <span className="text-xs font-medium text-purple-300 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-                              Mercado
-                            </span>
-                            <div className="text-right">
-                              <span className="text-sm font-bold text-purple-300">{formatCurrency(item.precioMercado)}</span>
-                              <span className="block text-[10px] text-purple-400/80 font-medium">
-                                {calcMargen(item.precioMercado, item.costoBase)} ganancia
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* 3. Comunidad */}
-                          <div className="flex justify-between items-center p-2 rounded-lg bg-blue-950/20 border border-blue-800/30">
-                            <span className="text-xs font-medium text-blue-400 flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                              Comunidad
-                            </span>
-                            <div className="text-right">
-                              <span className="text-sm font-bold text-blue-400">{formatCurrency(item.precioComunidad)}</span>
-                              <span className="block text-[10px] text-blue-400/80 font-medium">
-                                {calcMargen(item.precioComunidad, item.costoBase)} ganancia
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-
-              {/* Cards Pagination Footer */}
-              {totalPages > 1 && (
-                <Card className="bg-zinc-950/50 border-zinc-800 p-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400">
-                  <div>
-                    Mostrando página <span className="text-white font-medium">{currentPage}</span> de <span className="text-white font-medium">{totalPages}</span> ({filteredProductos.length} productos)
-                  </div>
-
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Anterior
-                    </Button>
-
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`h-8 w-8 rounded-lg text-xs font-medium transition-all ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20'
-                              : 'bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
-                    >
-                      Siguiente
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </Card>
-              )}
-            </div>
           )}
         </div>
       )}
@@ -964,45 +793,45 @@ export function CatalogoClient({
         <div className="space-y-6 animate-in fade-in duration-300">
           {/* Categories KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-              <span className="text-xs font-medium text-zinc-400 flex items-center gap-2">
-                <Database className="h-4 w-4 text-blue-400" />
-                Categorías en BD
+            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Categorías Registradas
               </span>
-              <div className="text-2xl font-bold text-white mt-1">{totalCategoriesCount}</div>
+              <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">{totalCategoriesCount}</div>
             </div>
-            <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-              <span className="text-xs font-medium text-emerald-400 flex items-center gap-2">
-                <Package className="h-4 w-4 text-emerald-400" />
+            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-2">
+                <Package className="h-4 w-4" />
                 Con Productos Asignados
               </span>
-              <div className="text-2xl font-bold text-emerald-400 mt-1">{categoriesWithProductsCount}</div>
+              <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">{categoriesWithProductsCount}</div>
             </div>
-            <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-              <span className="text-xs font-medium text-zinc-400 flex items-center gap-2">
-                <Tag className="h-4 w-4 text-zinc-500" />
-                Categorías Disponibles
+            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#75695D] flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Categorías Sin Modelos
               </span>
-              <div className="text-2xl font-bold text-zinc-300 mt-1">{emptyCategoriesCount}</div>
+              <div className="text-2xl font-extrabold text-[#75695D] font-mono mt-1">{emptyCategoriesCount}</div>
             </div>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6 items-start">
             {/* Column 1: Create Category Card Form */}
-            <Card className="bg-zinc-950/60 border-zinc-800 backdrop-blur-xl">
+            <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
               <CardHeader>
-                <CardTitle className="text-lg font-bold flex items-center gap-2 text-white">
-                  <Plus className="h-5 w-5 text-blue-400" />
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-[#241C15]">
+                  <Plus className="h-5 w-5 text-[#A36F4C]" />
                   Nueva Categoría
                 </CardTitle>
-                <CardDescription className="text-xs text-zinc-400">
-                  Registra una nueva categoría directamente en la base de datos para organizar tus modelos.
+                <CardDescription className="text-xs text-[#75695D]">
+                  Registra una nueva categoría directamente en la base de datos para organizar tus modelos 3D.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleCreateCategoria} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-zinc-300 font-semibold uppercase tracking-wider">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                       Nombre de la Categoría *
                     </Label>
                     <Input 
@@ -1010,28 +839,28 @@ export function CatalogoClient({
                       value={newCatNombre}
                       onChange={(e) => setNewCatNombre(e.target.value)}
                       required
-                      className="bg-zinc-900 border-zinc-700 text-white"
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-zinc-300 font-semibold uppercase tracking-wider">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                       Descripción (Opcional)
                     </Label>
                     <Input 
                       placeholder="Ej: Anillos, dijes y accesorios 3D"
                       value={newCatDesc}
                       onChange={(e) => setNewCatDesc(e.target.value)}
-                      className="bg-zinc-900 border-zinc-700 text-white"
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                     />
                   </div>
 
                   <Button 
                     type="submit" 
                     disabled={isCatSubmitting || !newCatNombre.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
+                    className="w-full bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
                     {isCatSubmitting ? 'Guardando en BD...' : 'Guardar Categoría en BD'}
                   </Button>
                 </form>
@@ -1039,30 +868,30 @@ export function CatalogoClient({
             </Card>
 
             {/* Column 2 & 3: Categories List and Table */}
-            <Card className="lg:col-span-2 bg-zinc-950/60 border-zinc-800 backdrop-blur-xl">
-              <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <Card className="lg:col-span-2 bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl overflow-hidden">
+              <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FDFBF7] border-b border-[#E2D9CC]">
                 <div>
-                  <CardTitle className="text-lg font-bold flex items-center gap-2 text-white">
-                    <FolderTree className="h-5 w-5 text-blue-400" />
+                  <CardTitle className="text-base font-bold flex items-center gap-2 text-[#241C15]">
+                    <FolderTree className="h-5 w-5 text-[#A36F4C]" />
                     Listado de Categorías
                   </CardTitle>
-                  <CardDescription className="text-xs text-zinc-400">
+                  <CardDescription className="text-xs text-[#75695D]">
                     Edita el nombre de las categorías o elimínalas si no tienen productos asociados.
                   </CardDescription>
                 </div>
 
                 <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-500" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#75695D]" />
                   <Input 
                     placeholder="Filtrar categorías..."
                     value={catSearch}
                     onChange={(e) => setCatSearch(e.target.value)}
-                    className="pl-8 h-8 bg-zinc-900/80 border-zinc-700 text-xs text-white"
+                    className="pl-8 h-9 bg-[#F4EFEA] border-[#DCD3C6] text-xs text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                   />
                   {catSearch && (
                     <button 
                       onClick={() => setCatSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15]"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
@@ -1072,54 +901,54 @@ export function CatalogoClient({
 
               <CardContent className="p-0">
                 {filteredCategorias.length === 0 ? (
-                  <div className="p-10 text-center text-zinc-500">
+                  <div className="p-10 text-center text-[#75695D]">
                     No se encontraron categorías registradas.
                   </div>
                 ) : (
-                  <div className="divide-y divide-zinc-800/80">
+                  <div className="divide-y divide-[#E2D9CC]/70">
                     {filteredCategorias.map((cat) => {
                       const isEditing = editingCatId === cat.id
                       const prodCount = productos.filter(p => p.lineaCategoria === cat.nombre).length
 
                       return (
-                        <div key={cat.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-zinc-900/40 transition-colors">
+                        <div key={cat.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FDFBF7] transition-colors">
                           {isEditing ? (
                             <div className="flex-1 grid sm:grid-cols-2 gap-2">
                               <Input 
                                 value={editingCatNombre}
                                 onChange={(e) => setEditingCatNombre(e.target.value)}
                                 placeholder="Nombre de categoría"
-                                className="bg-zinc-950 border-zinc-700 text-white text-xs h-9"
+                                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs h-9 rounded-xl focus:border-[#A36F4C]"
                                 autoFocus
                               />
                               <Input 
                                 value={editingCatDesc}
                                 onChange={(e) => setEditingCatDesc(e.target.value)}
                                 placeholder="Descripción (opcional)"
-                                className="bg-zinc-950 border-zinc-700 text-white text-xs h-9"
+                                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs h-9 rounded-xl focus:border-[#A36F4C]"
                               />
                             </div>
                           ) : (
                             <div className="flex-1 min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-bold text-sm text-white">
+                                <span className="font-bold text-sm text-[#241C15]">
                                   {cat.nombre}
                                 </span>
                                 <button
                                   onClick={() => handleFilterByCategoryFromTab(cat.nombre)}
-                                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1 ${
+                                  className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-colors flex items-center gap-1 font-semibold cursor-pointer ${
                                     prodCount > 0 
-                                      ? 'bg-blue-500/10 border-blue-500/30 text-blue-300 hover:bg-blue-500/20' 
-                                      : 'bg-zinc-900 border-zinc-800 text-zinc-500'
+                                      ? 'bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] hover:bg-[#EAE4DC]' 
+                                      : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D]'
                                   }`}
                                   title="Ver productos en el catálogo"
                                 >
-                                  <span>{prodCount} {prodCount === 1 ? 'producto' : 'productos'}</span>
+                                  <span>{prodCount} {prodCount === 1 ? 'modelo' : 'modelos'}</span>
                                   {prodCount > 0 && <ArrowRight className="h-2.5 w-2.5" />}
                                 </button>
                               </div>
                               {cat.descripcion && (
-                                <p className="text-xs text-zinc-400 mt-1">
+                                <p className="text-xs text-[#75695D] mt-1">
                                   {cat.descripcion}
                                 </p>
                               )}
@@ -1133,7 +962,7 @@ export function CatalogoClient({
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => setEditingCatId(null)}
-                                  className="h-8 px-2.5 text-zinc-400 hover:text-white text-xs"
+                                  className="h-8 px-2.5 text-[#75695D] hover:text-[#241C15] text-xs rounded-xl cursor-pointer"
                                 >
                                   Cancelar
                                 </Button>
@@ -1141,7 +970,7 @@ export function CatalogoClient({
                                   size="sm"
                                   onClick={() => handleSaveEditCat(cat.id)}
                                   disabled={isCatSubmitting || !editingCatNombre.trim()}
-                                  className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                                  className="h-8 px-3 bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer"
                                 >
                                   <Check className="h-3.5 w-3.5 mr-1" />
                                   Guardar
@@ -1153,9 +982,9 @@ export function CatalogoClient({
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleStartEditCat(cat)}
-                                  className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-blue-400 hover:border-blue-500/30 text-xs"
+                                  className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] text-xs rounded-xl cursor-pointer font-medium"
                                 >
-                                  <Edit2 className="h-3.5 w-3.5 mr-1" />
+                                  <Pencil className="h-3 w-3 mr-1 text-[#A36F4C]" />
                                   Editar
                                 </Button>
                                 <Button
@@ -1163,14 +992,14 @@ export function CatalogoClient({
                                   variant="ghost"
                                   onClick={() => handleDeleteCat(cat.id, cat.nombre)}
                                   disabled={prodCount > 0}
-                                  className={`h-8 px-2.5 text-xs transition-colors ${
+                                  className={`h-8 px-2.5 text-xs transition-colors rounded-xl cursor-pointer ${
                                     prodCount > 0 
-                                      ? 'text-zinc-600 cursor-not-allowed opacity-50' 
-                                      : 'text-zinc-400 hover:text-red-400 hover:bg-red-400/10'
+                                      ? 'text-[#A89B8D] cursor-not-allowed opacity-40' 
+                                      : 'text-[#A34335] hover:text-red-700 hover:bg-red-50 font-medium'
                                   }`}
                                   title={prodCount > 0 ? `Tiene ${prodCount} producto(s) asignado(s)` : 'Eliminar categoría'}
                                 >
-                                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                  <Trash2 className="h-3 w-3 mr-1" />
                                   Eliminar
                                 </Button>
                               </>
@@ -1188,49 +1017,64 @@ export function CatalogoClient({
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: VER DETALLE DEL PRODUCTO                                           */}
+      {/* MODAL: VER DETALLE DEL PRODUCTO (LIGHT MODE NOVA)                         */}
       {/* ========================================================================= */}
       <Dialog open={openDetails} onOpenChange={setOpenDetails}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[560px]">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[560px] p-0 overflow-hidden shadow-2xl rounded-2xl">
           {selectedProducto && (
             <>
-              <DialogHeader>
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="text-zinc-400 border-zinc-700 bg-zinc-900 text-xs">
-                    {selectedProducto.lineaCategoria}
-                  </Badge>
-                  {selectedProducto.activo ? (
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                      Activo
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-zinc-800 text-zinc-400 border-zinc-700 text-xs gap-1">
-                      <Archive className="w-3 h-3" />
-                      Descontinuado
-                    </Badge>
-                  )}
-                </div>
-                <DialogTitle className="text-2xl font-bold text-white leading-tight">
-                  {selectedProducto.nombreModelo}
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="space-y-5 mt-4">
-                {/* Costo Base Hero Box */}
-                <div className="p-4 rounded-xl bg-gradient-to-r from-zinc-900 to-zinc-900/60 border border-zinc-800 flex items-center justify-between">
-                  <div>
-                    <span className="text-xs uppercase tracking-wider text-zinc-400 font-semibold">Costo Base de Fabricación</span>
-                    <p className="text-xs text-zinc-500 mt-0.5">Filamento, energía y depreciación estimada</p>
+              {/* Modal Header */}
+              <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                    <Package className="h-5 w-5" />
                   </div>
-                  <div className="text-2xl font-bold text-white font-mono">
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Badge variant="outline" className="text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] text-[10px] font-semibold">
+                        {selectedProducto.lineaCategoria}
+                      </Badge>
+                      {selectedProducto.activo ? (
+                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] gap-1 font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
+                          Activo
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-[#F4EFEA] text-[#75695D] border-[#E2D9CC] text-[10px]">
+                          <Archive className="w-2.5 h-2.5" />
+                          Descontinuado
+                        </Badge>
+                      )}
+                    </div>
+                    <DialogTitle className="text-lg font-bold text-[#241C15] tracking-tight">
+                      {selectedProducto.nombreModelo}
+                    </DialogTitle>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenDetails(false)}
+                  className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Costo Base Hero Box */}
+                <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] flex items-center justify-between shadow-sm">
+                  <div>
+                    <span className="text-xs uppercase tracking-wider text-[#75695D] font-bold">Costo Base de Fabricación</span>
+                    <p className="text-[11px] text-[#75695D] mt-0.5">Filamento, energía y depreciación estimada</p>
+                  </div>
+                  <div className="text-2xl font-extrabold text-[#241C15] font-mono">
                     {formatCurrency(selectedProducto.costoBase)}
                   </div>
                 </div>
 
-                {/* Precios & Márgenes (Order: Amigos, Mercado, Comunidad) */}
-                <div className="space-y-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                {/* Precios & Márgenes */}
+                <div className="space-y-2.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#75695D]">
                     Estructura de Precios y Márgenes
                   </span>
 
@@ -1239,17 +1083,17 @@ export function CatalogoClient({
                     const ganancia = selectedProducto.precioAmigos - selectedProducto.costoBase
                     const margen = selectedProducto.costoBase > 0 ? (ganancia / selectedProducto.costoBase) * 100 : 0
                     return (
-                      <div className="p-3.5 rounded-xl bg-emerald-950/15 border border-emerald-500/20 flex items-center justify-between">
+                      <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#1E5E3A]"></span>
                           <div>
-                            <span className="text-sm font-bold text-emerald-300">Precio Amigos</span>
-                            <span className="block text-xs text-emerald-400/80">
+                            <span className="text-xs font-bold text-[#1E5E3A]">Precio Amigos</span>
+                            <span className="block text-[11px] text-[#75695D]">
                               Ganancia: +{formatCurrency(ganancia)} ({margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`})
                             </span>
                           </div>
                         </div>
-                        <span className="text-lg font-bold text-emerald-300 font-mono">
+                        <span className="text-base font-bold text-[#1E5E3A] font-mono">
                           {formatCurrency(selectedProducto.precioAmigos)}
                         </span>
                       </div>
@@ -1261,17 +1105,17 @@ export function CatalogoClient({
                     const ganancia = selectedProducto.precioMercado - selectedProducto.costoBase
                     const margen = selectedProducto.costoBase > 0 ? (ganancia / selectedProducto.costoBase) * 100 : 0
                     return (
-                      <div className="p-3.5 rounded-xl bg-purple-950/20 border border-purple-500/25 flex items-center justify-between">
+                      <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#944917]"></span>
                           <div>
-                            <span className="text-sm font-bold text-purple-200">Precio Mercado</span>
-                            <span className="block text-xs text-purple-400/80">
+                            <span className="text-xs font-bold text-[#944917]">Precio Mercado</span>
+                            <span className="block text-[11px] text-[#75695D]">
                               Ganancia: +{formatCurrency(ganancia)} ({margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`})
                             </span>
                           </div>
                         </div>
-                        <span className="text-lg font-bold text-purple-200 font-mono">
+                        <span className="text-base font-bold text-[#944917] font-mono">
                           {formatCurrency(selectedProducto.precioMercado)}
                         </span>
                       </div>
@@ -1283,17 +1127,17 @@ export function CatalogoClient({
                     const ganancia = selectedProducto.precioComunidad - selectedProducto.costoBase
                     const margen = selectedProducto.costoBase > 0 ? (ganancia / selectedProducto.costoBase) * 100 : 0
                     return (
-                      <div className="p-3.5 rounded-xl bg-blue-950/15 border border-blue-500/20 flex items-center justify-between">
+                      <div className="p-3 rounded-xl bg-[#FDFBF7] border border-[#D4BEA7] flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#A36F4C]"></span>
                           <div>
-                            <span className="text-sm font-bold text-blue-300">Precio Comunidad</span>
-                            <span className="block text-xs text-blue-400/80">
+                            <span className="text-xs font-bold text-[#A36F4C]">Precio Comunidad</span>
+                            <span className="block text-[11px] text-[#75695D]">
                               Ganancia: +{formatCurrency(ganancia)} ({margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`})
                             </span>
                           </div>
                         </div>
-                        <span className="text-lg font-bold text-blue-300 font-mono">
+                        <span className="text-base font-extrabold text-[#A36F4C] font-mono">
                           {formatCurrency(selectedProducto.precioComunidad)}
                         </span>
                       </div>
@@ -1302,16 +1146,16 @@ export function CatalogoClient({
                 </div>
 
                 {/* Quick actions inside Detail Modal */}
-                <div className="flex items-center justify-between gap-3 pt-4 border-t border-zinc-800">
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#E2D9CC]">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => handleToggleEstado(selectedProducto.id, selectedProducto.activo)}
-                    className={`border-zinc-700 text-xs ${
+                    className={`border-[#E2D9CC] text-xs rounded-xl cursor-pointer font-medium ${
                       selectedProducto.activo 
-                        ? 'text-amber-400 hover:text-amber-300 hover:bg-amber-400/10' 
-                        : 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10'
+                        ? 'text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]' 
+                        : 'text-[#1E5E3A] hover:text-[#16472C] hover:bg-emerald-50'
                     }`}
                   >
                     {selectedProducto.activo ? (
@@ -1332,16 +1176,16 @@ export function CatalogoClient({
                       type="button"
                       variant="ghost"
                       onClick={() => setOpenDetails(false)}
-                      className="text-zinc-400 hover:text-white text-xs"
+                      className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs rounded-xl cursor-pointer"
                     >
                       Cerrar
                     </Button>
                     <Button 
                       type="button"
                       onClick={() => handleOpenEdit(selectedProducto)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                      className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer"
                     >
-                      <Edit2 className="h-3.5 w-3.5 mr-1.5" />
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
                       Editar Producto
                     </Button>
                   </div>
@@ -1353,28 +1197,44 @@ export function CatalogoClient({
       </Dialog>
 
       {/* ========================================================================= */}
-      {/* MODAL: NUEVO PRODUCTO                                                     */}
+      {/* MODAL: NUEVO PRODUCTO (LIGHT MODE NOVA)                                   */}
       {/* ========================================================================= */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[540px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Package className="h-5 w-5 text-blue-500" />
-              Nuevo Producto
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[540px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                <Package className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                  Nuevo Producto en Catálogo
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                  Registra un modelo 3D con sus costos base y precios de venta.
+                </DialogDescription>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpenCreate(false)}
+              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-          <form onSubmit={handleCreateSubmit} className="space-y-4 mt-3">
+          <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
             {/* Categoría Selector with Quick Add */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                   Línea / Categoría *
                 </Label>
                 <button
                   type="button"
                   onClick={() => setIsQuickAddingCat(!isQuickAddingCat)}
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-[#A36F4C] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="h-3 w-3" />
                   {isQuickAddingCat ? 'Elegir existente' : 'Crear nueva categoría'}
@@ -1382,14 +1242,14 @@ export function CatalogoClient({
               </div>
 
               {isQuickAddingCat ? (
-                <div className="p-3 rounded-lg bg-zinc-900 border border-blue-500/40 space-y-2">
+                <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2">
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-zinc-400">Nombre de la nueva categoría *</Label>
+                    <Label className="text-[11px] text-[#75695D] font-medium">Nombre de la nueva categoría *</Label>
                     <Input 
                       value={quickCatName}
                       onChange={(e) => setQuickCatName(e.target.value)}
                       placeholder="Ej: Joyería & Accesorios..."
-                      className="h-8 bg-zinc-950 border-zinc-700 text-white text-xs"
+                      className="h-9 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#A36F4C]"
                       autoFocus
                     />
                   </div>
@@ -1399,7 +1259,7 @@ export function CatalogoClient({
                       variant="ghost"
                       size="sm"
                       onClick={() => setIsQuickAddingCat(false)}
-                      className="h-7 px-2 text-zinc-400 text-xs"
+                      className="h-8 px-2.5 text-[#75695D] text-xs rounded-xl cursor-pointer"
                     >
                       Cancelar
                     </Button>
@@ -1408,7 +1268,7 @@ export function CatalogoClient({
                       size="sm"
                       onClick={handleQuickAddCategory}
                       disabled={!quickCatName.trim()}
-                      className="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                      className="h-8 px-3 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
                     >
                       Guardar en BD
                     </Button>
@@ -1419,7 +1279,7 @@ export function CatalogoClient({
                   value={formCategoria}
                   onChange={(e) => setFormCategoria(e.target.value)}
                   required
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] rounded-xl px-3 py-2 text-sm text-[#241C15] focus:outline-none focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 >
                   <option value="" disabled>Selecciona una categoría</option>
                   {categoryNamesList.map(c => (
@@ -1429,8 +1289,8 @@ export function CatalogoClient({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                 Nombre del Modelo / Producto *
               </Label>
               <Input 
@@ -1438,14 +1298,14 @@ export function CatalogoClient({
                 onChange={(e) => setFormNombre(e.target.value)}
                 placeholder="Ej: Inserto Catan 3D (5 Placas)"
                 required
-                className="bg-zinc-900 border-zinc-700 text-white"
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
               />
             </div>
 
             {/* Costo Base & Auto-calculate Button */}
-            <div className="space-y-2 pt-2 border-t border-zinc-800/80">
+            <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                   Costo Base de Fabricación (S/) *
                 </Label>
                 <Button
@@ -1454,110 +1314,129 @@ export function CatalogoClient({
                   size="sm"
                   onClick={() => handleAutoCalculatePrices(formCostoBase)}
                   disabled={!formCostoBase || parseFloat(formCostoBase) <= 0}
-                  className="h-6 text-xs text-blue-400 hover:text-blue-300 p-0"
+                  className="h-6 text-xs text-[#A36F4C] font-semibold hover:underline p-0 cursor-pointer"
                 >
                   <Sparkles className="h-3 w-3 mr-1" />
                   Sugerir Precios
                 </Button>
               </div>
-              <Input 
-                type="number"
-                step="0.01"
-                min="0"
-                value={formCostoBase}
-                onChange={(e) => {
-                  setFormCostoBase(e.target.value)
-                  if (!formPrecioAmigos && !formPrecioMercado && !formPrecioComunidad) {
-                    handleAutoCalculatePrices(e.target.value)
-                  }
-                }}
-                placeholder="Ej: 25.50"
-                required
-                className="bg-zinc-900 border-zinc-700 text-white font-mono text-base"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formCostoBase}
+                  onChange={(e) => {
+                    setFormCostoBase(e.target.value)
+                    if (!formPrecioAmigos && !formPrecioMercado && !formPrecioComunidad) {
+                      handleAutoCalculatePrices(e.target.value)
+                    }
+                  }}
+                  placeholder="0.00"
+                  required
+                  className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
             </div>
 
             {/* Price Tiers Grid: 1. Amigos, 2. Mercado, 3. Comunidad */}
-            <div className="grid grid-cols-3 gap-3 pt-2">
+            <div className="grid grid-cols-3 gap-3 pt-1">
               <div className="space-y-1.5">
-                <Label className="text-xs text-emerald-400 font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <Label className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
                   P. Amigos
                 </Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formPrecioAmigos}
-                  onChange={(e) => setFormPrecioAmigos(e.target.value)}
-                  placeholder="S/ 0.00"
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-emerald-400 font-mono font-semibold"
-                />
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formPrecioAmigos}
+                    onChange={(e) => setFormPrecioAmigos(e.target.value)}
+                    placeholder="0.00"
+                    required
+                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-purple-400 font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                <Label className="text-xs text-[#944917] font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#944917]"></span>
                   P. Mercado
                 </Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formPrecioMercado}
-                  onChange={(e) => setFormPrecioMercado(e.target.value)}
-                  placeholder="S/ 0.00"
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-purple-400 font-mono font-semibold"
-                />
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formPrecioMercado}
+                    onChange={(e) => setFormPrecioMercado(e.target.value)}
+                    placeholder="0.00"
+                    required
+                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-blue-400 font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <Label className="text-xs text-[#A36F4C] font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#A36F4C]"></span>
                   P. Comunidad
                 </Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formPrecioComunidad}
-                  onChange={(e) => setFormPrecioComunidad(e.target.value)}
-                  placeholder="S/ 0.00"
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-blue-400 font-mono font-semibold"
-                />
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formPrecioComunidad}
+                    onChange={(e) => setFormPrecioComunidad(e.target.value)}
+                    placeholder="0.00"
+                    required
+                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                  />
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2 pt-2">
-              <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-[#241C15] font-medium cursor-pointer">
                 <input 
                   type="checkbox"
                   checked={formActivo}
                   onChange={(e) => setFormActivo(e.target.checked)}
-                  className="rounded border-zinc-700 bg-zinc-900 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-[#DCD3C6] text-[#A36F4C] focus:ring-[#A36F4C]"
                 />
                 Producto activo disponible para ventas
               </label>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenCreate(false)}
-                className="text-zinc-400 hover:text-white"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all"
               >
-                {isSubmitting ? 'Guardando...' : 'Guardar Producto'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Guardar Producto'
+                )}
               </Button>
             </div>
           </form>
@@ -1565,28 +1444,44 @@ export function CatalogoClient({
       </Dialog>
 
       {/* ========================================================================= */}
-      {/* MODAL: EDITAR PRODUCTO                                                    */}
+      {/* MODAL: EDITAR PRODUCTO (LIGHT MODE NOVA)                                  */}
       {/* ========================================================================= */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[540px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Edit2 className="h-5 w-5 text-blue-400" />
-              Editar Producto
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[540px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                <Pencil className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                  Editar Producto
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                  Actualiza los datos del modelo, categoría o estructura de precios.
+                </DialogDescription>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpenEdit(false)}
+              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-          <form onSubmit={handleEditSubmit} className="space-y-4 mt-3">
+          <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
             {/* Categoría Selector with Quick Add */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                   Línea / Categoría *
                 </Label>
                 <button
                   type="button"
                   onClick={() => setIsQuickAddingCat(!isQuickAddingCat)}
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer"
+                  className="text-xs text-[#A36F4C] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="h-3 w-3" />
                   {isQuickAddingCat ? 'Elegir existente' : 'Crear nueva categoría'}
@@ -1594,14 +1489,14 @@ export function CatalogoClient({
               </div>
 
               {isQuickAddingCat ? (
-                <div className="p-3 rounded-lg bg-zinc-900 border border-blue-500/40 space-y-2">
+                <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2">
                   <div className="space-y-1">
-                    <Label className="text-[11px] text-zinc-400">Nombre de la nueva categoría *</Label>
+                    <Label className="text-[11px] text-[#75695D] font-medium">Nombre de la nueva categoría *</Label>
                     <Input 
                       value={quickCatName}
                       onChange={(e) => setQuickCatName(e.target.value)}
                       placeholder="Ej: Joyería & Accesorios..."
-                      className="h-8 bg-zinc-950 border-zinc-700 text-white text-xs"
+                      className="h-9 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#A36F4C]"
                       autoFocus
                     />
                   </div>
@@ -1611,7 +1506,7 @@ export function CatalogoClient({
                       variant="ghost" 
                       size="sm"
                       onClick={() => setIsQuickAddingCat(false)}
-                      className="h-7 px-2 text-zinc-400 text-xs"
+                      className="h-8 px-2.5 text-[#75695D] text-xs rounded-xl cursor-pointer"
                     >
                       Cancelar
                     </Button>
@@ -1620,7 +1515,7 @@ export function CatalogoClient({
                       size="sm"
                       onClick={handleQuickAddCategory}
                       disabled={!quickCatName.trim()}
-                      className="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                      className="h-8 px-3 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
                     >
                       Guardar en BD
                     </Button>
@@ -1631,7 +1526,7 @@ export function CatalogoClient({
                   value={formCategoria}
                   onChange={(e) => setFormCategoria(e.target.value)}
                   required
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] rounded-xl px-3 py-2 text-sm text-[#241C15] focus:outline-none focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 >
                   {categoryNamesList.map(c => (
                     <option key={c} value={c}>{c}</option>
@@ -1640,21 +1535,21 @@ export function CatalogoClient({
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                 Nombre del Modelo / Producto *
               </Label>
               <Input 
                 value={formNombre}
                 onChange={(e) => setFormNombre(e.target.value)}
                 required
-                className="bg-zinc-900 border-zinc-700 text-white"
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
               />
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-zinc-800/80">
+            <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
               <div className="flex items-center justify-between">
-                <Label className="text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
                   Costo Base de Fabricación (S/) *
                 </Label>
                 <Button
@@ -1663,92 +1558,111 @@ export function CatalogoClient({
                   size="sm"
                   onClick={() => handleAutoCalculatePrices(formCostoBase)}
                   disabled={!formCostoBase || parseFloat(formCostoBase) <= 0}
-                  className="h-6 text-xs text-blue-400 hover:text-blue-300 p-0"
+                  className="h-6 text-xs text-[#A36F4C] font-semibold hover:underline p-0 cursor-pointer"
                 >
                   <Sparkles className="h-3 w-3 mr-1" />
                   Recalcular Sugeridos
                 </Button>
               </div>
-              <Input 
-                type="number"
-                step="0.01"
-                min="0"
-                value={formCostoBase}
-                onChange={(e) => setFormCostoBase(e.target.value)}
-                required
-                className="bg-zinc-900 border-zinc-700 text-white font-mono text-base"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formCostoBase}
+                  onChange={(e) => setFormCostoBase(e.target.value)}
+                  required
+                  className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
             </div>
 
-            {/* Price Tiers Grid: 1. Amigos, 2. Mercado, 3. Comunidad */}
-            <div className="grid grid-cols-3 gap-3 pt-2">
+            {/* Price Tiers Grid */}
+            <div className="grid grid-cols-3 gap-3 pt-1">
               <div className="space-y-1.5">
-                <Label className="text-xs text-emerald-400 font-medium">P. Amigos</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formPrecioAmigos}
-                  onChange={(e) => setFormPrecioAmigos(e.target.value)}
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-emerald-400 font-mono font-semibold"
-                />
+                <Label className="text-xs text-[#1E5E3A] font-bold">P. Amigos</Label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formPrecioAmigos}
+                    onChange={(e) => setFormPrecioAmigos(e.target.value)}
+                    required
+                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-purple-400 font-medium">P. Mercado</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formPrecioMercado}
-                  onChange={(e) => setFormPrecioMercado(e.target.value)}
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-purple-400 font-mono font-semibold"
-                />
+                <Label className="text-xs text-[#944917] font-bold">P. Mercado</Label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formPrecioMercado}
+                    onChange={(e) => setFormPrecioMercado(e.target.value)}
+                    required
+                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-blue-400 font-medium">P. Comunidad</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formPrecioComunidad}
-                  onChange={(e) => setFormPrecioComunidad(e.target.value)}
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-blue-400 font-mono font-semibold"
-                />
+                <Label className="text-xs text-[#A36F4C] font-bold">P. Comunidad</Label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formPrecioComunidad}
+                    onChange={(e) => setFormPrecioComunidad(e.target.value)}
+                    required
+                    className="pl-7 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                  />
+                </div>
               </div>
             </div>
 
             <div className="flex items-center gap-2 pt-2">
-              <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-[#241C15] font-medium cursor-pointer">
                 <input 
                   type="checkbox"
                   checked={formActivo}
                   onChange={(e) => setFormActivo(e.target.checked)}
-                  className="rounded border-zinc-700 bg-zinc-900 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-[#DCD3C6] text-[#A36F4C] focus:ring-[#A36F4C]"
                 />
                 Producto activo disponible para ventas
               </label>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenEdit(false)}
-                className="text-zinc-400 hover:text-white"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all"
               >
-                {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Guardar Cambios'
+                )}
               </Button>
             </div>
           </form>

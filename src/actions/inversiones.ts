@@ -4,6 +4,19 @@ import prisma from '@/lib/prisma'
 import { CategoriaInversion } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 
+function safeRevalidate() {
+  try {
+    revalidatePath('/finanzas')
+    revalidatePath('/finanzas/egresos')
+    revalidatePath('/finanzas/flujo-caja')
+    revalidatePath('/finanzas/proyecciones')
+    revalidatePath('/inversiones')
+    revalidatePath('/')
+  } catch (e) {
+    // Ignore if called outside Next.js request store
+  }
+}
+
 export async function getInversiones() {
   const inversiones = await prisma.inversion.findMany({
     orderBy: { createdAt: 'desc' }
@@ -25,14 +38,14 @@ export async function getInversiones() {
 export async function createInversion(data: {
   persona?: string
   categoria: CategoriaInversion
-  subcategoria?: string
+  subcategoria?: string | null
   itemConcepto: string
-  especificacionColor?: string
-  presentacion?: string
+  especificacionColor?: string | null
+  presentacion?: string | null
   cantidad: number
   costoUnitario: number
   costoEnvio?: number
-  numeroCuotas?: number
+  numeroCuotas?: number | null
 }) {
   const costoTotal = (data.cantidad * data.costoUnitario) + (data.costoEnvio || 0)
   
@@ -61,8 +74,8 @@ export async function createInversion(data: {
       categoria: data.categoria,
       subcategoria: data.subcategoria || undefined,
       itemConcepto: data.itemConcepto,
-      especificacionColor: data.especificacionColor,
-      presentacion: data.presentacion,
+      especificacionColor: data.especificacionColor || undefined,
+      presentacion: data.presentacion || undefined,
       cantidad: data.cantidad,
       costoUnitario: data.costoUnitario,
       costoEnvio: data.costoEnvio || 0,
@@ -73,13 +86,11 @@ export async function createInversion(data: {
     }
   })
 
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/egresos')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/inversiones')
-  revalidatePath('/')
+  safeRevalidate()
+
   return {
     ...inversion,
+    subcategoria: inversion.subcategoria || null,
     costoUnitario: Number(inversion.costoUnitario),
     costoEnvio: inversion.costoEnvio ? Number(inversion.costoEnvio) : null,
     costoTotal: Number(inversion.costoTotal),
@@ -91,16 +102,16 @@ export async function createInversion(data: {
 }
 
 export async function updateInversion(id: string, data: {
-  persona?: string
+  persona?: string | null
   categoria?: CategoriaInversion
-  subcategoria?: string
+  subcategoria?: string | null
   itemConcepto?: string
-  especificacionColor?: string
-  presentacion?: string
+  especificacionColor?: string | null
+  presentacion?: string | null
   cantidad?: number
   costoUnitario?: number
   costoEnvio?: number
-  numeroCuotas?: number
+  numeroCuotas?: number | null
 }) {
   const current = await prisma.inversion.findUnique({ where: { id } })
   if (!current) throw new Error("Registro de egreso no encontrado")
@@ -136,30 +147,27 @@ export async function updateInversion(id: string, data: {
   const updated = await prisma.inversion.update({
     where: { id },
     data: {
-      persona: data.persona !== undefined ? data.persona : current.persona,
+      persona: data.persona !== undefined ? (data.persona || 'Víctor') : current.persona,
       categoria,
-      subcategoria,
+      subcategoria: data.subcategoria !== undefined ? data.subcategoria : current.subcategoria,
       itemConcepto: data.itemConcepto !== undefined ? data.itemConcepto : current.itemConcepto,
       especificacionColor: data.especificacionColor !== undefined ? data.especificacionColor : current.especificacionColor,
-      presentacion,
+      presentacion: data.presentacion !== undefined ? data.presentacion : current.presentacion,
       cantidad,
       costoUnitario,
       costoEnvio,
       costoTotal,
       costoPorGramo,
-      numeroCuotas,
+      numeroCuotas: data.numeroCuotas !== undefined ? data.numeroCuotas : current.numeroCuotas,
       montoCuota
     }
   })
 
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/egresos')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/inversiones')
-  revalidatePath('/')
+  safeRevalidate()
 
   return {
     ...updated,
+    subcategoria: updated.subcategoria || null,
     costoUnitario: Number(updated.costoUnitario),
     costoEnvio: updated.costoEnvio ? Number(updated.costoEnvio) : null,
     costoTotal: Number(updated.costoTotal),
@@ -172,9 +180,5 @@ export async function updateInversion(id: string, data: {
 
 export async function deleteInversion(id: string) {
   await prisma.inversion.delete({ where: { id } })
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/egresos')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/inversiones')
-  revalidatePath('/')
+  safeRevalidate()
 }

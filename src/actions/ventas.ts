@@ -4,6 +4,19 @@ import prisma from '@/lib/prisma'
 import { EstadoVenta, TipoPrecio } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 
+function safeRevalidate() {
+  try {
+    revalidatePath('/ventas')
+    revalidatePath('/finanzas')
+    revalidatePath('/finanzas/flujo-caja')
+    revalidatePath('/finanzas/ingresos')
+    revalidatePath('/finanzas/proyecciones')
+    revalidatePath('/')
+  } catch (e) {
+    // Ignore outside request store
+  }
+}
+
 export async function getPromedioPackaging(): Promise<number> {
   const packagingExpenses = await prisma.inversion.findMany({
     where: {
@@ -95,11 +108,8 @@ export async function createVenta(data: {
     }
   })
 
-  revalidatePath('/ventas')
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/finanzas/ingresos')
-  revalidatePath('/')
+  safeRevalidate()
+
   return {
     ...venta,
     precioUnitario: Number(venta.precioUnitario),
@@ -119,11 +129,7 @@ export async function updateEstadoVenta(id: string, estado: EstadoVenta) {
     where: { id },
     data: { estado }
   })
-  revalidatePath('/ventas')
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/finanzas/ingresos')
-  revalidatePath('/')
+  safeRevalidate()
   return {
     ...venta,
     precioUnitario: Number(venta.precioUnitario),
@@ -153,11 +159,8 @@ export async function registrarAbono(id: string, montoAbono: number) {
     }
   })
 
-  revalidatePath('/ventas')
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/finanzas/ingresos')
-  revalidatePath('/')
+  safeRevalidate()
+
   return {
     ...updatedVenta,
     precioUnitario: Number(updatedVenta.precioUnitario),
@@ -184,11 +187,8 @@ export async function liquidarSaldoTotal(id: string) {
     }
   })
 
-  revalidatePath('/ventas')
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/finanzas/ingresos')
-  revalidatePath('/')
+  safeRevalidate()
+
   return {
     ...updatedVenta,
     precioUnitario: Number(updatedVenta.precioUnitario),
@@ -205,9 +205,5 @@ export async function liquidarSaldoTotal(id: string) {
 
 export async function deleteVenta(id: string) {
   await prisma.venta.delete({ where: { id } })
-  revalidatePath('/ventas')
-  revalidatePath('/finanzas')
-  revalidatePath('/finanzas/flujo-caja')
-  revalidatePath('/finanzas/ingresos')
-  revalidatePath('/')
+  safeRevalidate()
 }

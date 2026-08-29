@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,19 +14,18 @@ import {
   Trash2, 
   Search, 
   X, 
-  DollarSign, 
   Clock, 
-  CreditCard, 
   CheckCircle2, 
   ChevronLeft, 
   ChevronRight,
   Package,
-  Layers
+  DollarSign,
+  Loader2
 } from 'lucide-react'
 import { createIngreso, deleteIngreso } from '@/actions/ingresos'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { VentaItem, IngresoDirectoItem } from './FlujoCajaClient'
 
 interface IngresosClientProps {
@@ -58,7 +57,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
   const [formMetodoPago, setFormMetodoPago] = useState('YAPE')
   const [formNotas, setFormNotas] = useState('')
 
-  const formatCurrency = (val: number) => `S/ ${val.toFixed(2)}`
+  const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Financial KPIs
   const totalIngresosCobradosVentas = useMemo(() => {
@@ -208,186 +207,185 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
-            <ArrowUpRight className="h-8 w-8 text-emerald-500" />
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] shadow-sm">
+              <ArrowUpRight className="h-6 w-6 stroke-[2.5]" />
+            </div>
             Registro de Ingresos
           </h1>
-          <p className="text-sm text-zinc-400 mt-1">
+          <p className="text-sm text-[#75695D] mt-1">
             Control de cobros por ventas de productos 3D y servicios de impresión / diseño personalizado.
           </p>
         </div>
 
         <Button 
           onClick={handleOpenCreate}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+          className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold rounded-xl shadow-md shadow-[#1E5E3A]/20 transition-all cursor-pointer h-10 px-4 text-xs"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
           Registrar Ingreso Directo
         </Button>
       </div>
 
       {/* KPI Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
+          <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 stroke-[2.5]" />
             Total Ingresos Cobrados
           </span>
-          <div className="text-2xl font-extrabold text-emerald-400 font-mono mt-1">
+          <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
             {formatCurrency(totalIngresosCobrados)}
           </div>
-          <span className="text-xs text-zinc-500 mt-0.5 block">
+          <span className="text-xs text-[#75695D] mt-0.5 block">
             Dinero real ingresado a caja
           </span>
         </div>
 
-        <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-400 flex items-center gap-2">
-            <Package className="h-4 w-4" />
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
+            <Package className="h-4 w-4 stroke-[2.5]" />
             Facturación Total en Ventas
           </span>
-          <div className="text-2xl font-extrabold text-white font-mono mt-1">
+          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
             {formatCurrency(totalFacturadoVentas)}
           </div>
-          <span className="text-xs text-zinc-500 mt-0.5 block">
+          <span className="text-xs text-[#75695D] mt-0.5 block">
             Monto total de ventas generadas
           </span>
         </div>
 
-        <div className="bg-zinc-950/60 border border-zinc-800 rounded-xl p-4 backdrop-blur-md">
-          <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-2">
-            <Clock className="h-4 w-4" />
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center gap-2">
+            <Clock className="h-4 w-4 stroke-[2.5]" />
             Cuentas por Cobrar (Saldos)
           </span>
-          <div className="text-2xl font-extrabold text-amber-400 font-mono mt-1">
+          <div className="text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
             {formatCurrency(totalSaldosPorCobrar)}
           </div>
-          <span className="text-xs text-zinc-500 mt-0.5 block">
+          <span className="text-xs text-[#75695D] mt-0.5 block">
             Saldos pendientes de entrega
           </span>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-              <Input 
-                placeholder="Buscar por cliente, modelo o servicio..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-9 bg-zinc-900/80 border-zinc-800 text-white placeholder:text-zinc-500 text-sm"
-              />
-              {search && (
-                <button 
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+      {/* 1-Row Toolbar */}
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
+        {/* Search */}
+        <div className="relative w-full md:w-80 flex-shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+          <Input 
+            placeholder="Buscar por cliente, modelo o servicio..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+          />
+          {search && (
+            <button 
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
-            {/* Type Filters */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => { setTipoFilter('TODOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  tipoFilter === 'TODOS'
-                    ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                Todos ({unifiedIngresos.length})
-              </button>
-              <button
-                onClick={() => { setTipoFilter('VENTAS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  tipoFilter === 'VENTAS'
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <Package className="h-3 w-3" />
-                Ventas Catálogo
-              </button>
-              <button
-                onClick={() => { setTipoFilter('DIRECTOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
-                  tipoFilter === 'DIRECTOS'
-                    ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                }`}
-              >
-                <DollarSign className="h-3 w-3" />
-                Servicios Directos
-              </button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Type Filters */}
+        <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC]">
+          <button
+            onClick={() => { setTipoFilter('TODOS'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              tipoFilter === 'TODOS'
+                ? 'bg-[#1E5E3A] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            Todos ({unifiedIngresos.length})
+          </button>
+          <button
+            onClick={() => { setTipoFilter('VENTAS'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              tipoFilter === 'VENTAS'
+                ? 'bg-[#A36F4C] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            <Package className="h-3 w-3 stroke-[2.5]" />
+            Ventas Catálogo
+          </button>
+          <button
+            onClick={() => { setTipoFilter('DIRECTOS'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              tipoFilter === 'DIRECTOS'
+                ? 'bg-[#8C6D1F] text-white shadow-sm'
+                : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+            }`}
+          >
+            <DollarSign className="h-3 w-3 stroke-[2.5]" />
+            Servicios Directos
+          </button>
+        </div>
+      </div>
 
       {/* Table */}
-      <Card className="bg-zinc-950/50 border-zinc-800 backdrop-blur-xl overflow-hidden">
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
         <Table className="w-full">
-          <TableHeader className="bg-zinc-900/70 border-b border-zinc-800">
-            <TableRow className="border-zinc-800 hover:bg-transparent">
-              <TableHead className="text-zinc-400 font-semibold px-4 py-3 text-left">Fecha</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left">Origen / Tipo</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left">Cliente</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-left">Concepto / Detalle</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-center hidden sm:table-cell">Método</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-4 py-3 text-right">Monto Cobrado</TableHead>
-              <TableHead className="text-zinc-400 font-semibold px-3 py-3 text-center">Acciones</TableHead>
+          <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+            <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Fecha</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Origen / Tipo</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Cliente</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Concepto / Detalle</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center hidden sm:table-cell">Método</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Monto Cobrado</TableHead>
+              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedIngresos.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-zinc-500">
+                <TableCell colSpan={7} className="text-center py-12 text-[#75695D]">
                   No se encontraron ingresos registrados en este periodo.
                 </TableCell>
               </TableRow>
             ) : (
               paginatedIngresos.map((ing) => (
-                <TableRow key={ing.id} className="border-zinc-800/60 hover:bg-zinc-900/40 transition-colors">
-                  <TableCell className="px-4 py-3 text-xs text-zinc-400 font-mono whitespace-nowrap">
+                <TableRow key={ing.id} className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors">
+                  <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
                     {formatDate(ing.fecha)}
                   </TableCell>
 
                   <TableCell className="px-3 py-3 whitespace-nowrap">
                     {ing.origen === 'VENTA_CATALOGO' ? (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-xs">
+                      <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-bold">
                         Venta Catálogo
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-500/30 text-xs">
+                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold">
                         Servicio Directo
                       </Badge>
                     )}
                   </TableCell>
 
-                  <TableCell className="px-3 py-3 font-semibold text-zinc-100 whitespace-nowrap">
+                  <TableCell className="px-3 py-3 font-bold text-[#241C15] whitespace-nowrap">
                     {ing.cliente}
                   </TableCell>
 
                   <TableCell className="px-3 py-3">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-zinc-200">
+                      <span className="text-sm font-semibold text-[#241C15]">
                         {ing.concepto}
                       </span>
                       {ing.saldoPendiente && ing.saldoPendiente > 0 ? (
-                        <span className="text-[11px] text-amber-400">
+                        <span className="text-[11px] text-[#8C6D1F] font-bold">
                           Saldo pendiente: {formatCurrency(ing.saldoPendiente)}
                         </span>
                       ) : null}
@@ -395,12 +393,12 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                   </TableCell>
 
                   <TableCell className="px-3 py-3 text-center hidden sm:table-cell whitespace-nowrap">
-                    <Badge variant="outline" className="bg-zinc-900 border-zinc-700 text-zinc-300 text-xs">
+                    <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] text-xs">
                       {ing.metodoPago || 'Yape'}
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="px-4 py-3 text-right font-mono font-bold text-emerald-400 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-right font-mono font-extrabold text-[#1E5E3A] whitespace-nowrap">
                     +{formatCurrency(ing.montoCobrado)}
                   </TableCell>
 
@@ -410,13 +408,13 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDeleteDirect(ing.rawId, ing.concepto)}
-                        className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-400/10"
+                        className="h-8 w-8 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-xl cursor-pointer"
                         title="Eliminar ingreso directo"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     ) : (
-                      <span className="text-[11px] text-zinc-600">Desde Ventas</span>
+                      <span className="text-[11px] text-[#75695D] font-medium">Desde Ventas</span>
                     )}
                   </TableCell>
                 </TableRow>
@@ -427,9 +425,9 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-zinc-800/80 bg-zinc-950/70 text-xs text-zinc-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#F4EFEA] text-xs text-[#75695D]">
             <div>
-              Mostrando página <span className="text-white font-medium">{currentPage}</span> de <span className="text-white font-medium">{totalPages}</span> ({filteredIngresos.length} ingresos)
+              Mostrando página <span className="text-[#241C15] font-bold">{currentPage}</span> de <span className="text-[#241C15] font-bold">{totalPages}</span> ({filteredIngresos.length} ingresos)
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -438,7 +436,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Anterior
@@ -449,10 +447,10 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 w-8 rounded-lg text-xs font-medium transition-all ${
+                    className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       currentPage === page
-                        ? 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-500/20'
-                        : 'bg-zinc-900/80 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                        ? 'bg-[#1E5E3A] text-white shadow-sm'
+                        : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
                     }`}
                   >
                     {page}
@@ -465,7 +463,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-2.5 border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white disabled:opacity-40"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
               >
                 Siguiente
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -477,44 +475,60 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
       {/* Modal: Registrar Ingreso Directo */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <ArrowUpRight className="h-5 w-5 text-emerald-500" />
-              Registrar Nuevo Ingreso Directo
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] flex items-center justify-center text-[#1E5E3A] shadow-sm">
+                <ArrowUpRight className="h-5 w-5 stroke-[2.5]" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                  Registrar Nuevo Ingreso Directo
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#75695D]">
+                  Ingresos por servicios de impresión, diseño 3D o aportes a caja.
+                </DialogDescription>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOpenModal(false)}
+              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-3">
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Cliente / Empresa *</Label>
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Empresa *</Label>
               <Input 
                 value={formCliente}
                 onChange={(e) => setFormCliente(e.target.value)}
                 placeholder="Ej: Juan Pérez / Empresa ABC"
                 required
-                className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Concepto / Servicio Realizado *</Label>
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto / Servicio Realizado *</Label>
               <Input 
                 value={formConcepto}
                 onChange={(e) => setFormConcepto(e.target.value)}
                 placeholder="Ej: Impresión pieza técnica en PETG, Modelado 3D..."
                 required
-                className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Categoría *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Categoría *</Label>
                 <select
                   value={formCategoria}
                   onChange={(e) => setFormCategoria(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
                 >
                   <option value="Préstamo Bancario / Financiamiento">Préstamo Bancario / Financiamiento</option>
                   <option value="Servicio de Impresión 3D">Servicio de Impresión 3D</option>
@@ -527,11 +541,11 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Método de Pago *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Método de Pago *</Label>
                 <select
                   value={formMetodoPago}
                   onChange={(e) => setFormMetodoPago(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
                 >
                   <option value="YAPE">Yape</option>
                   <option value="PLIN">Plin</option>
@@ -544,44 +558,54 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Monto Cobrado (S/) *</Label>
-              <Input 
-                type="number"
-                step="0.01"
-                min="0"
-                value={formMonto}
-                onChange={(e) => setFormMonto(e.target.value)}
-                placeholder="0.00"
-                required
-                className="bg-zinc-900 border-zinc-700 text-emerald-400 font-mono font-bold text-base"
-              />
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Cobrado (S/) *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-mono font-bold text-[#75695D]">S/</span>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formMonto}
+                  onChange={(e) => setFormMonto(e.target.value)}
+                  placeholder="0.00"
+                  required
+                  className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-extrabold text-base rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                />
+              </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Notas / Observaciones (Opcional)</Label>
+              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Notas / Observaciones (Opcional)</Label>
               <Input 
                 value={formNotas}
                 onChange={(e) => setFormNotas(e.target.value)}
                 placeholder="Ej: Pago adelantado del 100%"
-                className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
               />
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenModal(false)}
-                className="text-zinc-400 hover:text-white text-xs"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#1E5E3A]/20 cursor-pointer disabled:opacity-50 transition-all"
               >
-                {isSubmitting ? 'Guardando...' : 'Guardar Ingreso'}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Guardar Ingreso'
+                )}
               </Button>
             </div>
           </form>

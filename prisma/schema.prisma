@@ -55,6 +55,16 @@ model Categoria {
   updatedAt   DateTime @updatedAt
 }
 
+model TagInsumo {
+  id          String   @id @default(uuid())
+  nombre      String   @unique
+  descripcion String?
+  color       String?  @default("amber") // blue, emerald, purple, amber, pink, indigo
+  categoria   String?  @default("INSUMO") // INSUMO, ACTIVO_FIJO, SERVICIO
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Producto {
   id               String   @id @default(uuid())
   lineaCategoria   String
