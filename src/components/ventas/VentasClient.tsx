@@ -39,12 +39,15 @@ import { toast } from 'sonner'
 import { EstadoVenta, TipoPrecio } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 
 export interface VentaItem {
   id: string
   fecha: string
   cliente: string
   productoId: string
+  costoBaseSnapshot?: number
+  nombreProductoSnapshot?: string
   cantidad: number
   tipoPrecio: TipoPrecio
   precioUnitario: number
@@ -183,6 +186,35 @@ export function VentasClient({
     return Number((base + packProrrateado).toFixed(2))
   }, [formPrecioBase, incluirPackaging, montoProrrateoPackaging])
 
+  // Combobox items definitions
+  const productosComboboxItems: ComboboxItem[] = useMemo(() => {
+    return productos.map(p => ({
+      id: p.id,
+      label: p.nombreModelo,
+      sublabel: `${p.lineaCategoria} • Costo Base: S/ ${p.costoBase.toFixed(2)}`,
+      badge: `S/ ${p.precioComunidad.toFixed(2)}`,
+      icon: Package,
+    }))
+  }, [productos])
+
+  const nivelesPrecioComboboxItems: ComboboxItem[] = useMemo(() => [
+    { id: 'AMIGOS', label: '1. Precio Amigo', sublabel: 'Margen preferencial', badge: '35% margen' },
+    { id: 'MERCADO', label: '2. Precio Mercado', sublabel: 'Precio estándar venta', badge: '60% margen' },
+    { id: 'COMUNIDAD', label: '3. Precio Comunidad', sublabel: 'Precio seguidores / comunidad', badge: '80% margen' },
+    { id: 'PERSONALIZADO', label: '4. Personalizado', sublabel: 'Monto ingresado manualmente' },
+  ], [])
+
+  const pagoFilterComboboxItems: ComboboxItem[] = useMemo(() => [
+    { id: 'TODOS', label: 'Todos los Pagos' },
+    { id: 'PENDIENTES_PAGO', label: 'Por Cobrar', badge: `${items.filter(v => v.saldoPendiente > 0).length}` },
+    { id: 'PAGADOS', label: '100% Pagados', badge: `${items.filter(v => v.saldoPendiente <= 0).length}` },
+  ], [items])
+
+  // Selected product helper
+  const selectedProduct = useMemo(() => {
+    return productos.find(p => p.id === formProductoId)
+  }, [productos, formProductoId])
+
   // Change order status directly
   const handleCambiarEstado = async (id: string, nuevoEstado: EstadoVenta, e?: React.ChangeEvent<HTMLSelectElement> | React.MouseEvent) => {
     if (e && 'stopPropagation' in e) e.stopPropagation()
@@ -256,21 +288,86 @@ export function VentasClient({
     setOpenDetailsModal(true)
   }
 
-  // Autocomplete price on product / tier select
+  // Bidirectional Synchronization: Product or Tier selected
   const handleProductoOrTierChange = (prodId: string, tier: TipoPrecio) => {
     setFormProductoId(prodId)
     setFormTipoPrecio(tier)
     const found = productos.find(p => p.id === prodId)
     if (found) {
+      const pack = incluirPackaging ? montoProrrateoPackaging : 0
       let base = found.precioComunidad
       if (tier === 'AMIGOS') base = found.precioAmigos
       else if (tier === 'MERCADO') base = found.precioMercado
       else if (tier === 'COMUNIDAD') base = found.precioComunidad
 
       setFormPrecioBase(base.toString())
-      const pack = incluirPackaging ? montoProrrateoPackaging : 0
-      const finalUnit = Number((base + pack).toFixed(2))
-      setFormPrecioUnitario(finalUnit.toString())
+      if (tier !== 'PERSONALIZADO') {
+        const finalUnit = Number((base + pack).toFixed(2))
+        setFormPrecioUnitario(finalUnit.toString())
+      }
+    }
+  }
+
+  // Bidirectional Synchronization: Manual Unit Price Input Change
+  const handlePrecioUnitarioChange = (valStr: string) => {
+    setFormPrecioUnitario(valStr)
+    const num = parseFloat(valStr)
+    if (isNaN(num) || !selectedProduct) {
+      setFormTipoPrecio('PERSONALIZADO')
+      return
+    }
+
+    const pack = incluirPackaging ? montoProrrateoPackaging : 0
+    const pAmigos = Number((selectedProduct.precioAmigos + pack).toFixed(2))
+    const pMercado = Number((selectedProduct.precioMercado + pack).toFixed(2))
+    const pComunidad = Number((selectedProduct.precioComunidad + pack).toFixed(2))
+
+    // Compare with tolerance of 0.005
+    if (Math.abs(num - pAmigos) < 0.005) {
+      setFormTipoPrecio('AMIGOS')
+      setFormPrecioBase(selectedProduct.precioAmigos.toString())
+    } else if (Math.abs(num - pMercado) < 0.005) {
+      setFormTipoPrecio('MERCADO')
+      setFormPrecioBase(selectedProduct.precioMercado.toString())
+    } else if (Math.abs(num - pComunidad) < 0.005) {
+      setFormTipoPrecio('COMUNIDAD')
+      setFormPrecioBase(selectedProduct.precioComunidad.toString())
+    } else {
+      setFormTipoPrecio('PERSONALIZADO')
+    }
+  }
+
+  // Packaging toggle with price recalculation
+  const handleTogglePackaging = (checked: boolean) => {
+    setIncluirPackaging(checked)
+    if (!selectedProduct) return
+    const packBase = parseFloat(montoPackagingBase) || 0
+    const pct = parseFloat(porcentajePackaging) || 0
+    const pack = checked ? Number(((packBase * pct) / 100).toFixed(2)) : 0
+
+    if (formTipoPrecio === 'AMIGOS') {
+      setFormPrecioUnitario((selectedProduct.precioAmigos + pack).toFixed(2))
+    } else if (formTipoPrecio === 'MERCADO') {
+      setFormPrecioUnitario((selectedProduct.precioMercado + pack).toFixed(2))
+    } else if (formTipoPrecio === 'COMUNIDAD') {
+      setFormPrecioUnitario((selectedProduct.precioComunidad + pack).toFixed(2))
+    }
+  }
+
+  // Packaging percentage select with price recalculation
+  const handleSelectPackagingPct = (pct: string) => {
+    setPorcentajePackaging(pct)
+    if (!selectedProduct || !incluirPackaging) return
+    const packBase = parseFloat(montoPackagingBase) || 0
+    const pNum = parseFloat(pct) || 0
+    const pack = Number(((packBase * pNum) / 100).toFixed(2))
+
+    if (formTipoPrecio === 'AMIGOS') {
+      setFormPrecioUnitario((selectedProduct.precioAmigos + pack).toFixed(2))
+    } else if (formTipoPrecio === 'MERCADO') {
+      setFormPrecioUnitario((selectedProduct.precioMercado + pack).toFixed(2))
+    } else if (formTipoPrecio === 'COMUNIDAD') {
+      setFormPrecioUnitario((selectedProduct.precioComunidad + pack).toFixed(2))
     }
   }
 
@@ -311,6 +408,9 @@ export function VentasClient({
   // Apply suggested calculated price
   const handleAplicarPrecioSugerido = () => {
     setFormPrecioUnitario(precioSugeridoCalculado.toString())
+    if (selectedProduct) {
+      handlePrecioUnitarioChange(precioSugeridoCalculado.toString())
+    }
     toast.success(`Precio unitario actualizado a ${formatCurrency(precioSugeridoCalculado)}`)
   }
 
@@ -504,20 +604,21 @@ export function VentasClient({
             </button>
           </div>
 
-          {/* Dropdown Select para Estado de Pago */}
-          <div className="relative">
-            <select
+          {/* Combobox Interactivo para Estado de Pago */}
+          <div className="w-full sm:w-52 flex-shrink-0">
+            <SearchableCombobox
+              items={pagoFilterComboboxItems}
               value={pagoFilter}
-              onChange={(e: any) => { setPagoFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-[#F4EFEA] border border-[#E2D9CC] text-[#241C15] rounded-xl px-3 py-1.5 text-xs font-medium focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] cursor-pointer outline-none h-9 pr-7 appearance-none transition-all shadow-sm"
-            >
-              <option value="TODOS">Todos los Pagos</option>
-              <option value="PENDIENTES_PAGO">Por Cobrar ({items.filter(v => v.saldoPendiente > 0).length})</option>
-              <option value="PAGADOS">100% Pagados ({items.filter(v => v.saldoPendiente <= 0).length})</option>
-            </select>
-            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D]">
-              <DollarSign className="h-3 w-3" />
-            </div>
+              onChange={(val) => {
+                setPagoFilter(val as any || 'TODOS')
+                setCurrentPage(1)
+              }}
+              size="sm"
+              icon={DollarSign}
+              placeholder="Estado de Pago..."
+              clearable={false}
+              className="w-full"
+            />
           </div>
         </div>
       </div>
@@ -1044,37 +1145,52 @@ export function VentasClient({
               </div>
             </div>
 
-            {/* Producto del Catálogo */}
+            {/* Producto del Catálogo con Autocompletado y Búsqueda */}
             <div className="space-y-1.5">
               <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Producto del Catálogo *</Label>
-              <select
+              <SearchableCombobox
+                items={productosComboboxItems}
                 value={formProductoId}
-                onChange={(e) => handleProductoOrTierChange(e.target.value, formTipoPrecio)}
-                required
-                className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              >
-                {productos.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.nombreModelo} ({p.lineaCategoria})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleProductoOrTierChange(val, formTipoPrecio)}
+                placeholder="Buscar y seleccionar producto..."
+                searchPlaceholder="Buscar por modelo o categoría..."
+                icon={Package}
+                inputClassName="bg-[#F4EFEA]"
+              />
             </div>
 
             {/* Tipo de Precio & Cantidad con Stepper */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Nivel de Precio *</Label>
-                <select
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Nivel de Precio *</Label>
+                  {formTipoPrecio === 'PERSONALIZADO' ? (
+                    <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold px-1.5 py-0">
+                      Personalizado
+                    </Badge>
+                  ) : formTipoPrecio === 'AMIGOS' ? (
+                    <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold px-1.5 py-0">
+                      Amigo
+                    </Badge>
+                  ) : formTipoPrecio === 'MERCADO' ? (
+                    <Badge variant="outline" className="bg-[#EFE5D8] text-[#944917] border-[#D4BEA7] text-[10px] font-bold px-1.5 py-0">
+                      Mercado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold px-1.5 py-0">
+                      Comunidad
+                    </Badge>
+                  )}
+                </div>
+                <SearchableCombobox
+                  items={nivelesPrecioComboboxItems}
                   value={formTipoPrecio}
-                  onChange={(e) => handleProductoOrTierChange(formProductoId, e.target.value as TipoPrecio)}
-                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                >
-                  <option value="AMIGOS">1. Precio Amigos</option>
-                  <option value="MERCADO">2. Precio Mercado</option>
-                  <option value="COMUNIDAD">3. Precio Comunidad</option>
-                  <option value="PERSONALIZADO">Personalizado</option>
-                </select>
+                  onChange={(val) => handleProductoOrTierChange(formProductoId, val as TipoPrecio)}
+                  placeholder="Seleccionar nivel..."
+                  icon={Tag}
+                  clearable={false}
+                  inputClassName="bg-[#F4EFEA]"
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -1120,7 +1236,7 @@ export function VentasClient({
                   <input
                     type="checkbox"
                     checked={incluirPackaging}
-                    onChange={(e) => setIncluirPackaging(e.target.checked)}
+                    onChange={(e) => handleTogglePackaging(e.target.checked)}
                     className="rounded border-[#DCD3C6] text-[#A36F4C] focus:ring-0 h-4 w-4 cursor-pointer"
                   />
                   <span>Incluir Packaging</span>
@@ -1135,7 +1251,16 @@ export function VentasClient({
                       <span className="text-[#75695D] font-medium">Costo Base de Packaging (S/):</span>
                       <button
                         type="button"
-                        onClick={() => setMontoPackagingBase(promedioPackaging.toFixed(2))}
+                        onClick={() => {
+                          setMontoPackagingBase(promedioPackaging.toFixed(2))
+                          if (selectedProduct) {
+                            const pNum = parseFloat(porcentajePackaging) || 0
+                            const pack = Number(((promedioPackaging * pNum) / 100).toFixed(2))
+                            if (formTipoPrecio === 'AMIGOS') setFormPrecioUnitario((selectedProduct.precioAmigos + pack).toFixed(2))
+                            else if (formTipoPrecio === 'MERCADO') setFormPrecioUnitario((selectedProduct.precioMercado + pack).toFixed(2))
+                            else if (formTipoPrecio === 'COMUNIDAD') setFormPrecioUnitario((selectedProduct.precioComunidad + pack).toFixed(2))
+                          }
+                        }}
                         className="text-[#A36F4C] hover:underline text-[11px] font-bold flex items-center gap-1 cursor-pointer"
                       >
                         <span>Usar promedio ({formatCurrency(promedioPackaging)})</span>
@@ -1148,7 +1273,17 @@ export function VentasClient({
                         step="0.10"
                         min="0"
                         value={montoPackagingBase}
-                        onChange={(e) => setMontoPackagingBase(e.target.value)}
+                        onChange={(e) => {
+                          setMontoPackagingBase(e.target.value)
+                          const base = parseFloat(e.target.value) || 0
+                          const pNum = parseFloat(porcentajePackaging) || 0
+                          const pack = Number(((base * pNum) / 100).toFixed(2))
+                          if (selectedProduct && formTipoPrecio !== 'PERSONALIZADO') {
+                            if (formTipoPrecio === 'AMIGOS') setFormPrecioUnitario((selectedProduct.precioAmigos + pack).toFixed(2))
+                            else if (formTipoPrecio === 'MERCADO') setFormPrecioUnitario((selectedProduct.precioMercado + pack).toFixed(2))
+                            else if (formTipoPrecio === 'COMUNIDAD') setFormPrecioUnitario((selectedProduct.precioComunidad + pack).toFixed(2))
+                          }
+                        }}
                         placeholder={promedioPackaging.toFixed(2)}
                         className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#8C6D1F] font-mono text-sm font-bold h-8 rounded-xl"
                       />
@@ -1171,7 +1306,7 @@ export function VentasClient({
                         min="0"
                         max="100"
                         value={porcentajePackaging}
-                        onChange={(e) => setPorcentajePackaging(e.target.value)}
+                        onChange={(e) => handleSelectPackagingPct(e.target.value)}
                         placeholder="10"
                         className="bg-[#FFFFFF] border-[#DCD3C6] text-[#A36F4C] font-mono text-sm font-bold h-8 w-24 rounded-xl"
                       />
@@ -1180,7 +1315,7 @@ export function VentasClient({
                           <button
                             key={pct}
                             type="button"
-                            onClick={() => setPorcentajePackaging(pct)}
+                            onClick={() => handleSelectPackagingPct(pct)}
                             className={`flex-1 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                               porcentajePackaging === pct
                                 ? 'bg-[#A36F4C] text-white shadow-sm'
@@ -1221,7 +1356,7 @@ export function VentasClient({
             </div>
 
             {/* Precio Unitario Final Aplicado */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Precio Unitario Final (S/) *</Label>
                 <div className="relative">
@@ -1231,7 +1366,7 @@ export function VentasClient({
                     step="0.01"
                     min="0"
                     value={formPrecioUnitario}
-                    onChange={(e) => setFormPrecioUnitario(e.target.value)}
+                    onChange={(e) => handlePrecioUnitarioChange(e.target.value)}
                     required
                     className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                   />

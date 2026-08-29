@@ -20,12 +20,16 @@ import {
   ChevronRight,
   Package,
   DollarSign,
-  Loader2
+  Loader2,
+  Landmark,
+  CreditCard,
+  Tag
 } from 'lucide-react'
 import { createIngreso, deleteIngreso } from '@/actions/ingresos'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { VentaItem, IngresoDirectoItem } from './FlujoCajaClient'
 
 interface IngresosClientProps {
@@ -524,38 +528,47 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Categoría *</Label>
-                <select
+                <SearchableCombobox
+                  items={[
+                    { id: 'Servicio de Impresión 3D', label: 'Servicio de Impresión 3D', sublabel: 'Fabricación a pedido', icon: Package },
+                    { id: 'Diseño & Modelado CAD', label: 'Diseño & Modelado CAD', sublabel: 'Modelado 3D y prototipado', icon: Tag },
+                    { id: 'Préstamo Bancario / Financiamiento', label: 'Préstamo Bancario / Financiamiento', sublabel: 'Inyección de liquidez', icon: Landmark },
+                    { id: 'Venta Directa', label: 'Venta Directa / Feria', sublabel: 'Venta de stock presencial', icon: DollarSign },
+                    { id: 'Servicio Técnico', label: 'Servicio Técnico / Calibración', sublabel: 'Mantenimiento de impresoras', icon: Package },
+                    { id: 'Aporte de Capital', label: 'Aporte de Capital', sublabel: 'Fondos propios', icon: Landmark },
+                    { id: 'Otros Ingresos', label: 'Otros Ingresos', sublabel: 'Ingresos varios no clasificados' },
+                  ]}
                   value={formCategoria}
-                  onChange={(e) => setFormCategoria(e.target.value)}
-                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-                >
-                  <option value="Préstamo Bancario / Financiamiento">Préstamo Bancario / Financiamiento</option>
-                  <option value="Servicio de Impresión 3D">Servicio de Impresión 3D</option>
-                  <option value="Diseño & Modelado CAD">Diseño & Modelado CAD</option>
-                  <option value="Venta Directa">Venta Directa / Feria</option>
-                  <option value="Servicio Técnico">Servicio Técnico / Calibración</option>
-                  <option value="Aporte de Capital">Aporte de Capital</option>
-                  <option value="Otros Ingresos">Otros Ingresos</option>
-                </select>
+                  onChange={(val) => setFormCategoria(val)}
+                  allowCustomInput={true}
+                  customCreateLabel="Usar categoría:"
+                  placeholder="Seleccionar categoría..."
+                  icon={Tag}
+                  inputClassName="bg-[#F4EFEA]"
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Método de Pago *</Label>
-                <select
+                <SearchableCombobox
+                  items={[
+                    { id: 'YAPE', label: 'Yape', sublabel: 'Billetera digital BCP', badge: 'Digital' },
+                    { id: 'PLIN', label: 'Plin', sublabel: 'Billetera digital BBVA/Interbank', badge: 'Digital' },
+                    { id: 'TRANSFERENCIA_BCP', label: 'Transferencia BCP', sublabel: 'Cuenta bancaria BCP', badge: 'Banco' },
+                    { id: 'TRANSFERENCIA_BBVA', label: 'Transferencia BBVA', sublabel: 'Cuenta bancaria BBVA', badge: 'Banco' },
+                    { id: 'TRANSFERENCIA_INTERBANK', label: 'Transferencia Interbank', sublabel: 'Cuenta bancaria Interbank', badge: 'Banco' },
+                    { id: 'EFECTIVO', label: 'Efectivo', sublabel: 'Dinero en mano física', badge: 'Caja física' },
+                  ]}
                   value={formMetodoPago}
-                  onChange={(e) => setFormMetodoPago(e.target.value)}
-                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-                >
-                  <option value="YAPE">Yape</option>
-                  <option value="PLIN">Plin</option>
-                  <option value="TRANSFERENCIA_BCP">Transferencia BCP</option>
-                  <option value="TRANSFERENCIA_BBVA">Transferencia BBVA</option>
-                  <option value="TRANSFERENCIA_INTERBANK">Transferencia Interbank</option>
-                  <option value="EFECTIVO">Efectivo</option>
-                </select>
+                  onChange={(val) => setFormMetodoPago(val)}
+                  placeholder="Seleccionar método..."
+                  icon={CreditCard}
+                  clearable={false}
+                  inputClassName="bg-[#F4EFEA]"
+                />
               </div>
             </div>
 

@@ -57,6 +57,8 @@ export async function getVentas() {
     saldoPendiente: Number(v.saldoPendiente),
     costoPackaging: v.costoPackaging ? Number(v.costoPackaging) : 0,
     porcentajeAdicional: v.porcentajeAdicional ? Number(v.porcentajeAdicional) : 0,
+    costoBaseSnapshot: v.costoBaseSnapshot != null ? Number(v.costoBaseSnapshot) : (v.producto ? Number(v.producto.costoBase) : 0),
+    nombreProductoSnapshot: v.nombreProductoSnapshot || v.producto?.nombreModelo || '',
     fecha: v.fecha.toISOString(),
     createdAt: v.createdAt.toISOString(),
     updatedAt: v.updatedAt.toISOString(),
@@ -89,10 +91,17 @@ export async function createVenta(data: {
   const total = data.cantidad * data.precioUnitario
   const saldoPendiente = total - data.montoPagado
 
+  // Obtain product to freeze immutable snapshot of base cost and model name
+  const producto = await prisma.producto.findUnique({
+    where: { id: data.productoId }
+  })
+
   const venta = await prisma.venta.create({
     data: {
       cliente: data.cliente,
       productoId: data.productoId,
+      nombreProductoSnapshot: producto?.nombreModelo || '',
+      costoBaseSnapshot: producto?.costoBase || 0,
       cantidad: data.cantidad,
       tipoPrecio: data.tipoPrecio,
       precioUnitario: data.precioUnitario,

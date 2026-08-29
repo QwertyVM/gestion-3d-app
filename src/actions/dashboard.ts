@@ -20,9 +20,11 @@ export async function getDashboardData() {
   // 2. Ingresos por Ventas de Catálogo
   const ingresosVentas = ventas.reduce((sum, item) => sum + Number(item.total), 0)
 
-  // 3. Costo Total de Fabricación de los productos vendidos
+  // 3. Costo Total de Fabricación de los productos vendidos (usando snapshot histórico)
   const costoFabricacionTotal = ventas.reduce((sum, v) => {
-    const costoBaseUnit = Number(v.producto?.costoBase) || 0
+    const costoBaseUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
+      ? Number(v.costoBaseSnapshot) 
+      : (Number(v.producto?.costoBase) || 0)
     return sum + (costoBaseUnit * v.cantidad)
   }, 0)
 
@@ -53,7 +55,10 @@ export async function getDashboardData() {
       acc[date] = { ingresos: 0, costo: 0, ganancia: 0 }
     }
     const ventaTotal = Number(venta.total)
-    const ventaCosto = (Number(venta.producto?.costoBase) || 0) * venta.cantidad
+    const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
+      ? Number(venta.costoBaseSnapshot) 
+      : (Number(venta.producto?.costoBase) || 0)
+    const ventaCosto = costoBaseUnit * venta.cantidad
     acc[date].ingresos += ventaTotal
     acc[date].costo += ventaCosto
     acc[date].ganancia += (ventaTotal - ventaCosto)

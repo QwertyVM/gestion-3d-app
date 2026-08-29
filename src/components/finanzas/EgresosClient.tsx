@@ -33,6 +33,7 @@ import { TagInsumoItem } from '@/actions/tagsInsumos'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { EgresoItem } from './FlujoCajaClient'
 
 interface EgresosClientProps {
@@ -179,6 +180,20 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
       })
     return matching
   }, [categoriaFilter, tags, items, availableTags])
+
+  const tagsComboboxItems: ComboboxItem[] = useMemo(() => {
+    const allOption: ComboboxItem = {
+      id: 'TODOS',
+      label: categoriaFilter === 'TODOS' ? 'Todos los Tags' : `Tags de Categoría (${dropdownTags.length})`,
+      badge: `${dropdownTags.length}`
+    }
+    const tagOptions: ComboboxItem[] = dropdownTags.map(tag => ({
+      id: tag,
+      label: tag,
+      icon: Tag
+    }))
+    return [allOption, ...tagOptions]
+  }, [dropdownTags, categoriaFilter])
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -543,25 +558,22 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
             </button>
           </div>
 
-          {/* Dropdown Select dinámico para 'Filtrar por Tag' basado en la categoría */}
-          <div className="relative">
-            <select
+          {/* Combobox interactivo dinámico para 'Filtrar por Tag' basado en la categoría */}
+          <div className="w-full sm:w-56 flex-shrink-0">
+            <SearchableCombobox
+              items={tagsComboboxItems}
               value={tagFilter}
-              onChange={(e) => { setTagFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-[#F4EFEA] border border-[#E2D9CC] text-[#241C15] rounded-xl px-3 py-1.5 text-xs font-medium focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] cursor-pointer outline-none h-9 pr-7 appearance-none transition-all shadow-sm"
-            >
-              <option value="TODOS">
-                {categoriaFilter === 'TODOS' ? 'Todos los Tags' : `Tags de Categoría (${dropdownTags.length})`}
-              </option>
-              {dropdownTags.map(tag => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D]">
-              <Tag className="h-3 w-3" />
-            </div>
+              onChange={(val) => {
+                setTagFilter(val || 'TODOS')
+                setCurrentPage(1)
+              }}
+              size="sm"
+              icon={Tag}
+              placeholder="Filtrar por Tag..."
+              searchPlaceholder="Buscar etiqueta..."
+              clearable={false}
+              className="w-full"
+            />
           </div>
         </div>
       </div>

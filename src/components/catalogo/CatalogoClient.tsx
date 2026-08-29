@@ -45,6 +45,7 @@ import {
   DialogTitle,
   DialogDescription
 } from '@/components/ui/dialog'
+import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 
 export interface ProductoItem {
   id: string
@@ -157,6 +158,29 @@ export function CatalogoClient({
     })
     return Array.from(set).sort()
   }, [categorias, productos])
+
+  const categoriasFilterComboboxItems: ComboboxItem[] = useMemo(() => {
+    const allOption: ComboboxItem = {
+      id: 'TODOS',
+      label: 'Todas las Categorías',
+      badge: `${productos.length}`
+    }
+    const catOptions: ComboboxItem[] = categoryNamesList.map(cat => ({
+      id: cat,
+      label: cat,
+      icon: FolderTree,
+      badge: `${productos.filter(p => p.lineaCategoria === cat).length}`
+    }))
+    return [allOption, ...catOptions]
+  }, [categoryNamesList, productos])
+
+  const categoriasFormComboboxItems: ComboboxItem[] = useMemo(() => {
+    return categoryNamesList.map(cat => ({
+      id: cat,
+      label: cat,
+      icon: FolderTree
+    }))
+  }, [categoryNamesList])
 
   // KPIs Products
   const totalProductsCount = productos.length
@@ -546,17 +570,20 @@ export function CatalogoClient({
 
             {/* Lado Derecho: Controles y Selectores */}
             <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
-              {/* Category Dropdown */}
-              <select 
-                className="bg-[#F4EFEA] border border-[#E2D9CC] text-[#241C15] rounded-xl px-3 py-1.5 text-xs font-medium focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] cursor-pointer outline-none h-9 shadow-sm"
-                value={categoriaFilter}
-                onChange={(e) => setCategoriaFilter(e.target.value)}
-              >
-                <option value="TODOS">Todas las Categorías</option>
-                {categoryNamesList.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+              {/* Category Combobox */}
+              <div className="w-full sm:w-56 flex-shrink-0">
+                <SearchableCombobox
+                  items={categoriasFilterComboboxItems}
+                  value={categoriaFilter}
+                  onChange={(val) => setCategoriaFilter(val || 'TODOS')}
+                  size="sm"
+                  icon={FolderTree}
+                  placeholder="Todas las Categorías"
+                  searchPlaceholder="Buscar categoría..."
+                  clearable={false}
+                  className="w-full"
+                />
+              </div>
 
               {/* Sort Dropdown */}
               <select 
@@ -1277,17 +1304,17 @@ export function CatalogoClient({
                   </div>
                 </div>
               ) : (
-                <select
+                <SearchableCombobox
+                  items={categoriasFormComboboxItems}
                   value={formCategoria}
-                  onChange={(e) => setFormCategoria(e.target.value)}
-                  required
-                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] rounded-xl px-3 py-2 text-sm text-[#241C15] focus:outline-none focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                >
-                  <option value="" disabled>Selecciona una categoría</option>
-                  {categoryNamesList.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormCategoria(val)}
+                  allowCustomInput={true}
+                  customCreateLabel="Crear categoría:"
+                  placeholder="Seleccionar o escribir categoría..."
+                  searchPlaceholder="Buscar categoría..."
+                  icon={FolderTree}
+                  inputClassName="bg-[#F4EFEA]"
+                />
               )}
             </div>
 
@@ -1524,16 +1551,17 @@ export function CatalogoClient({
                   </div>
                 </div>
               ) : (
-                <select
+                <SearchableCombobox
+                  items={categoriasFormComboboxItems}
                   value={formCategoria}
-                  onChange={(e) => setFormCategoria(e.target.value)}
-                  required
-                  className="w-full bg-[#F4EFEA] border border-[#DCD3C6] rounded-xl px-3 py-2 text-sm text-[#241C15] focus:outline-none focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                >
-                  {categoryNamesList.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormCategoria(val)}
+                  allowCustomInput={true}
+                  customCreateLabel="Crear categoría:"
+                  placeholder="Seleccionar o escribir categoría..."
+                  searchPlaceholder="Buscar categoría..."
+                  icon={FolderTree}
+                  inputClassName="bg-[#F4EFEA]"
+                />
               )}
             </div>
 
