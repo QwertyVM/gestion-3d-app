@@ -407,152 +407,163 @@ export function InsumosClient({ inversiones }: InsumosClientProps) {
 
       {/* Modal: Registrar Insumo */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[520px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5 text-amber-500" />
-              Registrar Compra de Insumo
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 w-[95vw] sm:max-w-[520px] max-h-[90dvh] p-0 flex flex-col overflow-hidden z-50">
+          <form onSubmit={handleSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="p-5 sm:p-6 pb-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5 text-amber-500" />
+                <DialogTitle className="text-lg font-bold">
+                  Registrar Compra de Insumo
+                </DialogTitle>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Fecha *</Label>
+                  <Input 
+                    type="date"
+                    value={formFecha}
+                    onChange={(e) => setFormFecha(e.target.value)}
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Tipo de Insumo *</Label>
+                  <select
+                    value={formCategoria}
+                    onChange={(e) => setFormCategoria(e.target.value as any)}
+                    className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="INSUMO">Insumo / Filamento</option>
+                    <option value="SERVICIO">Servicio / Mant.</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Comprador *</Label>
+                  <Input 
+                    value={formPersona}
+                    onChange={(e) => setFormPersona(e.target.value)}
+                    placeholder="Víctor"
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Fecha *</Label>
+                <Label className="text-xs text-zinc-400">Descripción / Marca / Material *</Label>
                 <Input 
-                  type="date"
-                  value={formFecha}
-                  onChange={(e) => setFormFecha(e.target.value)}
+                  value={formConcepto}
+                  onChange={(e) => setFormConcepto(e.target.value)}
+                  placeholder="Ej: Filamento PLA+ Polymaker, Resina Anycubic Eco..."
                   required
                   className="bg-zinc-900 border-zinc-700 text-white text-sm"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Tipo de Insumo *</Label>
-                <select
-                  value={formCategoria}
-                  onChange={(e) => setFormCategoria(e.target.value as any)}
-                  className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
-                >
-                  <option value="INSUMO">Insumo / Filamento</option>
-                  <option value="SERVICIO">Servicio / Mant.</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Color / Acabado</Label>
+                  <Input 
+                    value={formColor}
+                    onChange={(e) => setFormColor(e.target.value)}
+                    placeholder="Ej: Negro Mate, Azul Cobalto"
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Presentación / Peso *</Label>
+                  <Input 
+                    value={formPresentacion}
+                    onChange={(e) => setFormPresentacion(e.target.value)}
+                    placeholder="Ej: 1kg, 1000g, 500g"
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Comprador *</Label>
-                <Input 
-                  value={formPersona}
-                  onChange={(e) => setFormPersona(e.target.value)}
-                  placeholder="Víctor"
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
-                />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Cantidad *</Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    value={formCantidad}
+                    onChange={(e) => setFormCantidad(e.target.value)}
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Costo Unit. (S/) *</Label>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formCostoUnitario}
+                    onChange={(e) => setFormCostoUnitario(e.target.value)}
+                    placeholder="0.00"
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white font-mono text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Envío (S/)</Label>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formCostoEnvio}
+                    onChange={(e) => setFormCostoEnvio(e.target.value)}
+                    placeholder="0.00"
+                    className="bg-zinc-900 border-zinc-700 text-white font-mono text-sm"
+                  />
+                </div>
               </div>
+
+              {/* Live calculated cost per gram preview */}
+              {previewCostoGramo !== null && (
+                <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/20 flex items-center justify-between text-xs">
+                  <span className="text-zinc-400 flex items-center gap-1">
+                    <Scale className="h-3.5 w-3.5 text-emerald-400" />
+                    Costo estimado por gramo:
+                  </span>
+                  <span className="font-mono font-bold text-emerald-400 text-sm">
+                    S/ {previewCostoGramo.toFixed(4)} / gramo
+                  </span>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Descripción / Marca / Material *</Label>
-              <Input 
-                value={formConcepto}
-                onChange={(e) => setFormConcepto(e.target.value)}
-                placeholder="Ej: Filamento PLA+ Polymaker, Resina Anycubic Eco..."
-                required
-                className="bg-zinc-900 border-zinc-700 text-white text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Color / Acabado</Label>
-                <Input 
-                  value={formColor}
-                  onChange={(e) => setFormColor(e.target.value)}
-                  placeholder="Ej: Negro Mate, Azul Cobalto"
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Presentación / Peso *</Label>
-                <Input 
-                  value={formPresentacion}
-                  onChange={(e) => setFormPresentacion(e.target.value)}
-                  placeholder="Ej: 1kg, 1000g, 500g"
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Cantidad *</Label>
-                <Input 
-                  type="number"
-                  min="1"
-                  value={formCantidad}
-                  onChange={(e) => setFormCantidad(e.target.value)}
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm font-mono"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Costo Unit. (S/) *</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formCostoUnitario}
-                  onChange={(e) => setFormCostoUnitario(e.target.value)}
-                  placeholder="0.00"
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-white font-mono text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Envío (S/)</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formCostoEnvio}
-                  onChange={(e) => setFormCostoEnvio(e.target.value)}
-                  placeholder="0.00"
-                  className="bg-zinc-900 border-zinc-700 text-white font-mono text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Live calculated cost per gram preview */}
-            {previewCostoGramo !== null && (
-              <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/20 flex items-center justify-between text-xs">
-                <span className="text-zinc-400 flex items-center gap-1">
-                  <Scale className="h-3.5 w-3.5 text-emerald-400" />
-                  Costo estimado por gramo:
-                </span>
-                <span className="font-mono font-bold text-emerald-400 text-sm">
-                  S/ {previewCostoGramo.toFixed(4)} / gramo
-                </span>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="p-5 sm:p-6 py-4 border-t border-zinc-800 flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenModal(false)}
-                className="text-zinc-400 hover:text-white text-xs"
+                className="text-zinc-400 hover:text-white text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-amber-600 hover:bg-amber-700 text-white text-xs"
+                className="bg-amber-600 hover:bg-amber-700 text-white text-xs px-5 py-2.5 rounded-xl cursor-pointer disabled:opacity-50 active:scale-[0.98]"
               >
                 {isSubmitting ? 'Guardando...' : 'Guardar Insumo'}
               </Button>

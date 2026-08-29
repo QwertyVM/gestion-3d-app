@@ -423,9 +423,9 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
       {/* MODAL / WIZARD DE CIERRE DE MES (PRUEBA)                                  */}
       {/* ========================================================================= */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[620px] p-0 overflow-hidden shadow-2xl rounded-2xl max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[620px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          {/* Header Fijo */}
+          <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
                 <FileCheck className="h-5 w-5" />
@@ -454,8 +454,8 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
             </button>
           </div>
 
-          {/* Stepper Tabs Header */}
-          <div className="grid grid-cols-3 bg-[#F4EFEA] border-b border-[#E2D9CC] text-xs font-bold text-center">
+          {/* Stepper Tabs Header Fijo */}
+          <div className="grid grid-cols-3 bg-[#F4EFEA] border-b border-[#E2D9CC] text-xs font-bold text-center flex-shrink-0">
             <button
               type="button"
               onClick={() => setPasoWizard(1)}
@@ -485,211 +485,206 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
             </button>
           </div>
 
-          <form onSubmit={handleSubmitCierre} className="p-6 space-y-5">
-            {/* PASO 1: RENDIMIENTO DEL PERÍODO */}
-            {pasoWizard === 1 && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <div className="p-4 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#241C15] block">
-                    Resumen Financiero del Período ({formPeriodo}):
-                  </span>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
-                      <span className="text-[#75695D] block">Ventas Cobradas:</span>
-                      <span className="font-bold text-[#1E5E3A] font-mono">{formatCurrency(datosPreCierre.totalIngresosVentas)}</span>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
-                      <span className="text-[#75695D] block">Servicios Directos:</span>
-                      <span className="font-bold text-[#1E5E3A] font-mono">{formatCurrency(datosPreCierre.totalIngresosDirectos)}</span>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
-                      <span className="text-[#75695D] block">Compras Insumos:</span>
-                      <span className="font-bold text-[#944917] font-mono">-{formatCurrency(datosPreCierre.totalEgresosInsumos)}</span>
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
-                      <span className="text-[#75695D] block">Maquinaria & Equipos:</span>
-                      <span className="font-bold text-[#944917] font-mono">-{formatCurrency(datosPreCierre.totalEgresosMaquinaria)}</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-lg bg-[#F4FAF5] border border-[#B4E3C0] flex items-center justify-between text-xs">
-                    <span className="font-bold text-[#1E5E3A]">Saldo Neto Calculado por el Sistema:</span>
-                    <span className="text-base font-extrabold text-[#1E5E3A] font-mono">
-                      {formatCurrency(datosPreCierre.saldoSistemaCaja)}
+          <form onSubmit={handleSubmitCierre} className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              {/* PASO 1: RENDIMIENTO DEL PERÍODO */}
+              {pasoWizard === 1 && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="p-4 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-3">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#241C15] block">
+                      Resumen Financiero del Período ({formPeriodo}):
                     </span>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
+                        <span className="text-[#75695D] block">Ventas Cobradas:</span>
+                        <span className="font-bold text-[#1E5E3A] font-mono">{formatCurrency(datosPreCierre.totalIngresosVentas)}</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
+                        <span className="text-[#75695D] block">Servicios Directos:</span>
+                        <span className="font-bold text-[#1E5E3A] font-mono">{formatCurrency(datosPreCierre.totalIngresosDirectos)}</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
+                        <span className="text-[#75695D] block">Compras Insumos:</span>
+                        <span className="font-bold text-[#944917] font-mono">-{formatCurrency(datosPreCierre.totalEgresosInsumos)}</span>
+                      </div>
+                      <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
+                        <span className="text-[#75695D] block">Maquinaria & Equipos:</span>
+                        <span className="font-bold text-[#944917] font-mono">-{formatCurrency(datosPreCierre.totalEgresosMaquinaria)}</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#F4FAF5] border border-[#B4E3C0] flex items-center justify-between text-xs">
+                      <span className="font-bold text-[#1E5E3A]">Saldo Neto Calculado por el Sistema:</span>
+                      <span className="text-base font-extrabold text-[#1E5E3A] font-mono">
+                        {formatCurrency(datosPreCierre.saldoSistemaCaja)}
+                      </span>
+                    </div>
                   </div>
                 </div>
+              )}
 
-                <div className="flex justify-end pt-2">
-                  <Button
-                    type="button"
-                    onClick={() => setPasoWizard(2)}
-                    className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl text-xs px-4 py-2"
-                  >
-                    Siguiente: Arqueo de Cuentas
-                    <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                  </Button>
+              {/* PASO 2: ARQUEO Y CONCILIACIÓN BANCARIA */}
+              {pasoWizard === 2 && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="p-3.5 rounded-xl bg-[#FDF6E2] border border-[#E8D49B] text-xs text-[#8C6D1F]">
+                    <strong>Arqueo de Caja:</strong> Ingresa los saldos que figuran en tus aplicaciones bancarias al cierre de mes para conciliar posibles diferencias.
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#241C15]">Saldo Real en BCP (S/):</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formRealBCP}
+                        onChange={(e) => setFormRealBCP(e.target.value)}
+                        className="bg-[#F4EFEA] border-[#DCD3C6] font-mono font-bold text-sm h-9 rounded-xl"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-bold text-[#241C15]">Saldo Real en Yape (S/):</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={formRealYape}
+                        onChange={(e) => setFormRealYape(e.target.value)}
+                        className="bg-[#F4EFEA] border-[#DCD3C6] font-mono font-bold text-sm h-9 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Comparación y descuadre */}
+                  <div className="p-4 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-[#75695D]">Saldo Real Total Ingresado:</span>
+                      <span className="font-mono font-bold text-[#241C15]">{formatCurrency(saldoRealTotalCalculado)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#75695D]">Saldo Registrado en Sistema:</span>
+                      <span className="font-mono text-[#75695D]">{formatCurrency(datosPreCierre.saldoSistemaCaja)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-[#E2D9CC] font-bold">
+                      <span>Descuadre / Diferencia:</span>
+                      <span className={`font-mono ${descuadreCalculado === 0 ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'}`}>
+                        {descuadreCalculado >= 0 ? '+' : ''}{formatCurrency(descuadreCalculado)} ({descuadreCalculado === 0 ? 'Cuadrado perfecto' : 'Ajuste registrado'})
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* PASO 2: ARQUEO Y CONCILIACIÓN BANCARIA */}
-            {pasoWizard === 2 && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <div className="p-3.5 rounded-xl bg-[#FDF6E2] border border-[#E8D49B] text-xs text-[#8C6D1F]">
-                  <strong>Arqueo de Caja:</strong> Ingresa los saldos que figuran en tus aplicaciones bancarias al cierre de mes para conciliar posibles diferencias.
-                </div>
+              {/* PASO 3: BLINDAJE FINAL Y CONFIRMACIÓN */}
+              {pasoWizard === 3 && (
+                <div className="space-y-4 animate-in fade-in duration-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
+                      <Label className="text-[11px] text-[#75695D]">Cuota Préstamo:</Label>
+                      <Input
+                        type="number"
+                        step="10"
+                        value={formCuotaPrestamo}
+                        onChange={(e) => setFormCuotaPrestamo(e.target.value)}
+                        className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
+                      />
+                    </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
+                      <Label className="text-[11px] text-[#75695D]">Reserva Máquina:</Label>
+                      <Input
+                        type="number"
+                        step="50"
+                        value={formReservaMaquina}
+                        onChange={(e) => setFormReservaMaquina(e.target.value)}
+                        className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
+                      />
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
+                      <Label className="text-[11px] text-[#75695D]">Colchón Emergencia:</Label>
+                      <Input
+                        type="number"
+                        step="25"
+                        value={formColchonEmergencia}
+                        onChange={(e) => setFormColchonEmergencia(e.target.value)}
+                        className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Resumen de liquidez final */}
+                  <div className="p-4 rounded-xl bg-[#F4FAF5] border-2 border-[#1E5E3A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                    <div>
+                      <span className="font-extrabold text-[#1E5E3A] block text-sm">Liquidez Libre Oficial de Cierre:</span>
+                      <span className="text-[11px] text-[#1E5E3A]/80">Saldo Real ({formatCurrency(saldoRealTotalCalculado)}) - Blindado ({formatCurrency(totalBlindadoCalculado)})</span>
+                    </div>
+                    <div className="text-2xl font-extrabold font-mono text-[#1E5E3A]">
+                      {formatCurrency(liquidezLibreFinalCalculada)}
+                    </div>
+                  </div>
+
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#241C15]">Saldo Real en BCP (S/):</Label>
+                    <Label className="text-xs font-bold text-[#241C15]">Notas u Observaciones del Cierre (Opcional):</Label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      value={formRealBCP}
-                      onChange={(e) => setFormRealBCP(e.target.value)}
-                      className="bg-[#F4EFEA] border-[#DCD3C6] font-mono font-bold text-sm h-9 rounded-xl"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#241C15]">Saldo Real en Yape (S/):</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={formRealYape}
-                      onChange={(e) => setFormRealYape(e.target.value)}
-                      className="bg-[#F4EFEA] border-[#DCD3C6] font-mono font-bold text-sm h-9 rounded-xl"
+                      placeholder="Ej: Cuota bancaria pagada el 28, preventa A2L reservada..."
+                      value={formNotas}
+                      onChange={(e) => setFormNotas(e.target.value)}
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-xs text-[#241C15] rounded-xl"
                     />
                   </div>
                 </div>
+              )}
+            </div>
 
-                {/* Comparación y descuadre */}
-                <div className="p-4 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-2 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-[#75695D]">Saldo Real Total Ingresado:</span>
-                    <span className="font-mono font-bold text-[#241C15]">{formatCurrency(saldoRealTotalCalculado)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#75695D]">Saldo Registrado en Sistema:</span>
-                    <span className="font-mono text-[#75695D]">{formatCurrency(datosPreCierre.saldoSistemaCaja)}</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-[#E2D9CC] font-bold">
-                    <span>Descuadre / Diferencia:</span>
-                    <span className={`font-mono ${descuadreCalculado === 0 ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'}`}>
-                      {descuadreCalculado >= 0 ? '+' : ''}{formatCurrency(descuadreCalculado)} ({descuadreCalculado === 0 ? 'Cuadrado perfecto' : 'Ajuste registrado'})
-                    </span>
-                  </div>
-                </div>
+            {/* Footer Fijo con Navegación y Botones */}
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              {pasoWizard > 1 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setPasoWizard((p) => Math.max(1, p - 1) as any)}
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
+                >
+                  Volver
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setOpenModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
+                >
+                  Cancelar
+                </Button>
+              )}
 
-                <div className="flex justify-between pt-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setPasoWizard(1)}
-                    className="text-[#75695D] text-xs rounded-xl"
-                  >
-                    Volver
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setPasoWizard(3)}
-                    className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl text-xs px-4 py-2"
-                  >
-                    Siguiente: Blindaje Final
-                    <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* PASO 3: BLINDAJE FINAL Y CONFIRMACIÓN */}
-            {pasoWizard === 3 && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <div className="grid grid-cols-3 gap-2.5 text-xs">
-                  <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
-                    <Label className="text-[11px] text-[#75695D]">Cuota Préstamo:</Label>
-                    <Input
-                      type="number"
-                      step="10"
-                      value={formCuotaPrestamo}
-                      onChange={(e) => setFormCuotaPrestamo(e.target.value)}
-                      className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
-                    />
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
-                    <Label className="text-[11px] text-[#75695D]">Reserva Máquina:</Label>
-                    <Input
-                      type="number"
-                      step="50"
-                      value={formReservaMaquina}
-                      onChange={(e) => setFormReservaMaquina(e.target.value)}
-                      className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
-                    />
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
-                    <Label className="text-[11px] text-[#75695D]">Colchón Emergencia:</Label>
-                    <Input
-                      type="number"
-                      step="25"
-                      value={formColchonEmergencia}
-                      onChange={(e) => setFormColchonEmergencia(e.target.value)}
-                      className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
-                    />
-                  </div>
-                </div>
-
-                {/* Resumen de liquidez final */}
-                <div className="p-4 rounded-xl bg-[#F4FAF5] border-2 border-[#1E5E3A] flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-extrabold text-[#1E5E3A] block text-sm">Liquidez Libre Oficial de Cierre:</span>
-                    <span className="text-[11px] text-[#1E5E3A]/80">Saldo Real ({formatCurrency(saldoRealTotalCalculado)}) - Blindado ({formatCurrency(totalBlindadoCalculado)})</span>
-                  </div>
-                  <div className="text-2xl font-extrabold font-mono text-[#1E5E3A]">
-                    {formatCurrency(liquidezLibreFinalCalculada)}
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15]">Notas u Observaciones del Cierre (Opcional):</Label>
-                  <Input
-                    placeholder="Ej: Cuota bancaria pagada el 28, preventa A2L reservada..."
-                    value={formNotas}
-                    onChange={(e) => setFormNotas(e.target.value)}
-                    className="bg-[#F4EFEA] border-[#DCD3C6] text-xs text-[#241C15] rounded-xl"
-                  />
-                </div>
-
-                <div className="flex justify-between items-center pt-3 border-t border-[#E2D9CC]">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setPasoWizard(2)}
-                    className="text-[#75695D] text-xs rounded-xl"
-                  >
-                    Volver
-                  </Button>
-
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md cursor-pointer disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                        Guardando Cierre...
-                      </>
-                    ) : (
-                      'Confirmar y Guardar Cierre Oficial'
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
+              {pasoWizard < 3 ? (
+                <Button
+                  type="button"
+                  onClick={() => setPasoWizard((p) => Math.min(3, p + 1) as any)}
+                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl text-xs px-5 py-2.5 cursor-pointer active:scale-[0.98]"
+                >
+                  Siguiente
+                  <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md cursor-pointer disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      Guardando Cierre...
+                    </>
+                  ) : (
+                    'Confirmar y Guardar Cierre Oficial'
+                  )}
+                </Button>
+              )}
+            </div>
           </form>
         </DialogContent>
       </Dialog>

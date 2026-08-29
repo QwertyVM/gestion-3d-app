@@ -143,22 +143,21 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     return tags.filter(t => t.categoria === formCategoria)
   }, [tags, formCategoria])
 
-  // Lista única de todos los nombres de tags para filtros generales
+  // Lista única de todos los nombres de tags para filtros generales (incluye todos los tags registrados)
   const availableTags = useMemo(() => {
     const list: string[] = []
-    const excluded = ['otros', 'insumos varios']
 
     tags.forEach(t => {
-      if (t.nombre && !excluded.includes(t.nombre.trim().toLowerCase()) && !list.includes(t.nombre.trim())) {
+      if (t.nombre && t.nombre.trim() && !list.includes(t.nombre.trim())) {
         list.push(t.nombre.trim())
       }
     })
     items.forEach(e => {
-      if (e.subcategoria && e.subcategoria.trim() && !excluded.includes(e.subcategoria.trim().toLowerCase()) && !list.includes(e.subcategoria.trim())) {
+      if (e.subcategoria && e.subcategoria.trim() && !list.includes(e.subcategoria.trim())) {
         list.push(e.subcategoria.trim())
       }
     })
-    return list
+    return list.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [items, tags])
 
   // Tags para el dropdown de la barra de filtros, filtrados según la categoría activa
@@ -170,18 +169,18 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     tags
       .filter(t => t.categoria === categoriaFilter)
       .forEach(t => {
-        if (t.nombre && !matching.includes(t.nombre.trim())) {
+        if (t.nombre && t.nombre.trim() && !matching.includes(t.nombre.trim())) {
           matching.push(t.nombre.trim())
         }
       })
     items
       .filter(e => e.categoria === categoriaFilter && e.subcategoria)
       .forEach(e => {
-        if (e.subcategoria && !matching.includes(e.subcategoria.trim())) {
+        if (e.subcategoria && e.subcategoria.trim() && !matching.includes(e.subcategoria.trim())) {
           matching.push(e.subcategoria.trim())
         }
       })
-    return matching
+    return matching.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [categoriaFilter, tags, items, availableTags])
 
   const tagsComboboxItems: ComboboxItem[] = useMemo(() => {
@@ -190,13 +189,21 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
       label: categoriaFilter === 'TODOS' ? 'Todos los Tags' : `Tags de Categoría (${dropdownTags.length})`,
       badge: `${dropdownTags.length}`
     }
-    const tagOptions: ComboboxItem[] = dropdownTags.map(tag => ({
-      id: tag,
-      label: tag,
-      icon: Tag
-    }))
+    const tagOptions: ComboboxItem[] = dropdownTags.map(tag => {
+      const count = items.filter(e => 
+        (categoriaFilter === 'TODOS' || e.categoria === categoriaFilter) &&
+        e.subcategoria?.trim().toLowerCase() === tag.toLowerCase()
+      ).length
+
+      return {
+        id: tag,
+        label: tag,
+        badge: count > 0 ? `${count}` : undefined,
+        icon: Tag
+      }
+    })
     return [allOption, ...tagOptions]
-  }, [dropdownTags, categoriaFilter])
+  }, [dropdownTags, categoriaFilter, items])
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -814,570 +821,277 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
       {/* ========================================================================= */}
       {/* MODAL: REGISTRAR NUEVO EGRESO / INSUMO (LIGHT MODE NOVA)                  */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* MODAL: REGISTRAR NUEVO EGRESO / INSUMO (LIGHT MODE NOVA)                  */}
+      {/* ========================================================================= */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[580px] max-h-[90vh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl">
-          {/* Header Fijo */}
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                <ShoppingBag className="h-5 w-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                  Registrar Nuevo Egreso / Insumo
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Registra compras de filamentos, packaging, máquinas o servicios operativos.
-                </DialogDescription>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpenModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Formulario Limpio */}
-          <form onSubmit={handleCreateSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-            {/* 1. Selector Visual de Categoría Principal */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
-                <span>Categoría Principal <span className="text-[#A36F4C]">*</span></span>
-                <span className="text-[11px] text-[#75695D] font-normal">Destino de gasto</span>
-              </Label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {CATEGORIAS_CONFIG.map(cat => {
-                  const isSelected = formCategoria === cat.id
-                  const Icon = cat.icon
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => handleSelectCategoria(cat.id as any)}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-                        isSelected
-                          ? 'bg-[#FDFBF7] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-sm'
-                          : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-                        {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-[#241C15]">{cat.label}</div>
-                        <div className="text-[10px] text-[#75695D] line-clamp-1">{cat.desc}</div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* 2. Fecha del Registro / Compra */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
-                <span>Fecha del Egreso <span className="text-[#A36F4C]">*</span></span>
-                <span className="text-[11px] text-[#75695D] font-normal">Modificable</span>
-              </Label>
-              <Input 
-                type="date"
-                value={formFecha}
-                onChange={(e) => setFormFecha(e.target.value)}
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            {/* 3. Concepto / Nombre del Insumo (ARRIBA DEL TAG) */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15]">
-                Concepto / Nombre del Insumo <span className="text-[#A36F4C]">*</span>
-              </Label>
-              <Input 
-                value={formConcepto}
-                onChange={(e) => setFormConcepto(e.target.value)}
-                placeholder="Ej: Filamento PLA Matte Negro, Cajas de Envío 15x15x15..."
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            {/* 3. Subcategoría Dinámica por Categoría Asociada */}
-            <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
-                  <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                  Subcategoría / Tag <span className="text-[#A36F4C]">*</span>
-                </Label>
-                <Link 
-                  href="/finanzas/tags" 
-                  className="text-[11px] text-[#A36F4C] font-semibold hover:underline flex items-center gap-1"
-                >
-                  Gestionar tags <ExternalLink className="h-2.5 w-2.5" />
-                </Link>
-              </div>
-
-              {/* Chips con los tags asociados a la categoría seleccionada */}
-              {activeCategoryTags.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {activeCategoryTags.map(tag => {
-                    const colorStyle = getTagColor(tag.nombre)
-                    const isSelected = formSubcategoria.trim().toLowerCase() === tag.nombre.trim().toLowerCase()
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => setFormSubcategoria(tag.nombre)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border ${
-                          isSelected
-                            ? colorStyle.chipActive
-                            : colorStyle.chip
-                        }`}
-                      >
-                        <Tag className="h-3 w-3" />
-                        {tag.nombre}
-                        {isSelected && <Check className="h-3 w-3 ml-1" />}
-                      </button>
-                    )
-                  })}
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[580px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            {/* Header Fijo */}
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                  <ShoppingBag className="h-5 w-5" />
                 </div>
-              ) : (
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC] text-xs text-[#75695D]">
-                  <span>No hay tags asociados a esta categoría.</span>
-                  <Link href="/finanzas/tags" className="text-[#A36F4C] font-bold hover:underline">
-                    + Crear tag en CRUD
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* 4. Costos y Cantidades */}
-            <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Cantidad con Stepper +/- */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold">Cantidad <span className="text-[#A36F4C]">*</span></Label>
-                  <div className="flex items-center">
-                    <button
-                      type="button"
-                      onClick={handleDecrementCantidad}
-                      className="h-9 px-2.5 bg-[#FFFFFF] border border-r-0 border-[#DCD3C6] rounded-l-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer"
-                    >
-                      <Minus className="h-3.5 w-3.5" />
-                    </button>
-                    <Input 
-                      type="number"
-                      min="1"
-                      value={formCantidad}
-                      onChange={(e) => setFormCantidad(e.target.value)}
-                      required
-                      className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-center font-mono font-bold text-sm h-9 rounded-none focus:border-[#A36F4C]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleIncrementCantidad}
-                      className="h-9 px-2.5 bg-[#FFFFFF] border border-l-0 border-[#DCD3C6] rounded-r-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Costo Unitario */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold">Costo Unit. (S/) <span className="text-[#A36F4C]">*</span></Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formCostoUnitario}
-                      onChange={(e) => setFormCostoUnitario(e.target.value)}
-                      placeholder="0.00"
-                      required
-                      className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono font-bold h-9 rounded-xl focus:border-[#A36F4C]"
-                    />
-                  </div>
-                </div>
-
-                {/* Flete / Envío */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold">Flete / Envío (S/)</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formCostoEnvio}
-                      onChange={(e) => setFormCostoEnvio(e.target.value)}
-                      placeholder="0.00"
-                      className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono h-9 rounded-xl focus:border-[#A36F4C]"
-                    />
-                  </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                    Registrar Nuevo Egreso / Insumo
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                    Registra compras de filamentos, packaging, máquinas o servicios operativos.
+                  </DialogDescription>
                 </div>
               </div>
-            </div>
-
-            {/* 5. Live Metrics Preview Card Light Mode */}
-            <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] shadow-sm relative overflow-hidden space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Cálculo & Métricas en Vivo
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-                {/* Costo Total */}
-                <div className="space-y-0.5">
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold">Total Calculado</span>
-                  <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono">
-                    {formatCurrency(liveCostMetrics.totalCalculado)}
-                  </div>
-                  <span className="text-[10px] text-[#75695D] block">Subtotal + Flete</span>
-                </div>
-
-                {/* Costo Real Unitario */}
-                <div className="space-y-0.5">
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold">Costo Real Unit.</span>
-                  <div className="text-base font-semibold text-[#944917] font-mono">
-                    {formatCurrency(liveCostMetrics.costoRealUnitario)}
-                  </div>
-                  <span className="text-[10px] text-[#75695D] block">Incluye flete prorrateado</span>
-                </div>
-
-                {/* Desglose Flete */}
-                <div className="space-y-0.5 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold">Desglose Flete</span>
-                  <div className="text-sm font-semibold text-[#4A3E35] font-mono">
-                    {formatCurrency(parseFloat(formCostoEnvio) || 0)}
-                  </div>
-                  <span className="text-[10px] text-[#75695D] block">Costo logístico</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom spacer */}
-            <div className="h-2" />
-          </form>
-
-          {/* Footer Fijo */}
-          <div className="px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={() => setOpenModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleCreateSubmit}
-              disabled={isSubmitting}
-              className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                'Guardar Egreso'
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ========================================================================= */}
-      {/* MODAL: EDITAR EGRESO / INSUMO (LIGHT MODE NOVA)                          */}
-      {/* ========================================================================= */}
-      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[580px] max-h-[90vh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl">
-          {/* Header Fijo */}
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                <Pencil className="h-5 w-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                  Editar Egreso & Insumo
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Modifica los detalles, tag de clasificación, costos o cantidades adquiridas.
-                </DialogDescription>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpenEditModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Formulario Limpio */}
-          <form onSubmit={handleEditSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-            {/* 1. Selector Visual de Categoría Principal */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
-                <span>Categoría Principal <span className="text-[#A36F4C]">*</span></span>
-                <span className="text-[11px] text-[#75695D] font-normal">Destino de gasto</span>
-              </Label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {CATEGORIAS_CONFIG.map(cat => {
-                  const isSelected = formCategoria === cat.id
-                  const Icon = cat.icon
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => handleSelectCategoria(cat.id as any)}
-                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-                        isSelected
-                          ? 'bg-[#FDFBF7] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-sm'
-                          : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-                        {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-[#241C15]">{cat.label}</div>
-                        <div className="text-[10px] text-[#75695D] line-clamp-1">{cat.desc}</div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* 2. Fecha del Registro / Compra */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
-                <span>Fecha del Egreso <span className="text-[#A36F4C]">*</span></span>
-                <span className="text-[11px] text-[#75695D] font-normal">Modificable</span>
-              </Label>
-              <Input 
-                type="date"
-                value={formFecha}
-                onChange={(e) => setFormFecha(e.target.value)}
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            {/* 3. Concepto / Nombre del Insumo (ARRIBA DEL TAG) */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15]">
-                Concepto / Nombre del Insumo <span className="text-[#A36F4C]">*</span>
-              </Label>
-              <Input 
-                value={formConcepto}
-                onChange={(e) => setFormConcepto(e.target.value)}
-                placeholder="Ej: Filamento PLA Matte Negro, Cajas de Envío 15x15x15..."
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            {/* 3. Subcategoría Dinámica por Categoría Asociada */}
-            <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
-                  <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                  Subcategoría / Tag <span className="text-[#A36F4C]">*</span>
-                </Label>
-                <Link 
-                  href="/finanzas/tags" 
-                  className="text-[11px] text-[#A36F4C] font-semibold hover:underline flex items-center gap-1"
-                >
-                  Gestionar tags <ExternalLink className="h-2.5 w-2.5" />
-                </Link>
-              </div>
-
-              {/* Chips con los tags asociados a la categoría seleccionada */}
-              {activeCategoryTags.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {activeCategoryTags.map(tag => {
-                    const colorStyle = getTagColor(tag.nombre)
-                    const isSelected = formSubcategoria.trim().toLowerCase() === tag.nombre.trim().toLowerCase()
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => setFormSubcategoria(tag.nombre)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border ${
-                          isSelected
-                            ? colorStyle.chipActive
-                            : colorStyle.chip
-                        }`}
-                      >
-                        <Tag className="h-3 w-3" />
-                        {tag.nombre}
-                        {isSelected && <Check className="h-3 w-3 ml-1" />}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC] text-xs text-[#75695D]">
-                  <span>No hay tags asociados a esta categoría.</span>
-                  <Link href="/finanzas/tags" className="text-[#A36F4C] font-bold hover:underline">
-                    + Crear tag en CRUD
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* 4. Costos y Cantidades */}
-            <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Cantidad con Stepper +/- */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold">Cantidad <span className="text-[#A36F4C]">*</span></Label>
-                  <div className="flex items-center">
-                    <button
-                      type="button"
-                      onClick={handleDecrementCantidad}
-                      className="h-9 px-2.5 bg-[#FFFFFF] border border-r-0 border-[#DCD3C6] rounded-l-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer"
-                    >
-                      <Minus className="h-3.5 w-3.5" />
-                    </button>
-                    <Input 
-                      type="number"
-                      min="1"
-                      value={formCantidad}
-                      onChange={(e) => setFormCantidad(e.target.value)}
-                      required
-                      className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-center font-mono font-bold text-sm h-9 rounded-none focus:border-[#A36F4C]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleIncrementCantidad}
-                      className="h-9 px-2.5 bg-[#FFFFFF] border border-l-0 border-[#DCD3C6] rounded-r-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Costo Unitario */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold">Costo Unit. (S/) <span className="text-[#A36F4C]">*</span></Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formCostoUnitario}
-                      onChange={(e) => setFormCostoUnitario(e.target.value)}
-                      placeholder="0.00"
-                      required
-                      className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono font-bold h-9 rounded-xl focus:border-[#A36F4C]"
-                    />
-                  </div>
-                </div>
-
-                {/* Flete / Envío */}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold">Flete / Envío (S/)</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formCostoEnvio}
-                      onChange={(e) => setFormCostoEnvio(e.target.value)}
-                      placeholder="0.00"
-                      className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono h-9 rounded-xl focus:border-[#A36F4C]"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 5. Live Metrics Preview Card Light Mode */}
-            <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] shadow-sm relative overflow-hidden space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Cálculo & Métricas en Vivo
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-                {/* Costo Total */}
-                <div className="space-y-0.5">
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold">Total Calculado</span>
-                  <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono">
-                    {formatCurrency(liveCostMetrics.totalCalculado)}
-                  </div>
-                  <span className="text-[10px] text-[#75695D] block">Subtotal + Flete</span>
-                </div>
-
-                {/* Costo Real Unitario */}
-                <div className="space-y-0.5">
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold">Costo Real Unit.</span>
-                  <div className="text-base font-semibold text-[#944917] font-mono">
-                    {formatCurrency(liveCostMetrics.costoRealUnitario)}
-                  </div>
-                  <span className="text-[10px] text-[#75695D] block">Incluye flete prorrateado</span>
-                </div>
-
-                {/* Desglose Flete */}
-                <div className="space-y-0.5 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold">Desglose Flete</span>
-                  <div className="text-sm font-semibold text-[#4A3E35] font-mono">
-                    {formatCurrency(parseFloat(formCostoEnvio) || 0)}
-                  </div>
-                  <span className="text-[10px] text-[#75695D] block">Costo logístico</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom spacer */}
-            <div className="h-2" />
-          </form>
-
-          {/* Footer Fijo */}
-          <div className="px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-            {editingItem && (
-              <Button 
-                type="button" 
-                variant="ghost" 
-                onClick={() => handleDelete(editingItem.id, editingItem.itemConcepto)}
-                className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs rounded-xl cursor-pointer font-bold"
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
               >
-                <Trash2 className="h-4 w-4 mr-1.5" />
-                Eliminar Egreso
-              </Button>
-            )}
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-            <div className="flex items-center gap-3 ml-auto">
+            {/* Formulario Scrolleable */}
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4 touch-pan-y">
+              {/* 1. Selector Visual de Categoría Principal */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
+                  <span>Categoría Principal <span className="text-[#A36F4C]">*</span></span>
+                  <span className="text-[11px] text-[#75695D] font-normal">Destino de gasto</span>
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {CATEGORIAS_CONFIG.map(cat => {
+                    const isSelected = formCategoria === cat.id
+                    const Icon = cat.icon
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => handleSelectCategoria(cat.id as any)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                          isSelected
+                            ? 'bg-[#FDFBF7] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-sm'
+                            : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
+                          {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-[#241C15]">{cat.label}</div>
+                          <div className="text-[10px] text-[#75695D] line-clamp-1">{cat.desc}</div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Fecha del Registro / Compra */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
+                  <span>Fecha del Egreso <span className="text-[#A36F4C]">*</span></span>
+                  <span className="text-[11px] text-[#75695D] font-normal">Modificable</span>
+                </Label>
+                <Input 
+                  type="date"
+                  value={formFecha}
+                  onChange={(e) => setFormFecha(e.target.value)}
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
+              {/* 3. Concepto / Nombre del Insumo */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15]">
+                  Concepto / Nombre del Insumo <span className="text-[#A36F4C]">*</span>
+                </Label>
+                <Input 
+                  value={formConcepto}
+                  onChange={(e) => setFormConcepto(e.target.value)}
+                  placeholder="Ej: Filamento PLA Matte Negro, Cajas de Envío 15x15x15..."
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
+              {/* 3. Subcategoría Dinámica por Categoría Asociada */}
+              <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
+                    Subcategoría / Tag <span className="text-[#A36F4C]">*</span>
+                  </Label>
+                  <Link 
+                    href="/finanzas/tags" 
+                    className="text-[11px] text-[#A36F4C] font-semibold hover:underline flex items-center gap-1"
+                  >
+                    Gestionar tags <ExternalLink className="h-2.5 w-2.5" />
+                  </Link>
+                </div>
+
+                {/* Chips con los tags asociados a la categoría seleccionada */}
+                {activeCategoryTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {activeCategoryTags.map(tag => {
+                      const colorStyle = getTagColor(tag.nombre)
+                      const isSelected = formSubcategoria.trim().toLowerCase() === tag.nombre.trim().toLowerCase()
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => setFormSubcategoria(tag.nombre)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border ${
+                            isSelected
+                              ? colorStyle.chipActive
+                              : colorStyle.chip
+                          }`}
+                        >
+                          <Tag className="h-3 w-3" />
+                          {tag.nombre}
+                          {isSelected && <Check className="h-3 w-3 ml-1" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC] text-xs text-[#75695D]">
+                    <span>No hay tags asociados a esta categoría.</span>
+                    <Link href="/finanzas/tags" className="text-[#A36F4C] font-bold hover:underline">
+                      + Crear tag en CRUD
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Costos y Cantidades */}
+              <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Cantidad con Stepper +/- */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold">Cantidad <span className="text-[#A36F4C]">*</span></Label>
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={handleDecrementCantidad}
+                        className="h-9 px-2.5 bg-[#FFFFFF] border border-r-0 border-[#DCD3C6] rounded-l-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <Input 
+                        type="number"
+                        min="1"
+                        value={formCantidad}
+                        onChange={(e) => setFormCantidad(e.target.value)}
+                        required
+                        className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-center font-mono font-bold text-sm h-9 rounded-none focus:border-[#A36F4C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleIncrementCantidad}
+                        className="h-9 px-2.5 bg-[#FFFFFF] border border-l-0 border-[#DCD3C6] rounded-r-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Costo Unitario */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold">Costo Unit. (S/) <span className="text-[#A36F4C]">*</span></Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formCostoUnitario}
+                        onChange={(e) => setFormCostoUnitario(e.target.value)}
+                        placeholder="0.00"
+                        required
+                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono font-bold h-9 rounded-xl focus:border-[#A36F4C]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Flete / Envío */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold">Flete / Envío (S/)</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formCostoEnvio}
+                        onChange={(e) => setFormCostoEnvio(e.target.value)}
+                        placeholder="0.00"
+                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono h-9 rounded-xl focus:border-[#A36F4C]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Live Metrics Preview Card Light Mode */}
+              <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] shadow-sm relative overflow-hidden space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Cálculo & Métricas en Vivo
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+                  {/* Costo Total */}
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Total Calculado</span>
+                    <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono">
+                      {formatCurrency(liveCostMetrics.totalCalculado)}
+                    </div>
+                    <span className="text-[10px] text-[#75695D] block">Subtotal + Flete</span>
+                  </div>
+
+                  {/* Costo Real Unitario */}
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Costo Real Unit.</span>
+                    <div className="text-base font-semibold text-[#944917] font-mono">
+                      {formatCurrency(liveCostMetrics.costoRealUnitario)}
+                    </div>
+                    <span className="text-[10px] text-[#75695D] block">Incluye flete prorrateado</span>
+                  </div>
+
+                  {/* Desglose Flete */}
+                  <div className="space-y-0.5 col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Desglose Flete</span>
+                    <div className="text-sm font-semibold text-[#4A3E35] font-mono">
+                      {formatCurrency(parseFloat(formCostoEnvio) || 0)}
+                    </div>
+                    <span className="text-[10px] text-[#75695D] block">Costo logístico</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom spacer */}
+              <div className="h-2" />
+            </div>
+
+            {/* Footer Fijo con Botones Funcionales */}
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
-                onClick={() => setOpenEditModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
+                onClick={() => setOpenModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
-                onClick={handleEditSubmit}
+                type="submit"
                 disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
@@ -1385,11 +1099,311 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                     Guardando...
                   </>
                 ) : (
-                  'Guardar Cambios'
+                  'Guardar Egreso'
                 )}
               </Button>
             </div>
-          </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDITAR EGRESO / INSUMO (LIGHT MODE NOVA)                          */}
+      {/* ========================================================================= */}
+      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[580px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          <form onSubmit={handleEditSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            {/* Header Fijo */}
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                  <Pencil className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                    Editar Egreso & Insumo
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                    Modifica los detalles, tag de clasificación, costos o cantidades adquiridas.
+                  </DialogDescription>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenEditModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Formulario Scrolleable */}
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4 touch-pan-y">
+              {/* 1. Selector Visual de Categoría Principal */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
+                  <span>Categoría Principal <span className="text-[#A36F4C]">*</span></span>
+                  <span className="text-[11px] text-[#75695D] font-normal">Destino de gasto</span>
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {CATEGORIAS_CONFIG.map(cat => {
+                    const isSelected = formCategoria === cat.id
+                    const Icon = cat.icon
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => handleSelectCategoria(cat.id as any)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                          isSelected
+                            ? 'bg-[#FDFBF7] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-sm'
+                            : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
+                          {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-[#241C15]">{cat.label}</div>
+                          <div className="text-[10px] text-[#75695D] line-clamp-1">{cat.desc}</div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Fecha del Registro / Compra */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
+                  <span>Fecha del Egreso <span className="text-[#A36F4C]">*</span></span>
+                  <span className="text-[11px] text-[#75695D] font-normal">Modificable</span>
+                </Label>
+                <Input 
+                  type="date"
+                  value={formFecha}
+                  onChange={(e) => setFormFecha(e.target.value)}
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
+              {/* 3. Concepto / Nombre del Insumo (ARRIBA DEL TAG) */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15]">
+                  Concepto / Nombre del Insumo <span className="text-[#A36F4C]">*</span>
+                </Label>
+                <Input 
+                  value={formConcepto}
+                  onChange={(e) => setFormConcepto(e.target.value)}
+                  placeholder="Ej: Filamento PLA Matte Negro, Cajas de Envío 15x15x15..."
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
+              {/* 3. Subcategoría Dinámica por Categoría Asociada */}
+              <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
+                    Subcategoría / Tag <span className="text-[#A36F4C]">*</span>
+                  </Label>
+                  <Link 
+                    href="/finanzas/tags" 
+                    className="text-[11px] text-[#A36F4C] font-semibold hover:underline flex items-center gap-1"
+                  >
+                    Gestionar tags <ExternalLink className="h-2.5 w-2.5" />
+                  </Link>
+                </div>
+
+                {/* Chips con los tags asociados a la categoría seleccionada */}
+                {activeCategoryTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {activeCategoryTags.map(tag => {
+                      const colorStyle = getTagColor(tag.nombre)
+                      const isSelected = formSubcategoria.trim().toLowerCase() === tag.nombre.trim().toLowerCase()
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => setFormSubcategoria(tag.nombre)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border ${
+                            isSelected
+                              ? colorStyle.chipActive
+                              : colorStyle.chip
+                          }`}
+                        >
+                          <Tag className="h-3 w-3" />
+                          {tag.nombre}
+                          {isSelected && <Check className="h-3 w-3 ml-1" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC] text-xs text-[#75695D]">
+                    <span>No hay tags asociados a esta categoría.</span>
+                    <Link href="/finanzas/tags" className="text-[#A36F4C] font-bold hover:underline">
+                      + Crear tag en CRUD
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Costos y Cantidades */}
+              <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Cantidad con Stepper +/- */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold">Cantidad <span className="text-[#A36F4C]">*</span></Label>
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={handleDecrementCantidad}
+                        className="h-9 px-2.5 bg-[#FFFFFF] border border-r-0 border-[#DCD3C6] rounded-l-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <Input 
+                        type="number"
+                        min="1"
+                        value={formCantidad}
+                        onChange={(e) => setFormCantidad(e.target.value)}
+                        required
+                        className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-center font-mono font-bold text-sm h-9 rounded-none focus:border-[#A36F4C]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleIncrementCantidad}
+                        className="h-9 px-2.5 bg-[#FFFFFF] border border-l-0 border-[#DCD3C6] rounded-r-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Costo Unitario */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold">Costo Unit. (S/) <span className="text-[#A36F4C]">*</span></Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formCostoUnitario}
+                        onChange={(e) => setFormCostoUnitario(e.target.value)}
+                        placeholder="0.00"
+                        required
+                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono font-bold h-9 rounded-xl focus:border-[#A36F4C]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Flete / Envío */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold">Flete / Envío (S/)</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formCostoEnvio}
+                        onChange={(e) => setFormCostoEnvio(e.target.value)}
+                        placeholder="0.00"
+                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono h-9 rounded-xl focus:border-[#A36F4C]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Live Metrics Preview Card Light Mode */}
+              <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] shadow-sm relative overflow-hidden space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Cálculo & Métricas en Vivo
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+                  {/* Costo Total */}
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Total Calculado</span>
+                    <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono">
+                      {formatCurrency(liveCostMetrics.totalCalculado)}
+                    </div>
+                    <span className="text-[10px] text-[#75695D] block">Subtotal + Flete</span>
+                  </div>
+
+                  {/* Costo Real Unitario */}
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Costo Real Unit.</span>
+                    <div className="text-base font-semibold text-[#944917] font-mono">
+                      {formatCurrency(liveCostMetrics.costoRealUnitario)}
+                    </div>
+                    <span className="text-[10px] text-[#75695D] block">Incluye flete prorrateado</span>
+                  </div>
+
+                  {/* Desglose Flete */}
+                  <div className="space-y-0.5 col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Desglose Flete</span>
+                    <div className="text-sm font-semibold text-[#4A3E35] font-mono">
+                      {formatCurrency(parseFloat(formCostoEnvio) || 0)}
+                    </div>
+                    <span className="text-[10px] text-[#75695D] block">Costo logístico</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom spacer */}
+              <div className="h-2" />
+            </div>
+
+            {/* Footer Fijo con Botones Funcionales */}
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              {editingItem && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => handleDelete(editingItem.id, editingItem.itemConcepto)}
+                  className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs rounded-xl cursor-pointer font-bold active:scale-[0.98]"
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Eliminar Egreso
+                </Button>
+              )}
+
+              <div className="flex items-center gap-3 ml-auto">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => setOpenEditModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    'Guardar Cambios'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

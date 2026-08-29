@@ -890,11 +890,11 @@ export function VentasClient({
       {/* MODAL: FICHA Y GESTIÓN COMPLETA DEL PEDIDO                                */}
       {/* ========================================================================= */}
       <Dialog open={openDetailsModal} onOpenChange={setOpenDetailsModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[560px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[560px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
           {selectedVenta && (
-            <>
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+              {/* Modal Header Fijo */}
+              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
                     <ShoppingCart className="h-5 w-5 stroke-[2.5]" />
@@ -933,7 +933,7 @@ export function VentasClient({
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
                 {/* Fecha del Pedido modificable */}
                 <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] flex items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2">
@@ -1022,7 +1022,7 @@ export function VentasClient({
                         key={est}
                         type="button"
                         onClick={() => handleCambiarEstado(selectedVenta.id, est)}
-                        className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                        className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer active:scale-[0.98] ${
                           selectedVenta.estado === est
                             ? est === 'ENTREGADO'
                               ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-sm'
@@ -1039,62 +1039,62 @@ export function VentasClient({
                     ))}
                   </div>
                 </div>
+              </div>
 
-                {/* Botones de Gestión de Pago y Acciones */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-[#E2D9CC]">
-                  {/* Botón de eliminar en el modal */}
+              {/* Botones de Gestión de Pago y Acciones Fijo */}
+              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
+                {/* Botón de eliminar en el modal */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleDeleteVenta(selectedVenta.id, selectedVenta.cliente)}
+                  disabled={deletingId === selectedVenta.id}
+                  className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs font-bold rounded-xl cursor-pointer self-start sm:self-auto active:scale-[0.98]"
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  Eliminar Pedido
+                </Button>
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {selectedVenta.saldoPendiente > 0 ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setMontoAbono(selectedVenta.saldoPendiente.toString())
+                          setOpenAbonoModal(true)
+                        }}
+                        className="bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm active:scale-[0.98]"
+                      >
+                        <DollarSign className="h-4 w-4 mr-1" />
+                        Registrar Abono
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => handleLiquidarTotal(selectedVenta.id)}
+                        className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm active:scale-[0.98]"
+                      >
+                        <Check className="h-4 w-4 mr-1 stroke-[2.5]" />
+                        Liquidar 100%
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
+                      <CheckCircle2 className="h-4 w-4" /> Pago Completado
+                    </span>
+                  )}
+
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => handleDeleteVenta(selectedVenta.id, selectedVenta.cliente)}
-                    disabled={deletingId === selectedVenta.id}
-                    className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs font-bold rounded-xl cursor-pointer self-start sm:self-auto"
+                    onClick={() => setOpenDetailsModal(false)}
+                    className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
                   >
-                    <Trash2 className="h-4 w-4 mr-1.5" />
-                    Eliminar Pedido
+                    Cerrar
                   </Button>
-
-                  <div className="flex items-center gap-2">
-                    {selectedVenta.saldoPendiente > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            setMontoAbono(selectedVenta.saldoPendiente.toString())
-                            setOpenAbonoModal(true)
-                          }}
-                          className="bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                        >
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          Registrar Abono
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={() => handleLiquidarTotal(selectedVenta.id)}
-                          className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                        >
-                          <Check className="h-4 w-4 mr-1 stroke-[2.5]" />
-                          Liquidar 100% (Ya Pagó)
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
-                        <CheckCircle2 className="h-4 w-4" /> Pago Completado
-                      </span>
-                    )}
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setOpenDetailsModal(false)}
-                      className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs rounded-xl cursor-pointer font-medium"
-                    >
-                      Cerrar
-                    </Button>
-                  </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -1103,10 +1103,10 @@ export function VentasClient({
       {/* MODAL: REGISTRAR ABONO / PAGO                                             */}
       {/* ========================================================================= */}
       <Dialog open={openAbonoModal} onOpenChange={setOpenAbonoModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[420px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[420px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
           {selectedVenta && (
-            <>
-              <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <form onSubmit={handleRegistrarAbonoSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] flex items-center justify-center text-[#1E5E3A] shadow-sm">
                     <DollarSign className="h-5 w-5 stroke-[2.5]" />
@@ -1129,7 +1129,7 @@ export function VentasClient({
                 </button>
               </div>
 
-              <form onSubmit={handleRegistrarAbonoSubmit} className="p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto a Abonar (S/) *</Label>
                   <div className="relative">
@@ -1158,26 +1158,26 @@ export function VentasClient({
                     </button>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-[#E2D9CC]">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setOpenAbonoModal(false)}
-                    className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting || !montoAbono || parseFloat(montoAbono) <= 0}
-                    className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Guardando...' : 'Confirmar Cobro'}
-                  </Button>
-                </div>
-              </form>
-            </>
+              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex justify-end gap-2 flex-shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setOpenAbonoModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !montoAbono || parseFloat(montoAbono) <= 0}
+                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {isSubmitting ? 'Guardando...' : 'Confirmar Cobro'}
+                </Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>
@@ -1186,36 +1186,37 @@ export function VentasClient({
       {/* MODAL: NUEVO PEDIDO CON PRORRATEO DE PACKAGING Y MARGEN                   */}
       {/* ========================================================================= */}
       <Dialog open={openCreateModal} onOpenChange={setOpenCreateModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[620px] max-h-[90vh] overflow-y-auto p-0 shadow-2xl rounded-2xl">
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                <ShoppingCart className="h-5 w-5 stroke-[2.5]" />
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[620px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                  <ShoppingCart className="h-5 w-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                    Nuevo Pedido de Venta
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D]">
+                    Registra la venta con cálculo automático de prorrateo de packaging y margen adicional.
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                  Nuevo Pedido de Venta
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D]">
-                  Registra la venta con cálculo automático de prorrateo de packaging y margen adicional.
-                </DialogDescription>
-              </div>
+              <button
+                type="button"
+                onClick={() => setOpenCreateModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpenCreateModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
 
-          <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
-                <Input 
-                  type="date"
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
+                  <Input 
+                    type="date"
                   value={formFecha}
                   onChange={(e) => setFormFecha(e.target.value)}
                   required
@@ -1428,119 +1429,98 @@ export function VentasClient({
                       </div>
                     </div>
                   </div>
-
-                  {/* Desglose en vivo de Prorrateo */}
-                  <div className="p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
-                    <div className="space-y-0.5 text-[#75695D]">
-                      <div className="text-[11px]">
-                        Pack Base: <strong className="text-[#241C15]">{formatCurrency(parseFloat(montoPackagingBase) || 0)}</strong>
-                        <span> • Prorrateo ({porcentajePackaging}%): <strong className="text-[#8C6D1F] font-bold">+{formatCurrency(montoProrrateoPackaging)}</strong></span>
-                      </div>
-                      <div>
-                        Precio Sugerido Final: <strong className="text-[#1E5E3A] font-mono text-sm font-bold">{formatCurrency(precioSugeridoCalculado)}</strong>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleAplicarPrecioSugerido}
-                      className="h-7 px-2.5 bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold whitespace-nowrap rounded-xl cursor-pointer shadow-sm"
-                    >
-                      <Calculator className="h-3.5 w-3.5 mr-1" />
-                      Aplicar Precio
-                    </Button>
-                  </div>
                 </div>
               )}
             </div>
 
-            {/* Precio Unitario Final Aplicado */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Precio Unitario Final (S/) *</Label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formPrecioUnitario}
-                    onChange={(e) => handlePrecioUnitarioChange(e.target.value)}
-                    required
-                    className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                  />
+              {/* Precio Unitario Final Aplicado */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Precio Unitario Final (S/) *</Label>
+                  <div className="relative flex items-center w-full">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formPrecioUnitario}
+                      onChange={(e) => handlePrecioUnitarioChange(e.target.value)}
+                      required
+                      className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#1E5E3A] font-bold uppercase tracking-wider">Pago Inicial / Anticipo (S/)</Label>
+                  <div className="relative flex items-center w-full">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formMontoPagado}
+                      onChange={(e) => setFormMontoPagado(e.target.value)}
+                      placeholder="0.00"
+                      className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#1E5E3A] font-bold uppercase tracking-wider">Pago Inicial / Anticipo (S/)</Label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+              {/* Total Calculado & Saldo */}
+              {(() => {
+                const cant = parseInt(formCantidad) || 1
+                const unit = parseFloat(formPrecioUnitario) || 0
+                const total = cant * unit
+                const pagado = parseFloat(formMontoPagado) || 0
+                const saldo = Math.max(0, total - pagado)
+
+                return (
+                  <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
+                    <div>
+                      <span className="text-[10px] text-[#75695D] uppercase font-bold">Total del Pedido</span>
+                      <div className="text-lg font-extrabold text-[#241C15] font-mono">{formatCurrency(total)}</div>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#8C6D1F] uppercase font-bold">Saldo Pendiente</span>
+                      <div className="text-lg font-extrabold text-[#8C6D1F] font-mono">{formatCurrency(saldo)}</div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Logística */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Destino de Envío</Label>
                   <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formMontoPagado}
-                    onChange={(e) => setFormMontoPagado(e.target.value)}
-                    placeholder="0.00"
-                    className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    value={formDestinoEnvio}
+                    onChange={(e) => setFormDestinoEnvio(e.target.value)}
+                    placeholder="Ej: Shalom / Lince / Recojo taller"
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Promesa de Entrega</Label>
+                  <Input 
+                    value={formDiaEntrega}
+                    onChange={(e) => setFormDiaEntrega(e.target.value)}
+                    placeholder="Ej: 28 Viernes en la mañana"
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Total Calculado & Saldo */}
-            {(() => {
-              const cant = parseInt(formCantidad) || 1
-              const unit = parseFloat(formPrecioUnitario) || 0
-              const total = cant * unit
-              const pagado = parseFloat(formMontoPagado) || 0
-              const saldo = Math.max(0, total - pagado)
-
-              return (
-                <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
-                  <div>
-                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Total del Pedido</span>
-                    <div className="text-lg font-extrabold text-[#241C15] font-mono">{formatCurrency(total)}</div>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#8C6D1F] uppercase font-bold">Saldo Pendiente</span>
-                    <div className="text-lg font-extrabold text-[#8C6D1F] font-mono">{formatCurrency(saldo)}</div>
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* Logística */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Destino de Envío</Label>
-                <Input 
-                  value={formDestinoEnvio}
-                  onChange={(e) => setFormDestinoEnvio(e.target.value)}
-                  placeholder="Ej: Shalom / Lince / Recojo taller"
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Promesa de Entrega</Label>
-                <Input 
-                  value={formDiaEntrega}
-                  onChange={(e) => setFormDiaEntrega(e.target.value)}
-                  placeholder="Ej: 28 Viernes en la mañana"
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
+            {/* Footer Fijo con Botones Funcionales */}
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenCreateModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
               >
                 Cancelar
               </Button>

@@ -473,140 +473,145 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
       {/* ========================================================================= */}
       {/* MODAL: CREAR / EDITAR TAG (LIGHT MODE NOVA)                               */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* MODAL: CREAR / EDITAR TAG (LIGHT MODE NOVA)                               */}
+      {/* ========================================================================= */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                <Tag className="h-5 w-5" />
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[500px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          <form onSubmit={handleSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                  <Tag className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                    {editingTag ? 'Editar Tag de Insumo' : 'Crear Nuevo Tag de Insumo'}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                    Asocia el tag a una categoría principal para que se filtre dinámicamente.
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                  {editingTag ? 'Editar Tag de Insumo' : 'Crear Nuevo Tag de Insumo'}
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Asocia el tag a una categoría principal para que se filtre dinámicamente.
-                </DialogDescription>
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4 touch-pan-y">
+              {/* 1. Categoría Asociada */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15]">
+                  Categoría Principal Asociada <span className="text-[#A36F4C]">*</span>
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {CATEGORIAS_TAG.map(c => {
+                    const isSelected = formCategoria === c.id
+                    const Icon = c.icon
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setFormCategoria(c.id)}
+                        className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                          isSelected
+                            ? 'bg-[#FDFBF7] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-sm'
+                            : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
+                          {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
+                        </div>
+                        <div className="font-bold text-[11px] leading-tight">{c.label}</div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpenModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* 1. Categoría Asociada */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15]">
-                Categoría Principal Asociada <span className="text-[#A36F4C]">*</span>
-              </Label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                {CATEGORIAS_TAG.map(c => {
-                  const isSelected = formCategoria === c.id
-                  const Icon = c.icon
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setFormCategoria(c.id)}
-                      className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1 ${
-                        isSelected
-                          ? 'bg-[#FDFBF7] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-sm'
-                          : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-                        {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
-                      </div>
-                      <div className="font-bold text-[11px] leading-tight">{c.label}</div>
-                    </button>
-                  )
-                })}
+              {/* 2. Nombre del Tag */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15]">
+                  Nombre del Tag <span className="text-[#A36F4C]">*</span>
+                </Label>
+                <Input 
+                  value={formNombre}
+                  onChange={(e) => setFormNombre(e.target.value)}
+                  placeholder="Ej: Filamento PLA, Cajas 15x15, Tornillería M3..."
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
               </div>
-            </div>
 
-            {/* 2. Nombre del Tag */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15]">
-                Nombre del Tag <span className="text-[#A36F4C]">*</span>
-              </Label>
-              <Input 
-                value={formNombre}
-                onChange={(e) => setFormNombre(e.target.value)}
-                placeholder="Ej: Filamento PLA, Cajas 15x15, Tornillería M3..."
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            {/* 3. Selector de Color */}
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-[#241C15]">
-                Color de Identificación Visual
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {COLOR_OPTIONS.map(c => {
-                  const isSelected = formColor === c.id
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setFormColor(c.id)}
-                      className={`p-2 rounded-xl border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        isSelected 
-                          ? `${c.bg} ${c.text} ${c.border} ring-2 ring-[#A36F4C]/50 shadow-sm font-bold`
-                          : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:border-[#DCD3C6]'
-                      }`}
-                    >
-                      <span className={`w-2.5 h-2.5 rounded-full ${c.bg} border ${c.border}`}></span>
-                      {c.name}
-                    </button>
-                  )
-                })}
+              {/* 3. Selector de Color */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-[#241C15]">
+                  Color de Identificación Visual
+                </Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {COLOR_OPTIONS.map(c => {
+                    const isSelected = formColor === c.id
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setFormColor(c.id)}
+                        className={`p-2 rounded-xl border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          isSelected 
+                            ? `${c.bg} ${c.text} ${c.border} ring-2 ring-[#A36F4C]/50 shadow-sm font-bold`
+                            : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:border-[#DCD3C6]'
+                        }`}
+                      >
+                        <span className={`w-2.5 h-2.5 rounded-full ${c.bg} border ${c.border}`}></span>
+                        {c.name}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* 4. Descripción */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#241C15]">
-                Descripción / Notas (Opcional)
-              </Label>
-              <Input 
-                value={formDescripcion}
-                onChange={(e) => setFormDescripcion(e.target.value)}
-                placeholder="Ej: Bobinas de filamento PLA para proyectos de clientes..."
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              />
-            </div>
+              {/* 4. Descripción */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15]">
+                  Descripción / Notas (Opcional)
+                </Label>
+                <Input 
+                  value={formDescripcion}
+                  onChange={(e) => setFormDescripcion(e.target.value)}
+                  placeholder="Ej: Bobinas de filamento PLA para proyectos de clientes..."
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
 
-            {/* Preview */}
-            <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] flex items-center justify-between text-xs">
-              <span className="text-[#75695D] font-medium">Vista previa del tag:</span>
-              <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(formColor)}`}>
-                <Tag className="h-3 w-3" />
-                {formNombre.trim() || 'Nombre del Tag'}
-              </Badge>
+              {/* Preview */}
+              <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] flex items-center justify-between text-xs">
+                <span className="text-[#75695D] font-medium">Vista previa del tag:</span>
+                <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(formColor)}`}>
+                  <Tag className="h-3 w-3" />
+                  {formNombre.trim() || 'Nombre del Tag'}
+                </Badge>
+              </div>
             </div>
 
             {/* Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>

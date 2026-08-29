@@ -84,7 +84,8 @@ export function SearchableCombobox({
 
   // Filter items in real time based on query
   const filteredItems = useMemo(() => {
-    if (!isOpen && selectedItem && query === selectedItem.label) {
+    // If the query matches the selected item label (i.e. user just opened dropdown without typing a new search), show all items
+    if (selectedItem && query.trim().toLowerCase() === selectedItem.label.trim().toLowerCase()) {
       return items
     }
     const cleanQuery = query.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -96,12 +97,21 @@ export function SearchableCombobox({
       const cleanBadge = item.badge ? item.badge.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') : ''
       return cleanLabel.includes(cleanQuery) || cleanSublabel.includes(cleanQuery) || cleanBadge.includes(cleanQuery)
     })
-  }, [items, query, isOpen, selectedItem])
+  }, [items, query, selectedItem])
 
   // Reset highlighted index when filtered items change
   useEffect(() => {
-    setHighlightedIndex(0)
-  }, [filteredItems])
+    if (isOpen && selectedItem) {
+      const idx = filteredItems.findIndex(i => String(i.id) === String(selectedItem.id))
+      if (idx >= 0) {
+        setHighlightedIndex(idx)
+      } else {
+        setHighlightedIndex(0)
+      }
+    } else {
+      setHighlightedIndex(0)
+    }
+  }, [filteredItems, isOpen, selectedItem])
 
   // Close on click outside
   useEffect(() => {
@@ -235,6 +245,14 @@ export function SearchableCombobox({
           onFocus={() => {
             setIsOpen(true)
             // If the query matches the selected item label, select all text for easy replacement
+            if (selectedItem && query === selectedItem.label) {
+              inputRef.current?.select()
+            }
+          }}
+          onClick={() => {
+            if (!isOpen) {
+              setIsOpen(true)
+            }
             if (selectedItem && query === selectedItem.label) {
               inputRef.current?.select()
             }

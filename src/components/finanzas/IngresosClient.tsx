@@ -646,150 +646,152 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
       {/* Modal: Registrar Ingreso Directo */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] max-w-lg p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <div className="p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
-                <DollarSign className="h-5 w-5 stroke-[2.5]" />
+        <DialogContent className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-lg max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
+          <form onSubmit={handleSubmitCreate} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="p-5 sm:p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
+                  <DollarSign className="h-5 w-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-extrabold text-[#241C15]">
+                    Registrar Ingreso Directo
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                    Servicios de impresión externa, modelado 3D, préstamos o aportes de capital.
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-lg font-extrabold text-[#241C15]">
-                  Registrar Ingreso Directo
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Servicios de impresión externa, modelado 3D, préstamos o aportes de capital.
-                </DialogDescription>
-              </div>
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpenModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
 
-          <form onSubmit={handleSubmitCreate} className="p-6 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Ingreso *</Label>
+                  <Input 
+                    type="date"
+                    value={formFecha}
+                    onChange={(e) => setFormFecha(e.target.value)}
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Entidad *</Label>
+                  <Input 
+                    value={formCliente}
+                    onChange={(e) => setFormCliente(e.target.value)}
+                    placeholder="Ej: Banco BCP / Juan Pérez"
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Ingreso *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto / Servicio Realizado *</Label>
                 <Input 
-                  type="date"
-                  value={formFecha}
-                  onChange={(e) => setFormFecha(e.target.value)}
+                  value={formConcepto}
+                  onChange={(e) => setFormConcepto(e.target.value)}
+                  placeholder="Ej: Desembolso Préstamo, Impresión pieza PETG, Modelado CAD..."
                   required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Categoría *</Label>
+                  <SearchableCombobox
+                    items={[
+                      { id: 'Servicio de Impresión 3D', label: 'Servicio de Impresión 3D', sublabel: 'Fabricación a pedido', icon: Package },
+                      { id: 'Diseño & Modelado CAD', label: 'Diseño & Modelado CAD', sublabel: 'Modelado 3D y prototipado', icon: Tag },
+                      { id: 'Préstamo Bancario / Financiamiento', label: 'Préstamo Bancario / Financiamiento', sublabel: 'Inyección de liquidez', icon: Landmark },
+                      { id: 'Venta Directa', label: 'Venta Directa / Feria', sublabel: 'Venta de stock presencial', icon: DollarSign },
+                      { id: 'Servicio Técnico', label: 'Servicio Técnico / Calibración', sublabel: 'Mantenimiento de impresoras', icon: Package },
+                      { id: 'Aporte de Capital', label: 'Aporte de Capital', sublabel: 'Fondos propios', icon: Landmark },
+                      { id: 'Otros Ingresos', label: 'Otros Ingresos', sublabel: 'Ingresos varios no clasificados' },
+                    ]}
+                    value={formCategoria}
+                    onChange={(val) => setFormCategoria(val)}
+                    allowCustomInput={true}
+                    customCreateLabel="Usar categoría:"
+                    placeholder="Seleccionar categoría..."
+                    icon={Tag}
+                    inputClassName="bg-[#F4EFEA]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Método de Pago *</Label>
+                  <SearchableCombobox
+                    items={[
+                      { id: 'YAPE', label: 'Yape', sublabel: 'Billetera digital BCP', badge: 'Digital' },
+                      { id: 'PLIN', label: 'Plin', sublabel: 'Billetera digital BBVA/Interbank', badge: 'Digital' },
+                      { id: 'TRANSFERENCIA_BCP', label: 'Transferencia BCP', sublabel: 'Cuenta bancaria BCP', badge: 'Banco' },
+                      { id: 'TRANSFERENCIA_BBVA', label: 'Transferencia BBVA', sublabel: 'Cuenta bancaria BBVA', badge: 'Banco' },
+                      { id: 'TRANSFERENCIA_INTERBANK', label: 'Transferencia Interbank', sublabel: 'Cuenta bancaria Interbank', badge: 'Banco' },
+                      { id: 'EFECTIVO', label: 'Efectivo', sublabel: 'Dinero en mano física', badge: 'Caja física' },
+                    ]}
+                    value={formMetodoPago}
+                    onChange={(val) => setFormMetodoPago(val)}
+                    placeholder="Seleccionar método..."
+                    icon={CreditCard}
+                    clearable={false}
+                    inputClassName="bg-[#F4EFEA]"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Entidad *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Cobrado (S/) *</Label>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formMonto}
+                    onChange={(e) => setFormMonto(e.target.value)}
+                    placeholder="0.00"
+                    required
+                    className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Notas / Observaciones (Opcional)</Label>
                 <Input 
-                  value={formCliente}
-                  onChange={(e) => setFormCliente(e.target.value)}
-                  placeholder="Ej: Banco BCP / Juan Pérez"
-                  required
+                  value={formNotas}
+                  onChange={(e) => setFormNotas(e.target.value)}
+                  placeholder="Ej: Pago adelantado del 100%, 24 cuotas..."
                   className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto / Servicio Realizado *</Label>
-              <Input 
-                value={formConcepto}
-                onChange={(e) => setFormConcepto(e.target.value)}
-                placeholder="Ej: Desembolso Préstamo, Impresión pieza PETG, Modelado CAD..."
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Categoría *</Label>
-                <SearchableCombobox
-                  items={[
-                    { id: 'Servicio de Impresión 3D', label: 'Servicio de Impresión 3D', sublabel: 'Fabricación a pedido', icon: Package },
-                    { id: 'Diseño & Modelado CAD', label: 'Diseño & Modelado CAD', sublabel: 'Modelado 3D y prototipado', icon: Tag },
-                    { id: 'Préstamo Bancario / Financiamiento', label: 'Préstamo Bancario / Financiamiento', sublabel: 'Inyección de liquidez', icon: Landmark },
-                    { id: 'Venta Directa', label: 'Venta Directa / Feria', sublabel: 'Venta de stock presencial', icon: DollarSign },
-                    { id: 'Servicio Técnico', label: 'Servicio Técnico / Calibración', sublabel: 'Mantenimiento de impresoras', icon: Package },
-                    { id: 'Aporte de Capital', label: 'Aporte de Capital', sublabel: 'Fondos propios', icon: Landmark },
-                    { id: 'Otros Ingresos', label: 'Otros Ingresos', sublabel: 'Ingresos varios no clasificados' },
-                  ]}
-                  value={formCategoria}
-                  onChange={(val) => setFormCategoria(val)}
-                  allowCustomInput={true}
-                  customCreateLabel="Usar categoría:"
-                  placeholder="Seleccionar categoría..."
-                  icon={Tag}
-                  inputClassName="bg-[#F4EFEA]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Método de Pago *</Label>
-                <SearchableCombobox
-                  items={[
-                    { id: 'YAPE', label: 'Yape', sublabel: 'Billetera digital BCP', badge: 'Digital' },
-                    { id: 'PLIN', label: 'Plin', sublabel: 'Billetera digital BBVA/Interbank', badge: 'Digital' },
-                    { id: 'TRANSFERENCIA_BCP', label: 'Transferencia BCP', sublabel: 'Cuenta bancaria BCP', badge: 'Banco' },
-                    { id: 'TRANSFERENCIA_BBVA', label: 'Transferencia BBVA', sublabel: 'Cuenta bancaria BBVA', badge: 'Banco' },
-                    { id: 'TRANSFERENCIA_INTERBANK', label: 'Transferencia Interbank', sublabel: 'Cuenta bancaria Interbank', badge: 'Banco' },
-                    { id: 'EFECTIVO', label: 'Efectivo', sublabel: 'Dinero en mano física', badge: 'Caja física' },
-                  ]}
-                  value={formMetodoPago}
-                  onChange={(val) => setFormMetodoPago(val)}
-                  placeholder="Seleccionar método..."
-                  icon={CreditCard}
-                  clearable={false}
-                  inputClassName="bg-[#F4EFEA]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Cobrado (S/) *</Label>
-              <div className="relative flex items-center w-full">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formMonto}
-                  onChange={(e) => setFormMonto(e.target.value)}
-                  placeholder="0.00"
-                  required
-                  className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Notas / Observaciones (Opcional)</Label>
-              <Input 
-                value={formNotas}
-                onChange={(e) => setFormNotas(e.target.value)}
-                placeholder="Ej: Pago adelantado del 100%, 24 cuotas..."
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#1E5E3A]/20 cursor-pointer disabled:opacity-50 transition-all"
+                className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#1E5E3A]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
@@ -807,144 +809,146 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
       {/* Modal: Editar Ingreso Directo */}
       <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <DialogContent className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] max-w-lg p-0 overflow-hidden shadow-2xl rounded-3xl">
-          <div className="p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
-                <Pencil className="h-5 w-5 stroke-[2.5]" />
+        <DialogContent className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-lg max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
+          <form onSubmit={handleSubmitEdit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="p-5 sm:p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
+                  <Pencil className="h-5 w-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-extrabold text-[#241C15]">
+                    Editar Ingreso Directo
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                    Modifica la fecha, monto, concepto o categoría del ingreso registrado.
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-lg font-extrabold text-[#241C15]">
-                  Editar Ingreso Directo
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Modifica la fecha, monto, concepto o categoría del ingreso registrado.
-                </DialogDescription>
-              </div>
+              <button
+                type="button"
+                onClick={() => setOpenEditModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpenEditModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
 
-          <form onSubmit={handleSubmitEdit} className="p-6 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Ingreso *</Label>
+                  <Input 
+                    type="date"
+                    value={formFecha}
+                    onChange={(e) => setFormFecha(e.target.value)}
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Entidad *</Label>
+                  <Input 
+                    value={formCliente}
+                    onChange={(e) => setFormCliente(e.target.value)}
+                    placeholder="Ej: Banco BCP / Juan Pérez"
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Ingreso *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto / Servicio Realizado *</Label>
                 <Input 
-                  type="date"
-                  value={formFecha}
-                  onChange={(e) => setFormFecha(e.target.value)}
+                  value={formConcepto}
+                  onChange={(e) => setFormConcepto(e.target.value)}
+                  placeholder="Ej: Desembolso Préstamo, Impresión pieza PETG, Modelado CAD..."
                   required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Categoría *</Label>
+                  <SearchableCombobox
+                    items={[
+                      { id: 'Servicio de Impresión 3D', label: 'Servicio de Impresión 3D', sublabel: 'Fabricación a pedido', icon: Package },
+                      { id: 'Diseño & Modelado CAD', label: 'Diseño & Modelado CAD', sublabel: 'Modelado 3D y prototipado', icon: Tag },
+                      { id: 'Préstamo Bancario / Financiamiento', label: 'Préstamo Bancario / Financiamiento', sublabel: 'Inyección de liquidez', icon: Landmark },
+                      { id: 'Venta Directa', label: 'Venta Directa / Feria', sublabel: 'Venta de stock presencial', icon: DollarSign },
+                      { id: 'Servicio Técnico', label: 'Servicio Técnico / Calibración', sublabel: 'Mantenimiento de impresoras', icon: Package },
+                      { id: 'Aporte de Capital', label: 'Aporte de Capital', sublabel: 'Fondos propios', icon: Landmark },
+                      { id: 'Otros Ingresos', label: 'Otros Ingresos', sublabel: 'Ingresos varios no clasificados' },
+                    ]}
+                    value={formCategoria}
+                    onChange={(val) => setFormCategoria(val)}
+                    allowCustomInput={true}
+                    customCreateLabel="Usar categoría:"
+                    placeholder="Seleccionar categoría..."
+                    icon={Tag}
+                    inputClassName="bg-[#F4EFEA]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Método de Pago *</Label>
+                  <SearchableCombobox
+                    items={[
+                      { id: 'YAPE', label: 'Yape', sublabel: 'Billetera digital BCP', badge: 'Digital' },
+                      { id: 'PLIN', label: 'Plin', sublabel: 'Billetera digital BBVA/Interbank', badge: 'Digital' },
+                      { id: 'TRANSFERENCIA_BCP', label: 'Transferencia BCP', sublabel: 'Cuenta bancaria BCP', badge: 'Banco' },
+                      { id: 'TRANSFERENCIA_BBVA', label: 'Transferencia BBVA', sublabel: 'Cuenta bancaria BBVA', badge: 'Banco' },
+                      { id: 'TRANSFERENCIA_INTERBANK', label: 'Transferencia Interbank', sublabel: 'Cuenta bancaria Interbank', badge: 'Banco' },
+                      { id: 'EFECTIVO', label: 'Efectivo', sublabel: 'Dinero en mano física', badge: 'Caja física' },
+                    ]}
+                    value={formMetodoPago}
+                    onChange={(val) => setFormMetodoPago(val)}
+                    placeholder="Seleccionar método..."
+                    icon={CreditCard}
+                    clearable={false}
+                    inputClassName="bg-[#F4EFEA]"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente / Entidad *</Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Cobrado (S/) *</Label>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formMonto}
+                    onChange={(e) => setFormMonto(e.target.value)}
+                    placeholder="0.00"
+                    required
+                    className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Notas / Observaciones (Opcional)</Label>
                 <Input 
-                  value={formCliente}
-                  onChange={(e) => setFormCliente(e.target.value)}
-                  placeholder="Ej: Banco BCP / Juan Pérez"
-                  required
+                  value={formNotas}
+                  onChange={(e) => setFormNotas(e.target.value)}
+                  placeholder="Ej: Pago adelantado del 100%, 24 cuotas..."
                   className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto / Servicio Realizado *</Label>
-              <Input 
-                value={formConcepto}
-                onChange={(e) => setFormConcepto(e.target.value)}
-                placeholder="Ej: Desembolso Préstamo, Impresión pieza PETG, Modelado CAD..."
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Categoría *</Label>
-                <SearchableCombobox
-                  items={[
-                    { id: 'Servicio de Impresión 3D', label: 'Servicio de Impresión 3D', sublabel: 'Fabricación a pedido', icon: Package },
-                    { id: 'Diseño & Modelado CAD', label: 'Diseño & Modelado CAD', sublabel: 'Modelado 3D y prototipado', icon: Tag },
-                    { id: 'Préstamo Bancario / Financiamiento', label: 'Préstamo Bancario / Financiamiento', sublabel: 'Inyección de liquidez', icon: Landmark },
-                    { id: 'Venta Directa', label: 'Venta Directa / Feria', sublabel: 'Venta de stock presencial', icon: DollarSign },
-                    { id: 'Servicio Técnico', label: 'Servicio Técnico / Calibración', sublabel: 'Mantenimiento de impresoras', icon: Package },
-                    { id: 'Aporte de Capital', label: 'Aporte de Capital', sublabel: 'Fondos propios', icon: Landmark },
-                    { id: 'Otros Ingresos', label: 'Otros Ingresos', sublabel: 'Ingresos varios no clasificados' },
-                  ]}
-                  value={formCategoria}
-                  onChange={(val) => setFormCategoria(val)}
-                  allowCustomInput={true}
-                  customCreateLabel="Usar categoría:"
-                  placeholder="Seleccionar categoría..."
-                  icon={Tag}
-                  inputClassName="bg-[#F4EFEA]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Método de Pago *</Label>
-                <SearchableCombobox
-                  items={[
-                    { id: 'YAPE', label: 'Yape', sublabel: 'Billetera digital BCP', badge: 'Digital' },
-                    { id: 'PLIN', label: 'Plin', sublabel: 'Billetera digital BBVA/Interbank', badge: 'Digital' },
-                    { id: 'TRANSFERENCIA_BCP', label: 'Transferencia BCP', sublabel: 'Cuenta bancaria BCP', badge: 'Banco' },
-                    { id: 'TRANSFERENCIA_BBVA', label: 'Transferencia BBVA', sublabel: 'Cuenta bancaria BBVA', badge: 'Banco' },
-                    { id: 'TRANSFERENCIA_INTERBANK', label: 'Transferencia Interbank', sublabel: 'Cuenta bancaria Interbank', badge: 'Banco' },
-                    { id: 'EFECTIVO', label: 'Efectivo', sublabel: 'Dinero en mano física', badge: 'Caja física' },
-                  ]}
-                  value={formMetodoPago}
-                  onChange={(val) => setFormMetodoPago(val)}
-                  placeholder="Seleccionar método..."
-                  icon={CreditCard}
-                  clearable={false}
-                  inputClassName="bg-[#F4EFEA]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Cobrado (S/) *</Label>
-              <div className="relative flex items-center w-full">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formMonto}
-                  onChange={(e) => setFormMonto(e.target.value)}
-                  placeholder="0.00"
-                  required
-                  className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Notas / Observaciones (Opcional)</Label>
-              <Input 
-                value={formNotas}
-                onChange={(e) => setFormNotas(e.target.value)}
-                placeholder="Ej: Pago adelantado del 100%, 24 cuotas..."
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-[#E2D9CC]">
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
               {editingItem && (
                 <Button 
                   type="button" 
                   variant="ghost" 
                   onClick={() => handleDeleteDirect(editingItem.id, editingItem.concepto)}
-                  className="text-[#A34335] hover:bg-red-50 text-xs px-3 py-2 rounded-xl cursor-pointer font-semibold gap-1.5"
+                  className="text-[#A34335] hover:bg-red-50 text-xs px-3 py-2 rounded-xl cursor-pointer font-semibold gap-1.5 active:scale-[0.98]"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Eliminar Ingreso
@@ -955,14 +959,14 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                   type="button" 
                   variant="ghost" 
                   onClick={() => setOpenEditModal(false)}
-                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#1E5E3A]/20 cursor-pointer disabled:opacity-50 transition-all"
+                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#1E5E3A]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   {isSubmitting ? (
                     <>

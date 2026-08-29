@@ -418,130 +418,141 @@ export function InyeccionClient({ inversiones }: InyeccionClientProps) {
 
       {/* Modal: Registrar Inyección / Activo */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-blue-500" />
-              Registrar Inyección / Activo Fijo
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="bg-zinc-950 border border-zinc-800 text-zinc-100 w-[95vw] sm:max-w-[500px] max-h-[90dvh] p-0 flex flex-col overflow-hidden z-50">
+          <form onSubmit={handleSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="p-5 sm:p-6 pb-4 border-b border-zinc-800 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-blue-500" />
+                <DialogTitle className="text-lg font-bold">
+                  Registrar Inyección / Activo Fijo
+                </DialogTitle>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Fecha *</Label>
+                  <Input 
+                    type="date"
+                    value={formFecha}
+                    onChange={(e) => setFormFecha(e.target.value)}
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Tipo de Registro *</Label>
+                  <select
+                    value={formCategoria}
+                    onChange={(e) => setFormCategoria(e.target.value as any)}
+                    className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="ACTIVO_FIJO">Activo Fijo</option>
+                    <option value="APORTE_CAPITAL">Aporte Capital</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Persona *</Label>
+                  <Input 
+                    value={formPersona}
+                    onChange={(e) => setFormPersona(e.target.value)}
+                    placeholder="Víctor"
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Fecha *</Label>
+                <Label className="text-xs text-zinc-400">Concepto / Maquinaria / Inversión *</Label>
                 <Input 
-                  type="date"
-                  value={formFecha}
-                  onChange={(e) => setFormFecha(e.target.value)}
+                  value={formConcepto}
+                  onChange={(e) => setFormConcepto(e.target.value)}
+                  placeholder="Ej: Impresora 3D Bambu Lab A1 Mini, Secador Sunlu..."
                   required
                   className="bg-zinc-900 border-zinc-700 text-white text-sm"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Tipo de Registro *</Label>
-                <select
-                  value={formCategoria}
-                  onChange={(e) => setFormCategoria(e.target.value as any)}
-                  className="w-full bg-zinc-900 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                >
-                  <option value="ACTIVO_FIJO">Activo Fijo</option>
-                  <option value="APORTE_CAPITAL">Aporte Capital</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Cantidad *</Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    value={formCantidad}
+                    onChange={(e) => setFormCantidad(e.target.value)}
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Costo Unitario (S/) *</Label>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formCostoUnitario}
+                    onChange={(e) => setFormCostoUnitario(e.target.value)}
+                    placeholder="0.00"
+                    required
+                    className="bg-zinc-900 border-zinc-700 text-white font-mono text-sm"
+                  />
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Persona *</Label>
-                <Input 
-                  value={formPersona}
-                  onChange={(e) => setFormPersona(e.target.value)}
-                  placeholder="Víctor"
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
-                />
-              </div>
-            </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">Costo de Envío / Flete (S/)</Label>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formCostoEnvio}
+                    onChange={(e) => setFormCostoEnvio(e.target.value)}
+                    placeholder="0.00"
+                    className="bg-zinc-900 border-zinc-700 text-white font-mono text-sm"
+                  />
+                </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Concepto / Maquinaria / Inversión *</Label>
-              <Input 
-                value={formConcepto}
-                onChange={(e) => setFormConcepto(e.target.value)}
-                placeholder="Ej: Impresora 3D Bambu Lab A1 Mini, Secador Sunlu..."
-                required
-                className="bg-zinc-900 border-zinc-700 text-white text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Cantidad *</Label>
-                <Input 
-                  type="number"
-                  min="1"
-                  value={formCantidad}
-                  onChange={(e) => setFormCantidad(e.target.value)}
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Costo Unitario (S/) *</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formCostoUnitario}
-                  onChange={(e) => setFormCostoUnitario(e.target.value)}
-                  placeholder="0.00"
-                  required
-                  className="bg-zinc-900 border-zinc-700 text-white font-mono text-sm"
-                />
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-zinc-400">N° de Cuotas (Financiamiento)</Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    value={formCuotas}
+                    onChange={(e) => setFormCuotas(e.target.value)}
+                    placeholder="Opcional (ej: 3, 6)"
+                    className="bg-zinc-900 border-zinc-700 text-white text-sm"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Costo de Envío / Flete (S/)</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formCostoEnvio}
-                  onChange={(e) => setFormCostoEnvio(e.target.value)}
-                  placeholder="0.00"
-                  className="bg-zinc-900 border-zinc-700 text-white font-mono text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">N° de Cuotas (Financiamiento)</Label>
-                <Input 
-                  type="number"
-                  min="1"
-                  value={formCuotas}
-                  onChange={(e) => setFormCuotas(e.target.value)}
-                  placeholder="Opcional (ej: 3, 6)"
-                  className="bg-zinc-900 border-zinc-700 text-white text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="p-5 sm:p-6 py-4 border-t border-zinc-800 flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenModal(false)}
-                className="text-zinc-400 hover:text-white text-xs"
+                className="text-zinc-400 hover:text-white text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-5 py-2.5 rounded-xl cursor-pointer disabled:opacity-50 active:scale-[0.98]"
               >
                 {isSubmitting ? 'Guardando...' : 'Guardar Registro'}
               </Button>

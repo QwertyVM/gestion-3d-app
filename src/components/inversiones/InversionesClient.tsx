@@ -112,119 +112,121 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
 
       {/* Modal Nueva Inversión */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[500px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                <Plus className="h-5 w-5 stroke-[2.5]" />
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[500px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          <form onSubmit={handleSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                  <Plus className="h-5 w-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                    Registrar Nueva Inversión
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D]">
+                    Compra de maquinaria, insumos o aportes de capital.
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                  Registrar Nueva Inversión
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D]">
-                  Compra de maquinaria, insumos o aportes de capital.
-                </DialogDescription>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
-                <Input 
-                  type="date"
-                  name="fecha"
-                  defaultValue={new Date().toISOString().split('T')[0]}
-                  required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Tipo de Registro</Label>
-                <select 
-                  name="categoria"
-                value={formCategoria}
-                onChange={(e) => setFormCategoria(e.target.value as CategoriaInversion)}
-                className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:border-[#A36F4C]"
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
               >
-                <option value="INSUMO">Compra de Insumo</option>
-                <option value="ACTIVO_FIJO">Compra de Activo Fijo</option>
-                <option value="SERVICIO">Pago de Servicio</option>
-                <option value="APORTE_CAPITAL">Aporte de Capital / Préstamo</option>
-              </select>
-            </div>
-          </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Persona / Inversionista</Label>
-                <Input name="persona" defaultValue="Víctor" required className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto</Label>
-                <Input name="itemConcepto" required placeholder="Ej: Préstamo, Filamento..." className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl" />
-              </div>
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            {formCategoria === 'APORTE_CAPITAL' ? (
+            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4 touch-pan-y">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
+                  <Input 
+                    type="date"
+                    name="fecha"
+                    defaultValue={new Date().toISOString().split('T')[0]}
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Tipo de Registro</Label>
+                  <select 
+                    name="categoria"
+                    value={formCategoria}
+                    onChange={(e) => setFormCategoria(e.target.value as CategoriaInversion)}
+                    className="w-full bg-[#F4EFEA] border border-[#DCD3C6] text-[#241C15] rounded-xl px-3 py-2 text-sm focus:border-[#A36F4C]"
+                  >
+                    <option value="INSUMO">Compra de Insumo</option>
+                    <option value="ACTIVO_FIJO">Compra de Activo Fijo</option>
+                    <option value="SERVICIO">Pago de Servicio</option>
+                    <option value="APORTE_CAPITAL">Aporte de Capital / Préstamo</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Total (S/)</Label>
-                  <Input name="costoUnitario" type="number" step="0.01" required className="bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold rounded-xl" />
-                  <input type="hidden" name="cantidad" value="1" />
-                  <input type="hidden" name="costoEnvio" value="0" />
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Persona / Inversionista</Label>
+                  <Input name="persona" defaultValue="Víctor" required className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Número de Cuotas</Label>
-                  <Input name="numeroCuotas" type="number" min="1" placeholder="Ej: 24" className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl" />
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto</Label>
+                  <Input name="itemConcepto" required placeholder="Ej: Préstamo, Filamento..." className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl" />
                 </div>
               </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cant.</Label>
-                    <Input name="cantidad" type="number" defaultValue="1" min="1" required className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl font-mono" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">C. Unitario</Label>
-                    <Input name="costoUnitario" type="number" step="0.01" required className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl font-mono" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Envío Total</Label>
-                    <Input name="costoEnvio" type="number" step="0.01" defaultValue="0" className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl font-mono" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Presentación</Label>
-                  <Input name="presentacion" placeholder="Ej: Bobina 1Kg, Pack 100u, etc." className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl" />
-                </div>
-              </>
-            )}
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
+              {formCategoria === 'APORTE_CAPITAL' ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto Total (S/)</Label>
+                    <Input name="costoUnitario" type="number" step="0.01" required className="bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold rounded-xl" />
+                    <input type="hidden" name="cantidad" value="1" />
+                    <input type="hidden" name="costoEnvio" value="0" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Número de Cuotas</Label>
+                    <Input name="numeroCuotas" type="number" min="1" placeholder="Ej: 24" className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl" />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cant.</Label>
+                      <Input name="cantidad" type="number" defaultValue="1" min="1" required className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl font-mono" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">C. Unitario</Label>
+                      <Input name="costoUnitario" type="number" step="0.01" required className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl font-mono" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Envío Total</Label>
+                      <Input name="costoEnvio" type="number" step="0.01" defaultValue="0" className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl font-mono" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Presentación</Label>
+                    <Input name="presentacion" placeholder="Ej: Bobina 1Kg, Pack 100u, etc." className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] rounded-xl" />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpen(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>

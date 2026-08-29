@@ -1049,11 +1049,11 @@ export function CatalogoClient({
       {/* MODAL: VER DETALLE DEL PRODUCTO (LIGHT MODE NOVA)                         */}
       {/* ========================================================================= */}
       <Dialog open={openDetails} onOpenChange={setOpenDetails}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[560px] p-0 overflow-hidden shadow-2xl rounded-2xl">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[560px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
           {selectedProducto && (
-            <>
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+              {/* Modal Header Fijo */}
+              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
                     <Package className="h-5 w-5" />
@@ -1089,7 +1089,7 @@ export function CatalogoClient({
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
                 {/* Costo Base Hero Box */}
                 <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] flex items-center justify-between shadow-sm">
                   <div>
@@ -1173,54 +1173,54 @@ export function CatalogoClient({
                     )
                   })()}
                 </div>
+              </div>
 
-                {/* Quick actions inside Detail Modal */}
-                <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#E2D9CC]">
-                  <Button
+              {/* Quick actions inside Detail Modal Fijo */}
+              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleToggleEstado(selectedProducto.id, selectedProducto.activo)}
+                  className={`border-[#E2D9CC] text-xs rounded-xl cursor-pointer font-medium active:scale-[0.98] ${
+                    selectedProducto.activo 
+                      ? 'text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]' 
+                      : 'text-[#1E5E3A] hover:text-[#16472C] hover:bg-emerald-50'
+                  }`}
+                >
+                  {selectedProducto.activo ? (
+                    <>
+                      <Archive className="h-3.5 w-3.5 mr-1.5" />
+                      Descontinuar Producto
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                      Reactivar Producto
+                    </>
+                  )}
+                </Button>
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button 
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleToggleEstado(selectedProducto.id, selectedProducto.activo)}
-                    className={`border-[#E2D9CC] text-xs rounded-xl cursor-pointer font-medium ${
-                      selectedProducto.activo 
-                        ? 'text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]' 
-                        : 'text-[#1E5E3A] hover:text-[#16472C] hover:bg-emerald-50'
-                    }`}
+                    variant="ghost"
+                    onClick={() => setOpenDetails(false)}
+                    className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
                   >
-                    {selectedProducto.activo ? (
-                      <>
-                        <Archive className="h-3.5 w-3.5 mr-1.5" />
-                        Descontinuar Producto
-                      </>
-                    ) : (
-                      <>
-                        <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                        Reactivar Producto
-                      </>
-                    )}
+                    Cerrar
                   </Button>
-
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setOpenDetails(false)}
-                      className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs rounded-xl cursor-pointer"
-                    >
-                      Cerrar
-                    </Button>
-                    <Button 
-                      type="button"
-                      onClick={() => handleOpenEdit(selectedProducto)}
-                      className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer"
-                    >
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                      Editar Producto
-                    </Button>
-                  </div>
+                  <Button 
+                    type="button"
+                    onClick={() => handleOpenEdit(selectedProducto)}
+                    className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer active:scale-[0.98]"
+                  >
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                    Editar Producto
+                  </Button>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -1229,106 +1229,107 @@ export function CatalogoClient({
       {/* MODAL: NUEVO PRODUCTO (LIGHT MODE NOVA)                                   */}
       {/* ========================================================================= */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[540px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                <Package className="h-5 w-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                  Nuevo Producto en Catálogo
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Registra un modelo 3D con sus costos base y precios de venta.
-                </DialogDescription>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setOpenCreate(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
-            {/* Categoría Selector with Quick Add */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                  Línea / Categoría *
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setIsQuickAddingCat(!isQuickAddingCat)}
-                  className="text-xs text-[#A36F4C] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus className="h-3 w-3" />
-                  {isQuickAddingCat ? 'Elegir existente' : 'Crear nueva categoría'}
-                </button>
-              </div>
-
-              {isQuickAddingCat ? (
-                <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] text-[#75695D] font-medium">Nombre de la nueva categoría *</Label>
-                    <Input 
-                      value={quickCatName}
-                      onChange={(e) => setQuickCatName(e.target.value)}
-                      placeholder="Ej: Joyería & Accesorios..."
-                      className="h-9 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#A36F4C]"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-1">
-                    <Button 
-                      type="button" 
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsQuickAddingCat(false)}
-                      className="h-8 px-2.5 text-[#75695D] text-xs rounded-xl cursor-pointer"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      type="button" 
-                      size="sm"
-                      onClick={handleQuickAddCategory}
-                      disabled={!quickCatName.trim()}
-                      className="h-8 px-3 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                    >
-                      Guardar en BD
-                    </Button>
-                  </div>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[540px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                  <Package className="h-5 w-5" />
                 </div>
-              ) : (
-                <SearchableCombobox
-                  items={categoriasFormComboboxItems}
-                  value={formCategoria}
-                  onChange={(val) => setFormCategoria(val)}
-                  allowCustomInput={true}
-                  customCreateLabel="Crear categoría:"
-                  placeholder="Seleccionar o escribir categoría..."
-                  searchPlaceholder="Buscar categoría..."
-                  icon={FolderTree}
-                  inputClassName="bg-[#F4EFEA]"
-                />
-              )}
+                <div>
+                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                    Nuevo Producto en Catálogo
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                    Registra un modelo 3D con sus costos base y precios de venta.
+                  </DialogDescription>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenCreate(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                Nombre del Modelo / Producto *
-              </Label>
-              <Input 
-                value={formNombre}
-                onChange={(e) => setFormNombre(e.target.value)}
-                placeholder="Ej: Inserto Catan 3D (5 Placas)"
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              />
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              {/* Categoría Selector with Quick Add */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                    Línea / Categoría *
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickAddingCat(!isQuickAddingCat)}
+                    className="text-xs text-[#A36F4C] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {isQuickAddingCat ? 'Elegir existente' : 'Crear nueva categoría'}
+                  </button>
+                </div>
+
+                {isQuickAddingCat ? (
+                  <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-[#75695D] font-medium">Nombre de la nueva categoría *</Label>
+                      <Input 
+                        value={quickCatName}
+                        onChange={(e) => setQuickCatName(e.target.value)}
+                        placeholder="Ej: Joyería & Accesorios..."
+                        className="h-9 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#A36F4C]"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setIsQuickAddingCat(false)}
+                        className="h-8 px-2.5 text-[#75695D] text-xs rounded-xl cursor-pointer"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        type="button" 
+                        size="sm"
+                        onClick={handleQuickAddCategory}
+                        disabled={!quickCatName.trim()}
+                        className="h-8 px-3 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+                      >
+                        Guardar en BD
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <SearchableCombobox
+                    items={categoriasFormComboboxItems}
+                    value={formCategoria}
+                    onChange={(val) => setFormCategoria(val)}
+                    allowCustomInput={true}
+                    customCreateLabel="Crear categoría:"
+                    placeholder="Seleccionar o escribir categoría..."
+                    searchPlaceholder="Buscar categoría..."
+                    icon={FolderTree}
+                    inputClassName="bg-[#F4EFEA]"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                  Nombre del Modelo / Producto *
+                </Label>
+                <Input 
+                  value={formNombre}
+                  onChange={(e) => setFormNombre(e.target.value)}
+                  placeholder="Ej: Inserto Catan 3D (5 Placas)"
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
             </div>
 
             {/* Costo Base & Auto-calculate Button */}
@@ -1443,20 +1444,21 @@ export function CatalogoClient({
                 Producto activo disponible para ventas
               </label>
             </div>
+          </div>
 
-            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
+          <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenCreate(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
@@ -1476,214 +1478,216 @@ export function CatalogoClient({
       {/* MODAL: EDITAR PRODUCTO (LIGHT MODE NOVA)                                  */}
       {/* ========================================================================= */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] sm:max-w-[540px] p-0 overflow-hidden shadow-2xl rounded-2xl">
-          <div className="px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                <Pencil className="h-5 w-5" />
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[540px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          <form onSubmit={handleEditSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                  <Pencil className="h-5 w-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                    Editar Producto
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                    Actualiza los datos del modelo, categoría o estructura de precios.
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                  Editar Producto
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Actualiza los datos del modelo, categoría o estructura de precios.
-                </DialogDescription>
-              </div>
+              <button
+                type="button"
+                onClick={() => setOpenEdit(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setOpenEdit(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
 
-          <form onSubmit={handleEditSubmit} className="p-6 space-y-4">
-            {/* Categoría Selector with Quick Add */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                  Línea / Categoría *
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setIsQuickAddingCat(!isQuickAddingCat)}
-                  className="text-xs text-[#A36F4C] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus className="h-3 w-3" />
-                  {isQuickAddingCat ? 'Elegir existente' : 'Crear nueva categoría'}
-                </button>
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              {/* Categoría Selector with Quick Add */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                    Línea / Categoría *
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickAddingCat(!isQuickAddingCat)}
+                    className="text-xs text-[#A36F4C] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {isQuickAddingCat ? 'Elegir existente' : 'Crear nueva categoría'}
+                  </button>
+                </div>
+
+                {isQuickAddingCat ? (
+                  <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-[#75695D] font-medium">Nombre de la nueva categoría *</Label>
+                      <Input 
+                        value={quickCatName}
+                        onChange={(e) => setQuickCatName(e.target.value)}
+                        placeholder="Ej: Joyería & Accesorios..."
+                        className="h-9 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#A36F4C]"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2 pt-1">
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setIsQuickAddingCat(false)}
+                        className="h-8 px-2.5 text-[#75695D] text-xs rounded-xl cursor-pointer"
+                      >
+                        Cancelar
+                      </Button>
+                      <Button 
+                        type="button" 
+                        size="sm"
+                        onClick={handleQuickAddCategory}
+                        disabled={!quickCatName.trim()}
+                        className="h-8 px-3 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
+                      >
+                        Guardar en BD
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <SearchableCombobox
+                    items={categoriasFormComboboxItems}
+                    value={formCategoria}
+                    onChange={(val) => setFormCategoria(val)}
+                    allowCustomInput={true}
+                    customCreateLabel="Crear categoría:"
+                    placeholder="Seleccionar o escribir categoría..."
+                    searchPlaceholder="Buscar categoría..."
+                    icon={FolderTree}
+                    inputClassName="bg-[#F4EFEA]"
+                  />
+                )}
               </div>
 
-              {isQuickAddingCat ? (
-                <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] text-[#75695D] font-medium">Nombre de la nueva categoría *</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                  Nombre del Modelo / Producto *
+                </Label>
+                <Input 
+                  value={formNombre}
+                  onChange={(e) => setFormNombre(e.target.value)}
+                  required
+                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                />
+              </div>
+
+              <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                    Costo Base de Fabricación (S/) *
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAutoCalculatePrices(formCostoBase)}
+                    disabled={!formCostoBase || parseFloat(formCostoBase) <= 0}
+                    className="h-6 text-xs text-[#A36F4C] font-semibold hover:underline p-0 cursor-pointer"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Recalcular Sugeridos
+                  </Button>
+                </div>
+                <div className="relative flex items-center w-full">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formCostoBase}
+                    onChange={(e) => setFormCostoBase(e.target.value)}
+                    required
+                    className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+              </div>
+
+              {/* Price Tiers Grid */}
+              <div className="grid grid-cols-3 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#1E5E3A] font-bold">P. Amigos</Label>
+                  <div className="relative flex items-center w-full">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
                     <Input 
-                      value={quickCatName}
-                      onChange={(e) => setQuickCatName(e.target.value)}
-                      placeholder="Ej: Joyería & Accesorios..."
-                      className="h-9 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#A36F4C]"
-                      autoFocus
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formPrecioAmigos}
+                      onChange={(e) => setFormPrecioAmigos(e.target.value)}
+                      required
+                      className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
                     />
                   </div>
-                  <div className="flex justify-end gap-2 pt-1">
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => setIsQuickAddingCat(false)}
-                      className="h-8 px-2.5 text-[#75695D] text-xs rounded-xl cursor-pointer"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      type="button" 
-                      size="sm"
-                      onClick={handleQuickAddCategory}
-                      disabled={!quickCatName.trim()}
-                      className="h-8 px-3 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                    >
-                      Guardar en BD
-                    </Button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#944917] font-bold">P. Mercado</Label>
+                  <div className="relative flex items-center w-full">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formPrecioMercado}
+                      onChange={(e) => setFormPrecioMercado(e.target.value)}
+                      required
+                      className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                    />
                   </div>
                 </div>
-              ) : (
-                <SearchableCombobox
-                  items={categoriasFormComboboxItems}
-                  value={formCategoria}
-                  onChange={(val) => setFormCategoria(val)}
-                  allowCustomInput={true}
-                  customCreateLabel="Crear categoría:"
-                  placeholder="Seleccionar o escribir categoría..."
-                  searchPlaceholder="Buscar categoría..."
-                  icon={FolderTree}
-                  inputClassName="bg-[#F4EFEA]"
-                />
-              )}
-            </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                Nombre del Modelo / Producto *
-              </Label>
-              <Input 
-                value={formNombre}
-                onChange={(e) => setFormNombre(e.target.value)}
-                required
-                className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-              />
-            </div>
-
-            <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                  Costo Base de Fabricación (S/) *
-                </Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAutoCalculatePrices(formCostoBase)}
-                  disabled={!formCostoBase || parseFloat(formCostoBase) <= 0}
-                  className="h-6 text-xs text-[#A36F4C] font-semibold hover:underline p-0 cursor-pointer"
-                >
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Recalcular Sugeridos
-                </Button>
-              </div>
-              <div className="relative flex items-center w-full">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formCostoBase}
-                  onChange={(e) => setFormCostoBase(e.target.value)}
-                  required
-                  className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
-              </div>
-            </div>
-
-            {/* Price Tiers Grid */}
-            <div className="grid grid-cols-3 gap-3 pt-1">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#1E5E3A] font-bold">P. Amigos</Label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formPrecioAmigos}
-                    onChange={(e) => setFormPrecioAmigos(e.target.value)}
-                    required
-                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
-                  />
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#A36F4C] font-bold">P. Comunidad</Label>
+                  <div className="relative flex items-center w-full">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formPrecioComunidad}
+                      onChange={(e) => setFormPrecioComunidad(e.target.value)}
+                      required
+                      className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#944917] font-bold">P. Mercado</Label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formPrecioMercado}
-                    onChange={(e) => setFormPrecioMercado(e.target.value)}
-                    required
-                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+              <div className="flex items-center gap-2 pt-2">
+                <label className="flex items-center gap-2 text-xs text-[#241C15] font-medium cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    checked={formActivo}
+                    onChange={(e) => setFormActivo(e.target.checked)}
+                    className="rounded border-[#DCD3C6] text-[#A36F4C] focus:ring-[#A36F4C]"
                   />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#A36F4C] font-bold">P. Comunidad</Label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formPrecioComunidad}
-                    onChange={(e) => setFormPrecioComunidad(e.target.value)}
-                    required
-                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
-                  />
-                </div>
+                  Producto activo disponible para ventas
+                </label>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
-              <label className="flex items-center gap-2 text-xs text-[#241C15] font-medium cursor-pointer">
-                <input 
-                  type="checkbox"
-                  checked={formActivo}
-                  onChange={(e) => setFormActivo(e.target.checked)}
-                  className="rounded border-[#DCD3C6] text-[#A36F4C] focus:ring-[#A36F4C]"
-                />
-                Producto activo disponible para ventas
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-3 border-t border-[#E2D9CC]">
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenEdit(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2 rounded-xl cursor-pointer font-medium"
+                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
