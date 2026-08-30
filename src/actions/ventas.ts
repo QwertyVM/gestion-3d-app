@@ -49,7 +49,8 @@ function serializeVenta(v: any) {
       tipoMaterial: v.colorFilamento.tipoMaterial,
       marca: v.colorFilamento.marca || 'Genérica',
       stockGramos: v.colorFilamento.stockGramos ? Number(v.colorFilamento.stockGramos) : 0,
-      stockBobinas: Number(v.colorFilamento.stockBobinas)
+      stockBobinas: Number(v.colorFilamento.stockBobinas),
+      alertaCritica: Boolean(v.colorFilamento.alertaCritica || (v.colorFilamento.stockGramos && Number(v.colorFilamento.stockGramos) < 300))
     } : null,
     producto: v.producto ? {
       id: v.producto.id,

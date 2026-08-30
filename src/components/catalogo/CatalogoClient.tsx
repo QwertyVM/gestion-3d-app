@@ -26,7 +26,8 @@ import {
   ArrowRight,
   Database,
   Loader2,
-  Pencil
+  Pencil,
+  Palette
 } from 'lucide-react'
 import { 
   createProducto, 
@@ -476,7 +477,14 @@ export function CatalogoClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/catalogo/inventario">
+            <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
+              <Palette className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
+              Inventario de Filamentos
+            </Button>
+          </Link>
+
           {activeTab === 'productos' ? (
             <>
               <Link href="/catalogo/categorias">

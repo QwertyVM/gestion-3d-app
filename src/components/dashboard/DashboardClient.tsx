@@ -1,11 +1,12 @@
 'use client'
 
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
-  ComposedChart,
+  ComposedChart, 
   Line, 
-  Area,
+  Area, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -13,7 +14,7 @@ import {
   ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell,
+  Cell, 
   Legend 
 } from 'recharts'
 import { 
@@ -24,7 +25,10 @@ import {
   Activity, 
   Sparkles,
   ArrowUpRight,
-  Receipt
+  Receipt,
+  Palette,
+  ArrowRight,
+  AlertTriangle
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -124,6 +128,18 @@ function CustomLegend() {
   )
 }
 
+export interface TopColorItem {
+  id: string
+  nombreColor: string
+  codigoHex: string
+  pedidosCount: number
+  unidadesCount: number
+  gramosTotal: number
+  stockGramosActual: number
+  alertaCritica: boolean
+  porcentajeUso: number
+}
+
 interface DashboardClientProps {
   kpis: {
     ingresosVentas: number
@@ -139,13 +155,15 @@ interface DashboardClientProps {
   graficoEvolucion: { fecha: string; ingresos: number; costo: number; ganancia: number }[]
   graficoInversion: { name: string; value: number }[]
   cuentasPorCobrar: any[]
+  topColores?: TopColorItem[]
 }
 
 export function DashboardClient({ 
   kpis, 
   graficoEvolucion, 
   graficoInversion, 
-  cuentasPorCobrar 
+  cuentasPorCobrar,
+  topColores = []
 }: DashboardClientProps) {
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -417,43 +435,161 @@ export function DashboardClient({
         </Card>
       </div>
 
-      {/* Cuentas por Cobrar */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
-        <CardHeader>
-          <CardTitle className="text-[#241C15] text-base font-bold flex items-center gap-2">
-            <Activity className="h-5 w-5 text-[#8C6D1F]" />
-            Cuentas Pendientes por Cobrar
-          </CardTitle>
-          <CardDescription className="text-xs text-[#75695D]">
-            Pedidos entregados o en producción con saldos pendientes de pago.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
-            {cuentasPorCobrar.length === 0 ? (
-              <div className="p-8 text-center text-[#75695D] text-sm bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
-                No hay cuentas pendientes por cobrar 🎉
-              </div>
-            ) : (
-              cuentasPorCobrar.slice(0, 5).map((cuenta) => (
-                <div key={cuenta.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] hover:bg-[#F4EFEA] transition-colors">
-                  <div>
-                    <p className="text-sm font-bold text-[#241C15]">{cuenta.cliente}</p>
-                    <p className="text-xs text-[#75695D] mt-0.5">
-                      {cuenta.producto?.nombreModelo ? `${cuenta.producto.nombreModelo} • ` : ''}{formatDate(cuenta.fecha)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="text-[#8C6D1F] border-[#E8D49B] bg-[#FDF6E2] font-mono text-xs font-bold px-3 py-1">
-                      Debe: {formatCurrency(Number(cuenta.saldoPendiente))}
-                    </Badge>
-                  </div>
+      {/* Fila Inferior: Cuentas Pendientes por Cobrar & Top 5 Colores de Filamento */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 items-start">
+        {/* 1. Cuentas por Cobrar */}
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl h-full flex flex-col justify-between">
+          <CardHeader>
+            <CardTitle className="text-[#241C15] text-base font-bold flex items-center gap-2">
+              <Activity className="h-5 w-5 text-[#8C6D1F]" />
+              Cuentas Pendientes por Cobrar
+            </CardTitle>
+            <CardDescription className="text-xs text-[#75695D]">
+              Pedidos entregados o en producción con saldos pendientes de cobro.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+              {cuentasPorCobrar.length === 0 ? (
+                <div className="p-8 text-center text-[#75695D] text-sm bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
+                  No hay cuentas pendientes por cobrar 🎉
                 </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              ) : (
+                cuentasPorCobrar.slice(0, 5).map((cuenta) => (
+                  <div key={cuenta.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] hover:bg-[#F4EFEA] transition-colors">
+                    <div className="min-w-0 pr-2">
+                      <p className="text-sm font-bold text-[#241C15] truncate">{cuenta.cliente}</p>
+                      <p className="text-xs text-[#75695D] mt-0.5 truncate">
+                        {cuenta.producto?.nombreModelo ? `${cuenta.producto.nombreModelo} • ` : ''}{formatDate(cuenta.fecha)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <Badge variant="outline" className="text-[#8C6D1F] border-[#E8D49B] bg-[#FDF6E2] font-mono text-xs font-bold px-3 py-1">
+                        Debe: {formatCurrency(Number(cuenta.saldoPendiente))}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 2. Top 5 Colores Más Utilizados */}
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl h-full flex flex-col justify-between">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-[#241C15] text-base font-bold flex items-center gap-2">
+                <Palette className="h-5 w-5 text-[#A36F4C]" />
+                Top 5 Colores Más Utilizados
+              </CardTitle>
+              <Link 
+                href="/catalogo/inventario" 
+                className="text-xs font-semibold text-[#A36F4C] hover:underline flex items-center gap-1 flex-shrink-0"
+              >
+                <span>Ver Inventario</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+            <CardDescription className="text-xs text-[#75695D]">
+              Filamentos con mayor frecuencia de uso y demanda en pedidos del taller.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+              {(!topColores || topColores.length === 0) ? (
+                <div className="p-8 text-center text-[#75695D] text-sm bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
+                  Aún no hay pedidos con colores asignados 🎨
+                </div>
+              ) : (
+                topColores.map((color, index) => {
+                  const isFirst = index === 0
+                  const esCritico = color.alertaCritica || color.stockGramosActual < 300
+
+                  return (
+                    <div 
+                      key={color.id || color.nombreColor} 
+                      className={`p-3 rounded-xl border transition-all ${
+                        isFirst
+                          ? 'bg-[#FDFBF7] border-[#D4BEA7] shadow-2xs'
+                          : 'bg-[#FAF8F5] border-[#E2D9CC] hover:bg-[#FFFFFF]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {/* Rank Badge */}
+                          <div className={`h-6 w-6 rounded-lg flex items-center justify-center text-xs font-black font-mono flex-shrink-0 ${
+                            isFirst 
+                              ? 'bg-[#A36F4C] text-white shadow-2xs' 
+                              : index === 1 
+                                ? 'bg-[#EAE4DC] text-[#241C15]' 
+                                : 'bg-[#F4EFEA] text-[#75695D]'
+                          }`}>
+                            #{index + 1}
+                          </div>
+
+                          {/* Color Swatch */}
+                          <div 
+                            className="h-7 w-7 rounded-full border border-black/15 shadow-xs flex-shrink-0"
+                            style={{ backgroundColor: color.codigoHex }}
+                            title={color.nombreColor}
+                          />
+
+                          {/* Info */}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-bold text-[#241C15] truncate">
+                                {color.nombreColor}
+                              </span>
+                              {isFirst && (
+                                <span className="text-[9px] font-black text-[#A36F4C] bg-[#EFE5D8] border border-[#D4BEA7] px-1.5 py-0.2 rounded uppercase flex-shrink-0">
+                                  Top 1
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-[#75695D] mt-0.5 flex-wrap">
+                              <span><strong className="text-[#241C15] font-mono">{color.pedidosCount}</strong> {color.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
+                              <span>•</span>
+                              <span><strong className="text-[#241C15] font-mono">{color.unidadesCount}</strong> un.</span>
+                              <span>•</span>
+                              <span className="font-mono text-[#A36F4C] font-semibold">{color.gramosTotal}g</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Stock en Taller Badge */}
+                        <div className="flex flex-col items-end flex-shrink-0">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs font-mono font-bold px-2 py-0.5 shadow-2xs ${
+                              esCritico
+                                ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047]'
+                                : 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
+                            }`}
+                          >
+                            {esCritico ? `⚠️ ${color.stockGramosActual}g` : `${color.stockGramosActual}g stock`}
+                          </Badge>
+                          <span className="text-[10px] font-mono text-[#75695D] mt-0.5">
+                            {color.porcentajeUso}% demanda
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden mt-2">
+                        <div 
+                          className="h-full rounded-full bg-[#A36F4C] transition-all duration-300"
+                          style={{ width: `${Math.max(6, color.porcentajeUso)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

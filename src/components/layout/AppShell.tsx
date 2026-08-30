@@ -36,10 +36,10 @@ export function AppShell({ children }: AppShellProps) {
 
   // Section dropdown states
   const isFinanzasSection = pathname === '/finanzas/flujo-caja' || pathname === '/finanzas/ingresos' || pathname.startsWith('/finanzas/egresos') || pathname.startsWith('/finanzas/tags')
-  const isCatalogoSection = pathname.startsWith('/catalogo')
+  const isCatalogoSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario')
   const isEgresosSection = pathname.startsWith('/finanzas/egresos') || pathname.startsWith('/finanzas/tags')
   const isPruebasSection = pathname.startsWith('/finanzas/proyecciones') || pathname.startsWith('/finanzas/cierres') || pathname.startsWith('/finanzas/caja-chica')
-  const isInventarioSection = pathname.startsWith('/inventario')
+  const isInventarioSection = pathname.startsWith('/inventario') || pathname.startsWith('/catalogo/inventario')
 
   const [finanzasOpen, setFinanzasOpen] = useState(true)
   const [egresosOpen, setEgresosOpen] = useState(true)
@@ -55,7 +55,7 @@ export function AppShell({ children }: AppShellProps) {
   const getPageTitle = () => {
     if (pathname === '/') return 'Dashboard General'
     if (pathname.startsWith('/ventas')) return 'Ventas y Pedidos'
-    if (pathname.startsWith('/inventario')) return 'Inventario de Filamentos'
+    if (pathname === '/catalogo/inventario' || pathname.startsWith('/inventario')) return 'Inventario de Filamentos'
     if (pathname === '/finanzas/flujo-caja') return 'Flujo de Caja'
     if (pathname === '/finanzas/ingresos') return 'Ingresos'
     if (pathname === '/finanzas/egresos') return 'Registro de Egresos'
@@ -97,21 +97,6 @@ export function AppShell({ children }: AppShellProps) {
       >
         <ShoppingCart className="h-4 w-4 flex-shrink-0 text-[#633E20]" />
         <span>Ventas y Pedidos</span>
-      </Link>
-
-      {/* 3. Inventario */}
-      <Link
-        href="/inventario"
-        onClick={() => isMobile && setMobileMenuOpen(false)}
-        className={cn(
-          'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 min-h-[44px]',
-          isInventarioSection
-            ? 'bg-[#EFE5D8] text-[#633E20] font-bold shadow-sm border border-[#D4BEA7]'
-            : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
-        )}
-      >
-        <Palette className="h-4 w-4 flex-shrink-0 text-[#A36F4C]" />
-        <span>Inventario</span>
       </Link>
 
       {/* 3. Finanzas */}
@@ -279,6 +264,20 @@ export function AppShell({ children }: AppShellProps) {
             >
               <FolderTree className="h-3.5 w-3.5 flex-shrink-0" />
               <span>Categorías</span>
+            </Link>
+
+            <Link
+              href="/catalogo/inventario"
+              onClick={() => isMobile && setMobileMenuOpen(false)}
+              className={cn(
+                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150 min-h-[40px]',
+                isInventarioSection
+                  ? 'bg-[#EFE5D8] text-[#633E20] font-bold border border-[#D4BEA7]'
+                  : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+              )}
+            >
+              <Palette className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>Inventario de Filamentos</span>
             </Link>
           </div>
         )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useTransition } from 'react'
+import Link from 'next/link'
 import { 
   Plus, 
   Search, 
@@ -15,7 +16,8 @@ import {
   ShoppingCart, 
   AlertTriangle,
   Sparkles,
-  Trash2
+  Trash2,
+  Package
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,6 +28,7 @@ import { toast } from 'sonner'
 import { 
   ColorFilamentoItem, 
   moverEstadoColor, 
+  actualizarGramosColor,
   agregarNuevoColor, 
   eliminarColor, 
   resetColoresTaller 
@@ -72,19 +75,44 @@ export function InventarioClient({
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoHex, setNuevoHex] = useState('#18181B')
   const [nuevoEstado, setNuevoEstado] = useState<'DISPONIBLE' | 'RESTOCK'>('DISPONIBLE')
+  const [nuevoGramos, setNuevoGramos] = useState('1000')
   const [nuevaNota, setNuevaNota] = useState('')
 
-  // Filtered lists
+  // Filtered and sorted lists (Críticos arriba, orden alfabético)
   const filteredDisponibles = useMemo(() => {
-    if (!search.trim()) return disponibles
-    return disponibles.filter(c => c.nombreColor.toLowerCase().includes(search.toLowerCase()))
+    let list = disponibles
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(c => c.nombreColor.toLowerCase().includes(q))
+    }
+
+    return [...list].sort((a, b) => {
+      const aGramos = a.stockGramos ?? 1000
+      const bGramos = b.stockGramos ?? 1000
+      const aCritico = aGramos < 300 || Boolean(a.alertaCritica)
+      const bCritico = bGramos < 300 || Boolean(b.alertaCritica)
+
+      // 1. Críticos primero arriba
+      if (aCritico && !bCritico) return -1
+      if (!aCritico && bCritico) return 1
+
+      // 2. Orden alfabético
+      return a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' })
+    })
   }, [disponibles, search])
 
   const filteredRestock = useMemo(() => {
-    if (!search.trim()) return restock
-    return restock.filter(c => 
-      c.nombreColor.toLowerCase().includes(search.toLowerCase()) ||
-      (c.nota && c.nota.toLowerCase().includes(search.toLowerCase()))
+    let list = restock
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(c => 
+        c.nombreColor.toLowerCase().includes(q) ||
+        (c.nota && c.nota.toLowerCase().includes(q))
+      )
+    }
+
+    return [...list].sort((a, b) => 
+      a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' })
     )
   }, [restock, search])
 
@@ -92,7 +120,7 @@ export function InventarioClient({
   const handleMoverARestock = async (item: ColorFilamentoItem) => {
     // Optimistic UI
     setDisponibles(prev => prev.filter(c => c.id !== item.id))
-    setRestock(prev => [{ ...item, estado: 'RESTOCK' }, ...prev])
+    setRestock(prev => [{ ...item, estado: 'RESTOCK', stockGramos: 0, alertaCritica: true }, ...prev])
 
     try {
       await moverEstadoColor(item.id, 'RESTOCK')
@@ -109,11 +137,11 @@ export function InventarioClient({
   const handleMoverADisponible = async (item: ColorFilamentoItem) => {
     // Optimistic UI
     setRestock(prev => prev.filter(c => c.id !== item.id))
-    setDisponibles(prev => [{ ...item, estado: 'DISPONIBLE', nota: null }, ...prev])
+    setDisponibles(prev => [{ ...item, estado: 'DISPONIBLE', stockGramos: 1000, alertaCritica: false, nota: null }, ...prev])
 
     try {
       await moverEstadoColor(item.id, 'DISPONIBLE')
-      toast.success(`"${item.nombreColor}" marcado como Disponible`)
+      toast.success(`"${item.nombreColor}" marcado como Disponible (1,000g)`)
     } catch (e: any) {
       toast.error('Error al mover color: ' + e.message)
       // Rollback
@@ -138,16 +166,48 @@ export function InventarioClient({
     toast.success('Lista de restock copiada para WhatsApp')
   }
 
+  // Delete color from inventory
+  const handleEliminarColor = async (item: ColorFilamentoItem) => {
+    if (!confirm(`¿Estás seguro de eliminar el color "${item.nombreColor}" del inventario?`)) return
+
+    // Optimistic UI
+    if (item.estado === 'DISPONIBLE') {
+      setDisponibles(prev => prev.filter(c => c.id !== item.id))
+    } else {
+      setRestock(prev => prev.filter(c => c.id !== item.id))
+    }
+
+    try {
+      const res = await eliminarColor(item.id)
+      if (res.softDeleted) {
+        toast.success(`"${item.nombreColor}" desactivado del inventario (mantiene historial de pedidos)`)
+      } else {
+        toast.success(`"${item.nombreColor}" eliminado con éxito`)
+      }
+    } catch (e: any) {
+      toast.error('Error al eliminar: ' + e.message)
+      // Rollback
+      if (item.estado === 'DISPONIBLE') {
+        setDisponibles(prev => [item, ...prev])
+      } else {
+        setRestock(prev => [item, ...prev])
+      }
+    }
+  }
+
   // Quick Add submit
   const handleAddColorSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!nuevoNombre.trim()) return
+
+    const gNum = nuevoEstado === 'DISPONIBLE' ? parseInt(nuevoGramos || '1000', 10) : 0
 
     try {
       const created = await agregarNuevoColor({
         nombreColor: nuevoNombre.trim(),
         codigoHex: nuevoHex,
         estado: nuevoEstado,
+        stockGramos: gNum,
         nota: nuevaNota.trim() || undefined
       })
 
@@ -160,6 +220,7 @@ export function InventarioClient({
       toast.success(`"${created.nombreColor}" agregado con éxito`)
       setNuevoNombre('')
       setNuevaNota('')
+      setNuevoGramos('1000')
       setOpenAddModal(false)
     } catch (e: any) {
       toast.error('Error al agregar: ' + e.message)
@@ -179,20 +240,81 @@ export function InventarioClient({
     }
   }
 
+  // Quick Grams Update
+  const handleAjustarGramos = async (item: ColorFilamentoItem, delta: number) => {
+    const nuevosGramos = Math.max(0, Math.min(2000, (item.stockGramos || 0) + delta))
+    setDisponibles(prev => prev.map(c => c.id === item.id ? { 
+      ...c, 
+      stockGramos: nuevosGramos,
+      alertaCritica: nuevosGramos < 300,
+      nota: nuevosGramos < 300 ? `⚠️ Stock Crítico: ${nuevosGramos}g` : null
+    } : c))
+
+    try {
+      await actualizarGramosColor(item.id, nuevosGramos)
+    } catch (e: any) {
+      toast.error('Error al actualizar gramos: ' + e.message)
+    }
+  }
+
+  // Quick Grams Direct Input
+  const handleSetGramosPrompt = async (item: ColorFilamentoItem) => {
+    const input = prompt(`Ingresa los gramos restantes para "${item.nombreColor}" (0 - 2000g):`, (item.stockGramos || 1000).toString())
+    if (input === null) return
+    const num = parseInt(input, 10)
+    if (isNaN(num) || num < 0 || num > 2000) {
+      toast.error('Ingresa un número válido entre 0 y 2000 gramos')
+      return
+    }
+
+    setDisponibles(prev => prev.map(c => c.id === item.id ? { 
+      ...c, 
+      stockGramos: num,
+      alertaCritica: num < 300,
+      nota: num < 300 ? `⚠️ Stock Crítico: ${num}g` : null
+    } : c))
+
+    try {
+      await actualizarGramosColor(item.id, num)
+      toast.success(`Gramos de "${item.nombreColor}" actualizados a ${num}g`)
+    } catch (e: any) {
+      toast.error('Error: ' + e.message)
+    }
+  }
+
+  // Stock Total KPI Calculation
+  const totalGramosActivos = useMemo(() => {
+    return disponibles.reduce((acc, c) => acc + (c.stockGramos || 0), 0)
+  }, [disponibles])
+
+  const totalCriticos = useMemo(() => {
+    return disponibles.filter(c => (c.stockGramos || 0) < 300)
+  }, [disponibles])
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-200">
       {/* ========================================================================= */}
-      {/* 3. BARRA SUPERIOR DE ACCIONES & BÚSQUEDA                                   */}
+      {/* 1. CABECERA PRINCIPAL Y ACCIONES                                          */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+        {/* Breadcrumb Contextual */}
+        <div className="flex items-center gap-2 text-xs text-[#75695D] font-medium">
+          <Link href="/catalogo" className="hover:text-[#A36F4C] transition-colors flex items-center gap-1">
+            <Package className="h-3.5 w-3.5 text-[#A36F4C]" />
+            <span>Catálogo</span>
+          </Link>
+          <span>/</span>
+          <span className="text-[#241C15] font-bold">Inventario de Filamentos</span>
+        </div>
+
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-[#241C15] tracking-tight flex items-center gap-2.5">
               <Palette className="h-6 w-6 text-[#A36F4C]" />
-              Control de Colores de Filamento
+              Control de Colores & Gramaje de Filamentos
             </h1>
             <p className="text-xs sm:text-sm text-[#75695D] mt-0.5">
-              Taller NOVA • Disponibilidad inmediata para impresión y lista de restock.
+              Taller NOVA • Control de peso en bobinas abiertas, alertas de stock crítico y lista de restock.
             </p>
           </div>
 
@@ -204,7 +326,7 @@ export function InventarioClient({
               className="border-[#D4BEA7] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#633E20] font-bold text-xs h-10 px-3.5 rounded-xl cursor-pointer shadow-xs active:scale-[0.98] flex-1 sm:flex-initial"
             >
               <Copy className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
-              Copiar lista para Restock ({restock.length})
+              Copiar lista Restock ({restock.length})
             </Button>
 
             <Button
@@ -229,11 +351,62 @@ export function InventarioClient({
           </div>
         </div>
 
+        {/* KPIs SUPERIORES DE INVENTARIO */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
+              Stock Total Activo
+            </span>
+            <div className="text-base sm:text-lg font-black text-[#1E5E3A] font-mono mt-0.5">
+              {totalGramosActivos.toLocaleString()} g
+            </div>
+            <span className="text-[10px] text-[#75695D]">
+              {(totalGramosActivos / 1000).toFixed(2)} kg en taller
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
+              Bobinas en Uso
+            </span>
+            <div className="text-base sm:text-lg font-black text-[#241C15] font-mono mt-0.5">
+              {disponibles.length} colores
+            </div>
+            <span className="text-[10px] text-[#1E5E3A] font-semibold">
+              🟢 Listos para imprimir
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
+              Stock Crítico (&lt;300g)
+            </span>
+            <div className={`text-base sm:text-lg font-black font-mono mt-0.5 ${totalCriticos.length > 0 ? 'text-[#DC2626]' : 'text-[#1E5E3A]'}`}>
+              {totalCriticos.length} {totalCriticos.length === 1 ? 'bobina' : 'bobinas'}
+            </div>
+            <span className={`text-[10px] font-semibold ${totalCriticos.length > 0 ? 'text-[#DC2626]' : 'text-[#75695D]'}`}>
+              {totalCriticos.length > 0 ? '⚠️ Alerta de reposición' : 'Nivel óptimo'}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
+              Para Restock / Pedir
+            </span>
+            <div className="text-base sm:text-lg font-black text-[#A36F4C] font-mono mt-0.5">
+              {restock.length} colores
+            </div>
+            <span className="text-[10px] text-[#8C6D1F] font-semibold">
+              🟡 Lista de compra
+            </span>
+          </div>
+        </div>
+
         {/* Buscador Rápido */}
-        <div className="relative">
+        <div className="relative pt-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
           <Input 
-            placeholder="Buscar color disponible o por pedir..."
+            placeholder="Buscar color disponible, por pedir o gramaje..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 pr-9 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
@@ -252,7 +425,7 @@ export function InventarioClient({
       {/* ========================================================================= */}
       {/* ESTRUCTURA DE 2 COLUMNAS CLARAS                                           */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
         {/* ----------------------------------------------------------------------- */}
         {/* COLUMNA 1: COLORES DISPONIBLES EN TALLER                                */}
         {/* ----------------------------------------------------------------------- */}
@@ -264,49 +437,143 @@ export function InventarioClient({
                 Colores Disponibles en Taller
               </h2>
             </div>
-            <Badge 
-              variant="outline" 
-              className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold font-mono px-2.5 py-0.5"
-            >
-              {filteredDisponibles.length} colores
-            </Badge>
+            <div className="flex items-center gap-2">
+              {totalCriticos.length > 0 && (
+                <Badge variant="outline" className="bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5] text-[11px] font-bold">
+                  {totalCriticos.length} críticos
+                </Badge>
+              )}
+              <Badge 
+                variant="outline" 
+                className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold font-mono px-2.5 py-0.5"
+              >
+                {filteredDisponibles.length} activos
+              </Badge>
+            </div>
           </div>
 
-          {/* Lista Limpia de Tarjetas */}
-          <div className="space-y-2">
+          {/* Lista Limpia de Tarjetas con Gramos y Alertas */}
+          <div className="space-y-3">
             {filteredDisponibles.length === 0 ? (
               <div className="p-8 text-center text-xs text-[#75695D] italic">
                 {search ? 'No se encontraron colores disponibles' : 'No hay colores disponibles registrados'}
               </div>
             ) : (
-              filteredDisponibles.map(item => (
-                <div 
-                  key={item.id}
-                  className="flex items-center justify-between p-3 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#FFFFFF] hover:border-[#1E5E3A]/50 transition-all shadow-2xs group"
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Círculo / Dot Visual */}
-                    <div 
-                      className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0"
-                      style={{ backgroundColor: item.codigoHex }}
-                      title={item.nombreColor}
-                    />
-                    <span className="text-sm font-medium text-[#241C15]">
-                      {item.nombreColor}
-                    </span>
-                  </div>
+              filteredDisponibles.map(item => {
+                const gramos = item.stockGramos ?? 1000
+                const pesoInicial = item.pesoInicialGramos ?? 1000
+                const pct = Math.min(100, Math.round((gramos / pesoInicial) * 100))
+                const esCritico = gramos < 300
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleMoverARestock(item)}
-                    className="h-7 text-xs font-semibold text-[#A36F4C] border-[#D4BEA7] bg-[#FFFFFF] hover:bg-[#FCE8E6] hover:text-[#A34335] hover:border-rose-300 px-2.5 rounded-lg transition-colors cursor-pointer"
+                return (
+                  <div 
+                    key={item.id}
+                    className={`p-3.5 rounded-xl border transition-all shadow-2xs space-y-2.5 ${
+                      esCritico
+                        ? 'bg-[#FFFBFB] border-red-300 ring-1 ring-red-300/40'
+                        : 'bg-[#FAF8F5] border-[#E2D9CC] hover:bg-[#FFFFFF] hover:border-[#1E5E3A]/40'
+                    }`}
                   >
-                    Mover a Restock
-                  </Button>
-                </div>
-              ))
+                    {/* Fila 1: Nombre + Color Dot + Acción Principal y Eliminar */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div 
+                          className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0"
+                          style={{ backgroundColor: item.codigoHex }}
+                          title={item.nombreColor}
+                        />
+                        <span className="text-sm font-bold text-[#241C15] truncate">
+                          {item.nombreColor}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMoverARestock(item)}
+                          className={`h-7 text-xs font-semibold px-2.5 rounded-lg transition-colors cursor-pointer ${
+                            esCritico
+                              ? 'bg-red-50 text-[#DC2626] border-red-200 hover:bg-red-100 hover:border-red-300'
+                              : 'text-[#A36F4C] border-[#D4BEA7] bg-white hover:bg-[#FCE8E6] hover:text-[#A34335]'
+                          }`}
+                        >
+                          {esCritico ? 'Mover a Restock' : 'A Restock'}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => handleEliminarColor(item)}
+                          title={`Eliminar "${item.nombreColor}"`}
+                          className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Fila 2: Gramos Restantes + Mini Barra de Progreso + Ajuste Rápido */}
+                    <div className="space-y-1.5 pt-0.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 font-mono">
+                          <button
+                            type="button"
+                            onClick={() => handleSetGramosPrompt(item)}
+                            className="font-bold text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer"
+                            title="Haz clic para ingresar gramos exactos"
+                          >
+                            {gramos} g
+                          </button>
+                          <span className="text-[#75695D] text-[11px]">de {pesoInicial} g</span>
+                        </div>
+
+                        {/* Botones de Micro-ajuste */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleAjustarGramos(item, -50)}
+                            className="h-5 px-1.5 text-[10px] font-bold rounded bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] cursor-pointer"
+                            title="Descontar 50g"
+                          >
+                            -50g
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAjustarGramos(item, 50)}
+                            className="h-5 px-1.5 text-[10px] font-bold rounded bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] cursor-pointer"
+                            title="Añadir 50g"
+                          >
+                            +50g
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Barra de Progreso */}
+                      <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            esCritico ? 'bg-[#DC2626]' : pct < 50 ? 'bg-[#D97706]' : 'bg-[#1E5E3A]'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bloque de Alerta de Stock Crítico (< 300g) */}
+                    {esCritico && (
+                      <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-[#DC2626] space-y-1 animate-in fade-in duration-150">
+                        <div className="flex items-center gap-1.5 font-bold">
+                          <AlertTriangle className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />
+                          <span>⚠️ Stock Crítico: {gramos}g restantes (Bajo de 300g)</span>
+                        </div>
+                        <p className="text-[11px] text-red-700 leading-tight">
+                          Puede no alcanzar para impresiones grandes o insertos.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
             )}
           </div>
         </div>
@@ -342,15 +609,15 @@ export function InventarioClient({
                   key={item.id}
                   className="flex items-center justify-between p-3 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#FFFFFF] hover:border-[#A36F4C]/50 transition-all shadow-2xs group"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     {/* Círculo / Dot Visual */}
                     <div 
                       className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0 opacity-70"
                       style={{ backgroundColor: item.codigoHex }}
                       title={item.nombreColor}
                     />
-                    <div>
-                      <span className="text-sm font-medium text-[#241C15] block">
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-[#241C15] block truncate">
                         {item.nombreColor}
                       </span>
                       {item.nota && (
@@ -361,14 +628,24 @@ export function InventarioClient({
                     </div>
                   </div>
 
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => handleMoverADisponible(item)}
-                    className="h-7 text-xs font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white px-3 rounded-lg shadow-2xs cursor-pointer active:scale-[0.98]"
-                  >
-                    Marcar Disponible
-                  </Button>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => handleMoverADisponible(item)}
+                      className="h-7 text-xs font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white px-3 rounded-lg shadow-2xs cursor-pointer active:scale-[0.98]"
+                    >
+                      Marcar Disponible
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => handleEliminarColor(item)}
+                      title={`Eliminar "${item.nombreColor}"`}
+                      className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -477,6 +754,28 @@ export function InventarioClient({
                   </button>
                 </div>
               </div>
+
+              {/* Gramos Iniciales si es Disponible */}
+              {nuevoEstado === 'DISPONIBLE' && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-[#241C15] uppercase">
+                      Gramos Restantes *
+                    </Label>
+                    <span className="text-[10px] text-[#75695D]">Bobina estándar: 1000g</span>
+                  </div>
+                  <Input 
+                    type="number"
+                    min="0"
+                    max="2000"
+                    value={nuevoGramos}
+                    onChange={(e) => setNuevoGramos(e.target.value)}
+                    placeholder="1000"
+                    required
+                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-mono font-bold h-10"
+                  />
+                </div>
+              )}
 
               {/* Nota opcional */}
               {nuevoEstado === 'RESTOCK' && (

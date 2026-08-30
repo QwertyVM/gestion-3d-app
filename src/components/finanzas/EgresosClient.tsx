@@ -207,36 +207,15 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // Financial KPIs
-  const totalEgresosTotales = useMemo(() => {
-    return items.reduce((acc, e) => acc + e.costoTotal, 0)
-  }, [items])
-
-  const totalMaquinaria = useMemo(() => {
-    return items
-      .filter(e => e.categoria === 'ACTIVO_FIJO')
-      .reduce((acc, e) => acc + e.costoTotal, 0)
-  }, [items])
-
-  const totalInsumos = useMemo(() => {
-    return items
-      .filter(e => e.categoria === 'INSUMO')
-      .reduce((acc, e) => acc + e.costoTotal, 0)
-  }, [items])
-
-  const totalServicios = useMemo(() => {
-    return items
-      .filter(e => e.categoria === 'SERVICIO')
-      .reduce((acc, e) => acc + e.costoTotal, 0)
-  }, [items])
-
   // Filtered & Sorted List (Descendente por fecha de creación createdAt)
   const filteredEgresos = useMemo(() => {
     return items
       .filter(eg => {
         const matchSearch = 
           eg.itemConcepto.toLowerCase().includes(search.toLowerCase()) ||
-          (eg.subcategoria && eg.subcategoria.toLowerCase().includes(search.toLowerCase()))
+          (eg.subcategoria && eg.subcategoria.toLowerCase().includes(search.toLowerCase())) ||
+          (eg.persona && eg.persona.toLowerCase().includes(search.toLowerCase())) ||
+          (eg.especificacionColor && eg.especificacionColor.toLowerCase().includes(search.toLowerCase()))
 
         const matchCat = categoriaFilter === 'TODOS' || eg.categoria === categoriaFilter
         const matchTag = tagFilter === 'TODOS' || eg.subcategoria?.trim().toLowerCase() === tagFilter.trim().toLowerCase()
@@ -245,6 +224,32 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [items, search, categoriaFilter, tagFilter])
+
+  // Indicador de filtros activos
+  const isFiltered = search.trim() !== '' || categoriaFilter !== 'TODOS' || tagFilter !== 'TODOS'
+
+  // Dynamic Financial KPIs based on filtered items
+  const totalEgresosTotales = useMemo(() => {
+    return filteredEgresos.reduce((acc, e) => acc + e.costoTotal, 0)
+  }, [filteredEgresos])
+
+  const totalMaquinaria = useMemo(() => {
+    return filteredEgresos
+      .filter(e => e.categoria === 'ACTIVO_FIJO')
+      .reduce((acc, e) => acc + e.costoTotal, 0)
+  }, [filteredEgresos])
+
+  const totalInsumos = useMemo(() => {
+    return filteredEgresos
+      .filter(e => e.categoria === 'INSUMO')
+      .reduce((acc, e) => acc + e.costoTotal, 0)
+  }, [filteredEgresos])
+
+  const totalServicios = useMemo(() => {
+    return filteredEgresos
+      .filter(e => e.categoria === 'SERVICIO')
+      .reduce((acc, e) => acc + e.costoTotal, 0)
+  }, [filteredEgresos])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredEgresos.length / ITEMS_PER_PAGE))
@@ -479,17 +484,26 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
         </div>
       </div>
 
-      {/* KPI Cards Light Mode */}
+      {/* KPI Cards Light Mode (Dinámicos según filtros aplicados) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
-            <ArrowDownRight className="h-4 w-4" />
-            Total Egresos
+          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <ArrowDownRight className="h-4 w-4" />
+              {isFiltered ? 'Total Filtrado' : 'Total Egresos'}
+            </span>
+            {isFiltered && (
+              <span className="text-[10px] font-mono font-bold text-[#A36F4C] bg-[#F4EFEA] border border-[#E2D9CC] px-1.5 py-0.2 rounded">
+                Filtrado
+              </span>
+            )}
           </span>
           <div className="text-2xl font-extrabold text-[#A36F4C] font-mono mt-1">
             {formatCurrency(totalEgresosTotales)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">{items.length} registros contabilizados</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">
+            {isFiltered ? `${filteredEgresos.length} de ${items.length} registros` : `${items.length} registros contabilizados`}
+          </span>
         </div>
 
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
@@ -500,7 +514,11 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
           <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
             {formatCurrency(totalMaquinaria)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Impresora 3D, Secador, etc.</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">
+            {isFiltered 
+              ? `${filteredEgresos.filter(e => e.categoria === 'ACTIVO_FIJO').length} registros de maquinaria` 
+              : 'Impresora 3D, Secador, etc.'}
+          </span>
         </div>
 
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
@@ -511,7 +529,11 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
           <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
             {formatCurrency(totalInsumos)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Filamentos, Resinas, Packaging</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">
+            {isFiltered 
+              ? `${filteredEgresos.filter(e => e.categoria === 'INSUMO').length} registros de insumos` 
+              : 'Filamentos, Resinas, Packaging'}
+          </span>
         </div>
 
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
@@ -522,7 +544,11 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
           <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
             {formatCurrency(totalServicios)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Fletes, Publicidad, Cuotas</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">
+            {isFiltered 
+              ? `${filteredEgresos.filter(e => e.categoria === 'SERVICIO').length} registros de servicios` 
+              : 'Fletes, Publicidad, Cuotas'}
+          </span>
         </div>
       </div>
 

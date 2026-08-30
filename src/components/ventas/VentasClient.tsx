@@ -31,7 +31,9 @@ import {
   Trash2,
   Calendar,
   Palette,
-  ShoppingBag
+  ShoppingBag,
+  AlertTriangle,
+  XCircle
 } from 'lucide-react'
 import { 
   updateEstadoVenta, 
@@ -577,14 +579,19 @@ export function VentasClient({
 
     setIsSubmitting(true)
     try {
+      const prod = productos.find(p => p.id === formProductoId)
+      const cant = parseInt(formCantidad) || 1
+      const pesoUnitario = prod ? Number((Number(prod.costoBase) / 0.065).toFixed(1)) : 0
+      const pesoTotalEstimado = Math.round(pesoUnitario * cant)
+
       const created = await createVenta({
         fecha: formFecha || undefined,
         cliente: formCliente.trim(),
         productoId: formProductoId,
         colorFilamentoId: formColorFilamentoId ? formColorFilamentoId : null,
         personalizacion: formPersonalizacion.trim() ? formPersonalizacion.trim() : null,
-        gramosConsumidos: 0,
-        cantidad: parseInt(formCantidad) || 1,
+        gramosConsumidos: pesoTotalEstimado,
+        cantidad: cant,
         tipoPrecio: formTipoPrecio,
         precioUnitario: parseFloat(formPrecioUnitario) || 0,
         montoPagado: parseFloat(formMontoPagado) || 0,
@@ -596,7 +603,6 @@ export function VentasClient({
         diaEntregaPrometida: formDiaEntrega.trim() || undefined,
       })
 
-      const prod = productos.find(p => p.id === formProductoId)
       const selectedFil = filamentos.find(f => f.id === formColorFilamentoId)
 
       const fullCreated = {
@@ -845,18 +851,37 @@ export function VentasClient({
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-[#241C15]">{v.producto.nombreModelo}</span>
                         
-                        {/* Filamento asignado */}
-                        {v.colorFilamento && (
-                          <div className="inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] shadow-2xs self-start">
-                            <span 
-                              className="h-2.5 w-2.5 rounded-full border border-black/20 inline-block flex-shrink-0 shadow-xs"
-                              style={{ backgroundColor: v.colorFilamento.codigoHex }}
-                            />
-                            <span className="text-xs font-bold text-[#241C15]">
-                              {v.colorFilamento.nombreColor}
-                            </span>
-                          </div>
-                        )}
+                        {/* Filamento asignado con alerta en amarillo si tiene bajo stock (< 300g) */}
+                        {v.colorFilamento && (() => {
+                          const filamentoEnTaller = filamentos.find(f => f.id === v.colorFilamentoId || f.nombreColor === v.colorFilamento?.nombreColor)
+                          const stockGramosActual = filamentoEnTaller?.stockGramos ?? v.colorFilamento?.stockGramos ?? 1000
+                          const esBajoStock = stockGramosActual < 300 || Boolean(filamentoEnTaller?.alertaCritica)
+
+                          return (
+                            <div 
+                              className={`inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-md shadow-2xs self-start border transition-colors ${
+                                esBajoStock
+                                  ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047]'
+                                  : 'bg-[#FAF8F5] text-[#241C15] border-[#E2D9CC]'
+                              }`}
+                              title={esBajoStock ? `⚠️ Bobina con stock bajo: ${stockGramosActual}g restantes` : `Color: ${v.colorFilamento.nombreColor}`}
+                            >
+                              <span 
+                                className="h-2.5 w-2.5 rounded-full border border-black/20 inline-block flex-shrink-0 shadow-xs"
+                                style={{ backgroundColor: v.colorFilamento.codigoHex }}
+                              />
+                              <span className="text-xs font-bold">
+                                {v.colorFilamento.nombreColor}
+                              </span>
+                              {esBajoStock && (
+                                <span className="text-[10px] font-extrabold text-[#854D0E] bg-[#FEF08A] px-1 py-0.2 rounded inline-flex items-center gap-0.5 border border-[#FACC15]">
+                                  <AlertTriangle className="h-2.5 w-2.5 text-[#A16207] stroke-[2.5]" />
+                                  {stockGramosActual}g
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })()}
 
                         <div className="flex items-center gap-1.5 text-[11px] text-[#75695D] flex-wrap mt-0.5">
                           <span>{v.cantidad}x • {v.tipoPrecio}</span>
@@ -1029,258 +1054,347 @@ export function VentasClient({
       {/* ========================================================================= */}
       <Dialog open={openDetailsModal} onOpenChange={setOpenDetailsModal}>
         <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[540px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
-          {selectedVenta && (
-            <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-              {/* 1. Cabecera Limpia & Contextual */}
-              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between gap-3 flex-shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] flex items-center justify-center text-[#A36F4C] flex-shrink-0 shadow-2xs">
-                    <ShoppingBag className="h-5 w-5 stroke-[2.2]" />
-                  </div>
-                  <div className="min-w-0">
-                    <DialogTitle className="text-base sm:text-lg font-black text-[#241C15] tracking-tight truncate">
-                      Pedido de {selectedVenta.cliente}
-                    </DialogTitle>
-                    <DialogDescription className="text-xs text-[#75695D] font-medium truncate mt-0.5">
-                      {selectedVenta.producto.nombreModelo} • {selectedVenta.cantidad} {selectedVenta.cantidad === 1 ? 'un.' : 'un.'} • Nivel {selectedVenta.tipoPrecio}
-                    </DialogDescription>
-                  </div>
-                </div>
+          {selectedVenta && (() => {
+            const pctPagado = selectedVenta.total > 0 
+              ? Math.min(100, Math.round((selectedVenta.montoPagado / selectedVenta.total) * 100))
+              : 100
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {selectedVenta.saldoPendiente > 0 ? (
-                    <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold font-mono px-2.5 py-1 flex items-center gap-1.5 shadow-2xs">
-                      <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span>Pendiente: {formatCurrency(selectedVenta.saldoPendiente)}</span>
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold font-mono px-2.5 py-1 flex items-center gap-1.5 shadow-2xs">
-                      <Check className="h-3.5 w-3.5 stroke-[2.5] flex-shrink-0" />
-                      <span>Pagado al 100%</span>
-                    </Badge>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setOpenDetailsModal(false)}
-                    className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-full hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-                    aria-label="Cerrar modal"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* 2. Cuerpo del Modal */}
-              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto max-h-[calc(90dvh-130px)]">
-                {/* Tarjeta Resumen Financiero (Compact Live Banner) */}
-                <div className="bg-[#F4EFEA] border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-4 shadow-2xs">
-                  <div className="grid grid-cols-3 gap-2 sm:gap-4 text-left items-center">
-                    <div>
-                      <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">Total Pedido</span>
-                      <div className="text-sm sm:text-base font-extrabold text-[#241C15] font-mono mt-0.5">
-                        {formatCurrency(selectedVenta.total)}
-                      </div>
+            return (
+              <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+                {/* 1. Cabecera Limpia & Contextual */}
+                <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between gap-3 flex-shrink-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-10 w-10 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] flex items-center justify-center text-[#A36F4C] flex-shrink-0 shadow-2xs">
+                      <ShoppingBag className="h-5 w-5 stroke-[2.2]" />
                     </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-[#1E5E3A] uppercase tracking-wider block">Monto Pagado</span>
-                      <div className="text-sm sm:text-base font-semibold text-[#1E5E3A] font-mono mt-0.5">
-                        {formatCurrency(selectedVenta.montoPagado)}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-[#A36F4C] uppercase tracking-wider block">Saldo Pendiente</span>
-                      <div className="text-lg sm:text-xl font-black text-[#A36F4C] font-mono mt-0.5">
-                        {formatCurrency(selectedVenta.saldoPendiente)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Selector de Color Optimizado & Minimalista (Reemplazo de la cuadrícula gigante) */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider flex items-center gap-1.5">
-                      <Palette className="h-3.5 w-3.5 text-[#A36F4C]" />
-                      Color de Filamento
-                    </span>
-                    {selectedVenta.colorFilamento && (
-                      <button
-                        type="button"
-                        onClick={() => handleAsignarColorVenta(selectedVenta.id, null)}
-                        className="text-[11px] text-[#A34335] hover:underline font-semibold cursor-pointer"
+                    <div className="min-w-0">
+                      <DialogTitle className="text-base sm:text-lg font-black text-[#241C15] tracking-tight truncate">
+                        Pedido de {selectedVenta.cliente}
+                      </DialogTitle>
+                      <DialogDescription 
+                        className="text-xs text-[#75695D] font-medium max-w-[280px] sm:max-w-md truncate mt-0.5" 
+                        title={`${selectedVenta.producto.nombreModelo} • ${selectedVenta.cantidad} ${selectedVenta.cantidad === 1 ? 'unidad' : 'unidades'}`}
                       >
-                        Quitar color
-                      </button>
-                    )}
+                        {selectedVenta.producto.nombreModelo} • {selectedVenta.cantidad} {selectedVenta.cantidad === 1 ? 'unidad' : 'unidades'}
+                      </DialogDescription>
+                    </div>
                   </div>
 
-                  {/* Vista Activa */}
-                  <div className="flex items-center justify-between p-3 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5]">
-                    <div className="flex items-center gap-2.5">
-                      <div 
-                        className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0"
-                        style={{ backgroundColor: selectedVenta.colorFilamento?.codigoHex || '#DCD3C6' }}
-                      />
-                      <div>
-                        <span className="text-xs font-bold text-[#241C15] block">
-                          {selectedVenta.colorFilamento ? selectedVenta.colorFilamento.nombreColor : 'Sin color asignado'}
-                        </span>
-                        <span className={`text-[10px] font-semibold ${selectedVenta.colorFilamento ? 'text-[#1E5E3A]' : 'text-[#75695D]'}`}>
-                          {selectedVenta.colorFilamento ? '🟢 Color asignado' : '⚪ Opcional para producción'}
-                        </span>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {selectedVenta.saldoPendiente > 0 ? (
+                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold font-mono px-2.5 py-1 flex items-center gap-1.5 shadow-2xs">
+                        <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span>Abonado {pctPagado}% - Falta {formatCurrency(selectedVenta.saldoPendiente)}</span>
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold font-mono px-2.5 py-1 flex items-center gap-1.5 shadow-2xs">
+                        <Check className="h-3.5 w-3.5 stroke-[2.5] flex-shrink-0" />
+                        <span>Pagado al 100%</span>
+                      </Badge>
+                    )}
 
                     <button
                       type="button"
-                      onClick={() => setIsChangingColor(prev => !prev)}
-                      className="text-xs font-bold text-[#633E20] bg-white hover:bg-[#F4EFEA] border border-[#D4BEA7] px-2.5 py-1 rounded-lg transition-colors cursor-pointer shadow-2xs"
+                      onClick={() => setOpenDetailsModal(false)}
+                      className="text-[#75695D] hover:text-[#241C15] p-2 rounded-full hover:bg-[#F4EFEA] transition-colors cursor-pointer ml-1 flex-shrink-0"
+                      aria-label="Cerrar modal"
                     >
-                      {isChangingColor ? 'Ocultar lista' : selectedVenta.colorFilamento ? 'Cambiar color' : 'Asignar color'}
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
+                </div>
 
-                  {/* Swatches Horizontales compactos al hacer clic en Cambiar Color */}
-                  {isChangingColor && (
-                    <div className="p-3 rounded-xl border border-[#E2D9CC] bg-white shadow-xs space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
-                      <span className="text-[10px] text-[#75695D] font-medium block">
-                        Toca el color disponible en taller:
-                      </span>
-                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-0.5">
-                        {filamentos.map(f => {
-                          const isSelected = selectedVenta.colorFilamento?.id === f.id || selectedVenta.colorFilamento?.nombreColor === f.nombreColor
-                          return (
-                            <button
-                              key={f.id}
-                              type="button"
-                              onClick={() => {
-                                handleAsignarColorVenta(selectedVenta.id, isSelected ? null : f.id)
-                                setIsChangingColor(false)
-                              }}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
-                                isSelected
-                                  ? 'bg-[#EFE5D8] text-[#633E20] border-[#A36F4C] ring-1 ring-[#A36F4C] shadow-2xs'
-                                  : 'bg-[#FAF8F5] text-[#241C15] border-[#E2D9CC] hover:bg-white'
-                              }`}
-                            >
-                              <span 
-                                className="w-2.5 h-2.5 rounded-full border border-black/15 flex-shrink-0 shadow-xs"
-                                style={{ backgroundColor: f.codigoHex }}
-                              />
-                              <span>{f.nombreColor}</span>
-                              {isSelected && <Check className="h-3 w-3 text-[#633E20] stroke-[2.5]" />}
-                            </button>
-                          )
-                        })}
+                {/* 2. Cuerpo del Modal */}
+                <div className="p-5 sm:p-6 space-y-4 overflow-y-auto max-h-[calc(90dvh-130px)]">
+                  {/* Tarjeta Resumen Financiero con Barra de Progreso */}
+                  <div className="bg-[#F8F6F2] border border-[#E2D9CC] rounded-2xl p-4 shadow-2xs space-y-3">
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4 text-left items-center">
+                      <div>
+                        <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">Total Pedido</span>
+                        <div className="text-sm sm:text-base font-bold text-[#241C15] font-mono mt-0.5">
+                          {formatCurrency(selectedVenta.total)}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-[#1E5E3A] uppercase tracking-wider block">Monto Pagado</span>
+                        <div className="text-sm sm:text-base font-bold text-[#1E5E3A] font-mono mt-0.5">
+                          {formatCurrency(selectedVenta.montoPagado)}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[11px] font-bold text-[#A36F4C] uppercase tracking-wider block">Saldo Pendiente</span>
+                        <div className="text-base sm:text-lg font-bold text-[#A36F4C] font-mono mt-0.5">
+                          {formatCurrency(selectedVenta.saldoPendiente)}
+                        </div>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Estado del Pedido & Fecha */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider">
-                      Estado del Pedido
-                    </span>
-                    <div className="flex items-center gap-1 text-[11px] text-[#75695D]">
-                      <Calendar className="h-3 w-3 text-[#A36F4C]" />
-                      <input
-                        type="date"
-                        value={selectedVenta.fecha ? new Date(selectedVenta.fecha).toISOString().split('T')[0] : ''}
-                        onChange={(e) => handleUpdateFechaVenta(selectedVenta.id, e.target.value)}
-                        className="bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15] font-mono text-[11px] font-semibold rounded-lg px-2 py-0.5 focus:outline-none focus:border-[#A36F4C] cursor-pointer"
-                        title="Modificar fecha del pedido"
-                      />
+                    {/* Barra de Progreso de Pago */}
+                    <div className="space-y-1 pt-1">
+                      <div className="w-full bg-[#EAE4DC] h-2 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-[#1E5E3A] h-full rounded-full transition-all duration-300"
+                          style={{ width: `${pctPagado}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] text-[#75695D] font-mono">
+                        <span>Progreso de cobranza</span>
+                        <span className="font-bold text-[#1E5E3A]">{pctPagado}%</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {(['PENDIENTE', 'EN_PRODUCCION', 'ENTREGADO', 'CANCELADO'] as EstadoVenta[]).map((est) => (
-                      <button
-                        key={est}
-                        type="button"
-                        onClick={() => handleCambiarEstado(selectedVenta.id, est)}
-                        className={`py-1.5 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer active:scale-[0.98] text-center ${
-                          selectedVenta.estado === est
-                            ? est === 'ENTREGADO'
-                              ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs'
-                              : est === 'EN_PRODUCCION'
-                              ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-xs'
-                              : est === 'PENDIENTE'
-                              ? 'bg-[#8C6D1F] text-white border-[#8C6D1F] shadow-xs'
-                              : 'bg-[#A34335] text-white border-[#A34335]'
-                            : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-white'
-                        }`}
-                      >
-                        {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'Producción' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Logística & Packaging (Si Aplica) */}
-                {(selectedVenta.canalVenta || selectedVenta.destinoEnvio || (selectedVenta.costoPackaging && selectedVenta.costoPackaging > 0)) && (
-                  <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-xs space-y-1.5">
-                    <div className="flex items-center justify-between text-[#75695D] text-[11px]">
-                      <span>Canal: <strong className="text-[#241C15]">{selectedVenta.canalVenta || 'Directo'}</strong></span>
-                      <span>Envío: <strong className="text-[#241C15]">{selectedVenta.destinoEnvio || 'Taller'}</strong></span>
+                  {/* Bloque de Color de Filamento */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider flex items-center gap-1.5">
+                        <Palette className="h-3.5 w-3.5 text-[#A36F4C]" />
+                        Color de Filamento
+                      </span>
+                      {selectedVenta.colorFilamento && (
+                        <button
+                          type="button"
+                          onClick={() => handleAsignarColorVenta(selectedVenta.id, null)}
+                          className="text-[11px] text-[#A34335] hover:underline font-semibold cursor-pointer"
+                        >
+                          Quitar color
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Vista Activa con Advertencia de Bajo Stock */}
+                    {(() => {
+                      const filamentoEnTaller = filamentos.find(f => f.id === selectedVenta.colorFilamentoId || f.nombreColor === selectedVenta.colorFilamento?.nombreColor)
+                      const stockGramosActual = filamentoEnTaller?.stockGramos ?? selectedVenta.colorFilamento?.stockGramos ?? 1000
+                      const esBajoStock = selectedVenta.colorFilamento && (stockGramosActual < 300 || Boolean(filamentoEnTaller?.alertaCritica))
+
+                      return (
+                        <div className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
+                          esBajoStock 
+                            ? 'bg-[#FEFCE8] border-[#FDE047] ring-1 ring-[#FDE047]/60' 
+                            : 'bg-[#FAF8F5] border-[#E2D9CC]'
+                        }`}>
+                          <div className="flex items-center gap-2.5">
+                            <div 
+                              className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0"
+                              style={{ backgroundColor: selectedVenta.colorFilamento?.codigoHex || '#A855F7' }}
+                            />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-[#241C15] block">
+                                  {selectedVenta.colorFilamento ? selectedVenta.colorFilamento.nombreColor : 'Sin color asignado'}
+                                </span>
+                                {esBajoStock && (
+                                  <span className="text-[10px] font-extrabold text-[#854D0E] bg-[#FEF08A] px-1.5 py-0.2 rounded border border-[#FACC15] inline-flex items-center gap-0.5">
+                                    <AlertTriangle className="h-3 w-3 text-[#A16207]" />
+                                    {stockGramosActual}g restante
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`text-[10px] font-semibold ${
+                                esBajoStock 
+                                  ? 'text-[#A16207]' 
+                                  : selectedVenta.colorFilamento ? 'text-[#1E5E3A]' : 'text-[#75695D]'
+                              }`}>
+                                {esBajoStock 
+                                  ? '⚠️ Bobina con bajo stock (<300g)' 
+                                  : selectedVenta.colorFilamento ? '🟢 Color asignado' : '⚪ Opcional para producción'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setIsChangingColor(prev => !prev)}
+                            className="text-xs font-bold text-[#633E20] bg-white hover:bg-[#F4EFEA] border border-[#D4BEA7] px-2.5 py-1 rounded-lg transition-colors cursor-pointer shadow-2xs"
+                          >
+                            {isChangingColor ? 'Ocultar lista' : selectedVenta.colorFilamento ? 'Cambiar color' : 'Asignar color'}
+                          </button>
+                        </div>
+                      )
+                    })()}
+
+                    {/* Contenedor de Paleta / Chips con 3 Estados Semánticos */}
+                    {isChangingColor && (
+                      <div className="p-3.5 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] shadow-sm space-y-2.5 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
+                            Toca el color disponible en taller:
+                          </span>
+                          <span className="text-[10px] text-[#8C6D1F] font-mono font-semibold">
+                            🟡 Amarillo = Stock Crítico (&lt;300g)
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-1 touch-pan-y">
+                          {filamentos.map(f => {
+                            const isSelected = selectedVenta.colorFilamento?.id === f.id || selectedVenta.colorFilamento?.nombreColor === f.nombreColor
+                            const gramos = f.stockGramos ?? 1000
+                            const esBajoStock = gramos < 300 || Boolean(f.alertaCritica)
+
+                            // 3 Variantes de Estado:
+                            // C: Seleccionado / Activo
+                            // B: Restock o Stock Crítico (< 300g) -> Tono Amarillento de Alerta
+                            // A: Stock Óptimo (> 300g) -> Fondo blanco neutral
+                            const chipClasses = isSelected
+                              ? 'bg-[#EFE5D8] text-[#633E20] border-[#A36F4C] ring-2 ring-[#A36F4C] shadow-2xs font-bold'
+                              : esBajoStock
+                                ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] hover:bg-[#FEF08A] hover:border-[#EAB308] font-medium shadow-2xs'
+                                : 'bg-[#FFFFFF] text-[#241C15] border-[#E2D9CC] hover:bg-[#FAF8F5] hover:border-[#A36F4C] font-medium shadow-2xs'
+
+                            const tooltipText = esBajoStock
+                              ? '⚠️ Filamento con poco stock o en restock. Consultar disponibilidad antes de confirmar.'
+                              : `${f.nombreColor} (${gramos}g disponibles en taller)`
+
+                            return (
+                              <button
+                                key={f.id}
+                                type="button"
+                                title={tooltipText}
+                                onClick={() => {
+                                  handleAsignarColorVenta(selectedVenta.id, isSelected ? null : f.id)
+                                  setIsChangingColor(false)
+                                }}
+                                className={`flex items-center gap-2 p-2 rounded-xl border text-xs transition-all cursor-pointer text-left active:scale-[0.98] ${chipClasses}`}
+                              >
+                                {/* Dot Circular */}
+                                <span 
+                                  className="w-3 h-3 rounded-full border border-black/15 flex-shrink-0 shadow-xs"
+                                  style={{ backgroundColor: f.codigoHex }}
+                                />
+
+                                {/* Nombre y Gramaje */}
+                                <div className="flex items-center justify-between min-w-0 flex-1 gap-1">
+                                  <span className="truncate">{f.nombreColor}</span>
+                                  {esBajoStock ? (
+                                    <span className="text-[10px] font-extrabold flex items-center gap-0.5 flex-shrink-0 text-[#854D0E]">
+                                      <span>⚠️</span>
+                                      <span>{gramos}g</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-mono text-[#75695D] flex-shrink-0">
+                                      {gramos}g
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Check de confirmación si está activo */}
+                                {isSelected && (
+                                  <Check className="h-3.5 w-3.5 text-[#633E20] stroke-[2.5] flex-shrink-0" />
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Estado Operativo & Fecha de Entrega Simétricos */}
+                  <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
+                        Estado del Pedido
+                      </span>
+                      <div className="flex items-center gap-1.5 text-xs text-[#241C15] font-medium">
+                        <Calendar className="h-3.5 w-3.5 text-[#A36F4C]" />
+                        <span className="text-[11px] text-[#75695D]">Promesa Entrega:</span>
+                        <input
+                          type="date"
+                          value={selectedVenta.fecha ? new Date(selectedVenta.fecha).toISOString().split('T')[0] : ''}
+                          onChange={(e) => handleUpdateFechaVenta(selectedVenta.id, e.target.value)}
+                          className="bg-white border border-[#E2D9CC] text-[#241C15] font-mono text-[11px] font-bold rounded-lg px-2 py-0.5 focus:outline-none focus:border-[#A36F4C] cursor-pointer"
+                          title="Modificar fecha de entrega"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {(['PENDIENTE', 'EN_PRODUCCION', 'ENTREGADO', 'CANCELADO'] as EstadoVenta[]).map((est) => {
+                        const isActive = selectedVenta.estado === est
+                        return (
+                          <button
+                            key={est}
+                            type="button"
+                            onClick={() => handleCambiarEstado(selectedVenta.id, est)}
+                            className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer active:scale-[0.98] text-center ${
+                              isActive
+                                ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-xs'
+                                : 'bg-white border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
+                            }`}
+                          >
+                            {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'Producción' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Chips informativos de logística */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#E2D9CC]/60 text-[11px]">
+                      <span className="bg-white border border-[#E2D9CC] px-2 py-0.5 rounded-lg text-[#75695D]">
+                        Canal: <strong className="text-[#241C15]">{selectedVenta.canalVenta || 'WhatsApp'}</strong>
+                      </span>
+                      <span className="bg-white border border-[#E2D9CC] px-2 py-0.5 rounded-lg text-[#75695D]">
+                        Envío: <strong className="text-[#241C15]">{selectedVenta.destinoEnvio || 'Shalom'}</strong>
+                      </span>
                       {selectedVenta.costoPackaging && selectedVenta.costoPackaging > 0 ? (
-                        <span>Pack: <strong className="text-[#8C6D1F]">+{formatCurrency(selectedVenta.costoPackaging)}</strong></span>
+                        <span className="bg-white border border-[#E2D9CC] px-2 py-0.5 rounded-lg text-[#75695D]">
+                          Pack: <strong className="text-[#8C6D1F]">+{formatCurrency(selectedVenta.costoPackaging)}</strong>
+                        </span>
                       ) : null}
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* 3. Footer & Acciones de Cobranza Claras */}
-              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FAF8F5] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
-                {/* Izquierda: Botón destructivo */}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => handleDeleteVenta(selectedVenta.id, selectedVenta.cliente)}
-                  disabled={deletingId === selectedVenta.id}
-                  className="text-[#A34335] hover:text-red-700 hover:bg-rose-50 text-xs font-semibold rounded-xl cursor-pointer self-start sm:self-auto h-9 px-3"
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                  Eliminar Pedido
-                </Button>
+                {/* 3. Footer & Acciones de Cobranza Consistentes (h-11, rounded-xl) */}
+                <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FAF8F5] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
+                  {/* Izquierda: Botón eliminar */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleDeleteVenta(selectedVenta.id, selectedVenta.cliente)}
+                    disabled={deletingId === selectedVenta.id}
+                    className="border border-red-200 text-[#DC2626] hover:bg-red-50 hover:text-red-700 h-11 px-3.5 rounded-xl text-xs font-semibold cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                  >
+                    <Trash2 className="h-4 w-4 text-[#DC2626]" />
+                    Eliminar Pedido
+                  </Button>
 
-                {/* Derecha: Grupo de acciones primarias */}
-                <div className="flex items-center justify-end gap-2">
-                  {selectedVenta.saldoPendiente > 0 ? (
-                    <>
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setMontoAbono(selectedVenta.saldoPendiente.toString())
-                          setOpenAbonoModal(true)
-                        }}
-                        className="bg-white hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] text-xs font-bold rounded-xl cursor-pointer shadow-2xs h-9 px-3.5 active:scale-[0.98]"
-                      >
-                        <DollarSign className="h-3.5 w-3.5 mr-1 text-[#A36F4C]" />
-                        Registrar Abono
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => handleLiquidarTotal(selectedVenta.id)}
-                        className="bg-[#1E5E3A] hover:bg-[#164B2E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs h-9 px-4 active:scale-[0.98]"
-                      >
-                        <Check className="h-3.5 w-3.5 mr-1 stroke-[2.5]" />
-                        Liquidar 100%
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] text-xs font-bold font-mono">
-                      <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span>Pagado al 100%</span>
-                    </div>
-                  )}
+                  {/* Derecha: Grupo de acciones primarias */}
+                  <div className="flex items-center justify-end gap-2.5">
+                    {selectedVenta.saldoPendiente > 0 ? (
+                      <>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setMontoAbono(selectedVenta.saldoPendiente.toString())
+                            setOpenAbonoModal(true)
+                          }}
+                          className="bg-white hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] text-xs font-bold h-11 px-4 rounded-xl cursor-pointer shadow-2xs active:scale-[0.98] flex items-center gap-1.5"
+                        >
+                          <Plus className="h-4 w-4 text-[#A36F4C]" />
+                          + Registrar Abono
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => handleLiquidarTotal(selectedVenta.id)}
+                          className="bg-[#1E5E3A] hover:bg-[#16482C] text-white text-xs font-bold h-11 px-4 rounded-xl cursor-pointer shadow-sm active:scale-[0.98] flex items-center gap-1.5"
+                        >
+                          <Check className="h-4 w-4 stroke-[2.5]" />
+                          Liquidar Saldo ({formatCurrency(selectedVenta.saldoPendiente)})
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-4 h-11 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] text-xs font-bold font-mono">
+                        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                        <span>Pagado al 100%</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -1618,7 +1732,7 @@ export function VentasClient({
               )}
             </div>
 
-            {/* SECCIÓN: COLOR DE FILAMENTO (OPCIONAL - SOLO CLIC) */}
+            {/* SECCIÓN: COLOR DE FILAMENTO CON CHECK DE STOCK EN TIEMPO REAL */}
             <div className="p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1638,38 +1752,107 @@ export function VentasClient({
                 )}
               </div>
 
-              {/* Grid de Chips de Colores Disponibles - Solo Clic */}
+              {/* Grid de Chips de Colores Disponibles con Gramaje */}
               <div className="space-y-1.5">
                 <span className="text-[11px] text-[#75695D] font-medium block">
-                  Toca el color que necesitas para este pedido:
+                  Toca el color disponible en taller para asociar a este pedido:
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
                   {filamentos.map(f => {
                     const isSelected = formColorFilamentoId === f.id
+                    const g = f.stockGramos ?? 1000
+                    const esBajoStock = g < 300 || Boolean(f.alertaCritica)
+
+                    const chipClasses = isSelected
+                      ? 'bg-[#EFE5D8] text-[#633E20] border-[#A36F4C] ring-2 ring-[#A36F4C] shadow-2xs font-bold'
+                      : esBajoStock
+                        ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] hover:bg-[#FEF08A] hover:border-[#EAB308] font-medium shadow-2xs'
+                        : 'bg-[#FFFFFF] text-[#241C15] border-[#E2D9CC] hover:bg-[#FAF8F5] hover:border-[#A36F4C] font-medium shadow-2xs'
+
+                    const tooltipText = esBajoStock
+                      ? '⚠️ Filamento con poco stock o en restock. Consultar disponibilidad antes de confirmar.'
+                      : `${f.nombreColor} (${g}g disponibles en taller)`
+
                     return (
                       <button
                         key={f.id}
                         type="button"
+                        title={tooltipText}
                         onClick={() => setFormColorFilamentoId(isSelected ? '' : f.id)}
-                        className={`flex items-center gap-2 p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer text-left ${
-                          isSelected
-                            ? 'bg-[#EFE5D8] text-[#633E20] border-[#A36F4C] ring-2 ring-[#A36F4C] shadow-2xs'
-                            : 'bg-white text-[#241C15] border-[#E2D9CC] hover:bg-[#FAF8F5]'
-                        }`}
+                        className={`flex items-center gap-2 p-2 rounded-xl border text-xs transition-all cursor-pointer text-left active:scale-[0.98] ${chipClasses}`}
                       >
                         <span 
-                          className="w-3.5 h-3.5 rounded-full border border-black/15 flex-shrink-0 shadow-xs"
+                          className="w-3 h-3 rounded-full border border-black/15 flex-shrink-0 shadow-xs"
                           style={{ backgroundColor: f.codigoHex }}
                         />
-                        <span className="truncate flex-1">{f.nombreColor}</span>
+                        <div className="flex items-center justify-between min-w-0 flex-1 gap-1">
+                          <span className="truncate">{f.nombreColor}</span>
+                          {esBajoStock ? (
+                            <span className="text-[10px] font-extrabold flex items-center gap-0.5 flex-shrink-0 text-[#854D0E]">
+                              <span>⚠️</span>
+                              <span>{g}g</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-mono text-[#75695D] flex-shrink-0">
+                              {g}g
+                            </span>
+                          )}
+                        </div>
                         {isSelected && (
-                          <Check className="h-3.5 w-3.5 text-[#633E20] flex-shrink-0" />
+                          <Check className="h-3.5 w-3.5 text-[#633E20] stroke-[2.5] flex-shrink-0" />
                         )}
                       </button>
                     )
                   })}
                 </div>
               </div>
+
+              {/* VALIDACIÓN DINÁMICA EN TIEMPO REAL: PESO REQUERIDO VS STOCK EN BOBINA */}
+              {(() => {
+                if (!formColorFilamentoId || !formProductoId) return null
+                const prod = productos.find(p => p.id === formProductoId)
+                const pesoUnitario = prod ? Number((Number(prod.costoBase) / 0.065).toFixed(1)) : 0
+                const pesoTotal = Math.round(pesoUnitario * (parseInt(formCantidad) || 1))
+                const fil = filamentos.find(f => f.id === formColorFilamentoId)
+                const gramosRestantes = fil?.stockGramos ?? 1000
+
+                if (gramosRestantes < pesoTotal) {
+                  return (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-[#DC2626] flex items-start gap-2.5 shadow-2xs animate-in fade-in duration-150">
+                      <XCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <span className="font-bold block">Stock insuficiente en bobina abierta</span>
+                        <p className="text-[11px] text-red-700 leading-tight">
+                          Requiere <strong>{pesoTotal}g</strong> ({pesoUnitario}g × {formCantidad || 1} un.) y solo quedan <strong>{gramosRestantes}g</strong>. Abre una bobina sellada o cambia de color.
+                        </p>
+                      </div>
+                    </div>
+                  )
+                }
+
+                if (gramosRestantes < 300 || (gramosRestantes - pesoTotal < 100)) {
+                  return (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-[#C2410C] flex items-start gap-2.5 shadow-2xs animate-in fade-in duration-150">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <span className="font-bold block">⚠️ Filamento con poco stock ({gramosRestantes}g restantes)</span>
+                        <p className="text-[11px] text-amber-800 leading-tight">
+                          Consumo estimado: <strong>{pesoTotal}g</strong>. Quedarán aprox. <strong>{gramosRestantes - pesoTotal}g</strong> tras la impresión.
+                        </p>
+                      </div>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="p-2.5 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-xs text-[#1E5E3A] flex items-center gap-2 shadow-2xs animate-in fade-in duration-150">
+                    <CheckCircle2 className="h-4 w-4 text-[#1E5E3A] flex-shrink-0" />
+                    <span className="font-medium">
+                      <strong>Stock disponible:</strong> {gramosRestantes}g restantes — Suficiente para este pedido ({pesoTotal}g requeridos).
+                    </span>
+                  </div>
+                )
+              })()}
             </div>
 
             {/* Precio Unitario Final Aplicado */}
