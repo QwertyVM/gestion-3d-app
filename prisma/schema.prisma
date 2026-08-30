@@ -65,6 +65,46 @@ model TagInsumo {
   updatedAt   DateTime @updatedAt
 }
 
+model InventarioFilamento {
+  id                      String   @id @default(uuid())
+  nombreColor             String
+  codigoHex               String?  @default("#1E1E1E")
+  tipoMaterial            String   @default("PLA") // PLA, PLA Matte, PLA+, PETG, TPU, ABS, Resina
+  marca                   String?  @default("Genérica")
+  formato                 String?  @default("CON_BOBINA") // CON_BOBINA (Con Bobina Reutilizable BR), REFILL (Refill sin bobina)
+  estadoStock             String   @default("ABIERTO") // ABIERTO (En Uso), SELLADO (Cajas Selladas / Reserva), FALTANTE (Por Reponer)
+  numeroBobina            Int?     @default(1) // Ej: Bobina #1, Bobina #2 para instancias independientes
+  porcentajeRestante      Decimal? @default(100.0) @db.Decimal(5, 2) // % restante estimado
+  stockBobinas            Decimal  @default(1.0) @db.Decimal(10, 2)
+  stockGramos             Decimal? @default(1000.0) @db.Decimal(10, 2)
+  pesoInicialGramos       Decimal? @default(1000.0) @db.Decimal(10, 2)
+  cajasSelladasDisponibles Int?    @default(1) // Conteo de cajas selladas en reserva
+  cantidadCompradaRef     Decimal? @default(1.0) @db.Decimal(10, 2)
+  costoBobinaRef          Decimal? @default(0.00) @db.Decimal(10, 2)
+  ubicacion               String?  @default("Taller Principal")
+  temperaturaImpresion    String?
+  temperaturaCama         String?
+  estado                  String   @default("DISPONIBLE") // DISPONIBLE, BAJO_STOCK, AGOTADO
+  alertaCritica           Boolean  @default(false)
+  notaProduccion          String?
+  notas                   String?
+  activo                  Boolean  @default(true)
+  ventas                  Venta[]
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model ConsumibleTaller {
+  id        String   @id @default(uuid())
+  nombre    String   @unique
+  categoria String   @default("POSTPROCESADO") // POSTPROCESADO, SEGURIDAD, ADHESION, HERRAMIENTA
+  estado    String   @default("DISPONIBLE") // DISPONIBLE, BAJO_STOCK, AGOTADO
+  cantidad  String?  @default("1 ud")
+  notas     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Producto {
   id               String   @id @default(uuid())
   lineaCategoria   String
@@ -80,27 +120,31 @@ model Producto {
 }
 
 model Venta {
-  id                     String      @id @default(uuid())
-  fecha                  DateTime    @default(now())
+  id                     String               @id @default(uuid())
+  fecha                  DateTime             @default(now())
   cliente                String
   productoId             String
-  producto               Producto    @relation(fields: [productoId], references: [id])
+  producto               Producto             @relation(fields: [productoId], references: [id])
   nombreProductoSnapshot String?
-  costoBaseSnapshot      Decimal?    @default(0.00) @db.Decimal(10, 2)
-  cantidad               Int         @default(1)
-  tipoPrecio             TipoPrecio  @default(COMUNIDAD)
-  precioUnitario         Decimal     @db.Decimal(10, 2)
-  total                  Decimal     @db.Decimal(10, 2)
-  montoPagado            Decimal     @db.Decimal(10, 2)
-  saldoPendiente         Decimal     @db.Decimal(10, 2)
-  costoPackaging         Decimal?    @default(0.00) @db.Decimal(10, 2)
-  porcentajeAdicional    Decimal?    @default(0.00) @db.Decimal(5, 2)
-  estado                 EstadoVenta @default(PENDIENTE)
+  costoBaseSnapshot      Decimal?             @default(0.00) @db.Decimal(10, 2)
+  colorFilamentoId       String?
+  colorFilamento         InventarioFilamento? @relation(fields: [colorFilamentoId], references: [id])
+  personalizacion        String?
+  gramosConsumidos       Decimal?             @default(0.00) @db.Decimal(10, 2) // Gramos descontados de la bobina
+  cantidad               Int                  @default(1)
+  tipoPrecio             TipoPrecio           @default(COMUNIDAD)
+  precioUnitario         Decimal              @db.Decimal(10, 2)
+  total                  Decimal              @db.Decimal(10, 2)
+  montoPagado            Decimal              @db.Decimal(10, 2)
+  saldoPendiente         Decimal              @db.Decimal(10, 2)
+  costoPackaging         Decimal?             @default(0.00) @db.Decimal(10, 2)
+  porcentajeAdicional    Decimal?             @default(0.00) @db.Decimal(5, 2)
+  estado                 EstadoVenta          @default(PENDIENTE)
   diaEntregaPrometida    String?
   destinoEnvio           String?
   canalVenta             String?
-  createdAt              DateTime    @default(now())
-  updatedAt              DateTime    @updatedAt
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
 }
 
 model Ingreso {

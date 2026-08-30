@@ -29,7 +29,9 @@ import {
   ArrowDownRight,
   Minus,
   Trash2,
-  Calendar
+  Calendar,
+  Palette,
+  ShoppingBag
 } from 'lucide-react'
 import { 
   updateEstadoVenta, 
@@ -45,6 +47,19 @@ import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 
+export interface FilamentoOption {
+  id: string
+  nombreColor: string
+  numeroBobina?: number
+  codigoHex: string
+  tipoMaterial: string
+  marca: string
+  stockGramos?: number
+  stockBobinas: number
+  estado: string
+  alertaCritica?: boolean
+}
+
 export interface VentaItem {
   id: string
   fecha: string
@@ -52,6 +67,19 @@ export interface VentaItem {
   productoId: string
   costoBaseSnapshot?: number
   nombreProductoSnapshot?: string
+  colorFilamentoId?: string | null
+  personalizacion?: string | null
+  gramosConsumidos?: number
+  colorFilamento?: {
+    id: string
+    nombreColor: string
+    numeroBobina?: number
+    codigoHex: string
+    tipoMaterial: string
+    marca: string
+    stockGramos?: number
+    stockBobinas: number
+  } | null
   cantidad: number
   tipoPrecio: TipoPrecio
   precioUnitario: number
@@ -92,6 +120,7 @@ interface VentasClientProps {
   ventas: VentaItem[]
   productos?: ProductoOption[]
   promedioPackaging?: number
+  filamentos?: FilamentoOption[]
 }
 
 const ITEMS_PER_PAGE = 5
@@ -99,7 +128,8 @@ const ITEMS_PER_PAGE = 5
 export function VentasClient({ 
   ventas, 
   productos = [], 
-  promedioPackaging = 9.80 
+  promedioPackaging = 9.80,
+  filamentos = [] 
 }: VentasClientProps) {
   const router = useRouter()
   const [items, setItems] = useState<VentaItem[]>(ventas)
@@ -118,7 +148,9 @@ export function VentasClient({
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
   const [openAbonoModal, setOpenAbonoModal] = useState(false)
   const [openCreateModal, setOpenCreateModal] = useState(false)
+  const [isChangingColor, setIsChangingColor] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isLiquidating, setIsLiquidating] = useState(false)
 
   // Abono form state
   const [montoAbono, setMontoAbono] = useState('')
@@ -126,7 +158,7 @@ export function VentasClient({
   // Create order form state
   const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
   const [formCliente, setFormCliente] = useState('')
-  const [formProductoId, setFormProductoId] = useState(productos[0]?.id || '')
+  const [formProductoId, setFormProductoId] = useState('')
   const [formCantidad, setFormCantidad] = useState('1')
   const [formTipoPrecio, setFormTipoPrecio] = useState<TipoPrecio>('COMUNIDAD')
   const [formPrecioBase, setFormPrecioBase] = useState('0')
@@ -141,6 +173,12 @@ export function VentasClient({
   const [incluirPackaging, setIncluirPackaging] = useState(false)
   const [montoPackagingBase, setMontoPackagingBase] = useState(promedioPackaging.toFixed(2))
   const [porcentajePackaging, setPorcentajePackaging] = useState('10')
+
+  // Personalización & Filament Color States
+  const [incluirPersonalizacion, setIncluirPersonalizacion] = useState(false)
+  const [formColorFilamentoId, setFormColorFilamentoId] = useState('')
+  const [formPersonalizacion, setFormPersonalizacion] = useState('')
+  const [formGramosConsumidos, setFormGramosConsumidos] = useState('100')
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -208,6 +246,23 @@ export function VentasClient({
     { id: 'COMUNIDAD', label: '3. Precio Comunidad', sublabel: 'Precio seguidores / comunidad', badge: '80% margen' },
     { id: 'PERSONALIZADO', label: '4. Personalizado', sublabel: 'Monto ingresado manualmente' },
   ], [])
+
+  const filamentosComboboxItems: ComboboxItem[] = useMemo(() => {
+    return [
+      { id: '', label: '(Sin color específico)', sublabel: 'Color no especificado' },
+      ...filamentos.map(f => ({
+        id: f.id,
+        label: f.nombreColor,
+        sublabel: 'Color disponible en taller',
+        badge: '🟢 Disponible',
+        icon: Palette
+      }))
+    ]
+  }, [filamentos])
+
+  const selectedFilamento = useMemo(() => {
+    return filamentos.find(f => f.id === formColorFilamentoId)
+  }, [filamentos, formColorFilamentoId])
 
   const pagoFilterComboboxItems: ComboboxItem[] = useMemo(() => [
     { id: 'TODOS', label: 'Todos los Pagos' },
@@ -311,6 +366,7 @@ export function VentasClient({
   // Open Details Modal
   const handleOpenDetails = (v: VentaItem) => {
     setSelectedVenta(v)
+    setIsChangingColor(false)
     setOpenDetailsModal(true)
   }
 
@@ -425,6 +481,58 @@ export function VentasClient({
     }
   }
 
+  // Assign or Change Color in Order Details
+  const handleAsignarColorVenta = async (ventaId: string, colorId: string | null) => {
+    try {
+      const updated = await updateVenta(ventaId, { colorFilamentoId: colorId })
+      setItems(prev => prev.map(v => v.id === ventaId ? {
+        ...v,
+        colorFilamentoId: colorId,
+        colorFilamento: updated.colorFilamento
+      } : v))
+
+      if (selectedVenta && selectedVenta.id === ventaId) {
+        setSelectedVenta(prev => prev ? {
+          ...prev,
+          colorFilamentoId: colorId,
+          colorFilamento: updated.colorFilamento
+        } : null)
+      }
+
+      if (colorId) {
+        const fil = filamentos.find(f => f.id === colorId)
+        toast.success(`Color asignado: "${fil?.nombreColor || 'Color actualizado'}"`)
+      } else {
+        toast.info('Color desasignado del pedido')
+      }
+      router.refresh()
+    } catch (err: any) {
+      toast.error('Error al actualizar color: ' + err.message)
+    }
+  }
+
+  // Update Personalization in Order Details
+  const handleUpdatePersonalizacion = async (ventaId: string, personalizacionText: string) => {
+    try {
+      const updated = await updateVenta(ventaId, { personalizacion: personalizacionText.trim() || null })
+      setItems(prev => prev.map(v => v.id === ventaId ? {
+        ...v,
+        personalizacion: updated.personalizacion
+      } : v))
+
+      if (selectedVenta && selectedVenta.id === ventaId) {
+        setSelectedVenta(prev => prev ? {
+          ...prev,
+          personalizacion: updated.personalizacion
+        } : null)
+      }
+      toast.success('Personalización guardada')
+      router.refresh()
+    } catch (err: any) {
+      toast.error('Error al actualizar personalización: ' + err.message)
+    }
+  }
+
   // Open Create Modal
   const handleOpenCreate = () => {
     const firstProd = productos[0]
@@ -444,6 +552,9 @@ export function VentasClient({
     setIncluirPackaging(false)
     setMontoPackagingBase(promedioPackaging.toFixed(2))
     setPorcentajePackaging('10')
+    setIncluirPersonalizacion(false)
+    setFormColorFilamentoId('')
+    setFormPersonalizacion('')
     setOpenCreateModal(true)
   }
 
@@ -470,6 +581,9 @@ export function VentasClient({
         fecha: formFecha || undefined,
         cliente: formCliente.trim(),
         productoId: formProductoId,
+        colorFilamentoId: formColorFilamentoId ? formColorFilamentoId : null,
+        personalizacion: formPersonalizacion.trim() ? formPersonalizacion.trim() : null,
+        gramosConsumidos: 0,
         cantidad: parseInt(formCantidad) || 1,
         tipoPrecio: formTipoPrecio,
         precioUnitario: parseFloat(formPrecioUnitario) || 0,
@@ -483,8 +597,18 @@ export function VentasClient({
       })
 
       const prod = productos.find(p => p.id === formProductoId)
+      const selectedFil = filamentos.find(f => f.id === formColorFilamentoId)
+
       const fullCreated = {
         ...created,
+        colorFilamento: created.colorFilamento || (selectedFil ? {
+          id: selectedFil.id,
+          nombreColor: selectedFil.nombreColor,
+          codigoHex: selectedFil.codigoHex,
+          tipoMaterial: selectedFil.tipoMaterial,
+          marca: selectedFil.marca,
+          stockBobinas: selectedFil.stockBobinas
+        } : null),
         producto: prod || {
           id: formProductoId,
           nombreModelo: 'Producto',
@@ -720,6 +844,20 @@ export function VentasClient({
                     <TableCell className="px-3 py-3">
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-[#241C15]">{v.producto.nombreModelo}</span>
+                        
+                        {/* Filamento asignado */}
+                        {v.colorFilamento && (
+                          <div className="inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] shadow-2xs self-start">
+                            <span 
+                              className="h-2.5 w-2.5 rounded-full border border-black/20 inline-block flex-shrink-0 shadow-xs"
+                              style={{ backgroundColor: v.colorFilamento.codigoHex }}
+                            />
+                            <span className="text-xs font-bold text-[#241C15]">
+                              {v.colorFilamento.nombreColor}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="flex items-center gap-1.5 text-[11px] text-[#75695D] flex-wrap mt-0.5">
                           <span>{v.cantidad}x • {v.tipoPrecio}</span>
                           {v.costoPackaging && v.costoPackaging > 0 ? (
@@ -890,148 +1028,189 @@ export function VentasClient({
       {/* MODAL: FICHA Y GESTIÓN COMPLETA DEL PEDIDO                                */}
       {/* ========================================================================= */}
       <Dialog open={openDetailsModal} onOpenChange={setOpenDetailsModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[560px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[540px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
           {selectedVenta && (
             <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-              {/* Modal Header Fijo */}
-              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                    <ShoppingCart className="h-5 w-5 stroke-[2.5]" />
+              {/* 1. Cabecera Limpia & Contextual */}
+              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between gap-3 flex-shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] flex items-center justify-center text-[#A36F4C] flex-shrink-0 shadow-2xs">
+                    <ShoppingBag className="h-5 w-5 stroke-[2.2]" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <Badge variant="outline" className="text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] text-[10px] font-bold">
-                        {selectedVenta.producto.lineaCategoria}
-                      </Badge>
-                      {selectedVenta.saldoPendiente <= 0 ? (
-                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] gap-1 font-bold">
-                          <Check className="h-3 w-3 stroke-[2.5]" />
-                          100% Pagado
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold">
-                          <Clock className="h-2.5 w-2.5" />
-                          Saldo: {formatCurrency(selectedVenta.saldoPendiente)}
-                        </Badge>
-                      )}
-                    </div>
-                    <DialogTitle className="text-lg font-bold text-[#241C15] tracking-tight">
+                  <div className="min-w-0">
+                    <DialogTitle className="text-base sm:text-lg font-black text-[#241C15] tracking-tight truncate">
                       Pedido de {selectedVenta.cliente}
                     </DialogTitle>
-                    <DialogDescription className="text-xs text-[#75695D]">
-                      {selectedVenta.producto.nombreModelo} • {selectedVenta.cantidad} {selectedVenta.cantidad === 1 ? 'unidad' : 'unidades'} ({selectedVenta.tipoPrecio})
+                    <DialogDescription className="text-xs text-[#75695D] font-medium truncate mt-0.5">
+                      {selectedVenta.producto.nombreModelo} • {selectedVenta.cantidad} {selectedVenta.cantidad === 1 ? 'un.' : 'un.'} • Nivel {selectedVenta.tipoPrecio}
                     </DialogDescription>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOpenDetailsModal(false)}
-                  className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {selectedVenta.saldoPendiente > 0 ? (
+                    <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold font-mono px-2.5 py-1 flex items-center gap-1.5 shadow-2xs">
+                      <Clock className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>Pendiente: {formatCurrency(selectedVenta.saldoPendiente)}</span>
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold font-mono px-2.5 py-1 flex items-center gap-1.5 shadow-2xs">
+                      <Check className="h-3.5 w-3.5 stroke-[2.5] flex-shrink-0" />
+                      <span>Pagado al 100%</span>
+                    </Badge>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setOpenDetailsModal(false)}
+                    className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-full hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                    aria-label="Cerrar modal"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
-                {/* Fecha del Pedido modificable */}
-                <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-[#A36F4C]" />
-                    <span className="font-bold text-[#241C15]">Fecha de Venta:</span>
-                  </div>
-                  <input
-                    type="date"
-                    value={selectedVenta.fecha ? new Date(selectedVenta.fecha).toISOString().split('T')[0] : ''}
-                    onChange={(e) => handleUpdateFechaVenta(selectedVenta.id, e.target.value)}
-                    className="bg-[#FFFFFF] border border-[#DCD3C6] text-[#241C15] font-mono text-xs font-bold rounded-lg px-2.5 py-1 focus:outline-none focus:border-[#A36F4C] cursor-pointer"
-                    title="Modificar fecha del pedido"
-                  />
-                </div>
-
-                {/* Resumen Financiero */}
-                <div className="grid grid-cols-3 gap-3 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
-                  <div>
-                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Total Pedido</span>
-                    <div className="text-lg font-extrabold text-[#241C15] font-mono mt-0.5">
-                      {formatCurrency(selectedVenta.total)}
+              {/* 2. Cuerpo del Modal */}
+              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto max-h-[calc(90dvh-130px)]">
+                {/* Tarjeta Resumen Financiero (Compact Live Banner) */}
+                <div className="bg-[#F4EFEA] border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-4 shadow-2xs">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 text-left items-center">
+                    <div>
+                      <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">Total Pedido</span>
+                      <div className="text-sm sm:text-base font-extrabold text-[#241C15] font-mono mt-0.5">
+                        {formatCurrency(selectedVenta.total)}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#1E5E3A] uppercase font-bold">Monto Pagado</span>
-                    <div className="text-lg font-extrabold text-[#1E5E3A] font-mono mt-0.5">
-                      {formatCurrency(selectedVenta.montoPagado)}
+                    <div>
+                      <span className="text-[11px] font-bold text-[#1E5E3A] uppercase tracking-wider block">Monto Pagado</span>
+                      <div className="text-sm sm:text-base font-semibold text-[#1E5E3A] font-mono mt-0.5">
+                        {formatCurrency(selectedVenta.montoPagado)}
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-[#8C6D1F] uppercase font-bold">Saldo Pendiente</span>
-                    <div className="text-lg font-extrabold text-[#8C6D1F] font-mono mt-0.5">
-                      {formatCurrency(selectedVenta.saldoPendiente)}
+                    <div>
+                      <span className="text-[11px] font-bold text-[#A36F4C] uppercase tracking-wider block">Saldo Pendiente</span>
+                      <div className="text-lg sm:text-xl font-black text-[#A36F4C] font-mono mt-0.5">
+                        {formatCurrency(selectedVenta.saldoPendiente)}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Prorrateos y Margen Registrado */}
-                {(selectedVenta.costoPackaging || selectedVenta.porcentajeAdicional) ? (
-                  <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] text-xs space-y-1">
-                    <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
-                      Desglose de Prorrateo & Margen
+                {/* Selector de Color Optimizado & Minimalista (Reemplazo de la cuadrícula gigante) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider flex items-center gap-1.5">
+                      <Palette className="h-3.5 w-3.5 text-[#A36F4C]" />
+                      Color de Filamento
                     </span>
-                    <div className="flex items-center gap-4 text-[#241C15]">
-                      {selectedVenta.costoPackaging ? (
-                        <span>Prorrateo Packaging: <strong className="text-[#8C6D1F]">{formatCurrency(selectedVenta.costoPackaging)}</strong> / ud</span>
-                      ) : null}
-                      {selectedVenta.porcentajeAdicional ? (
-                        <span>Margen Adicional: <strong className="text-[#A36F4C]">+{selectedVenta.porcentajeAdicional}%</strong></span>
-                      ) : null}
-                    </div>
+                    {selectedVenta.colorFilamento && (
+                      <button
+                        type="button"
+                        onClick={() => handleAsignarColorVenta(selectedVenta.id, null)}
+                        className="text-[11px] text-[#A34335] hover:underline font-semibold cursor-pointer"
+                      >
+                        Quitar color
+                      </button>
+                    )}
                   </div>
-                ) : null}
 
-                {/* Datos de Entrega y Envío */}
-                <div className="space-y-2 p-3.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] text-xs">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#75695D] block mb-1">
-                    Logística & Entrega
-                  </span>
-                  <div className="grid grid-cols-2 gap-2 text-[#241C15]">
-                    <div>
-                      <span className="text-[#75695D] block text-[11px]">Canal de Venta:</span>
-                      <span className="font-semibold">{selectedVenta.canalVenta || 'Directo'}</span>
+                  {/* Vista Activa */}
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5]">
+                    <div className="flex items-center gap-2.5">
+                      <div 
+                        className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0"
+                        style={{ backgroundColor: selectedVenta.colorFilamento?.codigoHex || '#DCD3C6' }}
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-[#241C15] block">
+                          {selectedVenta.colorFilamento ? selectedVenta.colorFilamento.nombreColor : 'Sin color asignado'}
+                        </span>
+                        <span className={`text-[10px] font-semibold ${selectedVenta.colorFilamento ? 'text-[#1E5E3A]' : 'text-[#75695D]'}`}>
+                          {selectedVenta.colorFilamento ? '🟢 Color asignado' : '⚪ Opcional para producción'}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[#75695D] block text-[11px]">Destino de Envío:</span>
-                      <span className="font-semibold">{selectedVenta.destinoEnvio || 'Recojo en taller'}</span>
-                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsChangingColor(prev => !prev)}
+                      className="text-xs font-bold text-[#633E20] bg-white hover:bg-[#F4EFEA] border border-[#D4BEA7] px-2.5 py-1 rounded-lg transition-colors cursor-pointer shadow-2xs"
+                    >
+                      {isChangingColor ? 'Ocultar lista' : selectedVenta.colorFilamento ? 'Cambiar color' : 'Asignar color'}
+                    </button>
                   </div>
-                  {selectedVenta.diaEntregaPrometida && (
-                    <div className="pt-1 text-[#241C15]">
-                      <span className="text-[#75695D] block text-[11px]">Promesa de Entrega:</span>
-                      <span className="font-bold text-[#A36F4C]">{selectedVenta.diaEntregaPrometida}</span>
+
+                  {/* Swatches Horizontales compactos al hacer clic en Cambiar Color */}
+                  {isChangingColor && (
+                    <div className="p-3 rounded-xl border border-[#E2D9CC] bg-white shadow-xs space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <span className="text-[10px] text-[#75695D] font-medium block">
+                        Toca el color disponible en taller:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-0.5">
+                        {filamentos.map(f => {
+                          const isSelected = selectedVenta.colorFilamento?.id === f.id || selectedVenta.colorFilamento?.nombreColor === f.nombreColor
+                          return (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => {
+                                handleAsignarColorVenta(selectedVenta.id, isSelected ? null : f.id)
+                                setIsChangingColor(false)
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#EFE5D8] text-[#633E20] border-[#A36F4C] ring-1 ring-[#A36F4C] shadow-2xs'
+                                  : 'bg-[#FAF8F5] text-[#241C15] border-[#E2D9CC] hover:bg-white'
+                              }`}
+                            >
+                              <span 
+                                className="w-2.5 h-2.5 rounded-full border border-black/15 flex-shrink-0 shadow-xs"
+                                style={{ backgroundColor: f.codigoHex }}
+                              />
+                              <span>{f.nombreColor}</span>
+                              {isSelected && <Check className="h-3 w-3 text-[#633E20] stroke-[2.5]" />}
+                            </button>
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* Cambiar Estado del Pedido */}
+                {/* Estado del Pedido & Fecha */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                    Cambiar Estado del Pedido
-                  </Label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider">
+                      Estado del Pedido
+                    </span>
+                    <div className="flex items-center gap-1 text-[11px] text-[#75695D]">
+                      <Calendar className="h-3 w-3 text-[#A36F4C]" />
+                      <input
+                        type="date"
+                        value={selectedVenta.fecha ? new Date(selectedVenta.fecha).toISOString().split('T')[0] : ''}
+                        onChange={(e) => handleUpdateFechaVenta(selectedVenta.id, e.target.value)}
+                        className="bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15] font-mono text-[11px] font-semibold rounded-lg px-2 py-0.5 focus:outline-none focus:border-[#A36F4C] cursor-pointer"
+                        title="Modificar fecha del pedido"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
                     {(['PENDIENTE', 'EN_PRODUCCION', 'ENTREGADO', 'CANCELADO'] as EstadoVenta[]).map((est) => (
                       <button
                         key={est}
                         type="button"
                         onClick={() => handleCambiarEstado(selectedVenta.id, est)}
-                        className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer active:scale-[0.98] ${
+                        className={`py-1.5 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer active:scale-[0.98] text-center ${
                           selectedVenta.estado === est
                             ? est === 'ENTREGADO'
-                              ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-sm'
+                              ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs'
                               : est === 'EN_PRODUCCION'
-                              ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-sm'
+                              ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-xs'
                               : est === 'PENDIENTE'
-                              ? 'bg-[#8C6D1F] text-white border-[#8C6D1F] shadow-sm'
+                              ? 'bg-[#8C6D1F] text-white border-[#8C6D1F] shadow-xs'
                               : 'bg-[#A34335] text-white border-[#A34335]'
-                            : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]'
+                            : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-white'
                         }`}
                       >
                         {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'Producción' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
@@ -1039,59 +1218,65 @@ export function VentasClient({
                     ))}
                   </div>
                 </div>
+
+                {/* Logística & Packaging (Si Aplica) */}
+                {(selectedVenta.canalVenta || selectedVenta.destinoEnvio || (selectedVenta.costoPackaging && selectedVenta.costoPackaging > 0)) && (
+                  <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-[#75695D] text-[11px]">
+                      <span>Canal: <strong className="text-[#241C15]">{selectedVenta.canalVenta || 'Directo'}</strong></span>
+                      <span>Envío: <strong className="text-[#241C15]">{selectedVenta.destinoEnvio || 'Taller'}</strong></span>
+                      {selectedVenta.costoPackaging && selectedVenta.costoPackaging > 0 ? (
+                        <span>Pack: <strong className="text-[#8C6D1F]">+{formatCurrency(selectedVenta.costoPackaging)}</strong></span>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Botones de Gestión de Pago y Acciones Fijo */}
-              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
-                {/* Botón de eliminar en el modal */}
+              {/* 3. Footer & Acciones de Cobranza Claras */}
+              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FAF8F5] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
+                {/* Izquierda: Botón destructivo */}
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => handleDeleteVenta(selectedVenta.id, selectedVenta.cliente)}
                   disabled={deletingId === selectedVenta.id}
-                  className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs font-bold rounded-xl cursor-pointer self-start sm:self-auto active:scale-[0.98]"
+                  className="text-[#A34335] hover:text-red-700 hover:bg-rose-50 text-xs font-semibold rounded-xl cursor-pointer self-start sm:self-auto h-9 px-3"
                 >
-                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                   Eliminar Pedido
                 </Button>
 
-                <div className="flex flex-wrap items-center justify-end gap-2">
+                {/* Derecha: Grupo de acciones primarias */}
+                <div className="flex items-center justify-end gap-2">
                   {selectedVenta.saldoPendiente > 0 ? (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <>
                       <Button
                         type="button"
                         onClick={() => {
                           setMontoAbono(selectedVenta.saldoPendiente.toString())
                           setOpenAbonoModal(true)
                         }}
-                        className="bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-xl cursor-pointer shadow-sm active:scale-[0.98]"
+                        className="bg-white hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] text-xs font-bold rounded-xl cursor-pointer shadow-2xs h-9 px-3.5 active:scale-[0.98]"
                       >
-                        <DollarSign className="h-4 w-4 mr-1" />
+                        <DollarSign className="h-3.5 w-3.5 mr-1 text-[#A36F4C]" />
                         Registrar Abono
                       </Button>
                       <Button
                         type="button"
                         onClick={() => handleLiquidarTotal(selectedVenta.id)}
-                        className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm active:scale-[0.98]"
+                        className="bg-[#1E5E3A] hover:bg-[#164B2E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs h-9 px-4 active:scale-[0.98]"
                       >
-                        <Check className="h-4 w-4 mr-1 stroke-[2.5]" />
+                        <Check className="h-3.5 w-3.5 mr-1 stroke-[2.5]" />
                         Liquidar 100%
                       </Button>
-                    </div>
+                    </>
                   ) : (
-                    <span className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
-                      <CheckCircle2 className="h-4 w-4" /> Pago Completado
-                    </span>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] text-xs font-bold font-mono">
+                      <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>Pagado al 100%</span>
+                    </div>
                   )}
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setOpenDetailsModal(false)}
-                    className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
-                  >
-                    Cerrar
-                  </Button>
                 </div>
               </div>
             </div>
@@ -1433,7 +1618,61 @@ export function VentasClient({
               )}
             </div>
 
-              {/* Precio Unitario Final Aplicado */}
+            {/* SECCIÓN: COLOR DE FILAMENTO (OPCIONAL - SOLO CLIC) */}
+            <div className="p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-[#A36F4C]" />
+                  <span className="text-xs font-bold text-[#241C15]">
+                    Color de Filamento (Opcional)
+                  </span>
+                </div>
+                {formColorFilamentoId && (
+                  <button
+                    type="button"
+                    onClick={() => setFormColorFilamentoId('')}
+                    className="text-[11px] text-[#A34335] hover:underline font-semibold cursor-pointer"
+                  >
+                    Quitar selección
+                  </button>
+                )}
+              </div>
+
+              {/* Grid de Chips de Colores Disponibles - Solo Clic */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] text-[#75695D] font-medium block">
+                  Toca el color que necesitas para este pedido:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
+                  {filamentos.map(f => {
+                    const isSelected = formColorFilamentoId === f.id
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setFormColorFilamentoId(isSelected ? '' : f.id)}
+                        className={`flex items-center gap-2 p-2 rounded-xl border text-xs font-bold transition-all cursor-pointer text-left ${
+                          isSelected
+                            ? 'bg-[#EFE5D8] text-[#633E20] border-[#A36F4C] ring-2 ring-[#A36F4C] shadow-2xs'
+                            : 'bg-white text-[#241C15] border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                        }`}
+                      >
+                        <span 
+                          className="w-3.5 h-3.5 rounded-full border border-black/15 flex-shrink-0 shadow-xs"
+                          style={{ backgroundColor: f.codigoHex }}
+                        />
+                        <span className="truncate flex-1">{f.nombreColor}</span>
+                        {isSelected && (
+                          <Check className="h-3.5 w-3.5 text-[#633E20] flex-shrink-0" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Precio Unitario Final Aplicado */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Precio Unitario Final (S/) *</Label>

@@ -21,7 +21,8 @@ import {
   FolderTree,
   Landmark,
   FlaskConical,
-  Sparkles
+  Sparkles,
+  Palette
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -38,6 +39,7 @@ export function AppShell({ children }: AppShellProps) {
   const isCatalogoSection = pathname.startsWith('/catalogo')
   const isEgresosSection = pathname.startsWith('/finanzas/egresos') || pathname.startsWith('/finanzas/tags')
   const isPruebasSection = pathname.startsWith('/finanzas/proyecciones') || pathname.startsWith('/finanzas/cierres') || pathname.startsWith('/finanzas/caja-chica')
+  const isInventarioSection = pathname.startsWith('/inventario')
 
   const [finanzasOpen, setFinanzasOpen] = useState(true)
   const [egresosOpen, setEgresosOpen] = useState(true)
@@ -53,6 +55,7 @@ export function AppShell({ children }: AppShellProps) {
   const getPageTitle = () => {
     if (pathname === '/') return 'Dashboard General'
     if (pathname.startsWith('/ventas')) return 'Ventas y Pedidos'
+    if (pathname.startsWith('/inventario')) return 'Inventario de Filamentos'
     if (pathname === '/finanzas/flujo-caja') return 'Flujo de Caja'
     if (pathname === '/finanzas/ingresos') return 'Ingresos'
     if (pathname === '/finanzas/egresos') return 'Registro de Egresos'
@@ -94,6 +97,21 @@ export function AppShell({ children }: AppShellProps) {
       >
         <ShoppingCart className="h-4 w-4 flex-shrink-0 text-[#633E20]" />
         <span>Ventas y Pedidos</span>
+      </Link>
+
+      {/* 3. Inventario */}
+      <Link
+        href="/inventario"
+        onClick={() => isMobile && setMobileMenuOpen(false)}
+        className={cn(
+          'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 min-h-[44px]',
+          isInventarioSection
+            ? 'bg-[#EFE5D8] text-[#633E20] font-bold shadow-sm border border-[#D4BEA7]'
+            : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+        )}
+      >
+        <Palette className="h-4 w-4 flex-shrink-0 text-[#A36F4C]" />
+        <span>Inventario</span>
       </Link>
 
       {/* 3. Finanzas */}

@@ -7,71 +7,86 @@ import { revalidatePath } from 'next/cache'
 function safeRevalidate() {
   try {
     revalidatePath('/ventas')
-    revalidatePath('/finanzas')
     revalidatePath('/finanzas/flujo-caja')
-    revalidatePath('/finanzas/ingresos')
-    revalidatePath('/finanzas/proyecciones')
+    revalidatePath('/finanzas/balance')
+    revalidatePath('/inventario')
     revalidatePath('/')
   } catch (e) {
     // Ignore outside request store
   }
 }
 
-export async function getPromedioPackaging(): Promise<number> {
-  const packagingExpenses = await prisma.inversion.findMany({
-    where: {
-      OR: [
-        { subcategoria: { contains: 'Embalaje', mode: 'insensitive' } },
-        { subcategoria: { contains: 'Cajas', mode: 'insensitive' } },
-        { itemConcepto: { contains: 'Caja', mode: 'insensitive' } },
-        { itemConcepto: { contains: 'Bolsa', mode: 'insensitive' } },
-        { itemConcepto: { contains: 'Sticker', mode: 'insensitive' } },
-      ]
+function serializeVenta(v: any) {
+  return {
+    id: v.id,
+    fecha: v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha),
+    cliente: v.cliente,
+    productoId: v.productoId,
+    costoBaseSnapshot: v.costoBaseSnapshot != null ? Number(v.costoBaseSnapshot) : (v.producto ? Number(v.producto.costoBase) : 0),
+    nombreProductoSnapshot: v.nombreProductoSnapshot || v.producto?.nombreModelo || '',
+    colorFilamentoId: v.colorFilamentoId || null,
+    personalizacion: v.personalizacion || null,
+    gramosConsumidos: v.gramosConsumidos != null ? Number(v.gramosConsumidos) : 0,
+    cantidad: Number(v.cantidad),
+    tipoPrecio: v.tipoPrecio,
+    precioUnitario: Number(v.precioUnitario),
+    total: Number(v.total),
+    montoPagado: Number(v.montoPagado),
+    saldoPendiente: Number(v.saldoPendiente),
+    costoPackaging: v.costoPackaging != null ? Number(v.costoPackaging) : 0,
+    porcentajeAdicional: v.porcentajeAdicional != null ? Number(v.porcentajeAdicional) : 0,
+    estado: v.estado,
+    diaEntregaPrometida: v.diaEntregaPrometida || null,
+    destinoEnvio: v.destinoEnvio || null,
+    canalVenta: v.canalVenta || null,
+    createdAt: v.createdAt instanceof Date ? v.createdAt.toISOString() : String(v.createdAt),
+    updatedAt: v.updatedAt instanceof Date ? v.updatedAt.toISOString() : String(v.updatedAt),
+    colorFilamento: v.colorFilamento ? {
+      id: v.colorFilamento.id,
+      nombreColor: v.colorFilamento.nombreColor,
+      numeroBobina: v.colorFilamento.numeroBobina || 1,
+      codigoHex: v.colorFilamento.codigoHex || '#1E1E1E',
+      tipoMaterial: v.colorFilamento.tipoMaterial,
+      marca: v.colorFilamento.marca || 'Genérica',
+      stockGramos: v.colorFilamento.stockGramos ? Number(v.colorFilamento.stockGramos) : 0,
+      stockBobinas: Number(v.colorFilamento.stockBobinas)
+    } : null,
+    producto: v.producto ? {
+      id: v.producto.id,
+      lineaCategoria: v.producto.lineaCategoria,
+      nombreModelo: v.producto.nombreModelo,
+      costoBase: Number(v.producto.costoBase),
+      precioAmigos: Number(v.producto.precioAmigos),
+      precioMercado: Number(v.producto.precioMercado),
+      precioComunidad: Number(v.producto.precioComunidad),
+      activo: v.producto.activo,
+      createdAt: v.producto.createdAt instanceof Date ? v.producto.createdAt.toISOString() : String(v.producto.createdAt),
+      updatedAt: v.producto.updatedAt instanceof Date ? v.producto.updatedAt.toISOString() : String(v.producto.updatedAt),
+    } : {
+      id: v.productoId,
+      lineaCategoria: 'General',
+      nombreModelo: v.nombreProductoSnapshot || 'Producto',
+      costoBase: 0,
+      precioAmigos: 0,
+      precioMercado: 0,
+      precioComunidad: 0,
+      activo: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
-  })
-
-  const totalGasto = packagingExpenses.reduce((sum, e) => sum + Number(e.costoTotal), 0)
-  const totalUnidades = packagingExpenses.reduce((sum, e) => sum + (e.cantidad || 1), 0)
-
-  if (totalUnidades > 0) {
-    const prom = totalGasto / totalUnidades
-    return Number(prom.toFixed(2))
   }
-
-  return 10.00
 }
 
 export async function getVentas() {
   const ventas = await prisma.venta.findMany({
     include: {
-      producto: true
+      producto: true,
+      colorFilamento: true
     },
     orderBy: { fecha: 'desc' }
   })
 
-  return ventas.map(v => ({
-    ...v,
-    precioUnitario: Number(v.precioUnitario),
-    total: Number(v.total),
-    montoPagado: Number(v.montoPagado),
-    saldoPendiente: Number(v.saldoPendiente),
-    costoPackaging: v.costoPackaging ? Number(v.costoPackaging) : 0,
-    porcentajeAdicional: v.porcentajeAdicional ? Number(v.porcentajeAdicional) : 0,
-    costoBaseSnapshot: v.costoBaseSnapshot != null ? Number(v.costoBaseSnapshot) : (v.producto ? Number(v.producto.costoBase) : 0),
-    nombreProductoSnapshot: v.nombreProductoSnapshot || v.producto?.nombreModelo || '',
-    fecha: v.fecha.toISOString(),
-    createdAt: v.createdAt.toISOString(),
-    updatedAt: v.updatedAt.toISOString(),
-    producto: {
-      ...v.producto,
-      costoBase: Number(v.producto.costoBase),
-      precioAmigos: Number(v.producto.precioAmigos),
-      precioMercado: Number(v.producto.precioMercado),
-      precioComunidad: Number(v.producto.precioComunidad),
-      createdAt: v.producto.createdAt.toISOString(),
-      updatedAt: v.producto.updatedAt.toISOString(),
-    }
-  }))
+  return ventas.map(serializeVenta)
 }
 
 function parseDateInput(fecha?: string | Date) {
@@ -99,6 +114,9 @@ export async function createVenta(data: {
   montoPagado: number
   costoPackaging?: number
   porcentajeAdicional?: number
+  colorFilamentoId?: string | null
+  personalizacion?: string | null
+  gramosConsumidos?: number | null
   estado: EstadoVenta
   diaEntregaPrometida?: string
   destinoEnvio?: string
@@ -108,7 +126,6 @@ export async function createVenta(data: {
   const total = data.cantidad * data.precioUnitario
   const saldoPendiente = total - data.montoPagado
 
-  // Obtain product to freeze immutable snapshot of base cost and model name
   const producto = await prisma.producto.findUnique({
     where: { id: data.productoId }
   })
@@ -119,6 +136,9 @@ export async function createVenta(data: {
       productoId: data.productoId,
       nombreProductoSnapshot: producto?.nombreModelo || '',
       costoBaseSnapshot: producto?.costoBase || 0,
+      colorFilamentoId: data.colorFilamentoId || null,
+      personalizacion: data.personalizacion || null,
+      gramosConsumidos: data.gramosConsumidos || 0,
       cantidad: data.cantidad,
       tipoPrecio: data.tipoPrecio,
       precioUnitario: data.precioUnitario,
@@ -132,23 +152,59 @@ export async function createVenta(data: {
       destinoEnvio: data.destinoEnvio,
       canalVenta: data.canalVenta,
       fecha: parseDateInput(data.fecha) || new Date(),
+    },
+    include: {
+      producto: true,
+      colorFilamento: true
     }
   })
 
-  safeRevalidate()
+  if (data.colorFilamentoId && data.gramosConsumidos && data.gramosConsumidos > 0) {
+    try {
+      const spool = await prisma.inventarioFilamento.findUnique({
+        where: { id: data.colorFilamentoId }
+      })
+      if (spool) {
+        const currentGramos = spool.stockGramos ? Number(spool.stockGramos) : 0
+        const newGramos = Math.max(0, currentGramos - data.gramosConsumidos)
+        const pesoInicial = spool.pesoInicialGramos ? Number(spool.pesoInicialGramos) : 1000
+        const newPct = Math.min(100, Math.max(0, Number(((newGramos / pesoInicial) * 100).toFixed(0))))
 
-  return {
-    ...venta,
-    precioUnitario: Number(venta.precioUnitario),
-    total: Number(venta.total),
-    montoPagado: Number(venta.montoPagado),
-    saldoPendiente: Number(venta.saldoPendiente),
-    costoPackaging: venta.costoPackaging ? Number(venta.costoPackaging) : 0,
-    porcentajeAdicional: venta.porcentajeAdicional ? Number(venta.porcentajeAdicional) : 0,
-    fecha: venta.fecha.toISOString(),
-    createdAt: venta.createdAt.toISOString(),
-    updatedAt: venta.updatedAt.toISOString(),
+        let estado = 'DISPONIBLE'
+        let alertaCritica = false
+        let notaProduccion = spool.notaProduccion
+
+        if (newGramos <= 0) {
+          estado = 'AGOTADO'
+          alertaCritica = true
+          notaProduccion = `Bobina #${spool.numeroBobina || 1} agotada en producción`
+        } else if (newGramos < 100) {
+          estado = 'BAJO_STOCK'
+          alertaCritica = true
+          notaProduccion = `Alerta: Menos de 100g restantes en Bobina #${spool.numeroBobina || 1} (${newGramos}g restantes)`
+        } else if (newGramos < 250) {
+          estado = 'BAJO_STOCK'
+        }
+
+        await prisma.inventarioFilamento.update({
+          where: { id: data.colorFilamentoId },
+          data: {
+            stockGramos: newGramos,
+            stockBobinas: Number((newGramos / 1000).toFixed(2)),
+            porcentajeRestante: newPct,
+            estado,
+            alertaCritica,
+            notaProduccion,
+          }
+        })
+      }
+    } catch (err) {
+      console.error('Error discounting spool grams:', err)
+    }
   }
+
+  safeRevalidate()
+  return serializeVenta(venta)
 }
 
 export async function updateVenta(id: string, data: {
@@ -160,55 +216,56 @@ export async function updateVenta(id: string, data: {
   montoPagado?: number
   costoPackaging?: number
   porcentajeAdicional?: number
+  colorFilamentoId?: string | null
+  personalizacion?: string | null
+  gramosConsumidos?: number | null
   estado?: EstadoVenta
   diaEntregaPrometida?: string | null
   destinoEnvio?: string | null
   canalVenta?: string | null
   fecha?: string | Date
 }) {
-  const current = await prisma.venta.findUnique({ where: { id }, include: { producto: true } })
+  const current = await prisma.venta.findUnique({
+    where: { id },
+    include: { producto: true }
+  })
   if (!current) throw new Error("Venta no encontrada")
 
   const cantidad = data.cantidad !== undefined ? data.cantidad : current.cantidad
   const precioUnitario = data.precioUnitario !== undefined ? data.precioUnitario : Number(current.precioUnitario)
   const total = cantidad * precioUnitario
+
   const montoPagado = data.montoPagado !== undefined ? data.montoPagado : Number(current.montoPagado)
   const saldoPendiente = Math.max(0, total - montoPagado)
 
-  let productoId = current.productoId
-  let nombreSnapshot = current.nombreProductoSnapshot
+  let newProductoId = current.productoId
   let costoSnapshot = current.costoBaseSnapshot
+  let nombreSnapshot = current.nombreProductoSnapshot
 
   if (data.productoId && data.productoId !== current.productoId) {
-    const newProd = await prisma.producto.findUnique({ where: { id: data.productoId } })
-    if (newProd) {
-      productoId = newProd.id
-      nombreSnapshot = newProd.nombreModelo
-      costoSnapshot = newProd.costoBase
+    const prod = await prisma.producto.findUnique({ where: { id: data.productoId } })
+    if (prod) {
+      newProductoId = prod.id
+      costoSnapshot = prod.costoBase
+      nombreSnapshot = prod.nombreModelo
     }
   }
 
   let newFecha = current.fecha
-  if (data.fecha) {
-    const currentFechaStr = current.fecha.toISOString().split('T')[0]
-    const inputFechaStr = typeof data.fecha === 'string' ? data.fecha.split('T')[0] : data.fecha.toISOString().split('T')[0]
-    if (inputFechaStr !== currentFechaStr) {
-      const [year, month, day] = inputFechaStr.split('-').map(Number)
-      if (year && month && day) {
-        const target = new Date(current.fecha)
-        target.setFullYear(year, month - 1, day)
-        newFecha = target
-      }
-    }
+  if (data.fecha !== undefined) {
+    newFecha = parseDateInput(data.fecha) || current.fecha
   }
 
   const updated = await prisma.venta.update({
     where: { id },
     data: {
       cliente: data.cliente !== undefined ? data.cliente : current.cliente,
-      productoId,
-      nombreProductoSnapshot: nombreSnapshot,
+      productoId: newProductoId,
       costoBaseSnapshot: costoSnapshot,
+      nombreProductoSnapshot: nombreSnapshot,
+      colorFilamentoId: data.colorFilamentoId !== undefined ? data.colorFilamentoId : current.colorFilamentoId,
+      personalizacion: data.personalizacion !== undefined ? data.personalizacion : current.personalizacion,
+      gramosConsumidos: data.gramosConsumidos !== undefined ? data.gramosConsumidos : current.gramosConsumidos,
       cantidad,
       tipoPrecio: data.tipoPrecio !== undefined ? data.tipoPrecio : current.tipoPrecio,
       precioUnitario,
@@ -224,55 +281,26 @@ export async function updateVenta(id: string, data: {
       fecha: newFecha,
     },
     include: {
-      producto: true
+      producto: true,
+      colorFilamento: true
     }
   })
 
   safeRevalidate()
-
-  return {
-    ...updated,
-    precioUnitario: Number(updated.precioUnitario),
-    total: Number(updated.total),
-    montoPagado: Number(updated.montoPagado),
-    saldoPendiente: Number(updated.saldoPendiente),
-    costoPackaging: updated.costoPackaging ? Number(updated.costoPackaging) : 0,
-    porcentajeAdicional: updated.porcentajeAdicional ? Number(updated.porcentajeAdicional) : 0,
-    costoBaseSnapshot: updated.costoBaseSnapshot != null ? Number(updated.costoBaseSnapshot) : (updated.producto ? Number(updated.producto.costoBase) : 0),
-    nombreProductoSnapshot: updated.nombreProductoSnapshot || updated.producto?.nombreModelo || '',
-    fecha: updated.fecha.toISOString(),
-    createdAt: updated.createdAt.toISOString(),
-    updatedAt: updated.updatedAt.toISOString(),
-    producto: {
-      ...updated.producto,
-      costoBase: Number(updated.producto.costoBase),
-      precioAmigos: Number(updated.producto.precioAmigos),
-      precioMercado: Number(updated.producto.precioMercado),
-      precioComunidad: Number(updated.producto.precioComunidad),
-      createdAt: updated.producto.createdAt.toISOString(),
-      updatedAt: updated.producto.updatedAt.toISOString(),
-    }
-  }
+  return serializeVenta(updated)
 }
 
 export async function updateEstadoVenta(id: string, estado: EstadoVenta) {
   const venta = await prisma.venta.update({
     where: { id },
-    data: { estado }
+    data: { estado },
+    include: {
+      producto: true,
+      colorFilamento: true
+    }
   })
   safeRevalidate()
-  return {
-    ...venta,
-    precioUnitario: Number(venta.precioUnitario),
-    total: Number(venta.total),
-    montoPagado: Number(venta.montoPagado),
-    saldoPendiente: Number(venta.saldoPendiente),
-    costoPackaging: venta.costoPackaging ? Number(venta.costoPackaging) : 0,
-    porcentajeAdicional: venta.porcentajeAdicional ? Number(venta.porcentajeAdicional) : 0,
-    fecha: venta.fecha.toISOString(),
-    createdAt: venta.createdAt.toISOString(),
-    updatedAt: venta.updatedAt.toISOString(),
-  }
+  return serializeVenta(venta)
 }
 
 export async function registrarAbono(id: string, montoAbono: number) {
@@ -287,23 +315,15 @@ export async function registrarAbono(id: string, montoAbono: number) {
     data: {
       montoPagado: nuevoMontoPagado,
       saldoPendiente: nuevoSaldo,
+    },
+    include: {
+      producto: true,
+      colorFilamento: true
     }
   })
 
   safeRevalidate()
-
-  return {
-    ...updatedVenta,
-    precioUnitario: Number(updatedVenta.precioUnitario),
-    total: Number(updatedVenta.total),
-    montoPagado: Number(updatedVenta.montoPagado),
-    saldoPendiente: Number(updatedVenta.saldoPendiente),
-    costoPackaging: updatedVenta.costoPackaging ? Number(updatedVenta.costoPackaging) : 0,
-    porcentajeAdicional: updatedVenta.porcentajeAdicional ? Number(updatedVenta.porcentajeAdicional) : 0,
-    fecha: updatedVenta.fecha.toISOString(),
-    createdAt: updatedVenta.createdAt.toISOString(),
-    updatedAt: updatedVenta.updatedAt.toISOString(),
-  }
+  return serializeVenta(updatedVenta)
 }
 
 export async function liquidarSaldoTotal(id: string) {
@@ -315,26 +335,41 @@ export async function liquidarSaldoTotal(id: string) {
     data: {
       montoPagado: venta.total,
       saldoPendiente: 0,
+    },
+    include: {
+      producto: true,
+      colorFilamento: true
     }
   })
 
   safeRevalidate()
-
-  return {
-    ...updatedVenta,
-    precioUnitario: Number(updatedVenta.precioUnitario),
-    total: Number(updatedVenta.total),
-    montoPagado: Number(updatedVenta.montoPagado),
-    saldoPendiente: Number(updatedVenta.saldoPendiente),
-    costoPackaging: updatedVenta.costoPackaging ? Number(updatedVenta.costoPackaging) : 0,
-    porcentajeAdicional: updatedVenta.porcentajeAdicional ? Number(updatedVenta.porcentajeAdicional) : 0,
-    fecha: updatedVenta.fecha.toISOString(),
-    createdAt: updatedVenta.createdAt.toISOString(),
-    updatedAt: updatedVenta.updatedAt.toISOString(),
-  }
+  return serializeVenta(updatedVenta)
 }
 
 export async function deleteVenta(id: string) {
-  await prisma.venta.delete({ where: { id } })
+  await prisma.venta.delete({
+    where: { id }
+  })
   safeRevalidate()
+  return { success: true }
+}
+
+export async function getPromedioPackaging(): Promise<number> {
+  const egresosPackaging = await prisma.inversion.findMany({
+    where: {
+      OR: [
+        { categoria: 'INSUMO' },
+        { subcategoria: { contains: 'packaging', mode: 'insensitive' } },
+        { itemConcepto: { contains: 'bolsa', mode: 'insensitive' } },
+        { itemConcepto: { contains: 'caja', mode: 'insensitive' } },
+        { itemConcepto: { contains: 'packaging', mode: 'insensitive' } },
+        { itemConcepto: { contains: 'embalaje', mode: 'insensitive' } },
+      ]
+    },
+    select: { costoTotal: true }
+  })
+
+  if (egresosPackaging.length === 0) return 1.50
+  const suma = egresosPackaging.reduce((acc, e) => acc + Number(e.costoTotal), 0)
+  return Number((suma / egresosPackaging.length).toFixed(2))
 }

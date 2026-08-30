@@ -16,7 +16,8 @@ import {
   TrendingUp,
   Tag,
   Receipt,
-  FileCheck
+  FileCheck,
+  Palette
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +26,7 @@ export function Sidebar() {
   const isFinanzasSection = pathname.startsWith('/finanzas') || pathname.startsWith('/inversiones')
   const isCatalogoSection = pathname.startsWith('/catalogo')
   const isEgresosSection = pathname.startsWith('/finanzas/egresos') || pathname.startsWith('/finanzas/tags')
+  const isInventarioSection = pathname.startsWith('/inventario')
   
   const [finanzasOpen, setFinanzasOpen] = useState(true)
   const [egresosOpen, setEgresosOpen] = useState(true)
@@ -73,6 +75,20 @@ export function Sidebar() {
         >
           <ShoppingCart className="h-4 w-4" />
           Ventas y Pedidos
+        </Link>
+
+        {/* 3. Inventario de Filamentos */}
+        <Link
+          href="/inventario"
+          className={cn(
+            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+            isInventarioSection
+              ? 'bg-[#EFE5D8] text-[#633E20] font-semibold shadow-sm border border-[#D4BEA7]'
+              : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+          )}
+        >
+          <Palette className="h-4 w-4 text-[#A36F4C]" />
+          Inventario
         </Link>
 
         {/* 3. Finanzas con Subdivisiones */}
