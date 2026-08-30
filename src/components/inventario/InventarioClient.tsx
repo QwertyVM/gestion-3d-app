@@ -29,6 +29,7 @@ import {
   ColorFilamentoItem, 
   moverEstadoColor, 
   actualizarGramosColor,
+  actualizarRollosColor,
   agregarNuevoColor, 
   eliminarColor, 
   resetColoresTaller 
@@ -75,6 +76,7 @@ export function InventarioClient({
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoHex, setNuevoHex] = useState('#18181B')
   const [nuevoEstado, setNuevoEstado] = useState<'DISPONIBLE' | 'RESTOCK'>('DISPONIBLE')
+  const [nuevoRollos, setNuevoRollos] = useState('1')
   const [nuevoGramos, setNuevoGramos] = useState('1000')
   const [nuevaNota, setNuevaNota] = useState('')
 
@@ -200,13 +202,18 @@ export function InventarioClient({
     e.preventDefault()
     if (!nuevoNombre.trim()) return
 
-    const gNum = nuevoEstado === 'DISPONIBLE' ? parseInt(nuevoGramos || '1000', 10) : 0
+    const rollosNum = Math.max(1, parseInt(nuevoRollos || '1', 10))
+    const totalGramosCapacidad = rollosNum * 1000
+    const gNum = nuevoEstado === 'DISPONIBLE' 
+      ? Math.min(totalGramosCapacidad, Math.max(0, parseInt(nuevoGramos || `${totalGramosCapacidad}`, 10))) 
+      : 0
 
     try {
       const created = await agregarNuevoColor({
         nombreColor: nuevoNombre.trim(),
         codigoHex: nuevoHex,
         estado: nuevoEstado,
+        rollos: rollosNum,
         stockGramos: gNum,
         nota: nuevaNota.trim() || undefined
       })
@@ -217,9 +224,10 @@ export function InventarioClient({
         setRestock(prev => [created, ...prev])
       }
 
-      toast.success(`"${created.nombreColor}" agregado con éxito`)
+      toast.success(`"${created.nombreColor}" agregado con ${rollosNum} ${rollosNum === 1 ? 'rollo' : 'rollos'} (${totalGramosCapacidad.toLocaleString()}g total)`)
       setNuevoNombre('')
       setNuevaNota('')
+      setNuevoRollos('1')
       setNuevoGramos('1000')
       setOpenAddModal(false)
     } catch (e: any) {
@@ -240,9 +248,82 @@ export function InventarioClient({
     }
   }
 
+  // Quick Rollos Adjust
+  const handleAjustarRollos = async (item: ColorFilamentoItem, delta: number) => {
+    const prevRollos = item.rollos || 1
+    const nuevosRollos = Math.max(1, Math.min(20, prevRollos + delta))
+    const nuevoTotal = nuevosRollos * 1000
+    const prevGramos = item.stockGramos || 1000
+
+    let nuevosGramos = prevGramos
+    if (nuevosRollos > prevRollos) {
+      // Al aumentar, agrega exactamente de 1000 g en 1000 g
+      nuevosGramos = prevGramos + ((nuevosRollos - prevRollos) * 1000)
+    } else if (nuevosRollos < prevRollos) {
+      // Al disminuir, resta 1000 g por unidad (tope el nuevo total y mínimo 0)
+      nuevosGramos = Math.max(0, Math.min(nuevoTotal, prevGramos - ((prevRollos - nuevosRollos) * 1000)))
+    }
+
+    setDisponibles(prev => prev.map(c => c.id === item.id ? { 
+      ...c, 
+      rollos: nuevosRollos,
+      pesoInicialGramos: nuevoTotal,
+      stockGramos: nuevosGramos,
+      alertaCritica: nuevosGramos < 300,
+      nota: nuevosGramos < 300 ? `⚠️ Stock Crítico: ${nuevosGramos}g` : null
+    } : c))
+
+    try {
+      await actualizarRollosColor(item.id, nuevosRollos)
+      toast.success(`"${item.nombreColor}" actualizado a ${nuevosRollos} un. (${nuevoTotal.toLocaleString()}g total)`)
+    } catch (e: any) {
+      toast.error('Error al actualizar: ' + e.message)
+    }
+  }
+
+  // Quick Rollos Direct Input
+  const handleSetRollosPrompt = async (item: ColorFilamentoItem) => {
+    const input = prompt(`Ingresa la cantidad para "${item.nombreColor}" (cada unidad = 1,000g):`, (item.rollos || 1).toString())
+    if (input === null) return
+    const num = parseInt(input, 10)
+    if (isNaN(num) || num < 1 || num > 20) {
+      toast.error('Ingresa una cantidad válida entre 1 y 20')
+      return
+    }
+
+    const prevRollos = item.rollos || 1
+    const nuevoTotal = num * 1000
+    const prevGramos = item.stockGramos || 1000
+
+    let nuevosGramos = prevGramos
+    if (num > prevRollos) {
+      // Al aumentar, agrega de 1000 g en 1000 g
+      nuevosGramos = prevGramos + ((num - prevRollos) * 1000)
+    } else if (num < prevRollos) {
+      nuevosGramos = Math.max(0, Math.min(nuevoTotal, prevGramos - ((prevRollos - num) * 1000)))
+    }
+
+    setDisponibles(prev => prev.map(c => c.id === item.id ? { 
+      ...c, 
+      rollos: num,
+      pesoInicialGramos: nuevoTotal,
+      stockGramos: nuevosGramos,
+      alertaCritica: nuevosGramos < 300,
+      nota: nuevosGramos < 300 ? `⚠️ Stock Crítico: ${nuevosGramos}g` : null
+    } : c))
+
+    try {
+      await actualizarRollosColor(item.id, num)
+      toast.success(`"${item.nombreColor}" configurado con ${num} un. (${nuevoTotal.toLocaleString()}g total)`)
+    } catch (e: any) {
+      toast.error('Error: ' + e.message)
+    }
+  }
+
   // Quick Grams Update
   const handleAjustarGramos = async (item: ColorFilamentoItem, delta: number) => {
-    const nuevosGramos = Math.max(0, Math.min(2000, (item.stockGramos || 0) + delta))
+    const maxGramos = (item.rollos || 1) * 1000
+    const nuevosGramos = Math.max(0, Math.min(maxGramos, (item.stockGramos || 0) + delta))
     setDisponibles(prev => prev.map(c => c.id === item.id ? { 
       ...c, 
       stockGramos: nuevosGramos,
@@ -259,11 +340,12 @@ export function InventarioClient({
 
   // Quick Grams Direct Input
   const handleSetGramosPrompt = async (item: ColorFilamentoItem) => {
-    const input = prompt(`Ingresa los gramos restantes para "${item.nombreColor}" (0 - 2000g):`, (item.stockGramos || 1000).toString())
+    const maxGramos = (item.rollos || 1) * 1000
+    const input = prompt(`Ingresa los gramos restantes para "${item.nombreColor}" (0 - ${maxGramos}g):`, (item.stockGramos || maxGramos).toString())
     if (input === null) return
     const num = parseInt(input, 10)
-    if (isNaN(num) || num < 0 || num > 2000) {
-      toast.error('Ingresa un número válido entre 0 y 2000 gramos')
+    if (isNaN(num) || num < 0 || num > maxGramos) {
+      toast.error(`Ingresa un número válido entre 0 y ${maxGramos} gramos`)
       return
     }
 
@@ -285,6 +367,10 @@ export function InventarioClient({
   // Stock Total KPI Calculation
   const totalGramosActivos = useMemo(() => {
     return disponibles.reduce((acc, c) => acc + (c.stockGramos || 0), 0)
+  }, [disponibles])
+
+  const totalRollosActivos = useMemo(() => {
+    return disponibles.reduce((acc, c) => acc + (c.rollos || 1), 0)
   }, [disponibles])
 
   const totalCriticos = useMemo(() => {
@@ -355,25 +441,25 @@ export function InventarioClient({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
           <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
             <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
-              Stock Total Activo
+              Stock Total en Gramos
             </span>
             <div className="text-base sm:text-lg font-black text-[#1E5E3A] font-mono mt-0.5">
               {totalGramosActivos.toLocaleString()} g
             </div>
             <span className="text-[10px] text-[#75695D]">
-              {(totalGramosActivos / 1000).toFixed(2)} kg en taller
+              {(totalGramosActivos / 1000).toFixed(2)} kg activos en taller
             </span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
             <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
-              Bobinas en Uso
+              Bobinas en Taller
             </span>
             <div className="text-base sm:text-lg font-black text-[#241C15] font-mono mt-0.5">
-              {disponibles.length} colores
+              {totalRollosActivos} bobinas
             </div>
             <span className="text-[10px] text-[#1E5E3A] font-semibold">
-              🟢 Listos para imprimir
+              🟢 {disponibles.length} colores activos (1,000g c/u)
             </span>
           </div>
 
@@ -382,7 +468,7 @@ export function InventarioClient({
               Stock Crítico (&lt;300g)
             </span>
             <div className={`text-base sm:text-lg font-black font-mono mt-0.5 ${totalCriticos.length > 0 ? 'text-[#DC2626]' : 'text-[#1E5E3A]'}`}>
-              {totalCriticos.length} {totalCriticos.length === 1 ? 'bobina' : 'bobinas'}
+              {totalCriticos.length} {totalCriticos.length === 1 ? 'color' : 'colores'}
             </div>
             <span className={`text-[10px] font-semibold ${totalCriticos.length > 0 ? 'text-[#DC2626]' : 'text-[#75695D]'}`}>
               {totalCriticos.length > 0 ? '⚠️ Alerta de reposición' : 'Nivel óptimo'}
@@ -460,8 +546,9 @@ export function InventarioClient({
               </div>
             ) : (
               filteredDisponibles.map(item => {
-                const gramos = item.stockGramos ?? 1000
-                const pesoInicial = item.pesoInicialGramos ?? 1000
+                const rollos = item.rollos || 1
+                const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
+                const gramos = item.stockGramos ?? pesoInicial
                 const pct = Math.min(100, Math.round((gramos / pesoInicial) * 100))
                 const esCritico = gramos < 300
 
@@ -474,8 +561,8 @@ export function InventarioClient({
                         : 'bg-[#FAF8F5] border-[#E2D9CC] hover:bg-[#FFFFFF] hover:border-[#1E5E3A]/40'
                     }`}
                   >
-                    {/* Fila 1: Nombre + Color Dot + Acción Principal y Eliminar */}
-                    <div className="flex items-center justify-between gap-2">
+                    {/* Fila 1: Nombre + Color Dot + Selector de Cantidad + Acción Principal y Eliminar */}
+                    <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div 
                           className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0"
@@ -487,7 +574,36 @@ export function InventarioClient({
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Selector Compacto de Cantidad */}
+                        <div className="flex items-center gap-1 bg-[#F4EFEA] border border-[#D4BEA7] rounded-lg px-1.5 py-0.5 shadow-2xs" title="Cantidad (1 un. = 1,000g)">
+                          <button
+                            type="button"
+                            onClick={() => handleAjustarRollos(item, -1)}
+                            disabled={rollos <= 1}
+                            className="h-4 w-4 rounded flex items-center justify-center bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] disabled:opacity-30 cursor-pointer font-bold text-xs"
+                            title="Restar (-1000g)"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetRollosPrompt(item)}
+                            className="text-xs font-black font-mono text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer px-1"
+                            title="Clic para definir cantidad (1 un. = 1,000g)"
+                          >
+                            {rollos} un.
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAjustarRollos(item, 1)}
+                            className="h-4 w-4 rounded flex items-center justify-center bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] cursor-pointer font-bold text-xs"
+                            title="Agregar (+1000g)"
+                          >
+                            +
+                          </button>
+                        </div>
+
                         <Button
                           type="button"
                           variant="outline"
@@ -520,11 +636,13 @@ export function InventarioClient({
                             type="button"
                             onClick={() => handleSetGramosPrompt(item)}
                             className="font-bold text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer"
-                            title="Haz clic para ingresar gramos exactos"
+                            title="Haz clic para ingresar gramos exactos pesados"
                           >
-                            {gramos} g
+                            {gramos.toLocaleString()} g
                           </button>
-                          <span className="text-[#75695D] text-[11px]">de {pesoInicial} g</span>
+                          <span className="text-[#75695D] text-[11px]">
+                            de {pesoInicial.toLocaleString()} g
+                          </span>
                         </div>
 
                         {/* Botones de Micro-ajuste */}
@@ -548,14 +666,20 @@ export function InventarioClient({
                         </div>
                       </div>
 
-                      {/* Barra de Progreso */}
-                      <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            esCritico ? 'bg-[#DC2626]' : pct < 50 ? 'bg-[#D97706]' : 'bg-[#1E5E3A]'
-                          }`}
-                          style={{ width: `${pct}%` }}
-                        />
+                      {/* Barra de Progreso y Porcentaje */}
+                      <div className="space-y-1">
+                        <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              esCritico ? 'bg-[#DC2626]' : pct < 50 ? 'bg-[#D97706]' : 'bg-[#1E5E3A]'
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-[#75695D] font-mono">
+                          <span>{pct}% disponible</span>
+                          <span>{pesoInicial - gramos > 0 ? `-${(pesoInicial - gramos).toLocaleString()}g consumidos` : 'Stock íntegro'}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -617,9 +741,14 @@ export function InventarioClient({
                       title={item.nombreColor}
                     />
                     <div className="min-w-0">
-                      <span className="text-sm font-medium text-[#241C15] block truncate">
-                        {item.nombreColor}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-[#241C15] block truncate">
+                          {item.nombreColor}
+                        </span>
+                        <span className="text-[10px] text-[#75695D] font-mono bg-[#EAE4DC] px-1.5 py-0.2 rounded">
+                          {item.rollos || 1} un.
+                        </span>
+                      </div>
                       {item.nota && (
                         <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded inline-block mt-0.5">
                           {item.nota}
@@ -665,7 +794,7 @@ export function InventarioClient({
                   Agregar Nuevo Color
                 </DialogTitle>
                 <DialogDescription className="text-xs text-[#75695D]">
-                  Ingresa el color para el control de stock del taller
+                  Ingresa el color y la cantidad de unidades (1 un. = 1,000g)
                 </DialogDescription>
               </div>
               <button
@@ -691,6 +820,39 @@ export function InventarioClient({
                   autoFocus
                   className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm h-10"
                 />
+              </div>
+
+              {/* Cantidad de Unidades */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-[#241C15] uppercase">
+                    Cantidad (1 un. = 1,000 g) *
+                  </Label>
+                  <span className="text-[10px] text-[#A36F4C] font-semibold">
+                    Total: {(Math.max(1, parseInt(nuevoRollos || '1', 10)) * 1000).toLocaleString()} g
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[1, 2, 3, 4].map(r => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => {
+                        setNuevoRollos(r.toString())
+                        if (nuevoEstado === 'DISPONIBLE') {
+                          setNuevoGramos((r * 1000).toString())
+                        }
+                      }}
+                      className={`py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        nuevoRollos === r.toString()
+                          ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-2xs'
+                          : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC] hover:bg-[#FFFFFF]'
+                      }`}
+                    >
+                      {r} un.
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Selector Visual de Color */}
@@ -762,12 +924,14 @@ export function InventarioClient({
                     <Label className="text-xs font-bold text-[#241C15] uppercase">
                       Gramos Restantes *
                     </Label>
-                    <span className="text-[10px] text-[#75695D]">Bobina estándar: 1000g</span>
+                    <span className="text-[10px] text-[#75695D]">
+                      Capacidad total: {(Math.max(1, parseInt(nuevoRollos || '1', 10)) * 1000).toLocaleString()} g
+                    </span>
                   </div>
                   <Input 
                     type="number"
                     min="0"
-                    max="2000"
+                    max={Math.max(1, parseInt(nuevoRollos || '1', 10)) * 1000}
                     value={nuevoGramos}
                     onChange={(e) => setNuevoGramos(e.target.value)}
                     placeholder="1000"
