@@ -104,6 +104,7 @@ export interface VentaItem {
     precioAmigos: number
     precioMercado: number
     precioComunidad: number
+    pesoGramos?: number
   }
 }
 
@@ -115,6 +116,7 @@ export interface ProductoOption {
   precioAmigos: number
   precioMercado: number
   precioComunidad: number
+  pesoGramos?: number
   activo: boolean
 }
 
@@ -581,7 +583,9 @@ export function VentasClient({
     try {
       const prod = productos.find(p => p.id === formProductoId)
       const cant = parseInt(formCantidad) || 1
-      const pesoUnitario = prod ? Number((Number(prod.costoBase) / 0.065).toFixed(1)) : 0
+      const pesoUnitario = prod 
+        ? (prod.pesoGramos != null && prod.pesoGramos > 0 ? Number(prod.pesoGramos) : Number((Number(prod.costoBase) / 0.065).toFixed(1))) 
+        : 0
       const pesoTotalEstimado = Math.round(pesoUnitario * cant)
 
       const created = await createVenta({
@@ -1105,7 +1109,7 @@ export function VentasClient({
                 </div>
 
                 {/* 2. Cuerpo del Modal */}
-                <div className="p-5 sm:p-6 space-y-4 overflow-y-auto max-h-[calc(90dvh-130px)]">
+                <div className="flex-1 overflow-y-auto min-h-0 p-5 sm:p-6 space-y-4 touch-pan-y">
                   {/* Tarjeta Resumen Financiero con Barra de Progreso */}
                   <div className="bg-[#F8F6F2] border border-[#E2D9CC] rounded-2xl p-4 shadow-2xs space-y-3">
                     <div className="grid grid-cols-3 gap-2 sm:gap-4 text-left items-center">
@@ -1811,7 +1815,9 @@ export function VentasClient({
               {(() => {
                 if (!formColorFilamentoId || !formProductoId) return null
                 const prod = productos.find(p => p.id === formProductoId)
-                const pesoUnitario = prod ? Number((Number(prod.costoBase) / 0.065).toFixed(1)) : 0
+                const pesoUnitario = prod 
+                  ? (prod.pesoGramos != null && prod.pesoGramos > 0 ? Number(prod.pesoGramos) : Number((Number(prod.costoBase) / 0.065).toFixed(1))) 
+                  : 0
                 const pesoTotal = Math.round(pesoUnitario * (parseInt(formCantidad) || 1))
                 const fil = filamentos.find(f => f.id === formColorFilamentoId)
                 const gramosRestantes = fil?.stockGramos ?? 1000

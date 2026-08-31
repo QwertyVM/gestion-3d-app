@@ -56,6 +56,7 @@ export interface ProductoItem {
   precioAmigos: number
   precioMercado: number
   precioComunidad: number
+  pesoGramos?: number
   activo: boolean
   createdAt?: string
   updatedAt?: string
@@ -135,6 +136,7 @@ export function CatalogoClient({
   // Form states for Product Create/Edit
   const [formCategoria, setFormCategoria] = useState('')
   const [formNombre, setFormNombre] = useState('')
+  const [formPesoGramos, setFormPesoGramos] = useState<string>('')
   const [formCostoBase, setFormCostoBase] = useState<string>('')
   const [formPrecioAmigos, setFormPrecioAmigos] = useState<string>('')
   const [formPrecioMercado, setFormPrecioMercado] = useState<string>('')
@@ -359,6 +361,7 @@ export function CatalogoClient({
   const handleOpenCreate = () => {
     setFormCategoria(categoryNamesList[0] || 'JUEGOS DE MESA')
     setFormNombre('')
+    setFormPesoGramos('')
     setFormCostoBase('')
     setFormPrecioAmigos('')
     setFormPrecioMercado('')
@@ -378,6 +381,7 @@ export function CatalogoClient({
     setSelectedProducto(prod)
     setFormCategoria(prod.lineaCategoria)
     setFormNombre(prod.nombreModelo)
+    setFormPesoGramos(prod.pesoGramos != null ? prod.pesoGramos.toString() : '')
     setFormCostoBase(prod.costoBase.toString())
     setFormPrecioAmigos(prod.precioAmigos.toString())
     setFormPrecioMercado(prod.precioMercado.toString())
@@ -400,6 +404,7 @@ export function CatalogoClient({
       await createProducto({
         lineaCategoria: formCategoria,
         nombreModelo: formNombre,
+        pesoGramos: parseFloat(formPesoGramos) || 0,
         costoBase: parseFloat(formCostoBase) || 0,
         precioAmigos: parseFloat(formPrecioAmigos) || 0,
         precioMercado: parseFloat(formPrecioMercado) || 0,
@@ -425,6 +430,7 @@ export function CatalogoClient({
       await updateProducto(selectedProducto.id, {
         lineaCategoria: formCategoria,
         nombreModelo: formNombre,
+        pesoGramos: parseFloat(formPesoGramos) || 0,
         costoBase: parseFloat(formCostoBase) || 0,
         precioAmigos: parseFloat(formPrecioAmigos) || 0,
         precioMercado: parseFloat(formPrecioMercado) || 0,
@@ -693,13 +699,20 @@ export function CatalogoClient({
                         {/* Modelo & mobile category */}
                         <TableCell className="font-medium text-[#241C15] px-4 py-3">
                           <div className="flex flex-col">
-                            <span className={`text-sm font-bold transition-colors ${
-                              isDiscontinued 
-                                ? 'line-through text-[#75695D]' 
-                                : 'text-[#241C15] group-hover:text-[#A36F4C]'
-                            }`}>
-                              {p.nombreModelo}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-sm font-bold transition-colors ${
+                                isDiscontinued 
+                                  ? 'line-through text-[#75695D]' 
+                                  : 'text-[#241C15] group-hover:text-[#A36F4C]'
+                              }`}>
+                                {p.nombreModelo}
+                              </span>
+                              {p.pesoGramos != null && p.pesoGramos > 0 && (
+                                <Badge variant="outline" className="text-[10px] font-mono font-bold bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] px-1.5 py-0">
+                                  ⚖️ {p.pesoGramos}g
+                                </Badge>
+                              )}
+                            </div>
                             <span className="sm:hidden text-[11px] text-[#75695D] mt-0.5">
                               {p.lineaCategoria}
                             </span>
@@ -1109,6 +1122,26 @@ export function CatalogoClient({
                   </div>
                 </div>
 
+                {/* Consumo y Rendimiento de Filamento */}
+                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] flex items-center justify-between shadow-2xs">
+                  <div className="space-y-0.5">
+                    <span className="text-xs uppercase tracking-wider text-[#75695D] font-bold flex items-center gap-1.5">
+                      <span>⚖️</span> Consumo de Filamento
+                    </span>
+                    <p className="text-[11px] text-[#75695D]">
+                      {selectedProducto.pesoGramos && selectedProducto.pesoGramos > 0
+                        ? `Rendimiento: ~${Math.floor(1000 / selectedProducto.pesoGramos)} unidades por bobina (1kg)`
+                        : 'Sin peso de filamento especificado'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xl font-extrabold text-[#241C15] font-mono">
+                      {selectedProducto.pesoGramos && selectedProducto.pesoGramos > 0 ? `${selectedProducto.pesoGramos} g` : '--'}
+                    </div>
+                    <span className="text-[10px] text-[#75695D]">por unidad</span>
+                  </div>
+                </div>
+
                 {/* Precios & Márgenes */}
                 <div className="space-y-2.5">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#75695D]">
@@ -1338,7 +1371,41 @@ export function CatalogoClient({
                   required
                   className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
-            </div>
+              </div>
+
+              {/* Gramos de Filamento por Unidad */}
+              <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span>⚖️</span> Peso de Filamento (Gramos)
+                  </Label>
+                  {formPesoGramos && parseFloat(formPesoGramos) > 0 && (
+                    <span className="text-[11px] font-semibold text-[#A36F4C]">
+                      ~{Math.floor(1000 / parseFloat(formPesoGramos))} u. por bobina (1kg)
+                    </span>
+                  )}
+                </div>
+                <div className="relative flex items-center w-full">
+                  <Input 
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={formPesoGramos}
+                    onChange={(e) => {
+                      setFormPesoGramos(e.target.value)
+                      if ((!formCostoBase || formCostoBase === '0') && e.target.value && parseFloat(e.target.value) > 0) {
+                        // Costo aprox de filamento S/ 0.065 por gramo
+                        const costoAprox = (parseFloat(e.target.value) * 0.065).toFixed(2)
+                        setFormCostoBase(costoAprox)
+                        handleAutoCalculatePrices(costoAprox)
+                      }
+                    }}
+                    placeholder="Ej: 85 (gramos por unidad)"
+                    className="pr-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">g</span>
+                </div>
+              </div>
 
             {/* Costo Base & Auto-calculate Button */}
             <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
@@ -1586,6 +1653,32 @@ export function CatalogoClient({
                   required
                   className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
+              </div>
+
+              {/* Gramos de Filamento por Unidad */}
+              <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <span>⚖️</span> Peso de Filamento (Gramos)
+                  </Label>
+                  {formPesoGramos && parseFloat(formPesoGramos) > 0 && (
+                    <span className="text-[11px] font-semibold text-[#A36F4C]">
+                      ~{Math.floor(1000 / parseFloat(formPesoGramos))} u. por bobina (1kg)
+                    </span>
+                  )}
+                </div>
+                <div className="relative flex items-center w-full">
+                  <Input 
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={formPesoGramos}
+                    onChange={(e) => setFormPesoGramos(e.target.value)}
+                    placeholder="Ej: 85 (gramos por unidad)"
+                    className="pr-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">g</span>
+                </div>
               </div>
 
               <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">

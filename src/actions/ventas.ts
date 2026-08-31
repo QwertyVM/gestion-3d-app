@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma'
 import { EstadoVenta, TipoPrecio } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
+import { ajustarStockBobina } from '@/actions/inventario'
 
 function safeRevalidate() {
   try {
@@ -10,6 +11,7 @@ function safeRevalidate() {
     revalidatePath('/finanzas/flujo-caja')
     revalidatePath('/finanzas/balance')
     revalidatePath('/inventario')
+    revalidatePath('/catalogo/inventario')
     revalidatePath('/')
   } catch (e) {
     // Ignore outside request store
@@ -60,6 +62,7 @@ function serializeVenta(v: any) {
       precioAmigos: Number(v.producto.precioAmigos),
       precioMercado: Number(v.producto.precioMercado),
       precioComunidad: Number(v.producto.precioComunidad),
+      pesoGramos: v.producto.pesoGramos != null ? Number(v.producto.pesoGramos) : 0,
       activo: v.producto.activo,
       createdAt: v.producto.createdAt instanceof Date ? v.producto.createdAt.toISOString() : String(v.producto.createdAt),
       updatedAt: v.producto.updatedAt instanceof Date ? v.producto.updatedAt.toISOString() : String(v.producto.updatedAt),
@@ -71,6 +74,7 @@ function serializeVenta(v: any) {
       precioAmigos: 0,
       precioMercado: 0,
       precioComunidad: 0,
+      pesoGramos: 0,
       activo: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -131,6 +135,14 @@ export async function createVenta(data: {
     where: { id: data.productoId }
   })
 
+  const prodGramosUnit = producto?.pesoGramos != null && Number(producto.pesoGramos) > 0
+    ? Number(producto.pesoGramos)
+    : 0
+
+  const gramosConsumidos = (data.gramosConsumidos !== undefined && data.gramosConsumidos !== null && data.gramosConsumidos > 0)
+    ? data.gramosConsumidos
+    : (prodGramosUnit * data.cantidad)
+
   const venta = await prisma.venta.create({
     data: {
       cliente: data.cliente,
@@ -139,7 +151,7 @@ export async function createVenta(data: {
       costoBaseSnapshot: producto?.costoBase || 0,
       colorFilamentoId: data.colorFilamentoId || null,
       personalizacion: data.personalizacion || null,
-      gramosConsumidos: data.gramosConsumidos || 0,
+      gramosConsumidos: gramosConsumidos || 0,
       cantidad: data.cantidad,
       tipoPrecio: data.tipoPrecio,
       precioUnitario: data.precioUnitario,
@@ -160,48 +172,8 @@ export async function createVenta(data: {
     }
   })
 
-  if (data.colorFilamentoId && data.gramosConsumidos && data.gramosConsumidos > 0) {
-    try {
-      const spool = await prisma.inventarioFilamento.findUnique({
-        where: { id: data.colorFilamentoId }
-      })
-      if (spool) {
-        const currentGramos = spool.stockGramos ? Number(spool.stockGramos) : 0
-        const newGramos = Math.max(0, currentGramos - data.gramosConsumidos)
-        const pesoInicial = spool.pesoInicialGramos ? Number(spool.pesoInicialGramos) : 1000
-        const newPct = Math.min(100, Math.max(0, Number(((newGramos / pesoInicial) * 100).toFixed(0))))
-
-        let estado = 'DISPONIBLE'
-        let alertaCritica = false
-        let notaProduccion = spool.notaProduccion
-
-        if (newGramos <= 0) {
-          estado = 'AGOTADO'
-          alertaCritica = true
-          notaProduccion = `Bobina #${spool.numeroBobina || 1} agotada en producción`
-        } else if (newGramos < 100) {
-          estado = 'BAJO_STOCK'
-          alertaCritica = true
-          notaProduccion = `Alerta: Menos de 100g restantes en Bobina #${spool.numeroBobina || 1} (${newGramos}g restantes)`
-        } else if (newGramos < 250) {
-          estado = 'BAJO_STOCK'
-        }
-
-        await prisma.inventarioFilamento.update({
-          where: { id: data.colorFilamentoId },
-          data: {
-            stockGramos: newGramos,
-            stockBobinas: Number((newGramos / 1000).toFixed(2)),
-            porcentajeRestante: newPct,
-            estado,
-            alertaCritica,
-            notaProduccion,
-          }
-        })
-      }
-    } catch (err) {
-      console.error('Error discounting spool grams:', err)
-    }
+  if (data.colorFilamentoId && gramosConsumidos > 0 && data.estado !== 'CANCELADO') {
+    await ajustarStockBobina(data.colorFilamentoId, gramosConsumidos)
   }
 
   safeRevalidate()
@@ -257,6 +229,39 @@ export async function updateVenta(id: string, data: {
     newFecha = parseDateInput(data.fecha) || current.fecha
   }
 
+  const prevGramos = current.gramosConsumidos != null ? Number(current.gramosConsumidos) : 0
+  const prevColorId = current.colorFilamentoId
+  const prevEstado = current.estado
+
+  const newGramos = data.gramosConsumidos !== undefined ? (data.gramosConsumidos ?? 0) : prevGramos
+  const newColorId = data.colorFilamentoId !== undefined ? data.colorFilamentoId : prevColorId
+  const newEstado = data.estado !== undefined ? data.estado : prevEstado
+
+  // Ajustes de inventario de filamento
+  if (prevEstado !== 'CANCELADO' && newEstado === 'CANCELADO') {
+    if (prevColorId && prevGramos > 0) {
+      await ajustarStockBobina(prevColorId, -prevGramos)
+    }
+  } else if (prevEstado === 'CANCELADO' && newEstado !== 'CANCELADO') {
+    if (newColorId && newGramos > 0) {
+      await ajustarStockBobina(newColorId, newGramos)
+    }
+  } else if (newEstado !== 'CANCELADO') {
+    if (prevColorId === newColorId) {
+      const delta = newGramos - prevGramos
+      if (newColorId && delta !== 0) {
+        await ajustarStockBobina(newColorId, delta)
+      }
+    } else {
+      if (prevColorId && prevGramos > 0) {
+        await ajustarStockBobina(prevColorId, -prevGramos)
+      }
+      if (newColorId && newGramos > 0) {
+        await ajustarStockBobina(newColorId, newGramos)
+      }
+    }
+  }
+
   const updated = await prisma.venta.update({
     where: { id },
     data: {
@@ -292,6 +297,18 @@ export async function updateVenta(id: string, data: {
 }
 
 export async function updateEstadoVenta(id: string, estado: EstadoVenta) {
+  const current = await prisma.venta.findUnique({ where: { id } })
+  if (current && current.colorFilamentoId) {
+    const gramos = current.gramosConsumidos != null ? Number(current.gramosConsumidos) : 0
+    if (gramos > 0) {
+      if (current.estado !== 'CANCELADO' && estado === 'CANCELADO') {
+        await ajustarStockBobina(current.colorFilamentoId, -gramos)
+      } else if (current.estado === 'CANCELADO' && estado !== 'CANCELADO') {
+        await ajustarStockBobina(current.colorFilamentoId, gramos)
+      }
+    }
+  }
+
   const venta = await prisma.venta.update({
     where: { id },
     data: { estado },
@@ -348,6 +365,14 @@ export async function liquidarSaldoTotal(id: string) {
 }
 
 export async function deleteVenta(id: string) {
+  const current = await prisma.venta.findUnique({ where: { id } })
+  if (current && current.colorFilamentoId && current.estado !== 'CANCELADO') {
+    const gramos = current.gramosConsumidos != null ? Number(current.gramosConsumidos) : 0
+    if (gramos > 0) {
+      await ajustarStockBobina(current.colorFilamentoId, -gramos)
+    }
+  }
+
   await prisma.venta.delete({
     where: { id }
   })

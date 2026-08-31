@@ -33,7 +33,7 @@ export function Sidebar() {
   const [catalogoOpen, setCatalogoOpen] = useState(true)
 
   return (
-    <aside className="flex h-screen w-64 flex-col bg-[#FFFFFF] text-[#75695D] shadow-md border-r border-[#E2D9CC] select-none transition-colors">
+    <aside className="flex h-full w-64 flex-col bg-[#FFFFFF] text-[#75695D] shadow-md border-r border-[#E2D9CC] select-none transition-colors">
       {/* NOVA Brand Header */}
       <div className="flex h-16 items-center gap-3 border-b border-[#E2D9CC] px-6 bg-[#FDFBF7]">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#A36F4C] to-[#C48C68] shadow-sm text-white">

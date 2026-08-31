@@ -13,6 +13,23 @@ function safeRevalidate() {
   }
 }
 
+export interface ProductoInvertidoEnBobina {
+  productoId: string
+  nombreModelo: string
+  lineaCategoria?: string
+  pesoGramosUnitario: number
+  totalUnidades: number
+  totalGramos: number
+  ultimosPedidos: Array<{
+    ventaId: string
+    cliente: string
+    cantidad: number
+    gramos: number
+    fecha: string
+    estado: string
+  }>
+}
+
 export interface ColorFilamentoItem {
   id: string
   nombreColor: string
@@ -24,6 +41,9 @@ export interface ColorFilamentoItem {
   pesoInicialGramos: number // rollos * 1000g (capacidad total del color)
   alertaCritica: boolean
   totalVentas?: number
+  totalProductosImpresos: number // Cantidad de piezas/unidades impresas
+  totalGramosConsumidos: number // Total de gramos invertidos en piezas
+  productosInvertidos: ProductoInvertidoEnBobina[] // Desglose agrupado por producto
   createdAt: string
   updatedAt: string
 }
@@ -54,6 +74,62 @@ const INITIAL_RESTOCK = [
   { nombreColor: 'Verde oscuro', codigoHex: '#14532D', estado: 'RESTOCK' as const, rollos: 1, stockGramos: 0, nota: 'Por terminar' },
   { nombreColor: 'Azul oscuro (Restock)', codigoHex: '#1E3A8A', estado: 'RESTOCK' as const, rollos: 1, stockGramos: 0, nota: 'Por terminar' },
 ]
+
+export async function ajustarStockBobina(colorFilamentoId: string, deltaGramos: number) {
+  // deltaGramos positivo = descontar consumo
+  // deltaGramos negativo = reintegrar stock (por cancelación, edición o eliminación)
+  if (!colorFilamentoId || deltaGramos === 0) return
+
+  try {
+    const spool = await prisma.inventarioFilamento.findUnique({
+      where: { id: colorFilamentoId }
+    })
+    if (!spool) return
+
+    const currentGramos = spool.stockGramos != null ? Number(spool.stockGramos) : 0
+    const pesoInicial = spool.pesoInicialGramos != null ? Number(spool.pesoInicialGramos) : (Number(spool.stockBobinas || 1) * 1000)
+    const newGramos = Math.max(0, Math.min(pesoInicial, currentGramos - deltaGramos))
+    const newPct = Math.min(100, Math.max(0, Number(((newGramos / pesoInicial) * 100).toFixed(0))))
+
+    let estado = 'DISPONIBLE'
+    let alertaCritica = false
+    let notaProduccion = spool.notaProduccion
+
+    if (newGramos <= 0) {
+      estado = 'AGOTADO'
+      alertaCritica = true
+      notaProduccion = `Bobina agotada en producción`
+    } else if (newGramos < 100) {
+      estado = 'BAJO_STOCK'
+      alertaCritica = true
+      notaProduccion = `Alerta: Menos de 100g restantes (${newGramos}g)`
+    } else if (newGramos < 300) {
+      estado = 'BAJO_STOCK'
+      alertaCritica = true
+      notaProduccion = `Stock bajo: ${newGramos}g restantes`
+    } else {
+      estado = 'DISPONIBLE'
+      alertaCritica = false
+      if (notaProduccion?.includes('agotada') || notaProduccion?.includes('Stock bajo')) {
+        notaProduccion = null
+      }
+    }
+
+    await prisma.inventarioFilamento.update({
+      where: { id: colorFilamentoId },
+      data: {
+        stockGramos: newGramos,
+        stockBobinas: Number((newGramos / 1000).toFixed(2)),
+        porcentajeRestante: newPct,
+        estado,
+        alertaCritica,
+        notaProduccion,
+      }
+    })
+  } catch (err) {
+    console.error('Error al ajustar stock de bobina:', err)
+  }
+}
 
 export async function getColoresInventario(forceReset = false): Promise<{
   disponibles: ColorFilamentoItem[]
@@ -107,11 +183,43 @@ export async function getColoresInventario(forceReset = false): Promise<{
     where: { activo: true },
     include: {
       ventas: {
-        select: { id: true }
+        include: {
+          producto: {
+            select: {
+              id: true,
+              nombreModelo: true,
+              lineaCategoria: true,
+              pesoGramos: true,
+              costoBase: true,
+            }
+          }
+        },
+        orderBy: { fecha: 'desc' }
       }
     },
     orderBy: { nombreColor: 'asc' }
   })
+
+  // Auto-sync: Sincronizar ventas activas que no tenían gramos registrados pero cuyo producto ahora tiene pesoGramos definido
+  for (const f of filamentos) {
+    for (const v of f.ventas) {
+      if (v.estado !== 'CANCELADO' && (!v.gramosConsumidos || Number(v.gramosConsumidos) === 0) && v.producto?.pesoGramos && Number(v.producto.pesoGramos) > 0) {
+        const cant = Number(v.cantidad || 1)
+        const computedGramos = Number(v.producto.pesoGramos) * cant
+        try {
+          await prisma.venta.update({
+            where: { id: v.id },
+            data: { gramosConsumidos: computedGramos }
+          })
+          v.gramosConsumidos = computedGramos as any
+          await ajustarStockBobina(f.id, computedGramos)
+          if (f.stockGramos != null) {
+            f.stockGramos = Math.max(0, Number(f.stockGramos) - computedGramos) as any
+          }
+        } catch (e) {}
+      }
+    }
+  }
 
   const mapped: ColorFilamentoItem[] = filamentos.map(f => {
     const isDisponible = f.estadoStock === 'ABIERTO' || f.estadoStock === 'SELLADO' || f.estado === 'DISPONIBLE'
@@ -123,6 +231,57 @@ export async function getColoresInventario(forceReset = false): Promise<{
     const stockGramos = f.stockGramos != null ? Number(f.stockGramos) : (isDisponible ? pesoInicialGramos : 0)
     const alertaCritica = isDisponible && stockGramos < 300
 
+    // Agrupación y cálculo de productos invertidos en esta bobina
+    const validVentas = f.ventas.filter(v => v.estado !== 'CANCELADO')
+    const totalProductosImpresos = validVentas.reduce((acc, v) => acc + (v.cantidad || 1), 0)
+    
+    let totalGramosConsumidos = 0
+    const mapProductos: Record<string, ProductoInvertidoEnBobina> = {}
+
+    for (const v of validVentas) {
+      const prodId = v.productoId || v.nombreProductoSnapshot || 'general'
+      const nombreProd = v.producto?.nombreModelo || v.nombreProductoSnapshot || 'Producto 3D'
+      const lineaCat = v.producto?.lineaCategoria || 'General'
+      const cant = Number(v.cantidad || 1)
+      
+      const pesoGramosUnit = (v.producto?.pesoGramos != null && Number(v.producto.pesoGramos) > 0)
+        ? Number(v.producto.pesoGramos)
+        : (v.gramosConsumidos && Number(v.gramosConsumidos) > 0 ? Number(v.gramosConsumidos) / cant : 0)
+
+      const gramosVenta = (v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0)
+        ? Number(v.gramosConsumidos)
+        : (pesoGramosUnit * cant)
+
+      totalGramosConsumidos += gramosVenta
+
+      if (!mapProductos[prodId]) {
+        mapProductos[prodId] = {
+          productoId: prodId,
+          nombreModelo: nombreProd,
+          lineaCategoria: lineaCat,
+          pesoGramosUnitario: pesoGramosUnit,
+          totalUnidades: 0,
+          totalGramos: 0,
+          ultimosPedidos: []
+        }
+      }
+
+      mapProductos[prodId].totalUnidades += cant
+      mapProductos[prodId].totalGramos += gramosVenta
+      if (mapProductos[prodId].ultimosPedidos.length < 5) {
+        mapProductos[prodId].ultimosPedidos.push({
+          ventaId: v.id,
+          cliente: v.cliente,
+          cantidad: cant,
+          gramos: gramosVenta,
+          fecha: v.fecha.toISOString(),
+          estado: v.estado
+        })
+      }
+    }
+
+    const productosInvertidos = Object.values(mapProductos).sort((a, b) => b.totalUnidades - a.totalUnidades)
+
     return {
       id: f.id,
       nombreColor: f.nombreColor,
@@ -133,7 +292,10 @@ export async function getColoresInventario(forceReset = false): Promise<{
       rollos,
       pesoInicialGramos,
       alertaCritica,
-      totalVentas: f.ventas.length,
+      totalVentas: validVentas.length,
+      totalProductosImpresos,
+      totalGramosConsumidos,
+      productosInvertidos,
       createdAt: f.createdAt.toISOString(),
       updatedAt: f.updatedAt.toISOString(),
     }
@@ -181,6 +343,9 @@ export async function moverEstadoColor(id: string, nuevoEstado: 'DISPONIBLE' | '
     rollos,
     pesoInicialGramos,
     alertaCritica: Boolean(updated.alertaCritica || (nuevoEstado === 'DISPONIBLE' && gramos < 300)),
+    totalProductosImpresos: 0,
+    totalGramosConsumidos: 0,
+    productosInvertidos: [],
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   }
@@ -233,6 +398,9 @@ export async function actualizarRollosColor(id: string, nuevosRollos: number) {
     rollos: rollosNum,
     pesoInicialGramos: nuevoPesoTotal,
     alertaCritica,
+    totalProductosImpresos: 0,
+    totalGramosConsumidos: 0,
+    productosInvertidos: [],
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   }
@@ -275,6 +443,9 @@ export async function actualizarGramosColor(id: string, stockGramos: number) {
     rollos,
     pesoInicialGramos,
     alertaCritica,
+    totalProductosImpresos: 0,
+    totalGramosConsumidos: 0,
+    productosInvertidos: [],
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   }
@@ -322,6 +493,9 @@ export async function agregarNuevoColor(data: {
     rollos,
     pesoInicialGramos: totalGramos,
     alertaCritica,
+    totalProductosImpresos: 0,
+    totalGramosConsumidos: 0,
+    productosInvertidos: [],
     createdAt: created.createdAt.toISOString(),
     updatedAt: created.updatedAt.toISOString(),
   }

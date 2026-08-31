@@ -113,6 +113,7 @@ model Producto {
   precioAmigos     Decimal  @db.Decimal(10, 2)
   precioMercado    Decimal  @db.Decimal(10, 2)
   precioComunidad  Decimal  @db.Decimal(10, 2)
+  pesoGramos       Decimal? @default(0.00) @db.Decimal(10, 2)
   activo           Boolean  @default(true)
   ventas           Venta[]
   createdAt        DateTime @default(now())

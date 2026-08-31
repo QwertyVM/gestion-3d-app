@@ -18,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className={`${inter.className} h-screen w-full bg-[#F8F6F2] overflow-hidden text-[#241C15]`}>
+    <html lang="es" suppressHydrationWarning className="h-full">
+      <body className={`${inter.className} min-h-full h-full w-full bg-[#F8F6F2] text-[#241C15] antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

@@ -373,11 +373,11 @@ export function AppShell({ children }: AppShellProps) {
   )
 
   return (
-    <div className="flex h-screen w-full bg-[#F8F6F2] overflow-hidden text-[#241C15] relative">
+    <div className="flex h-[100dvh] min-h-[100dvh] w-full bg-[#F8F6F2] overflow-hidden text-[#241C15] relative">
       {/* ========================================================================= */}
       {/* DESKTOP SIDEBAR (>= lg)                                                   */}
       {/* ========================================================================= */}
-      <aside className="hidden lg:flex h-screen w-64 flex-col bg-[#FFFFFF] text-[#75695D] shadow-md border-r border-[#E2D9CC] select-none flex-shrink-0 z-30">
+      <aside className="hidden lg:flex h-full w-64 flex-col bg-[#FFFFFF] text-[#75695D] shadow-md border-r border-[#E2D9CC] select-none flex-shrink-0 z-30">
         {/* Brand Header */}
         <div className="flex h-16 items-center gap-3 border-b border-[#E2D9CC] px-6 bg-[#FDFBF7] flex-shrink-0">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#A36F4C] to-[#C48C68] shadow-sm text-white flex-shrink-0">
@@ -447,7 +447,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* ========================================================================= */}
       {/* MAIN VIEWPORT CONTAINER (HEADER + SCROLLABLE CONTENT)                     */}
       {/* ========================================================================= */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
         {/* Mobile / Tablet Topbar (< lg) */}
         <header className="flex lg:hidden h-14 items-center justify-between px-4 border-b border-[#E2D9CC] bg-[#FFFFFF] shadow-sm flex-shrink-0 z-20">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -472,8 +472,8 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         {/* Scrollable Main Content (Strictly Mobile-First & Overflow protected) */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F8F6F2] p-3 sm:p-5 md:p-6 lg:p-8 text-[#241C15]">
-          <div className="mx-auto max-w-7xl w-full">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F8F6F2] p-3 sm:p-5 md:p-6 lg:p-8 pb-32 sm:pb-24 md:pb-16 text-[#241C15] overscroll-y-contain">
+          <div className="mx-auto max-w-7xl w-full pb-8 sm:pb-4">
             {children}
           </div>
         </main>

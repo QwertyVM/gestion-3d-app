@@ -80,6 +80,15 @@ export function InventarioClient({
   const [nuevoGramos, setNuevoGramos] = useState('1000')
   const [nuevaNota, setNuevaNota] = useState('')
 
+  // Details Modal State for invested products
+  const [selectedColorForDetails, setSelectedColorForDetails] = useState<ColorFilamentoItem | null>(null)
+  const [openColorDetailsModal, setOpenColorDetailsModal] = useState(false)
+
+  const handleOpenColorDetails = (item: ColorFilamentoItem) => {
+    setSelectedColorForDetails(item)
+    setOpenColorDetailsModal(true)
+  }
+
   // Filtered and sorted lists (Críticos arriba, orden alfabético)
   const filteredDisponibles = useMemo(() => {
     let list = disponibles
@@ -683,6 +692,31 @@ export function InventarioClient({
                       </div>
                     </div>
 
+                    {/* Fila 3: Productos Fabricados / Inversión en Bobina */}
+                    <div className="pt-2 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2 flex-wrap text-xs">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <Package className="h-3.5 w-3.5 text-[#A36F4C] flex-shrink-0" />
+                        {(item.totalProductosImpresos || 0) > 0 ? (
+                          <span className="text-[#241C15] font-semibold text-[11px] truncate">
+                            <strong>{item.totalProductosImpresos} {item.totalProductosImpresos === 1 ? 'producto fabricado' : 'productos fabricados'}</strong> ({item.totalGramosConsumidos || 0}g invertidos)
+                          </span>
+                        ) : (
+                          <span className="text-[#75695D] text-[11px] italic">
+                            Sin productos fabricados aún
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenColorDetails(item)}
+                        className="text-[11px] font-bold text-[#A36F4C] hover:text-[#8E5E3E] hover:underline flex items-center gap-1 cursor-pointer bg-white px-2 py-0.5 rounded-lg border border-[#D4BEA7] shadow-2xs hover:bg-[#FDFBF7] transition-all"
+                      >
+                        <span>Ver productos</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </div>
+
                     {/* Bloque de Alerta de Stock Crítico (< 300g) */}
                     {esCritico && (
                       <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-[#DC2626] space-y-1 animate-in fade-in duration-150">
@@ -731,50 +765,70 @@ export function InventarioClient({
               filteredRestock.map(item => (
                 <div 
                   key={item.id}
-                  className="flex items-center justify-between p-3 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#FFFFFF] hover:border-[#A36F4C]/50 transition-all shadow-2xs group"
+                  className="flex flex-col p-3 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#FFFFFF] hover:border-[#A36F4C]/50 transition-all shadow-2xs group space-y-2"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {/* Círculo / Dot Visual */}
-                    <div 
-                      className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0 opacity-70"
-                      style={{ backgroundColor: item.codigoHex }}
-                      title={item.nombreColor}
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-[#241C15] block truncate">
-                          {item.nombreColor}
-                        </span>
-                        <span className="text-[10px] text-[#75695D] font-mono bg-[#EAE4DC] px-1.5 py-0.2 rounded">
-                          {item.rollos || 1} un.
-                        </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Círculo / Dot Visual */}
+                      <div 
+                        className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0 opacity-70"
+                        style={{ backgroundColor: item.codigoHex }}
+                        title={item.nombreColor}
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-[#241C15] block truncate">
+                            {item.nombreColor}
+                          </span>
+                          <span className="text-[10px] text-[#75695D] font-mono bg-[#EAE4DC] px-1.5 py-0.2 rounded">
+                            {item.rollos || 1} un.
+                          </span>
+                        </div>
+                        {item.nota && (
+                          <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded inline-block mt-0.5">
+                            {item.nota}
+                          </span>
+                        )}
                       </div>
-                      {item.nota && (
-                        <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded inline-block mt-0.5">
-                          {item.nota}
-                        </span>
-                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => handleMoverADisponible(item)}
+                        className="h-7 text-xs font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white px-3 rounded-lg shadow-2xs cursor-pointer active:scale-[0.98]"
+                      >
+                        Marcar Disponible
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => handleEliminarColor(item)}
+                        title={`Eliminar "${item.nombreColor}"`}
+                        className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => handleMoverADisponible(item)}
-                      className="h-7 text-xs font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white px-3 rounded-lg shadow-2xs cursor-pointer active:scale-[0.98]"
-                    >
-                      Marcar Disponible
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => handleEliminarColor(item)}
-                      title={`Eliminar "${item.nombreColor}"`}
-                      className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  {/* Resumen de producción si tuvo histórico */}
+                  {(item.totalProductosImpresos || 0) > 0 && (
+                    <div className="pt-1.5 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2 text-xs">
+                      <span className="text-[11px] text-[#75695D] font-medium flex items-center gap-1">
+                        <Package className="h-3 w-3 text-[#A36F4C]" />
+                        {item.totalProductosImpresos} {item.totalProductosImpresos === 1 ? 'producto fabricado' : 'productos fabricados'} ({item.totalGramosConsumidos}g)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenColorDetails(item)}
+                        className="text-[11px] font-bold text-[#A36F4C] hover:underline flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <span>Ver detalle</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -976,6 +1030,181 @@ export function InventarioClient({
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* MODAL DETALLE DE PRODUCTOS FABRICADOS POR COLOR                           */}
+      {/* ========================================================================= */}
+      <Dialog open={openColorDetailsModal} onOpenChange={setOpenColorDetailsModal}>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[560px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          {selectedColorForDetails && (
+            <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+              {/* Header */}
+              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="h-10 w-10 rounded-xl border border-black/15 shadow-xs flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: selectedColorForDetails.codigoHex }}
+                  />
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Badge 
+                        variant="outline" 
+                        className={selectedColorForDetails.estado === 'DISPONIBLE'
+                          ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-semibold'
+                          : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-semibold'
+                        }
+                      >
+                        {selectedColorForDetails.estado === 'DISPONIBLE' ? '🟢 En Taller' : '🟡 En Restock'}
+                      </Badge>
+                      <span className="text-xs text-[#75695D] font-mono">
+                        {selectedColorForDetails.rollos || 1} {selectedColorForDetails.rollos === 1 ? 'bobina' : 'bobinas'}
+                      </span>
+                    </div>
+                    <DialogTitle className="text-base sm:text-lg font-bold text-[#241C15] tracking-tight">
+                      {selectedColorForDetails.nombreColor}
+                    </DialogTitle>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenColorDetailsModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+                {/* KPIs de Producción de la Bobina */}
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
+                    <span className="text-[10px] uppercase font-bold text-[#75695D] block">
+                      Total Piezas
+                    </span>
+                    <span className="text-lg font-extrabold text-[#241C15] font-mono block mt-0.5">
+                      {selectedColorForDetails.totalProductosImpresos || 0}
+                    </span>
+                    <span className="text-[9px] text-[#75695D]">unidades impresas</span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
+                    <span className="text-[10px] uppercase font-bold text-[#75695D] block">
+                      Filamento Usado
+                    </span>
+                    <span className="text-lg font-extrabold text-[#A36F4C] font-mono block mt-0.5">
+                      {(selectedColorForDetails.totalGramosConsumidos || 0).toLocaleString()} g
+                    </span>
+                    <span className="text-[9px] text-[#75695D]">en piezas terminadas</span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
+                    <span className="text-[10px] uppercase font-bold text-[#75695D] block">
+                      Stock Restante
+                    </span>
+                    <span className="text-lg font-extrabold text-[#1E5E3A] font-mono block mt-0.5">
+                      {(selectedColorForDetails.stockGramos || 0).toLocaleString()} g
+                    </span>
+                    <span className="text-[9px] text-[#75695D]">disponibles ahora</span>
+                  </div>
+                </div>
+
+                {/* Lista de Modelos Fabricados con esta Bobina */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
+                      <Package className="h-3.5 w-3.5 text-[#A36F4C]" />
+                      Modelos 3D Fabricados ({selectedColorForDetails.productosInvertidos?.length || 0})
+                    </span>
+                  </div>
+
+                  {(!selectedColorForDetails.productosInvertidos || selectedColorForDetails.productosInvertidos.length === 0) ? (
+                    <div className="p-6 rounded-xl border border-dashed border-[#E2D9CC] bg-[#FAF8F5] text-center space-y-1.5">
+                      <Package className="h-8 w-8 text-[#D4BEA7] mx-auto opacity-70" />
+                      <p className="text-xs font-medium text-[#75695D]">
+                        No hay productos registrados con este color todavía.
+                      </p>
+                      <p className="text-[11px] text-[#75695D]/80">
+                        Al asignar este color en tus pedidos de venta, el stock se descontará automáticamente y se listarán aquí los modelos producidos.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedColorForDetails.productosInvertidos.map((prod) => (
+                        <div 
+                          key={prod.productoId}
+                          className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] hover:bg-[#FFFFFF] transition-all space-y-2 shadow-2xs"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs font-bold text-[#241C15]">
+                                  {prod.nombreModelo}
+                                </span>
+                                {prod.lineaCategoria && (
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7]">
+                                    {prod.lineaCategoria}
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-[#75695D] block mt-0.5">
+                                Peso unitario: {prod.pesoGramosUnitario > 0 ? `${prod.pesoGramosUnitario}g` : 'No especificado'}
+                              </span>
+                            </div>
+
+                            <div className="text-right flex-shrink-0">
+                              <span className="text-xs font-extrabold text-[#241C15] font-mono block">
+                                {prod.totalUnidades} {prod.totalUnidades === 1 ? 'unidad' : 'unidades'}
+                              </span>
+                              <span className="text-[11px] font-bold text-[#A36F4C] font-mono">
+                                {prod.totalGramos.toLocaleString()}g totales
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Mini Historial de Pedidos */}
+                          {prod.ultimosPedidos && prod.ultimosPedidos.length > 0 && (
+                            <div className="pt-2 border-t border-[#E2D9CC]/60 space-y-1">
+                              <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider block">
+                                Pedidos recientes:
+                              </span>
+                              <div className="space-y-1">
+                                {prod.ultimosPedidos.map((ped, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-[11px] bg-white px-2 py-1 rounded-lg border border-[#E2D9CC]/60">
+                                    <span className="text-[#241C15] font-medium truncate max-w-[200px]">
+                                      👤 {ped.cliente}
+                                    </span>
+                                    <div className="flex items-center gap-2 text-[10px] text-[#75695D] font-mono">
+                                      <span>{ped.cantidad} un. ({ped.gramos}g)</span>
+                                      <span>•</span>
+                                      <span>{new Date(ped.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 sm:px-6 py-3 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end flex-shrink-0">
+                <Button
+                  type="button"
+                  onClick={() => setOpenColorDetailsModal(false)}
+                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-4 rounded-xl cursor-pointer"
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
