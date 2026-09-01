@@ -670,7 +670,95 @@ export function CatalogoClient({
             </Card>
           ) : (
             <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-              <div className="overflow-x-auto scrollbar-thin">
+              {/* Mobile View: Cards */}
+              <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+                {paginatedProductos.map((p) => {
+                  const isDiscontinued = !p.activo
+
+                  return (
+                    <div 
+                      key={p.id} 
+                      onClick={() => handleOpenDetails(p)}
+                      className={`p-3.5 space-y-2.5 transition-colors cursor-pointer active:bg-[#F8F6F2] ${
+                        isDiscontinued 
+                          ? 'bg-[#FAF8F5]/60 opacity-80' 
+                          : 'bg-[#FFFFFF] hover:bg-[#FDFBF7]'
+                      }`}
+                    >
+                      {/* Fila 1: Nombre, Peso, Categoría y Estado */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`text-sm font-bold truncate ${
+                              isDiscontinued ? 'line-through text-[#75695D]' : 'text-[#241C15]'
+                            }`}>
+                              {p.nombreModelo}
+                            </span>
+                            {p.pesoGramos != null && p.pesoGramos > 0 && (
+                              <Badge variant="outline" className="text-[10px] font-mono font-bold bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] px-1.5 py-0">
+                                ⚖️ {p.pesoGramos}g
+                              </Badge>
+                            )}
+                          </div>
+                          <Badge variant="outline" className="text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] text-[10px] font-semibold mt-1 inline-block">
+                            {p.lineaCategoria}
+                          </Badge>
+                        </div>
+
+                        <div className="flex-shrink-0">
+                          {p.activo ? (
+                            <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] gap-1 inline-flex items-center px-2 py-0.5 font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
+                              Activo
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-[#F4EFEA] text-[#75695D] border-[#E2D9CC] text-[10px] gap-1 inline-flex items-center px-2 py-0.5 font-medium">
+                              <Archive className="w-3 h-3" />
+                              Descontinuado
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Fila 2: 3 Precios en Grid */}
+                      <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
+                        <div className="p-1">
+                          <span className="text-[9px] uppercase font-bold text-[#1E5E3A] block">P. Amigos</span>
+                          <span className="text-xs font-bold text-[#1E5E3A] font-mono block mt-0.5">
+                            {formatCurrency(p.precioAmigos)}
+                          </span>
+                          <span className="text-[8px] text-[#1E5E3A]/80 font-medium block truncate">
+                            +{calcMargen(p.precioAmigos, p.costoBase)}
+                          </span>
+                        </div>
+
+                        <div className="p-1 border-x border-[#E2D9CC]">
+                          <span className="text-[9px] uppercase font-bold text-[#944917] block">P. Mercado</span>
+                          <span className="text-xs font-bold text-[#944917] font-mono block mt-0.5">
+                            {formatCurrency(p.precioMercado)}
+                          </span>
+                          <span className="text-[8px] text-[#944917]/80 font-medium block truncate">
+                            +{calcMargen(p.precioMercado, p.costoBase)}
+                          </span>
+                        </div>
+
+                        <div className="p-1">
+                          <span className="text-[9px] uppercase font-bold text-[#A36F4C] block">Comunidad</span>
+                          <span className="text-xs font-bold text-[#A36F4C] font-mono block mt-0.5">
+                            {formatCurrency(p.precioComunidad)}
+                          </span>
+                          <span className="text-[8px] text-[#A36F4C]/80 font-medium block truncate">
+                            +{calcMargen(p.precioComunidad, p.costoBase)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Desktop View: Table */}
+              <div className="hidden md:block overflow-x-auto scrollbar-thin">
                 <Table className="w-full min-w-[650px]">
                   <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
                   <TableRow className="border-[#E2D9CC] hover:bg-transparent">

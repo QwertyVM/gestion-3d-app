@@ -800,9 +800,169 @@ export function VentasClient({
         </div>
       </div>
 
-      {/* Main Orders Table Light Mode */}
+      {/* Main Orders: Responsive Card View on Mobile + Table on Desktop */}
       <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-        <div className="overflow-x-auto scrollbar-thin">
+        {/* Mobile View: Cards */}
+        <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+          {paginatedVentas.length === 0 ? (
+            <div className="p-8 text-center text-[#75695D] text-xs">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <ShoppingCart className="h-8 w-8 text-[#A89B8D]" />
+                <span>No se encontraron pedidos con los filtros seleccionados</span>
+              </div>
+            </div>
+          ) : (
+            paginatedVentas.map((v) => {
+              const isPaid = v.saldoPendiente <= 0
+
+              return (
+                <div 
+                  key={v.id} 
+                  onClick={() => handleOpenDetails(v)}
+                  className="p-3.5 space-y-2.5 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors cursor-pointer active:bg-[#F8F6F2]"
+                >
+                  {/* Fila 1: Cliente, Canal, Fecha y Estado */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-sm text-[#241C15] truncate">{v.cliente}</span>
+                        {v.canalVenta && (
+                          <span className="text-[10px] text-[#75695D] bg-[#F4EFEA] border border-[#E2D9CC] px-1.5 py-0.2 rounded font-medium">
+                            {v.canalVenta}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-[#75695D] font-mono block mt-0.5">
+                        {formatDate(v.fecha)}
+                      </span>
+                    </div>
+
+                    <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+                      <select
+                        value={v.estado}
+                        onChange={(e) => handleCambiarEstado(v.id, e.target.value as EstadoVenta)}
+                        className={`text-[11px] font-bold rounded-lg px-2 py-1 border transition-all cursor-pointer focus:outline-none shadow-xs ${
+                          v.estado === 'ENTREGADO'
+                            ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
+                            : v.estado === 'EN_PRODUCCION'
+                            ? 'bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7]'
+                            : v.estado === 'PENDIENTE'
+                            ? 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
+                            : 'bg-[#FDF2F0] text-[#A34335] border-[#F2C0B8]'
+                        }`}
+                      >
+                        <option value="PENDIENTE">Pendiente</option>
+                        <option value="EN_PRODUCCION">En Producción</option>
+                        <option value="ENTREGADO">Entregado</option>
+                        <option value="CANCELADO">Cancelado</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Fila 2: Modelo & Filamento Asignado */}
+                  <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-[#241C15] truncate">
+                        {v.producto.nombreModelo}
+                      </span>
+                      <span className="text-xs font-mono font-extrabold text-[#241C15] flex-shrink-0">
+                        {v.cantidad}x • {formatCurrency(v.total)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-[#75695D] flex-wrap">
+                      {v.colorFilamento ? (() => {
+                        const filamentoEnTaller = filamentos.find(f => f.id === v.colorFilamentoId || f.nombreColor === v.colorFilamento?.nombreColor)
+                        const stockGramosActual = filamentoEnTaller?.stockGramos ?? v.colorFilamento?.stockGramos ?? 1000
+                        const esBajoStock = stockGramosActual < 300 || Boolean(filamentoEnTaller?.alertaCritica)
+
+                        return (
+                          <div className="inline-flex items-center gap-1.5">
+                            <span 
+                              className="h-2.5 w-2.5 rounded-full border border-black/20 inline-block flex-shrink-0"
+                              style={{ backgroundColor: v.colorFilamento.codigoHex }}
+                            />
+                            <span className="font-semibold text-[#241C15] text-[11px]">
+                              {v.colorFilamento.nombreColor}
+                            </span>
+                            {esBajoStock && (
+                              <span className="text-[9px] font-bold text-[#854D0E] bg-[#FEF08A] px-1 rounded border border-[#FACC15]">
+                                ⚠️ {stockGramosActual}g
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })() : (
+                        <span className="text-[10px] text-[#75695D] italic">Sin filamento específico</span>
+                      )}
+
+                      <span className="text-[10px] text-[#75695D] font-mono">
+                        {v.tipoPrecio}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Fila 3: Cobranza & Acciones */}
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-2">
+                      {isPaid ? (
+                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] gap-1 font-bold py-0.5">
+                          <Check className="h-3 w-3 stroke-[2.5]" />
+                          100% Pagado
+                        </Badge>
+                      ) : (
+                        <div className="flex items-center gap-1 text-xs">
+                          <span className="text-[10px] text-[#75695D]">Debe:</span>
+                          <span className="font-mono font-bold text-[#8C6D1F] text-xs">
+                            {formatCurrency(v.saldoPendiente)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {!isPaid && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={(e) => handleOpenAbono(v, e)}
+                            className="h-7 px-2.5 bg-[#FDF6E2] hover:bg-[#F9ECC7] text-[#8C6D1F] border border-[#E8D49B] text-xs font-bold rounded-lg cursor-pointer shadow-2xs"
+                          >
+                            <DollarSign className="h-3 w-3 mr-0.5" />
+                            Abonar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={(e) => handleLiquidarTotal(v.id, e)}
+                            className="h-7 px-2.5 bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-lg cursor-pointer shadow-2xs"
+                          >
+                            <Check className="h-3 w-3 mr-0.5 stroke-[2.5]" />
+                            Pagó
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteVenta(v.id, v.cliente)
+                        }}
+                        disabled={deletingId === v.id}
+                        className="h-7 w-7 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <Table className="w-full min-w-[700px]">
             <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
             <TableRow className="border-[#E2D9CC] hover:bg-transparent">

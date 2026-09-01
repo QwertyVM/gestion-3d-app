@@ -57,15 +57,15 @@ function CustomEvolucionTooltip({ active, payload, label }: any) {
     const ganancia = Number(data.ganancia != null ? data.ganancia : (ingresos - costo))
 
     return (
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xl overflow-hidden min-w-[220px] text-xs font-sans">
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xl overflow-hidden min-w-[200px] sm:min-w-[220px] text-xs font-sans">
         {/* Cabecera: Fecha destacada con fondo NOVA */}
-        <div className="bg-[#F8F6F2] border-b border-[#E2D9CC] px-3.5 py-2 flex items-center justify-between">
+        <div className="bg-[#F8F6F2] border-b border-[#E2D9CC] px-3 py-1.5 sm:px-3.5 sm:py-2 flex items-center justify-between">
           <span className="font-bold text-[#241C15]">{formatFechaEvolucion(label, true)}</span>
-          <span className="text-[10px] text-[#75695D] font-mono uppercase font-semibold">Resumen</span>
+          <span className="text-[9px] sm:text-[10px] text-[#75695D] font-mono uppercase font-semibold">Resumen</span>
         </div>
 
         {/* Cuerpo del Tooltip: Flujo Contable */}
-        <div className="p-3.5 space-y-2">
+        <div className="p-2.5 sm:p-3.5 space-y-1.5 sm:space-y-2">
           {/* Fila 1: Venta Total */}
           <div className="flex items-center justify-between gap-3">
             <span className="text-[#A36F4C] font-bold flex items-center gap-1.5">
@@ -81,7 +81,7 @@ function CustomEvolucionTooltip({ active, payload, label }: any) {
           <div className="flex items-center justify-between gap-3 text-[#75695D]">
             <span className="flex items-center gap-1.5 font-medium">
               <span className="w-2 h-2 rounded-full bg-[#75695D]" />
-              (-) Costo Fabricación:
+              (-) Costo Fab.:
             </span>
             <span className="font-mono font-semibold">
               S/ {costo.toFixed(2)}
@@ -108,20 +108,20 @@ function CustomEvolucionTooltip({ active, payload, label }: any) {
   return null
 }
 
-// Leyenda personalizada con jerarquía vertical
+// Leyenda personalizada con jerarquía horizontal responsive
 function CustomLegend() {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-5 text-xs pb-3 pt-1">
+    <div className="flex flex-wrap items-center justify-start sm:justify-end gap-3 sm:gap-5 text-[11px] sm:text-xs pb-2 sm:pb-3 pt-1">
       <div className="flex items-center gap-1.5 font-bold text-[#A36F4C]">
-        <span className="w-3.5 h-0.5 bg-[#A36F4C] rounded-full inline-block" />
+        <span className="w-3 h-0.5 bg-[#A36F4C] rounded-full inline-block" />
         <span>Ventas</span>
       </div>
       <div className="flex items-center gap-1.5 font-medium text-[#75695D]">
-        <span className="w-3.5 h-0 border-t-2 border-dashed border-[#75695D] inline-block" />
+        <span className="w-3 h-0 border-t-2 border-dashed border-[#75695D] inline-block" />
         <span>Costo Fabricación</span>
       </div>
       <div className="flex items-center gap-1.5 font-bold text-[#1E5E3A]">
-        <span className="w-2.5 h-2.5 rounded-full bg-[#1E5E3A] border-2 border-white shadow-xs inline-block" />
+        <span className="w-2 h-2 rounded-full bg-[#1E5E3A] border border-white shadow-xs inline-block" />
         <span>Ganancia Neta</span>
       </div>
     </div>
@@ -168,18 +168,18 @@ export function DashboardClient({
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
-              <Sparkles className="h-6 w-6 stroke-[2.5]" />
+          <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-2.5 sm:gap-3">
+            <div className="p-2 sm:p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm flex-shrink-0">
+              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
             </div>
-            Dashboard General
+            <span>Dashboard General</span>
           </h1>
-          <p className="text-sm text-[#75695D] mt-1">
-            Métricas clave de rendimiento, rentabilidad sobre costos de fabricación y flujo comercial.
+          <p className="text-xs sm:text-sm text-[#75695D] mt-0.5 sm:mt-1">
+            Métricas clave de rendimiento, rentabilidad sobre costos y flujo comercial.
           </p>
         </div>
       </div>
@@ -189,25 +189,25 @@ export function DashboardClient({
         {/* 1. GANANCIA NETA EN VENTAS */}
         <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#1E5E3A] transition-all relative overflow-hidden rounded-2xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A]">
+          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:px-5">
+            <CardTitle className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#1E5E3A]">
               Ganancia Neta (Ventas)
             </CardTitle>
             <div className="p-1.5 rounded-lg bg-[#EBF7EE] text-[#1E5E3A]">
               <DollarSign className="h-4 w-4 stroke-[2.5]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono">
+          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
+            <div className="text-xl sm:text-2xl font-extrabold text-[#1E5E3A] font-mono truncate">
               +{formatCurrency(kpis.gananciaNeta)}
             </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D] pt-1">
+            <div className="flex items-center justify-between text-xs text-[#75695D] pt-0.5">
               <span>Margen sobre costo:</span>
               <span className="font-bold text-[#1E5E3A] font-mono">
                 +{kpis.margenPorcentaje.toFixed(1)}%
               </span>
             </div>
-            <p className="text-[11px] text-[#75695D]">
+            <p className="text-[10px] sm:text-[11px] text-[#75695D] truncate">
               Ventas ({formatCurrency(kpis.ingresosVentas)}) - Costo Fab. ({formatCurrency(kpis.costoFabricacionTotal)})
             </p>
           </CardContent>
@@ -216,99 +216,101 @@ export function DashboardClient({
         {/* 2. INGRESOS TOTALES EN VENTAS */}
         <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#A36F4C] transition-all relative overflow-hidden rounded-2xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#A36F4C]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-[#A36F4C]">
+          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:px-5">
+            <CardTitle className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#A36F4C]">
               Ingresos por Ventas
             </CardTitle>
             <div className="p-1.5 rounded-lg bg-[#EFE5D8] text-[#A36F4C]">
               <TrendingUp className="h-4 w-4 stroke-[2.5]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-2xl font-extrabold text-[#241C15] font-mono">
+          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
+            <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono truncate">
               {formatCurrency(kpis.ingresosVentas)}
             </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D] pt-1">
+            <div className="flex items-center justify-between text-xs text-[#75695D] pt-0.5">
               <span>Ticket Promedio:</span>
               <span className="font-mono text-[#241C15] font-bold">
                 {formatCurrency(kpis.ticketPromedio)}
               </span>
             </div>
-            <p className="text-[11px] text-[#75695D]">Total facturado en modelos 3D</p>
+            <p className="text-[10px] sm:text-[11px] text-[#75695D] truncate">Total facturado en modelos 3D</p>
           </CardContent>
         </Card>
 
         {/* 3. COSTO TOTAL DE FABRICACIÓN */}
         <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#944917] transition-all relative overflow-hidden rounded-2xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#944917]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-[#944917]">
+          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:px-5">
+            <CardTitle className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#944917]">
               Costo de Fabricación
             </CardTitle>
             <div className="p-1.5 rounded-lg bg-[#F4EFEA] text-[#944917]">
               <Layers className="h-4 w-4 stroke-[2.5]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-2xl font-extrabold text-[#944917] font-mono">
+          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
+            <div className="text-xl sm:text-2xl font-extrabold text-[#944917] font-mono truncate">
               {formatCurrency(kpis.costoFabricacionTotal)}
             </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D] pt-1">
-              <span>Costo por modelo vendido:</span>
+            <div className="flex items-center justify-between text-xs text-[#75695D] pt-0.5">
+              <span>Costo por modelo:</span>
               <span className="font-mono text-[#241C15] font-bold">
                 {kpis.ingresosVentas > 0 
                   ? `${((kpis.costoFabricacionTotal / kpis.ingresosVentas) * 100).toFixed(0)}% del precio`
                   : '0%'}
               </span>
             </div>
-            <p className="text-[11px] text-[#75695D]">Filamento, energía y depreciación base</p>
+            <p className="text-[10px] sm:text-[11px] text-[#75695D] truncate">Filamento, energía y amortización</p>
           </CardContent>
         </Card>
 
         {/* 4. SALDO POR COBRAR / COBRADO */}
         <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#8C6D1F] transition-all relative overflow-hidden rounded-2xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#8C6D1F]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-[#8C6D1F]">
+          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:px-5">
+            <CardTitle className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#8C6D1F]">
               Cobranzas & Saldos
             </CardTitle>
             <div className="p-1.5 rounded-lg bg-[#FDF6E2] text-[#8C6D1F]">
               <Clock className="h-4 w-4 stroke-[2.5]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="text-2xl font-extrabold text-[#8C6D1F] font-mono">
+          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
+            <div className="text-xl sm:text-2xl font-extrabold text-[#8C6D1F] font-mono truncate">
               {formatCurrency(kpis.saldoPorCobrar)}
             </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D] pt-1">
+            <div className="flex items-center justify-between text-xs text-[#75695D] pt-0.5">
               <span>Cobrado en Caja:</span>
               <span className="font-mono text-[#1E5E3A] font-bold">
                 {formatCurrency(kpis.totalCobradoVentas)}
               </span>
             </div>
-            <p className="text-[11px] text-[#75695D]">Saldos pendientes de entrega</p>
+            <p className="text-[10px] sm:text-[11px] text-[#75695D] truncate">Saldos pendientes de entrega</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
         
         {/* Gráfico de Evolución: Ingresos vs Costo vs Ganancia */}
-        <Card className="lg:col-span-4 bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-[#241C15] text-base font-bold flex items-center justify-between">
-              <span>Evolución: Ventas, Costo y Ganancia Neta</span>
-              <span className="text-xs text-[#75695D] font-normal font-mono">Por fecha</span>
+        <Card className="lg:col-span-4 bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 pb-2">
+            <CardTitle className="text-[#241C15] text-sm sm:text-base font-bold flex items-center justify-between flex-wrap gap-2">
+              <span>Evolución: Ventas, Costo y Ganancia</span>
+              <span className="text-[11px] text-[#75695D] font-normal font-mono bg-[#FAF8F5] border border-[#E2D9CC] px-2 py-0.5 rounded-md">
+                Historial
+              </span>
             </CardTitle>
             <CardDescription className="text-xs text-[#75695D]">
-              Comparativa histórica entre el precio cobrado y el costo base de fabricación.
+              Comparativa entre precio cobrado y costo de fabricación.
             </CardDescription>
           </CardHeader>
-          <CardContent className="pl-2">
-            <div className="h-[310px] w-full">
+          <CardContent className="p-2 sm:p-4 pt-0">
+            <div className="h-[250px] sm:h-[310px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={graficoEvolucion} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <ComposedChart data={graficoEvolucion} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gananciaGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#1E5E3A" stopOpacity={0.12} />
@@ -321,7 +323,7 @@ export function DashboardClient({
                   <XAxis 
                     dataKey="fecha" 
                     stroke="#75695D" 
-                    fontSize={11} 
+                    fontSize={10} 
                     tickLine={false} 
                     axisLine={{ stroke: '#E2D9CC' }}
                     tickFormatter={(val) => formatFechaEvolucion(val, false)}
@@ -330,10 +332,10 @@ export function DashboardClient({
                   
                   <YAxis 
                     stroke="#75695D" 
-                    fontSize={11} 
+                    fontSize={10} 
                     tickLine={false} 
                     axisLine={false} 
-                    tickFormatter={(val) => `S/ ${val}`}
+                    tickFormatter={(val) => `S/${val}`}
                     domain={[0, 'auto']}
                   />
                   
@@ -341,7 +343,7 @@ export function DashboardClient({
                   
                   <Legend content={<CustomLegend />} verticalAlign="top" />
 
-                  {/* Área sombreada sutil debajo de la curva de Ganancia Neta */}
+                  {/* Área sombreada debajo de la curva de Ganancia Neta */}
                   <Area 
                     type="monotone" 
                     dataKey="ganancia" 
@@ -351,37 +353,37 @@ export function DashboardClient({
                     tooltipType="none" 
                   />
 
-                  {/* Línea 1: Ventas Totales (Ingreso Bruto) - Cima, Continua Gruesa Terracota */}
+                  {/* Línea 1: Ventas Totales */}
                   <Line 
                     type="monotone" 
                     dataKey="ingresos" 
                     stroke="#A36F4C" 
                     strokeWidth={2.5} 
-                    dot={{ r: 3.5, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-                    activeDot={{ r: 5.5, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
+                    dot={{ r: 3, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+                    activeDot={{ r: 5, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
                     name="ingresos" 
                   />
 
-                  {/* Línea 2: Costo de Fabricación - Intermedio, Punteada Gris/Marrón */}
+                  {/* Línea 2: Costo de Fabricación */}
                   <Line 
                     type="monotone" 
                     dataKey="costo" 
                     stroke="#75695D" 
                     strokeWidth={2} 
                     strokeDasharray="4 4" 
-                    dot={{ r: 3, fill: '#75695D', stroke: '#FFFFFF', strokeWidth: 1 }}
-                    activeDot={{ r: 5, fill: '#75695D', stroke: '#FFFFFF', strokeWidth: 2 }}
+                    dot={{ r: 2.5, fill: '#75695D', stroke: '#FFFFFF', strokeWidth: 1 }}
+                    activeDot={{ r: 4.5, fill: '#75695D', stroke: '#FFFFFF', strokeWidth: 2 }}
                     name="costo" 
                   />
 
-                  {/* Línea 3: Ganancia Neta - Base Limpia, Continua Verde Esmeralda */}
+                  {/* Línea 3: Ganancia Neta */}
                   <Line 
                     type="monotone" 
                     dataKey="ganancia" 
                     stroke="#1E5E3A" 
                     strokeWidth={2.5} 
-                    dot={{ r: 4, fill: '#1E5E3A', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-                    activeDot={{ r: 6, fill: '#1E5E3A', stroke: '#FFFFFF', strokeWidth: 2 }}
+                    dot={{ r: 3.5, fill: '#1E5E3A', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+                    activeDot={{ r: 5.5, fill: '#1E5E3A', stroke: '#FFFFFF', strokeWidth: 2 }}
                     name="ganancia" 
                   />
                 </ComposedChart>
@@ -391,23 +393,23 @@ export function DashboardClient({
         </Card>
 
         {/* Gráfico de Distribución de Egresos */}
-        <Card className="lg:col-span-3 bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
-          <CardHeader>
-            <CardTitle className="text-[#241C15] text-base font-bold">Distribución de Gastos del Taller</CardTitle>
+        <Card className="lg:col-span-3 bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 pb-2">
+            <CardTitle className="text-[#241C15] text-sm sm:text-base font-bold">Distribución de Gastos</CardTitle>
             <CardDescription className="text-xs text-[#75695D]">
-              Maquinaria (impresoras/secador), insumos y servicios operativos.
+              Maquinaria, insumos, packaging y servicios operativos.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full flex flex-col items-center justify-center relative">
+          <CardContent className="p-2 sm:p-4 pt-0">
+            <div className="h-[250px] sm:h-[300px] w-full flex flex-col items-center justify-center relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={graficoInversion}
                     cx="50%"
                     cy="50%"
-                    innerRadius={65}
-                    outerRadius={95}
+                    innerRadius={55}
+                    outerRadius={85}
                     paddingAngle={4}
                     dataKey="value"
                     stroke="none"
@@ -417,18 +419,18 @@ export function DashboardClient({
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E2D9CC', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}
+                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E2D9CC', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', fontSize: '12px' }}
                     formatter={(val: any) => [`S/ ${Number(val).toFixed(2)}`, 'Gasto']}
                   />
                   <Legend 
                     verticalAlign="bottom"
-                    formatter={(val) => <span className="text-xs text-[#241C15] font-medium">{val}</span>}
+                    formatter={(val) => <span className="text-[11px] sm:text-xs text-[#241C15] font-medium">{val}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none pb-8">
-                <span className="text-[11px] text-[#75695D] uppercase font-bold tracking-wider">Total Gastos</span>
-                <span className="text-lg font-extrabold text-[#241C15] font-mono">{formatCurrency(kpis.egresosTotales)}</span>
+              <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none pb-7">
+                <span className="text-[10px] text-[#75695D] uppercase font-bold tracking-wider">Total</span>
+                <span className="text-sm sm:text-base font-extrabold text-[#241C15] font-mono">{formatCurrency(kpis.egresosTotales)}</span>
               </div>
             </div>
           </CardContent>
@@ -438,33 +440,33 @@ export function DashboardClient({
       {/* Fila Inferior: Cuentas Pendientes por Cobrar & Top 5 Colores de Filamento */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 items-start">
         {/* 1. Cuentas por Cobrar */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl h-full flex flex-col justify-between">
-          <CardHeader>
-            <CardTitle className="text-[#241C15] text-base font-bold flex items-center gap-2">
-              <Activity className="h-5 w-5 text-[#8C6D1F]" />
-              Cuentas Pendientes por Cobrar
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl h-full flex flex-col justify-between overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 pb-3">
+            <CardTitle className="text-[#241C15] text-sm sm:text-base font-bold flex items-center gap-2">
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-[#8C6D1F]" />
+              <span>Cuentas Pendientes por Cobrar</span>
             </CardTitle>
             <CardDescription className="text-xs text-[#75695D]">
-              Pedidos entregados o en producción con saldos pendientes de cobro.
+              Pedidos con saldos pendientes de liquidación.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+          <CardContent className="p-4 sm:p-5 pt-0">
+            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-0.5">
               {cuentasPorCobrar.length === 0 ? (
-                <div className="p-8 text-center text-[#75695D] text-sm bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
+                <div className="p-6 text-center text-[#75695D] text-xs sm:text-sm bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
                   No hay cuentas pendientes por cobrar 🎉
                 </div>
               ) : (
                 cuentasPorCobrar.slice(0, 5).map((cuenta) => (
-                  <div key={cuenta.id} className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] hover:bg-[#F4EFEA] transition-colors">
-                    <div className="min-w-0 pr-2">
-                      <p className="text-sm font-bold text-[#241C15] truncate">{cuenta.cliente}</p>
-                      <p className="text-xs text-[#75695D] mt-0.5 truncate">
+                  <div key={cuenta.id} className="flex items-center justify-between p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] hover:bg-[#F4EFEA] transition-colors gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-bold text-[#241C15] truncate">{cuenta.cliente}</p>
+                      <p className="text-[11px] text-[#75695D] mt-0.5 truncate">
                         {cuenta.producto?.nombreModelo ? `${cuenta.producto.nombreModelo} • ` : ''}{formatDate(cuenta.fecha)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <Badge variant="outline" className="text-[#8C6D1F] border-[#E8D49B] bg-[#FDF6E2] font-mono text-xs font-bold px-3 py-1">
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Badge variant="outline" className="text-[#8C6D1F] border-[#E8D49B] bg-[#FDF6E2] font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5">
                         Debe: {formatCurrency(Number(cuenta.saldoPendiente))}
                       </Badge>
                     </div>
@@ -476,29 +478,29 @@ export function DashboardClient({
         </Card>
 
         {/* 2. Top 5 Colores Más Utilizados */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl h-full flex flex-col justify-between">
-          <CardHeader>
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl h-full flex flex-col justify-between overflow-hidden">
+          <CardHeader className="p-4 sm:p-5 pb-3">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-[#241C15] text-base font-bold flex items-center gap-2">
-                <Palette className="h-5 w-5 text-[#A36F4C]" />
-                Top 5 Colores Más Utilizados
+              <CardTitle className="text-[#241C15] text-sm sm:text-base font-bold flex items-center gap-2">
+                <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-[#A36F4C]" />
+                <span>Top Colores Más Usados</span>
               </CardTitle>
               <Link 
                 href="/catalogo/inventario" 
-                className="text-xs font-semibold text-[#A36F4C] hover:underline flex items-center gap-1 flex-shrink-0"
+                className="text-[11px] sm:text-xs font-semibold text-[#A36F4C] hover:underline flex items-center gap-1 flex-shrink-0"
               >
-                <span>Ver Inventario</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                <span>Inventario</span>
+                <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
             <CardDescription className="text-xs text-[#75695D]">
-              Filamentos con mayor frecuencia de uso y demanda en pedidos del taller.
+              Filamentos con mayor frecuencia de uso y rotación.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+          <CardContent className="p-4 sm:p-5 pt-0">
+            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-0.5">
               {(!topColores || topColores.length === 0) ? (
-                <div className="p-8 text-center text-[#75695D] text-sm bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
+                <div className="p-6 text-center text-[#75695D] text-xs sm:text-sm bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
                   Aún no hay pedidos con colores asignados 🎨
                 </div>
               ) : (
@@ -509,16 +511,16 @@ export function DashboardClient({
                   return (
                     <div 
                       key={color.id || color.nombreColor} 
-                      className={`p-3 rounded-xl border transition-all ${
+                      className={`p-2.5 sm:p-3 rounded-xl border transition-all ${
                         isFirst
                           ? 'bg-[#FDFBF7] border-[#D4BEA7] shadow-2xs'
                           : 'bg-[#FAF8F5] border-[#E2D9CC] hover:bg-[#FFFFFF]'
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
                           {/* Rank Badge */}
-                          <div className={`h-6 w-6 rounded-lg flex items-center justify-center text-xs font-black font-mono flex-shrink-0 ${
+                          <div className={`h-5 w-5 sm:h-6 sm:w-6 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-black font-mono flex-shrink-0 ${
                             isFirst 
                               ? 'bg-[#A36F4C] text-white shadow-2xs' 
                               : index === 1 
@@ -530,25 +532,25 @@ export function DashboardClient({
 
                           {/* Color Swatch */}
                           <div 
-                            className="h-7 w-7 rounded-full border border-black/15 shadow-xs flex-shrink-0"
+                            className="h-6 w-6 sm:h-7 sm:w-7 rounded-full border border-black/15 shadow-xs flex-shrink-0"
                             style={{ backgroundColor: color.codigoHex }}
                             title={color.nombreColor}
                           />
 
                           {/* Info */}
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-bold text-[#241C15] truncate">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs sm:text-sm font-bold text-[#241C15] truncate">
                                 {color.nombreColor}
                               </span>
                               {isFirst && (
-                                <span className="text-[9px] font-black text-[#A36F4C] bg-[#EFE5D8] border border-[#D4BEA7] px-1.5 py-0.2 rounded uppercase flex-shrink-0">
+                                <span className="text-[8px] sm:text-[9px] font-black text-[#A36F4C] bg-[#EFE5D8] border border-[#D4BEA7] px-1 py-0.2 rounded uppercase flex-shrink-0">
                                   Top 1
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-1.5 text-xs text-[#75695D] mt-0.5 flex-wrap">
-                              <span><strong className="text-[#241C15] font-mono">{color.pedidosCount}</strong> {color.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
+                            <div className="flex items-center gap-1 text-[10px] sm:text-xs text-[#75695D] mt-0.5 flex-wrap">
+                              <span><strong className="text-[#241C15] font-mono">{color.pedidosCount}</strong> ped.</span>
                               <span>•</span>
                               <span><strong className="text-[#241C15] font-mono">{color.unidadesCount}</strong> un.</span>
                               <span>•</span>
@@ -561,22 +563,22 @@ export function DashboardClient({
                         <div className="flex flex-col items-end flex-shrink-0">
                           <Badge 
                             variant="outline" 
-                            className={`text-xs font-mono font-bold px-2 py-0.5 shadow-2xs ${
+                            className={`text-[10px] sm:text-xs font-mono font-bold px-1.5 sm:px-2 py-0.5 shadow-2xs ${
                               esCritico
                                 ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047]'
                                 : 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
                             }`}
                           >
-                            {esCritico ? `⚠️ ${color.stockGramosActual}g` : `${color.stockGramosActual}g stock`}
+                            {esCritico ? `⚠️ ${color.stockGramosActual}g` : `${color.stockGramosActual}g`}
                           </Badge>
-                          <span className="text-[10px] font-mono text-[#75695D] mt-0.5">
-                            {color.porcentajeUso}% demanda
+                          <span className="text-[9px] sm:text-[10px] font-mono text-[#75695D] mt-0.5">
+                            {color.porcentajeUso}% uso
                           </span>
                         </div>
                       </div>
 
                       {/* Progress Bar */}
-                      <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden mt-2">
+                      <div className="w-full bg-[#EAE4DC] h-1 sm:h-1.5 rounded-full overflow-hidden mt-1.5">
                         <div 
                           className="h-full rounded-full bg-[#A36F4C] transition-all duration-300"
                           style={{ width: `${Math.max(6, color.porcentajeUso)}%` }}

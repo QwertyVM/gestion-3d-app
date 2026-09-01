@@ -826,9 +826,75 @@ export function FlujoCajaClient({
         </div>
       </div>
 
-      {/* Table */}
+      {/* Movements: Responsive Card View on Mobile + Table on Desktop */}
       <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-        <div className="overflow-x-auto scrollbar-thin">
+        {/* Mobile View: Cards */}
+        <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+          {paginatedMovements.length === 0 ? (
+            <div className="p-8 text-center text-[#75695D] text-xs">
+              No se encontraron movimientos registrados con los filtros aplicados.
+            </div>
+          ) : (
+            paginatedMovements.map((mov) => (
+              <div key={mov.id} className="p-3.5 space-y-2 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-sm text-[#241C15] block truncate">{mov.concepto}</span>
+                    <span className="text-[11px] text-[#75695D] font-mono block mt-0.5">
+                      {formatDate(mov.fecha)} • {mov.entidad}
+                    </span>
+                  </div>
+
+                  <span className={`text-sm font-mono font-extrabold flex-shrink-0 ${
+                    mov.isPositive ? 'text-[#1E5E3A]' : 'text-[#A34335]'
+                  }`}>
+                    {mov.isPositive ? `+${formatCurrency(mov.monto)}` : `-${formatCurrency(mov.monto)}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-xs pt-1">
+                  <div>
+                    {mov.tipo === 'INGRESO_VENTA' ? (
+                      <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold gap-1">
+                        <ArrowUpRight className="h-3 w-3 stroke-[2.5]" />
+                        Venta
+                      </Badge>
+                    ) : mov.tipo === 'INGRESO_DIRECTO' ? (
+                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold gap-1">
+                        <ArrowUpRight className="h-3 w-3 stroke-[2.5]" />
+                        Ingreso Directo
+                      </Badge>
+                    ) : mov.tipo === 'EGRESO_MAQUINARIA' ? (
+                      <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-semibold gap-1">
+                        <Wrench className="h-3 w-3" />
+                        Maquinaria
+                      </Badge>
+                    ) : mov.tipo === 'EGRESO_INSUMO' ? (
+                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-semibold gap-1">
+                        <ShoppingBag className="h-3 w-3" />
+                        Insumo
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-[10px] font-semibold gap-1">
+                        <Truck className="h-3 w-3" />
+                        Gasto Operativo
+                      </Badge>
+                    )}
+                  </div>
+
+                  {mov.detalle && (
+                    <span className="text-[11px] text-[#75695D] truncate max-w-[180px]">
+                      {mov.detalle}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <Table className="w-full min-w-[650px]">
             <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent">
