@@ -527,6 +527,31 @@ export async function resetColoresTaller() {
   return getColoresInventario(true)
 }
 
+export async function editarColorFilamento(id: string, data: {
+  nombreColor: string
+  codigoHex?: string
+  nota?: string | null
+}) {
+  const updated = await prisma.inventarioFilamento.update({
+    where: { id },
+    data: {
+      nombreColor: data.nombreColor.trim(),
+      ...(data.codigoHex ? { codigoHex: data.codigoHex } : {}),
+      ...(data.nota !== undefined ? { notaProduccion: data.nota?.trim() || null } : {})
+    }
+  })
+
+  safeRevalidate()
+
+  return {
+    id: updated.id,
+    nombreColor: updated.nombreColor,
+    codigoHex: updated.codigoHex || '#18181B',
+    nota: updated.notaProduccion,
+    updatedAt: updated.updatedAt.toISOString(),
+  }
+}
+
 // Para selector de ventas con información de gramos y stock crítico
 export async function getFilamentosActivos() {
   const { disponibles } = await getColoresInventario()

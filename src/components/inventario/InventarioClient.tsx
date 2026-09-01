@@ -17,7 +17,12 @@ import {
   AlertTriangle,
   Sparkles,
   Trash2,
-  Package
+  Package,
+  Pencil,
+  SlidersHorizontal,
+  Layers,
+  Flame,
+  ArrowUpDown
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,7 +37,8 @@ import {
   actualizarRollosColor,
   agregarNuevoColor, 
   eliminarColor, 
-  resetColoresTaller 
+  resetColoresTaller,
+  editarColorFilamento
 } from '@/actions/inventario'
 
 interface InventarioClientProps {
@@ -69,6 +75,8 @@ export function InventarioClient({
   const [disponibles, setDisponibles] = useState<ColorFilamentoItem[]>(initialDisponibles)
   const [restock, setRestock] = useState<ColorFilamentoItem[]>(initialRestock)
   const [search, setSearch] = useState('')
+  const [activeTab, setActiveTab] = useState<'disponibles' | 'restock' | 'todos'>('disponibles')
+  const [filterCritico, setFilterCritico] = useState<boolean>(false)
   const [isPending, startTransition] = useTransition()
 
   // Quick Add State
@@ -79,6 +87,44 @@ export function InventarioClient({
   const [nuevoRollos, setNuevoRollos] = useState('1')
   const [nuevoGramos, setNuevoGramos] = useState('1000')
   const [nuevaNota, setNuevaNota] = useState('')
+
+  // Edit Spool State
+  const [openEditModal, setOpenEditModal] = useState(false)
+  const [editColorId, setEditColorId] = useState('')
+  const [editNombre, setEditNombre] = useState('')
+  const [editHex, setEditHex] = useState('#18181B')
+  const [editNota, setEditNota] = useState('')
+
+  const handleOpenEditColor = (item: ColorFilamentoItem) => {
+    setEditColorId(item.id)
+    setEditNombre(item.nombreColor)
+    setEditHex(item.codigoHex || '#18181B')
+    setEditNota(item.nota || '')
+    setOpenEditModal(true)
+  }
+
+  const handleEditColorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editNombre.trim() || !editColorId) return
+
+    try {
+      await editarColorFilamento(editColorId, {
+        nombreColor: editNombre.trim(),
+        codigoHex: editHex,
+        nota: editNota.trim() || null
+      })
+
+      const updater = (prev: ColorFilamentoItem[]) =>
+        prev.map(c => c.id === editColorId ? { ...c, nombreColor: editNombre.trim(), codigoHex: editHex, nota: editNota.trim() || null } : c)
+
+      setDisponibles(updater)
+      setRestock(updater)
+      setOpenEditModal(false)
+      toast.success(`Bobina "${editNombre.trim()}" actualizada`)
+    } catch (err: any) {
+      toast.error('Error al editar: ' + (err?.message || 'Error desconocido'))
+    }
+  }
 
   // Details Modal State for invested products
   const [selectedColorForDetails, setSelectedColorForDetails] = useState<ColorFilamentoItem | null>(null)
@@ -96,6 +142,9 @@ export function InventarioClient({
       const q = search.toLowerCase()
       list = list.filter(c => c.nombreColor.toLowerCase().includes(q))
     }
+    if (filterCritico) {
+      list = list.filter(c => (c.stockGramos ?? 1000) < 300 || Boolean(c.alertaCritica))
+    }
 
     return [...list].sort((a, b) => {
       const aGramos = a.stockGramos ?? 1000
@@ -110,7 +159,7 @@ export function InventarioClient({
       // 2. Orden alfabético
       return a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' })
     })
-  }, [disponibles, search])
+  }, [disponibles, search, filterCritico])
 
   const filteredRestock = useMemo(() => {
     let list = restock
@@ -129,7 +178,6 @@ export function InventarioClient({
 
   // Move from Disponible -> Restock
   const handleMoverARestock = async (item: ColorFilamentoItem) => {
-    // Optimistic UI
     setDisponibles(prev => prev.filter(c => c.id !== item.id))
     setRestock(prev => [{ ...item, estado: 'RESTOCK', stockGramos: 0, alertaCritica: true }, ...prev])
 
@@ -138,7 +186,6 @@ export function InventarioClient({
       toast.info(`"${item.nombreColor}" movido a Restock`)
     } catch (e: any) {
       toast.error('Error al mover color: ' + e.message)
-      // Rollback
       setRestock(prev => prev.filter(c => c.id !== item.id))
       setDisponibles(prev => [item, ...prev])
     }
@@ -146,7 +193,6 @@ export function InventarioClient({
 
   // Move from Restock -> Disponible
   const handleMoverADisponible = async (item: ColorFilamentoItem) => {
-    // Optimistic UI
     setRestock(prev => prev.filter(c => c.id !== item.id))
     setDisponibles(prev => [{ ...item, estado: 'DISPONIBLE', stockGramos: 1000, alertaCritica: false, nota: null }, ...prev])
 
@@ -155,7 +201,6 @@ export function InventarioClient({
       toast.success(`"${item.nombreColor}" marcado como Disponible (1,000g)`)
     } catch (e: any) {
       toast.error('Error al mover color: ' + e.message)
-      // Rollback
       setDisponibles(prev => prev.filter(c => c.id !== item.id))
       setRestock(prev => [item, ...prev])
     }
@@ -179,9 +224,8 @@ export function InventarioClient({
 
   // Delete color from inventory
   const handleEliminarColor = async (item: ColorFilamentoItem) => {
-    if (!confirm(`¿Estás seguro de eliminar el color "${item.nombreColor}" del inventario?`)) return
+    if (!confirm(`¿Estás seguro de eliminar "${item.nombreColor}" del inventario?`)) return
 
-    // Optimistic UI
     if (item.estado === 'DISPONIBLE') {
       setDisponibles(prev => prev.filter(c => c.id !== item.id))
     } else {
@@ -191,13 +235,12 @@ export function InventarioClient({
     try {
       const res = await eliminarColor(item.id)
       if (res.softDeleted) {
-        toast.success(`"${item.nombreColor}" desactivado del inventario (mantiene historial de pedidos)`)
+        toast.success(`"${item.nombreColor}" desactivado (mantiene historial de pedidos)`)
       } else {
-        toast.success(`"${item.nombreColor}" eliminado con éxito`)
+        toast.success(`"${item.nombreColor}" eliminado`)
       }
     } catch (e: any) {
       toast.error('Error al eliminar: ' + e.message)
-      // Rollback
       if (item.estado === 'DISPONIBLE') {
         setDisponibles(prev => [item, ...prev])
       } else {
@@ -233,7 +276,7 @@ export function InventarioClient({
         setRestock(prev => [created, ...prev])
       }
 
-      toast.success(`"${created.nombreColor}" agregado con ${rollosNum} ${rollosNum === 1 ? 'rollo' : 'rollos'} (${totalGramosCapacidad.toLocaleString()}g total)`)
+      toast.success(`"${created.nombreColor}" agregado con ${rollosNum} ${rollosNum === 1 ? 'rollo' : 'rollos'}`)
       setNuevoNombre('')
       setNuevaNota('')
       setNuevoRollos('1')
@@ -266,10 +309,8 @@ export function InventarioClient({
 
     let nuevosGramos = prevGramos
     if (nuevosRollos > prevRollos) {
-      // Al aumentar, agrega exactamente de 1000 g en 1000 g
       nuevosGramos = prevGramos + ((nuevosRollos - prevRollos) * 1000)
     } else if (nuevosRollos < prevRollos) {
-      // Al disminuir, resta 1000 g por unidad (tope el nuevo total y mínimo 0)
       nuevosGramos = Math.max(0, Math.min(nuevoTotal, prevGramos - ((prevRollos - nuevosRollos) * 1000)))
     }
 
@@ -284,7 +325,7 @@ export function InventarioClient({
 
     try {
       await actualizarRollosColor(item.id, nuevosRollos)
-      toast.success(`"${item.nombreColor}" actualizado a ${nuevosRollos} un. (${nuevoTotal.toLocaleString()}g total)`)
+      toast.success(`"${item.nombreColor}" actualizado a ${nuevosRollos} un.`)
     } catch (e: any) {
       toast.error('Error al actualizar: ' + e.message)
     }
@@ -306,7 +347,6 @@ export function InventarioClient({
 
     let nuevosGramos = prevGramos
     if (num > prevRollos) {
-      // Al aumentar, agrega de 1000 g en 1000 g
       nuevosGramos = prevGramos + ((num - prevRollos) * 1000)
     } else if (num < prevRollos) {
       nuevosGramos = Math.max(0, Math.min(nuevoTotal, prevGramos - ((prevRollos - num) * 1000)))
@@ -323,7 +363,7 @@ export function InventarioClient({
 
     try {
       await actualizarRollosColor(item.id, num)
-      toast.success(`"${item.nombreColor}" configurado con ${num} un. (${nuevoTotal.toLocaleString()}g total)`)
+      toast.success(`"${item.nombreColor}" configurado con ${num} un.`)
     } catch (e: any) {
       toast.error('Error: ' + e.message)
     }
@@ -387,13 +427,13 @@ export function InventarioClient({
   }, [disponibles])
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-200">
+    <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-200 px-0.5 sm:px-0">
       {/* ========================================================================= */}
       {/* 1. CABECERA PRINCIPAL Y ACCIONES                                          */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-5 shadow-xs space-y-3">
         {/* Breadcrumb Contextual */}
-        <div className="flex items-center gap-2 text-xs text-[#75695D] font-medium">
+        <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-[#75695D] font-medium">
           <Link href="/catalogo" className="hover:text-[#A36F4C] transition-colors flex items-center gap-1">
             <Package className="h-3.5 w-3.5 text-[#A36F4C]" />
             <span>Catálogo</span>
@@ -402,35 +442,36 @@ export function InventarioClient({
           <span className="text-[#241C15] font-bold">Inventario de Filamentos</span>
         </div>
 
+        {/* Título & Botones de Acción */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-[#241C15] tracking-tight flex items-center gap-2.5">
-              <Palette className="h-6 w-6 text-[#A36F4C]" />
-              Control de Colores & Gramaje de Filamentos
+            <h1 className="text-lg sm:text-2xl font-black text-[#241C15] tracking-tight flex items-center gap-2">
+              <Palette className="h-5 w-5 sm:h-6 sm:w-6 text-[#A36F4C] flex-shrink-0" />
+              <span>Control de Bobinas & Filamentos</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#75695D] mt-0.5">
-              Taller NOVA • Control de peso en bobinas abiertas, alertas de stock crítico y lista de restock.
+            <p className="text-[11px] sm:text-sm text-[#75695D] mt-0.5">
+              Control de peso en gramos, stock crítico y lista para reposición.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
             <Button
               type="button"
-              variant="outline"
-              onClick={handleCopiarRestock}
-              className="border-[#D4BEA7] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#633E20] font-bold text-xs h-10 px-3.5 rounded-xl cursor-pointer shadow-xs active:scale-[0.98] flex-1 sm:flex-initial"
+              onClick={() => setOpenAddModal(true)}
+              className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex-1 sm:flex-initial"
             >
-              <Copy className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
-              Copiar lista Restock ({restock.length})
+              <Plus className="h-4 w-4 mr-1 stroke-[2.5]" />
+              Nuevo Color
             </Button>
 
             <Button
               type="button"
-              onClick={() => setOpenAddModal(true)}
-              className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs h-10 px-4 rounded-xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex-1 sm:flex-initial"
+              variant="outline"
+              onClick={handleCopiarRestock}
+              className="border-[#D4BEA7] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#633E20] font-bold text-xs h-9 sm:h-10 px-3 sm:px-3.5 rounded-xl cursor-pointer shadow-xs active:scale-[0.98] flex-1 sm:flex-initial"
             >
-              <Plus className="h-4 w-4 mr-1 stroke-[2.5]" />
-              + Agregar Color
+              <Copy className="h-3.5 w-3.5 mr-1 text-[#A36F4C]" />
+              <span>Restock ({restock.length})</span>
             </Button>
 
             <Button
@@ -439,7 +480,7 @@ export function InventarioClient({
               size="sm"
               onClick={handleReset}
               title="Restablecer lista de taller"
-              className="p-2.5 text-[#75695D] hover:text-[#241C15] rounded-xl hover:bg-[#F4EFEA] cursor-pointer"
+              className="h-9 w-9 sm:h-10 sm:w-10 p-0 text-[#75695D] hover:text-[#241C15] rounded-xl hover:bg-[#F4EFEA] cursor-pointer flex-shrink-0"
             >
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -447,414 +488,540 @@ export function InventarioClient({
         </div>
 
         {/* KPIs SUPERIORES DE INVENTARIO */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-          <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
-            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
-              Stock Total en Gramos
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 pt-1">
+          <div className="p-2.5 sm:p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block truncate">
+              Stock en Gramos
             </span>
-            <div className="text-base sm:text-lg font-black text-[#1E5E3A] font-mono mt-0.5">
+            <div className="text-sm sm:text-lg font-black text-[#1E5E3A] font-mono mt-0.5">
               {totalGramosActivos.toLocaleString()} g
             </div>
-            <span className="text-[10px] text-[#75695D]">
-              {(totalGramosActivos / 1000).toFixed(2)} kg activos en taller
+            <span className="text-[9px] sm:text-[10px] text-[#75695D] truncate">
+              {(totalGramosActivos / 1000).toFixed(2)} kg activos
             </span>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
-            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
-              Bobinas en Taller
+          <div className="p-2.5 sm:p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block truncate">
+              Bobinas Activas
             </span>
-            <div className="text-base sm:text-lg font-black text-[#241C15] font-mono mt-0.5">
-              {totalRollosActivos} bobinas
+            <div className="text-sm sm:text-lg font-black text-[#241C15] font-mono mt-0.5">
+              {totalRollosActivos} un.
             </div>
-            <span className="text-[10px] text-[#1E5E3A] font-semibold">
-              🟢 {disponibles.length} colores activos (1,000g c/u)
+            <span className="text-[9px] sm:text-[10px] text-[#1E5E3A] font-semibold truncate">
+              {disponibles.length} colores
             </span>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
-            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
+          <div className={`p-2.5 sm:p-3.5 rounded-xl border flex flex-col justify-between ${totalCriticos.length > 0 ? 'bg-[#FEF2F2] border-red-200' : 'bg-[#FAF8F5] border-[#E2D9CC]'}`}>
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block truncate">
               Stock Crítico (&lt;300g)
             </span>
-            <div className={`text-base sm:text-lg font-black font-mono mt-0.5 ${totalCriticos.length > 0 ? 'text-[#DC2626]' : 'text-[#1E5E3A]'}`}>
+            <div className={`text-sm sm:text-lg font-black font-mono mt-0.5 ${totalCriticos.length > 0 ? 'text-[#DC2626]' : 'text-[#1E5E3A]'}`}>
               {totalCriticos.length} {totalCriticos.length === 1 ? 'color' : 'colores'}
             </div>
-            <span className={`text-[10px] font-semibold ${totalCriticos.length > 0 ? 'text-[#DC2626]' : 'text-[#75695D]'}`}>
+            <span className={`text-[9px] sm:text-[10px] font-bold truncate ${totalCriticos.length > 0 ? 'text-[#DC2626]' : 'text-[#75695D]'}`}>
               {totalCriticos.length > 0 ? '⚠️ Alerta de reposición' : 'Nivel óptimo'}
             </span>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
-            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block">
-              Para Restock / Pedir
+          <div className="p-2.5 sm:p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between">
+            <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider block truncate">
+              Para Restock
             </span>
-            <div className="text-base sm:text-lg font-black text-[#A36F4C] font-mono mt-0.5">
+            <div className="text-sm sm:text-lg font-black text-[#A36F4C] font-mono mt-0.5">
               {restock.length} colores
             </div>
-            <span className="text-[10px] text-[#8C6D1F] font-semibold">
-              🟡 Lista de compra
+            <span className="text-[9px] sm:text-[10px] text-[#8C6D1F] font-semibold truncate">
+              🟡 Por comprar
             </span>
           </div>
         </div>
 
-        {/* Buscador Rápido */}
-        <div className="relative pt-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
-          <Input 
-            placeholder="Buscar color disponible, por pedir o gramaje..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 pr-9 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
-          />
-          {search && (
-            <button 
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-1 rounded-md cursor-pointer"
+        {/* ========================================================================= */}
+        {/* BUSCADOR Y FILTROS RÁPIDOS                                                */}
+        {/* ========================================================================= */}
+        <div className="space-y-2 pt-1">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+            <Input 
+              placeholder="Buscar por color, nota o gramaje..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-9 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
+            />
+            {search && (
+              <button 
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-1 rounded-md cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Chips de Filtro Rápido */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-xs">
+            <button
+              type="button"
+              onClick={() => setFilterCritico(false)}
+              className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer flex-shrink-0 ${
+                !filterCritico 
+                  ? 'bg-[#241C15] text-white shadow-2xs' 
+                  : 'bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] border border-[#E2D9CC]'
+              }`}
             >
-              <X className="h-4 w-4" />
+              Todos ({disponibles.length})
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setFilterCritico(true)}
+              className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all cursor-pointer flex-shrink-0 flex items-center gap-1 ${
+                filterCritico 
+                  ? 'bg-red-600 text-white shadow-2xs' 
+                  : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+              }`}
+            >
+              <AlertTriangle className="h-3 w-3" />
+              <span>Solo Críticos &lt;300g ({totalCriticos.length})</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* ESTRUCTURA DE 2 COLUMNAS CLARAS                                           */}
+      {/* 2. PESTAÑAS SEGMENTADAS RESPONSIVE (MÓVIL / ESCRITORIO)                    */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+      <div className="bg-[#EAE4DC] p-1 rounded-2xl border border-[#D4BEA7] grid grid-cols-3 gap-1 shadow-2xs">
+        <button
+          type="button"
+          onClick={() => setActiveTab('disponibles')}
+          className={`py-2 px-2 sm:px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+            activeTab === 'disponibles'
+              ? 'bg-[#FFFFFF] text-[#241C15] shadow-xs scale-[1.01]'
+              : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+          }`}
+        >
+          <span className="h-2 w-2 rounded-full bg-[#1E5E3A] flex-shrink-0" />
+          <span className="truncate">Disponibles</span>
+          <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+            activeTab === 'disponibles' ? 'bg-[#EBF7EE] text-[#1E5E3A]' : 'bg-[#FAF8F5] text-[#75695D]'
+          }`}>
+            {filteredDisponibles.length}
+          </span>
+          {totalCriticos.length > 0 && (
+            <span className="hidden sm:inline-flex h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('restock')}
+          className={`py-2 px-2 sm:px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+            activeTab === 'restock'
+              ? 'bg-[#FFFFFF] text-[#241C15] shadow-xs scale-[1.01]'
+              : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+          }`}
+        >
+          <span className="h-2 w-2 rounded-full bg-[#A36F4C] flex-shrink-0" />
+          <span className="truncate">Restock</span>
+          <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${
+            activeTab === 'restock' ? 'bg-[#FDF6E2] text-[#8C6D1F]' : 'bg-[#FAF8F5] text-[#75695D]'
+          }`}>
+            {filteredRestock.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('todos')}
+          className={`py-2 px-2 sm:px-4 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5 ${
+            activeTab === 'todos'
+              ? 'bg-[#FFFFFF] text-[#241C15] shadow-xs scale-[1.01]'
+              : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+          }`}
+        >
+          <Layers className="h-3.5 w-3.5 text-[#633E20] flex-shrink-0" />
+          <span className="truncate">Ver Ambos</span>
+        </button>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 3. VISTAS DE CONTENIDO CON TRANSICIÓN SUAVE                              */}
+      {/* ========================================================================= */}
+      <div className={`grid gap-4 sm:gap-5 items-start ${
+        activeTab === 'todos' ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'
+      }`}>
+        
         {/* ----------------------------------------------------------------------- */}
         {/* COLUMNA 1: COLORES DISPONIBLES EN TALLER                                */}
         {/* ----------------------------------------------------------------------- */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E2D9CC]">
-            <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-[#1E5E3A]" />
-              <h2 className="text-sm font-black text-[#241C15] uppercase tracking-wider">
-                Colores Disponibles en Taller
-              </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {totalCriticos.length > 0 && (
-                <Badge variant="outline" className="bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5] text-[11px] font-bold">
-                  {totalCriticos.length} críticos
-                </Badge>
-              )}
-              <Badge 
-                variant="outline" 
-                className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold font-mono px-2.5 py-0.5"
-              >
-                {filteredDisponibles.length} activos
-              </Badge>
-            </div>
-          </div>
-
-          {/* Lista Limpia de Tarjetas con Gramos y Alertas */}
-          <div className="space-y-3">
-            {filteredDisponibles.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#75695D] italic">
-                {search ? 'No se encontraron colores disponibles' : 'No hay colores disponibles registrados'}
+        {(activeTab === 'disponibles' || activeTab === 'todos') && (
+          <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-5 shadow-xs space-y-3.5 animate-in fade-in-50 duration-200">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#E2D9CC]">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#1E5E3A]" />
+                <h2 className="text-xs sm:text-sm font-black text-[#241C15] uppercase tracking-wider">
+                  Colores Disponibles en Taller
+                </h2>
               </div>
-            ) : (
-              filteredDisponibles.map(item => {
-                const rollos = item.rollos || 1
-                const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
-                const gramos = item.stockGramos ?? pesoInicial
-                const pct = Math.min(100, Math.round((gramos / pesoInicial) * 100))
-                const esCritico = gramos < 300
+              <div className="flex items-center gap-1.5">
+                {totalCriticos.length > 0 && (
+                  <Badge variant="outline" className="bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5] text-[10px] font-bold px-1.5 py-0">
+                    {totalCriticos.length} críticos
+                  </Badge>
+                )}
+                <Badge 
+                  variant="outline" 
+                  className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[11px] font-bold font-mono px-2 py-0.2"
+                >
+                  {filteredDisponibles.length} activos
+                </Badge>
+              </div>
+            </div>
 
-                return (
-                  <div 
-                    key={item.id}
-                    className={`p-3.5 rounded-xl border transition-all shadow-2xs space-y-2.5 ${
-                      esCritico
-                        ? 'bg-[#FFFBFB] border-red-300 ring-1 ring-red-300/40'
-                        : 'bg-[#FAF8F5] border-[#E2D9CC] hover:bg-[#FFFFFF] hover:border-[#1E5E3A]/40'
-                    }`}
-                  >
-                    {/* Fila 1: Nombre + Color Dot + Selector de Cantidad + Acción Principal y Eliminar */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div 
-                          className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0"
-                          style={{ backgroundColor: item.codigoHex }}
-                          title={item.nombreColor}
-                        />
-                        <span className="text-sm font-bold text-[#241C15] truncate">
-                          {item.nombreColor}
-                        </span>
-                      </div>
+            {/* Lista Limpia y Táctil de Tarjetas */}
+            <div className="space-y-2.5 sm:space-y-3">
+              {filteredDisponibles.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#75695D] italic rounded-xl border border-dashed border-[#E2D9CC] bg-[#FAF8F5]">
+                  {search ? 'No se encontraron colores con ese término' : 'No hay colores disponibles registrados'}
+                </div>
+              ) : (
+                filteredDisponibles.map(item => {
+                  const rollos = item.rollos || 1
+                  const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
+                  const gramos = item.stockGramos ?? pesoInicial
+                  const pct = Math.min(100, Math.round((gramos / pesoInicial) * 100))
+                  const esCritico = gramos < 300
 
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {/* Selector Compacto de Cantidad */}
-                        <div className="flex items-center gap-1 bg-[#F4EFEA] border border-[#D4BEA7] rounded-lg px-1.5 py-0.5 shadow-2xs" title="Cantidad (1 un. = 1,000g)">
+                  return (
+                    <div 
+                      key={item.id}
+                      className={`p-3 sm:p-3.5 rounded-xl border transition-all shadow-2xs space-y-2.5 ${
+                        esCritico
+                          ? 'bg-[#FFFBFB] border-red-300 ring-1 ring-red-300/40'
+                          : 'bg-[#FAF8F5] border-[#E2D9CC] hover:bg-[#FFFFFF] hover:border-[#1E5E3A]/40'
+                      }`}
+                    >
+                      {/* Fila 1: Nombre + Color Dot + Selector de Cantidad + Acciones */}
+                      <div className="flex items-center justify-between gap-2">
+                        {/* Dot y Nombre */}
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
                           <button
                             type="button"
-                            onClick={() => handleAjustarRollos(item, -1)}
-                            disabled={rollos <= 1}
-                            className="h-4 w-4 rounded flex items-center justify-center bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] disabled:opacity-30 cursor-pointer font-bold text-xs"
-                            title="Restar (-1000g)"
-                          >
-                            -
-                          </button>
+                            onClick={() => handleOpenEditColor(item)}
+                            className="h-7 w-7 sm:h-6 sm:w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-transform"
+                            style={{ backgroundColor: item.codigoHex }}
+                            title={`Editar "${item.nombreColor}"`}
+                          />
                           <button
                             type="button"
-                            onClick={() => handleSetRollosPrompt(item)}
-                            className="text-xs font-black font-mono text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer px-1"
-                            title="Clic para definir cantidad (1 un. = 1,000g)"
+                            onClick={() => handleOpenEditColor(item)}
+                            className="text-xs sm:text-sm font-bold text-[#241C15] truncate hover:text-[#A36F4C] hover:underline cursor-pointer text-left flex items-center gap-1 group"
+                            title={`Clic para editar nombre "${item.nombreColor}"`}
                           >
-                            {rollos} un.
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAjustarRollos(item, 1)}
-                            className="h-4 w-4 rounded flex items-center justify-center bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] cursor-pointer font-bold text-xs"
-                            title="Agregar (+1000g)"
-                          >
-                            +
+                            <span className="truncate">{item.nombreColor}</span>
+                            <Pencil className="h-3 w-3 text-[#75695D] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                           </button>
                         </div>
 
+                        {/* Botones de Control en Fila 1 */}
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {/* Selector Compacto de Cantidad */}
+                          <div className="flex items-center gap-1 bg-[#F4EFEA] border border-[#D4BEA7] rounded-lg px-1 py-0.5 shadow-2xs" title="Cantidad de bobinas (1 un. = 1,000g)">
+                            <button
+                              type="button"
+                              onClick={() => handleAjustarRollos(item, -1)}
+                              disabled={rollos <= 1}
+                              className="h-5 w-5 rounded flex items-center justify-center bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] disabled:opacity-30 cursor-pointer font-bold text-xs active:bg-[#FAF8F5]"
+                              title="Restar bobina (-1000g)"
+                            >
+                              -
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSetRollosPrompt(item)}
+                              className="text-[11px] font-black font-mono text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer px-1 min-w-[28px] text-center"
+                              title="Clic para definir cantidad de bobinas"
+                            >
+                              {rollos} un.
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAjustarRollos(item, 1)}
+                              className="h-5 w-5 rounded flex items-center justify-center bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] cursor-pointer font-bold text-xs active:bg-[#FAF8F5]"
+                              title="Agregar bobina (+1000g)"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMoverARestock(item)}
+                            className={`h-6 sm:h-7 text-[10px] sm:text-xs font-semibold px-2 rounded-lg transition-colors cursor-pointer ${
+                              esCritico
+                                ? 'bg-red-50 text-[#DC2626] border-red-200 hover:bg-red-100 hover:border-red-300'
+                                : 'text-[#A36F4C] border-[#D4BEA7] bg-white hover:bg-[#FCE8E6] hover:text-[#A34335]'
+                            }`}
+                          >
+                            {esCritico ? 'A Restock' : 'Restock'}
+                          </Button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditColor(item)}
+                            title={`Editar "${item.nombreColor}"`}
+                            className="h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleEliminarColor(item)}
+                            title={`Eliminar "${item.nombreColor}"`}
+                            className="h-6 w-6 sm:h-7 sm:w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Fila 2: Gramos Restantes + Micro-ajustes + Barra */}
+                      <div className="space-y-1 pt-0.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1 font-mono">
+                            <button
+                              type="button"
+                              onClick={() => handleSetGramosPrompt(item)}
+                              className="font-bold text-xs sm:text-sm text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer"
+                              title="Toca para ingresar gramos exactos"
+                            >
+                              {gramos.toLocaleString()} g
+                            </button>
+                            <span className="text-[#75695D] text-[10px] sm:text-[11px]">
+                              / {pesoInicial.toLocaleString()} g
+                            </span>
+                          </div>
+
+                          {/* Botones de Micro-ajuste Táctil */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleAjustarGramos(item, -50)}
+                              className="h-5 px-1.5 text-[10px] font-bold rounded bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer"
+                              title="Descontar 50g"
+                            >
+                              -50g
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAjustarGramos(item, 50)}
+                              className="h-5 px-1.5 text-[10px] font-bold rounded bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer"
+                              title="Añadir 50g"
+                            >
+                              +50g
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Barra de Progreso y Porcentaje */}
+                        <div className="space-y-1">
+                          <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                esCritico ? 'bg-[#DC2626]' : pct < 50 ? 'bg-[#D97706]' : 'bg-[#1E5E3A]'
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-[#75695D] font-mono">
+                            <span>{pct}% disponible</span>
+                            <span>{pesoInicial - gramos > 0 ? `-${(pesoInicial - gramos).toLocaleString()}g usados` : 'Íntegro'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Fila 3: Histórico de Producción */}
+                      <div className="pt-1.5 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Package className="h-3.5 w-3.5 text-[#A36F4C] flex-shrink-0" />
+                          {(item.totalProductosImpresos || 0) > 0 ? (
+                            <span className="text-[#241C15] font-semibold text-[10px] sm:text-[11px] truncate">
+                              <strong>{item.totalProductosImpresos} {item.totalProductosImpresos === 1 ? 'pieza' : 'piezas'}</strong> ({item.totalGramosConsumidos || 0}g)
+                            </span>
+                          ) : (
+                            <span className="text-[#75695D] text-[10px] sm:text-[11px] italic">
+                              Sin piezas fabricadas aún
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenColorDetails(item)}
+                          className="text-[10px] sm:text-[11px] font-bold text-[#A36F4C] hover:text-[#8E5E3E] hover:underline flex items-center gap-1 cursor-pointer bg-white px-2 py-0.5 rounded-lg border border-[#D4BEA7] shadow-2xs hover:bg-[#FDFBF7] transition-all flex-shrink-0"
+                        >
+                          <span>Detalle</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      {/* Bloque de Alerta de Stock Crítico (< 300g) */}
+                      {esCritico && (
+                        <div className="p-2 rounded-lg bg-red-50 border border-red-200 text-xs text-[#DC2626] flex items-center gap-2 animate-in fade-in duration-150">
+                          <AlertTriangle className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />
+                          <span className="text-[11px] font-bold leading-tight">
+                            Stock Crítico: solo {gramos}g restantes.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ----------------------------------------------------------------------- */}
+        {/* COLUMNA 2: COLORES PARA RESTOCK / COMPRAR                                */}
+        {/* ----------------------------------------------------------------------- */}
+        {(activeTab === 'restock' || activeTab === 'todos') && (
+          <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-5 shadow-xs space-y-3.5 animate-in fade-in-50 duration-200">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[#E2D9CC]">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#A36F4C]" />
+                <h2 className="text-xs sm:text-sm font-black text-[#241C15] uppercase tracking-wider">
+                  Colores para Restock / Comprar
+                </h2>
+              </div>
+              <Badge 
+                variant="outline" 
+                className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[11px] font-bold font-mono px-2 py-0.2"
+              >
+                {filteredRestock.length} por pedir
+              </Badge>
+            </div>
+
+            {/* Lista Limpia de Tarjetas */}
+            <div className="space-y-2">
+              {filteredRestock.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#75695D] italic rounded-xl border border-dashed border-[#E2D9CC] bg-[#FAF8F5]">
+                  {search ? 'No se encontraron colores para restock' : '¡Todo el stock está disponible!'}
+                </div>
+              ) : (
+                filteredRestock.map(item => (
+                  <div 
+                    key={item.id}
+                    className="flex flex-col p-3 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#FFFFFF] hover:border-[#A36F4C]/50 transition-all shadow-2xs group space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {/* Círculo / Dot Visual */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditColor(item)}
+                          className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0 opacity-80 cursor-pointer hover:scale-110 active:scale-95 transition-transform"
+                          style={{ backgroundColor: item.codigoHex }}
+                          title={`Editar "${item.nombreColor}"`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditColor(item)}
+                              className="text-xs sm:text-sm font-bold text-[#241C15] truncate hover:text-[#A36F4C] hover:underline cursor-pointer text-left"
+                            >
+                              {item.nombreColor}
+                            </button>
+                            <span className="text-[10px] text-[#75695D] font-mono bg-[#EAE4DC] px-1.5 py-0.2 rounded flex-shrink-0">
+                              {item.rollos || 1} un.
+                            </span>
+                          </div>
+                          {item.nota && (
+                            <span className="text-[9px] sm:text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded inline-block mt-0.5 truncate max-w-full">
+                              {item.nota}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <Button
                           type="button"
-                          variant="outline"
                           size="sm"
-                          onClick={() => handleMoverARestock(item)}
-                          className={`h-7 text-xs font-semibold px-2.5 rounded-lg transition-colors cursor-pointer ${
-                            esCritico
-                              ? 'bg-red-50 text-[#DC2626] border-red-200 hover:bg-red-100 hover:border-red-300'
-                              : 'text-[#A36F4C] border-[#D4BEA7] bg-white hover:bg-[#FCE8E6] hover:text-[#A34335]'
-                          }`}
+                          onClick={() => handleMoverADisponible(item)}
+                          className="h-7 text-xs font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white px-2.5 sm:px-3 rounded-lg shadow-2xs cursor-pointer active:scale-[0.98]"
                         >
-                          {esCritico ? 'Mover a Restock' : 'A Restock'}
+                          Disponible
                         </Button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditColor(item)}
+                          title={`Editar "${item.nombreColor}"`}
+                          className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleEliminarColor(item)}
                           title={`Eliminar "${item.nombreColor}"`}
                           className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3 w-3" />
                         </button>
                       </div>
                     </div>
 
-                    {/* Fila 2: Gramos Restantes + Mini Barra de Progreso + Ajuste Rápido */}
-                    <div className="space-y-1.5 pt-0.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5 font-mono">
-                          <button
-                            type="button"
-                            onClick={() => handleSetGramosPrompt(item)}
-                            className="font-bold text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer"
-                            title="Haz clic para ingresar gramos exactos pesados"
-                          >
-                            {gramos.toLocaleString()} g
-                          </button>
-                          <span className="text-[#75695D] text-[11px]">
-                            de {pesoInicial.toLocaleString()} g
-                          </span>
-                        </div>
-
-                        {/* Botones de Micro-ajuste */}
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleAjustarGramos(item, -50)}
-                            className="h-5 px-1.5 text-[10px] font-bold rounded bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] cursor-pointer"
-                            title="Descontar 50g"
-                          >
-                            -50g
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleAjustarGramos(item, 50)}
-                            className="h-5 px-1.5 text-[10px] font-bold rounded bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] cursor-pointer"
-                            title="Añadir 50g"
-                          >
-                            +50g
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Barra de Progreso y Porcentaje */}
-                      <div className="space-y-1">
-                        <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              esCritico ? 'bg-[#DC2626]' : pct < 50 ? 'bg-[#D97706]' : 'bg-[#1E5E3A]'
-                            }`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between text-[10px] text-[#75695D] font-mono">
-                          <span>{pct}% disponible</span>
-                          <span>{pesoInicial - gramos > 0 ? `-${(pesoInicial - gramos).toLocaleString()}g consumidos` : 'Stock íntegro'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Fila 3: Productos Fabricados / Inversión en Bobina */}
-                    <div className="pt-2 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2 flex-wrap text-xs">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <Package className="h-3.5 w-3.5 text-[#A36F4C] flex-shrink-0" />
-                        {(item.totalProductosImpresos || 0) > 0 ? (
-                          <span className="text-[#241C15] font-semibold text-[11px] truncate">
-                            <strong>{item.totalProductosImpresos} {item.totalProductosImpresos === 1 ? 'producto fabricado' : 'productos fabricados'}</strong> ({item.totalGramosConsumidos || 0}g invertidos)
-                          </span>
-                        ) : (
-                          <span className="text-[#75695D] text-[11px] italic">
-                            Sin productos fabricados aún
-                          </span>
-                        )}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenColorDetails(item)}
-                        className="text-[11px] font-bold text-[#A36F4C] hover:text-[#8E5E3E] hover:underline flex items-center gap-1 cursor-pointer bg-white px-2 py-0.5 rounded-lg border border-[#D4BEA7] shadow-2xs hover:bg-[#FDFBF7] transition-all"
-                      >
-                        <span>Ver productos</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </button>
-                    </div>
-
-                    {/* Bloque de Alerta de Stock Crítico (< 300g) */}
-                    {esCritico && (
-                      <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-[#DC2626] space-y-1 animate-in fade-in duration-150">
-                        <div className="flex items-center gap-1.5 font-bold">
-                          <AlertTriangle className="h-3.5 w-3.5 text-red-600 flex-shrink-0" />
-                          <span>⚠️ Stock Crítico: {gramos}g restantes (Bajo de 300g)</span>
-                        </div>
-                        <p className="text-[11px] text-red-700 leading-tight">
-                          Puede no alcanzar para impresiones grandes o insertos.
-                        </p>
+                    {/* Resumen de producción si tuvo histórico */}
+                    {(item.totalProductosImpresos || 0) > 0 && (
+                      <div className="pt-1.5 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2 text-xs">
+                        <span className="text-[10px] sm:text-[11px] text-[#75695D] font-medium flex items-center gap-1 truncate">
+                          <Package className="h-3 w-3 text-[#A36F4C] flex-shrink-0" />
+                          <span className="truncate">{item.totalProductosImpresos} {item.totalProductosImpresos === 1 ? 'pieza' : 'piezas'} ({item.totalGramosConsumidos}g)</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenColorDetails(item)}
+                          className="text-[10px] sm:text-[11px] font-bold text-[#A36F4C] hover:underline flex items-center gap-0.5 cursor-pointer flex-shrink-0"
+                        >
+                          <span>Ver detalle</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
                       </div>
                     )}
                   </div>
-                )
-              })
-            )}
-          </div>
-        </div>
-
-        {/* ----------------------------------------------------------------------- */}
-        {/* COLUMNA 2: COLORES PARA RESTOCK / COMPRAR                                */}
-        {/* ----------------------------------------------------------------------- */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E2D9CC]">
-            <div className="flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-[#A36F4C]" />
-              <h2 className="text-sm font-black text-[#241C15] uppercase tracking-wider">
-                Colores para Restock / Comprar
-              </h2>
+                ))
+              )}
             </div>
-            <Badge 
-              variant="outline" 
-              className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold font-mono px-2.5 py-0.5"
-            >
-              {filteredRestock.length} por pedir
-            </Badge>
           </div>
-
-          {/* Lista Limpia de Tarjetas */}
-          <div className="space-y-2">
-            {filteredRestock.length === 0 ? (
-              <div className="p-8 text-center text-xs text-[#75695D] italic">
-                {search ? 'No se encontraron colores para restock' : '¡Todo el stock está disponible!'}
-              </div>
-            ) : (
-              filteredRestock.map(item => (
-                <div 
-                  key={item.id}
-                  className="flex flex-col p-3 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#FFFFFF] hover:border-[#A36F4C]/50 transition-all shadow-2xs group space-y-2"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Círculo / Dot Visual */}
-                      <div 
-                        className="h-6 w-6 rounded-full border border-black/15 shadow-xs flex-shrink-0 opacity-70"
-                        style={{ backgroundColor: item.codigoHex }}
-                        title={item.nombreColor}
-                      />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-[#241C15] block truncate">
-                            {item.nombreColor}
-                          </span>
-                          <span className="text-[10px] text-[#75695D] font-mono bg-[#EAE4DC] px-1.5 py-0.2 rounded">
-                            {item.rollos || 1} un.
-                          </span>
-                        </div>
-                        {item.nota && (
-                          <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded inline-block mt-0.5">
-                            {item.nota}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => handleMoverADisponible(item)}
-                        className="h-7 text-xs font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white px-3 rounded-lg shadow-2xs cursor-pointer active:scale-[0.98]"
-                      >
-                        Marcar Disponible
-                      </Button>
-                      <button
-                        type="button"
-                        onClick={() => handleEliminarColor(item)}
-                        title={`Eliminar "${item.nombreColor}"`}
-                        className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Resumen de producción si tuvo histórico */}
-                  {(item.totalProductosImpresos || 0) > 0 && (
-                    <div className="pt-1.5 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2 text-xs">
-                      <span className="text-[11px] text-[#75695D] font-medium flex items-center gap-1">
-                        <Package className="h-3 w-3 text-[#A36F4C]" />
-                        {item.totalProductosImpresos} {item.totalProductosImpresos === 1 ? 'producto fabricado' : 'productos fabricados'} ({item.totalGramosConsumidos}g)
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenColorDetails(item)}
-                        className="text-[11px] font-bold text-[#A36F4C] hover:underline flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <span>Ver detalle</span>
-                        <ArrowRight className="h-3 w-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
       {/* MODAL RÁPIDO: AGREGAR COLOR                                               */}
       {/* ========================================================================= */}
       <Dialog open={openAddModal} onOpenChange={setOpenAddModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] max-w-[420px] p-0 rounded-2xl shadow-2xl z-50">
-          <form onSubmit={handleAddColorSubmit} className="p-5 space-y-4">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[440px] max-h-[92dvh] overflow-y-auto p-0 rounded-2xl shadow-2xl z-50">
+          <form onSubmit={handleAddColorSubmit} className="p-4 sm:p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-[#E2D9CC] pb-3">
               <div>
                 <DialogTitle className="text-base font-bold text-[#241C15]">
                   Agregar Nuevo Color
                 </DialogTitle>
                 <DialogDescription className="text-xs text-[#75695D]">
-                  Ingresa el color y la cantidad de unidades (1 un. = 1,000g)
+                  Define el color y la cantidad de bobinas (1 un. = 1,000g)
                 </DialogDescription>
               </div>
               <button
                 type="button"
                 onClick={() => setOpenAddModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] p-1 rounded-lg"
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -863,7 +1030,7 @@ export function InventarioClient({
             <div className="space-y-3">
               {/* Nombre */}
               <div className="space-y-1">
-                <Label className="text-xs font-bold text-[#241C15] uppercase">
+                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                   Nombre del Color *
                 </Label>
                 <Input 
@@ -879,10 +1046,10 @@ export function InventarioClient({
               {/* Cantidad de Unidades */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase">
+                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                     Cantidad (1 un. = 1,000 g) *
                   </Label>
-                  <span className="text-[10px] text-[#A36F4C] font-semibold">
+                  <span className="text-[10px] text-[#A36F4C] font-bold">
                     Total: {(Math.max(1, parseInt(nuevoRollos || '1', 10)) * 1000).toLocaleString()} g
                   </span>
                 </div>
@@ -942,7 +1109,7 @@ export function InventarioClient({
 
               {/* Estado Inicial */}
               <div className="space-y-1">
-                <Label className="text-xs font-bold text-[#241C15] uppercase">
+                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                   Estado Inicial
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -975,11 +1142,11 @@ export function InventarioClient({
               {nuevoEstado === 'DISPONIBLE' && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-[#241C15] uppercase">
+                    <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                       Gramos Restantes *
                     </Label>
                     <span className="text-[10px] text-[#75695D]">
-                      Capacidad total: {(Math.max(1, parseInt(nuevoRollos || '1', 10)) * 1000).toLocaleString()} g
+                      Capacidad: {(Math.max(1, parseInt(nuevoRollos || '1', 10)) * 1000).toLocaleString()} g
                     </span>
                   </div>
                   <Input 
@@ -998,7 +1165,7 @@ export function InventarioClient({
               {/* Nota opcional */}
               {nuevoEstado === 'RESTOCK' && (
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase">
+                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                     Nota (Opcional)
                   </Label>
                   <Input 
@@ -1034,6 +1201,116 @@ export function InventarioClient({
       </Dialog>
 
       {/* ========================================================================= */}
+      {/* MODAL: EDITAR COLOR / BOBINA                                              */}
+      {/* ========================================================================= */}
+      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[420px] max-h-[92dvh] overflow-y-auto p-0 rounded-2xl shadow-2xl z-50">
+          <form onSubmit={handleEditColorSubmit} className="p-4 sm:p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E2D9CC] pb-3">
+              <div className="flex items-center gap-2.5">
+                <div 
+                  className="h-8 w-8 rounded-xl border border-black/15 shadow-2xs flex-shrink-0"
+                  style={{ backgroundColor: editHex }}
+                />
+                <div>
+                  <DialogTitle className="text-base font-bold text-[#241C15]">
+                    Editar Bobina / Color
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-[#75695D]">
+                    Modifica el nombre, tono visual y notas.
+                  </DialogDescription>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenEditModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              {/* Nombre */}
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                  Nombre de la Bobina / Color *
+                </Label>
+                <Input 
+                  value={editNombre}
+                  onChange={(e) => setEditNombre(e.target.value)}
+                  placeholder="Ej: Negro Carbón eSun, Rosa Sakura Sunlu..."
+                  required
+                  autoFocus
+                  className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
+                />
+              </div>
+
+              {/* Selector Visual de Color */}
+              <div className="space-y-1.5 p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#241C15]">Muestra Visual (HEX)</span>
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="color"
+                      value={editHex}
+                      onChange={(e) => setEditHex(e.target.value)}
+                      className="h-6 w-8 rounded border border-[#E2D9CC] cursor-pointer"
+                    />
+                    <span className="text-xs font-mono font-bold text-[#75695D]">{editHex}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-6 gap-1 pt-1">
+                  {PRESET_SWATCHES.slice(0, 12).map(sw => (
+                    <button
+                      key={sw.name}
+                      type="button"
+                      onClick={() => setEditHex(sw.hex)}
+                      className="h-6 rounded border border-black/10 hover:scale-105 transition-transform cursor-pointer"
+                      style={{ backgroundColor: sw.hex }}
+                      title={sw.name}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Nota opcional */}
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                  Nota de Producción (Opcional)
+                </Label>
+                <Input 
+                  value={editNota}
+                  onChange={(e) => setEditNota(e.target.value)}
+                  placeholder="Ej: Lote #2, Bobina para figuras especiales..."
+                  className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 text-[#241C15]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E2D9CC]">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpenEditModal(false)}
+                className="text-xs rounded-xl cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-4 rounded-xl cursor-pointer"
+              >
+                Guardar Cambios
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
       {/* MODAL DETALLE DE PRODUCTOS FABRICADOS POR COLOR                           */}
       {/* ========================================================================= */}
       <Dialog open={openColorDetailsModal} onOpenChange={setOpenColorDetailsModal}>
@@ -1041,28 +1318,28 @@ export function InventarioClient({
           {selectedColorForDetails && (
             <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
               {/* Header */}
-              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-3">
+              <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-3">
                   <div 
-                    className="h-10 w-10 rounded-xl border border-black/15 shadow-xs flex items-center justify-center flex-shrink-0"
+                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl border border-black/15 shadow-xs flex items-center justify-center flex-shrink-0"
                     style={{ backgroundColor: selectedColorForDetails.codigoHex }}
                   />
                   <div>
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="flex items-center gap-1.5 mb-0.5">
                       <Badge 
                         variant="outline" 
                         className={selectedColorForDetails.estado === 'DISPONIBLE'
-                          ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-semibold'
-                          : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-semibold'
+                          ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[9px] sm:text-[10px] font-semibold'
+                          : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[9px] sm:text-[10px] font-semibold'
                         }
                       >
                         {selectedColorForDetails.estado === 'DISPONIBLE' ? '🟢 En Taller' : '🟡 En Restock'}
                       </Badge>
-                      <span className="text-xs text-[#75695D] font-mono">
+                      <span className="text-[11px] text-[#75695D] font-mono">
                         {selectedColorForDetails.rollos || 1} {selectedColorForDetails.rollos === 1 ? 'bobina' : 'bobinas'}
                       </span>
                     </div>
-                    <DialogTitle className="text-base sm:text-lg font-bold text-[#241C15] tracking-tight">
+                    <DialogTitle className="text-sm sm:text-base font-bold text-[#241C15] tracking-tight truncate max-w-[200px] sm:max-w-[320px]">
                       {selectedColorForDetails.nombreColor}
                     </DialogTitle>
                   </div>
@@ -1077,37 +1354,37 @@ export function InventarioClient({
               </div>
 
               {/* Body */}
-              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 touch-pan-y">
                 {/* KPIs de Producción de la Bobina */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
-                    <span className="text-[10px] uppercase font-bold text-[#75695D] block">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="p-2 sm:p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[#75695D] block truncate">
                       Total Piezas
                     </span>
-                    <span className="text-lg font-extrabold text-[#241C15] font-mono block mt-0.5">
+                    <span className="text-base sm:text-lg font-extrabold text-[#241C15] font-mono block mt-0.5">
                       {selectedColorForDetails.totalProductosImpresos || 0}
                     </span>
-                    <span className="text-[9px] text-[#75695D]">unidades impresas</span>
+                    <span className="text-[8px] sm:text-[9px] text-[#75695D] truncate block">impresas</span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
-                    <span className="text-[10px] uppercase font-bold text-[#75695D] block">
+                  <div className="p-2 sm:p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[#75695D] block truncate">
                       Filamento Usado
                     </span>
-                    <span className="text-lg font-extrabold text-[#A36F4C] font-mono block mt-0.5">
+                    <span className="text-base sm:text-lg font-extrabold text-[#A36F4C] font-mono block mt-0.5">
                       {(selectedColorForDetails.totalGramosConsumidos || 0).toLocaleString()} g
                     </span>
-                    <span className="text-[9px] text-[#75695D]">en piezas terminadas</span>
+                    <span className="text-[8px] sm:text-[9px] text-[#75695D] truncate block">consumidos</span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
-                    <span className="text-[10px] uppercase font-bold text-[#75695D] block">
+                  <div className="p-2 sm:p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-[#75695D] block truncate">
                       Stock Restante
                     </span>
-                    <span className="text-lg font-extrabold text-[#1E5E3A] font-mono block mt-0.5">
+                    <span className="text-base sm:text-lg font-extrabold text-[#1E5E3A] font-mono block mt-0.5">
                       {(selectedColorForDetails.stockGramos || 0).toLocaleString()} g
                     </span>
-                    <span className="text-[9px] text-[#75695D]">disponibles ahora</span>
+                    <span className="text-[8px] sm:text-[9px] text-[#75695D] truncate block">en taller</span>
                   </div>
                 </div>
 
@@ -1135,7 +1412,7 @@ export function InventarioClient({
                       {selectedColorForDetails.productosInvertidos.map((prod) => (
                         <div 
                           key={prod.productoId}
-                          className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] hover:bg-[#FFFFFF] transition-all space-y-2 shadow-2xs"
+                          className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] hover:bg-[#FFFFFF] transition-all space-y-2 shadow-2xs"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -1173,10 +1450,10 @@ export function InventarioClient({
                               <div className="space-y-1">
                                 {prod.ultimosPedidos.map((ped, idx) => (
                                   <div key={idx} className="flex items-center justify-between text-[11px] bg-white px-2 py-1 rounded-lg border border-[#E2D9CC]/60">
-                                    <span className="text-[#241C15] font-medium truncate max-w-[200px]">
+                                    <span className="text-[#241C15] font-medium truncate max-w-[160px] sm:max-w-[200px]">
                                       👤 {ped.cliente}
                                     </span>
-                                    <div className="flex items-center gap-2 text-[10px] text-[#75695D] font-mono">
+                                    <div className="flex items-center gap-1.5 text-[10px] text-[#75695D] font-mono">
                                       <span>{ped.cantidad} un. ({ped.gramos}g)</span>
                                       <span>•</span>
                                       <span>{new Date(ped.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })}</span>
@@ -1194,7 +1471,7 @@ export function InventarioClient({
               </div>
 
               {/* Footer */}
-              <div className="px-5 sm:px-6 py-3 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end flex-shrink-0">
+              <div className="px-4 sm:px-6 py-3 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end flex-shrink-0">
                 <Button
                   type="button"
                   onClick={() => setOpenColorDetailsModal(false)}
