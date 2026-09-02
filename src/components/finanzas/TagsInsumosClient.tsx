@@ -75,15 +75,33 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
     setCurrentPage(1)
   }, [search, categoriaFilter])
 
-  // Filtered tags
+  // Categorías order mapping (Insumos & Materiales -> Maquinaria & Equipos -> Servicios & Operativos)
+  const CATEGORIA_SORT_ORDER: Record<string, number> = {
+    INSUMO: 1,
+    ACTIVO_FIJO: 2,
+    SERVICIO: 3,
+  }
+
+  // Filtered and sorted tags (por Categoría y luego Subcategoría alfabéticamente A-Z)
   const filteredTags = useMemo(() => {
-    return items.filter(t => {
+    const list = items.filter(t => {
       const matchSearch = 
         t.nombre.toLowerCase().includes(search.toLowerCase()) ||
         (t.descripcion && t.descripcion.toLowerCase().includes(search.toLowerCase()))
       
       const matchCat = categoriaFilter === 'TODOS' || t.categoria === categoriaFilter
       return matchSearch && matchCat
+    })
+
+    return [...list].sort((a, b) => {
+      // 1. Ordenar por Categoría Asociada
+      const catOrderA = CATEGORIA_SORT_ORDER[a.categoria] ?? 99
+      const catOrderB = CATEGORIA_SORT_ORDER[b.categoria] ?? 99
+      if (catOrderA !== catOrderB) {
+        return catOrderA - catOrderB
+      }
+      // 2. Ordenar por Subcategoría (nombre del tag) alfabéticamente (A-Z)
+      return a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
     })
   }, [items, search, categoriaFilter])
 
@@ -93,8 +111,9 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
     return filteredTags.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredTags, currentPage])
 
-  const totalGastoGeneral = items.reduce((acc, t) => acc + t.gastoAcumulado, 0)
-  const totalItemsRegistrados = items.reduce((acc, t) => acc + t.totalEgresos, 0)
+  const totalTagsFiltrados = filteredTags.length
+  const totalItemsFiltrados = useMemo(() => filteredTags.reduce((acc, t) => acc + t.totalEgresos, 0), [filteredTags])
+  const totalGastoFiltrado = useMemo(() => filteredTags.reduce((acc, t) => acc + t.gastoAcumulado, 0), [filteredTags])
 
   // Open Create
   const handleOpenCreate = () => {
@@ -216,17 +235,19 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
         </div>
       </div>
 
-      {/* KPI Cards Light Mode */}
+      {/* KPI Cards Light Mode (Dinámicos según filtro) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
           <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
             <Tag className="h-4 w-4" />
-            Tags Creados
+            {categoriaFilter === 'TODOS' && !search ? 'Tags Creados' : 'Tags Filtrados'}
           </span>
           <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {items.length} <span className="text-sm font-normal text-[#75695D]">etiquetas</span>
+            {totalTagsFiltrados} <span className="text-sm font-normal text-[#75695D]">{totalTagsFiltrados === 1 ? 'etiqueta' : 'etiquetas'}</span>
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Clasificación activa del taller</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">
+            {categoriaFilter === 'TODOS' && !search ? 'Clasificación activa del taller' : 'Según filtros aplicados'}
+          </span>
         </div>
 
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
@@ -235,9 +256,11 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
             Insumos Asignados
           </span>
           <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {totalItemsRegistrados} <span className="text-sm font-normal text-[#75695D]">compras</span>
+            {totalItemsFiltrados} <span className="text-sm font-normal text-[#75695D]">{totalItemsFiltrados === 1 ? 'compra' : 'compras'}</span>
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Compras etiquetadas</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">
+            {categoriaFilter === 'TODOS' && !search ? 'Compras etiquetadas' : 'En tags seleccionados'}
+          </span>
         </div>
 
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
@@ -246,9 +269,11 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
             Gasto Total Etiquetado
           </span>
           <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
-            {formatCurrency(totalGastoGeneral)}
+            {formatCurrency(totalGastoFiltrado)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Acumulado en compras</span>
+          <span className="text-xs text-[#75695D] mt-0.5 block">
+            {categoriaFilter === 'TODOS' && !search ? 'Acumulado en compras' : 'Total en filtro activo'}
+          </span>
         </div>
       </div>
 
@@ -334,61 +359,55 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
             </div>
           ) : (
             paginatedTags.map((tag) => (
-              <div key={tag.id} className="p-3.5 space-y-2 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors">
+              <div 
+                key={tag.id} 
+                onClick={() => handleOpenEdit(tag)}
+                className="p-3.5 space-y-2 bg-[#FFFFFF] hover:bg-[#FDFBF7] active:bg-[#F4EFEA] transition-colors cursor-pointer group"
+                title={`Clic para editar o eliminar "${tag.nombre}"`}
+              >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(tag.color)}`}>
-                      <Tag className="h-3 w-3" />
-                      {tag.nombre}
-                    </Badge>
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    {/* Categoría Asociada Primero */}
+                    <div>
+                      {tag.categoria === 'ACTIVO_FIJO' ? (
+                        <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-semibold">
+                          Maquinaria & Equipos
+                        </Badge>
+                      ) : tag.categoria === 'SERVICIO' ? (
+                        <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-[10px] font-semibold">
+                          Servicios & Operativos
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-semibold">
+                          Insumos & Materiales
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Tag / Subcategoría */}
+                    <div>
+                      <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(tag.color)}`}>
+                        <Tag className="h-3 w-3" />
+                        {tag.nombre}
+                      </Badge>
+                    </div>
+
                     {tag.descripcion && (
-                      <p className="text-xs text-[#75695D] mt-1.5 line-clamp-2">
+                      <p className="text-xs text-[#75695D] mt-1 line-clamp-2">
                         {tag.descripcion}
                       </p>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleOpenEdit(tag)}
-                      className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
-                      title="Editar tag"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleDelete(tag.id, tag.nombre)}
-                      className="h-8 w-8 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                      title="Eliminar tag"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                  <div className="flex items-center text-[#75695D] group-hover:text-[#A36F4C] transition-colors pt-1">
+                    <Pencil className="h-3.5 w-3.5" />
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-[#E2D9CC]/60">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {tag.categoria === 'ACTIVO_FIJO' ? (
-                      <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-semibold">
-                        Maquinaria & Equipos
-                      </Badge>
-                    ) : tag.categoria === 'SERVICIO' ? (
-                      <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-[10px] font-semibold">
-                        Servicios & Operativos
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-semibold">
-                        Insumos & Materiales
-                      </Badge>
-                    )}
-                    <span className="text-[10px] text-[#75695D] font-mono">
-                      {tag.totalEgresos} {tag.totalEgresos === 1 ? 'ítem' : 'ítems'}
-                    </span>
-                  </div>
+                  <span className="text-[10px] text-[#75695D] font-mono">
+                    {tag.totalEgresos} {tag.totalEgresos === 1 ? 'ítem' : 'ítems'}
+                  </span>
 
                   <span className="font-mono font-bold text-[#A36F4C] text-xs">
                     {formatCurrency(tag.gastoAcumulado)}
@@ -404,18 +423,17 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
           <Table className="w-full min-w-[650px]">
             <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Categoría Asociada</TableHead>
                 <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Tag / Subcategoría</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Categoría Asociada</TableHead>
                 <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Descripción / Uso</TableHead>
                 <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Insumos Registrados</TableHead>
                 <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Gasto Acumulado</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTags.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-36 text-center text-[#75695D]">
+                  <TableCell colSpan={5} className="h-36 text-center text-[#75695D]">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Tag className="h-8 w-8 text-[#A89B8D]" />
                       <span>No hay tags registrados con los filtros actuales.</span>
@@ -426,17 +444,11 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                 paginatedTags.map((tag) => (
                   <TableRow 
                     key={tag.id}
-                    className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors"
+                    onClick={() => handleOpenEdit(tag)}
+                    className="border-[#E2D9CC]/70 hover:bg-[#F4EFEA]/80 cursor-pointer transition-colors group"
+                    title={`Clic para editar o eliminar tag "${tag.nombre}"`}
                   >
-                    {/* Tag Name with Color Badge */}
-                    <TableCell className="px-4 py-3 font-semibold">
-                      <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(tag.color)}`}>
-                        <Tag className="h-3 w-3" />
-                        {tag.nombre}
-                      </Badge>
-                    </TableCell>
-
-                    {/* Categoría Asociada */}
+                    {/* 1. Categoría Asociada Primero */}
                     <TableCell className="px-4 py-3 whitespace-nowrap">
                       {tag.categoria === 'ACTIVO_FIJO' ? (
                         <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-semibold">
@@ -453,45 +465,29 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                       )}
                     </TableCell>
 
-                    {/* Description */}
-                    <TableCell className="px-4 py-3 text-xs text-[#75695D]">
+                    {/* 2. Tag / Subcategoría */}
+                    <TableCell className="px-4 py-3 font-semibold">
+                      <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(tag.color)} group-hover:shadow-xs transition-shadow`}>
+                        <Tag className="h-3 w-3" />
+                        {tag.nombre}
+                      </Badge>
+                    </TableCell>
+
+                    {/* 3. Description */}
+                    <TableCell className="px-3 py-3 text-xs text-[#75695D]">
                       {tag.descripcion || <span className="text-[#A89B8D] italic">Sin descripción</span>}
                     </TableCell>
 
-                    {/* Total Insumos */}
+                    {/* 4. Total Insumos */}
                     <TableCell className="px-4 py-3 text-center font-mono text-xs">
-                      <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#241C15] font-semibold">
+                      <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#241C15] font-semibold group-hover:bg-[#FFFFFF]">
                         {tag.totalEgresos} {tag.totalEgresos === 1 ? 'ítem' : 'ítems'}
                       </Badge>
                     </TableCell>
 
-                    {/* Gasto Total */}
+                    {/* 5. Gasto Total */}
                     <TableCell className="px-4 py-3 text-right font-mono font-bold text-[#A36F4C] text-xs">
                       {formatCurrency(tag.gastoAcumulado)}
-                    </TableCell>
-
-                    {/* Actions */}
-                    <TableCell className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleOpenEdit(tag)}
-                          className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
-                          title="Editar tag"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDelete(tag.id, tag.nombre)}
-                          className="h-8 w-8 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                          title="Eliminar tag"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -547,9 +543,6 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
         )}
       </Card>
 
-      {/* ========================================================================= */}
-      {/* MODAL: CREAR / EDITAR TAG (LIGHT MODE NOVA)                               */}
-      {/* ========================================================================= */}
       {/* ========================================================================= */}
       {/* MODAL: CREAR / EDITAR TAG (LIGHT MODE NOVA)                               */}
       {/* ========================================================================= */}
@@ -675,30 +668,50 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
               </div>
             </div>
 
-            {/* Buttons */}
-            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                onClick={() => setOpenModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  editingTag ? 'Guardar Cambios' : 'Crear Tag'
-                )}
-              </Button>
+            {/* Buttons: Delete on left (when editing), Cancel + Submit on right */}
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between gap-3 flex-shrink-0">
+              {editingTag ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    const tagToDelete = editingTag
+                    setOpenModal(false)
+                    handleDelete(tagToDelete.id, tagToDelete.nombre)
+                  }}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs px-3 py-2.5 rounded-xl cursor-pointer font-semibold active:scale-[0.98] flex items-center gap-1.5"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Eliminar Tag</span>
+                </Button>
+              ) : (
+                <div />
+              )}
+
+              <div className="flex items-center gap-2">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => setOpenModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    editingTag ? 'Guardar Cambios' : 'Crear Tag'
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </DialogContent>
