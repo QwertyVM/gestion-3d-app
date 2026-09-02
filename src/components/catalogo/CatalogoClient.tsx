@@ -1508,7 +1508,7 @@ export function CatalogoClient({
             </div>
 
             {/* Price Tiers Grid: 1. Amigos, 2. Mercado, 3. Comunidad */}
-            <div className="grid grid-cols-3 gap-3 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
               <div className="space-y-1.5">
                 <Label className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
@@ -1722,7 +1722,7 @@ export function CatalogoClient({
               </div>
 
               {/* Price Tiers Grid */}
-              <div className="grid grid-cols-3 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-[#1E5E3A] font-bold">P. Amigos</Label>
                   <div className="relative flex items-center w-full">

@@ -1244,16 +1244,16 @@ export function VentasClient({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     {selectedVenta.saldoPendiente > 0 ? (
-                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold font-mono px-2.5 py-1 flex items-center gap-1.5 shadow-2xs">
+                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-2.5 py-1 flex items-center gap-1 sm:gap-1.5 shadow-2xs">
                         <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span>Abonado {pctPagado}% - Falta {formatCurrency(selectedVenta.saldoPendiente)}</span>
+                        <span>Abonado {pctPagado}%<span className="hidden sm:inline"> - Falta {formatCurrency(selectedVenta.saldoPendiente)}</span></span>
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold font-mono px-2.5 py-1 flex items-center gap-1.5 shadow-2xs">
+                      <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-2.5 py-1 flex items-center gap-1 sm:gap-1.5 shadow-2xs">
                         <Check className="h-3.5 w-3.5 stroke-[2.5] flex-shrink-0" />
-                        <span>Pagado al 100%</span>
+                        <span>Pagado 100%</span>
                       </Badge>
                     )}
 
@@ -2079,7 +2079,7 @@ export function VentasClient({
               })()}
 
               {/* Logística */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Destino de Envío</Label>
                   <Input 

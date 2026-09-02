@@ -321,15 +321,92 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
         </div>
       </div>
 
-      {/* Tags Table Light Mode */}
+      {/* Tags Table & Mobile Cards */}
       <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-        <div className="overflow-x-auto scrollbar-thin">
+        {/* Mobile View: Cards */}
+        <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+          {paginatedTags.length === 0 ? (
+            <div className="p-8 text-center text-[#75695D] text-xs">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <Tag className="h-8 w-8 text-[#A89B8D]" />
+                <span>No hay tags registrados con los filtros actuales.</span>
+              </div>
+            </div>
+          ) : (
+            paginatedTags.map((tag) => (
+              <div key={tag.id} className="p-3.5 space-y-2 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Badge variant="outline" className={`text-xs font-semibold py-1 px-2.5 gap-1.5 ${getTagColorClasses(tag.color)}`}>
+                      <Tag className="h-3 w-3" />
+                      {tag.nombre}
+                    </Badge>
+                    {tag.descripcion && (
+                      <p className="text-xs text-[#75695D] mt-1.5 line-clamp-2">
+                        {tag.descripcion}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleOpenEdit(tag)}
+                      className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
+                      title="Editar tag"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleDelete(tag.id, tag.nombre)}
+                      className="h-8 w-8 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                      title="Eliminar tag"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-[#E2D9CC]/60">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {tag.categoria === 'ACTIVO_FIJO' ? (
+                      <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-semibold">
+                        Maquinaria & Equipos
+                      </Badge>
+                    ) : tag.categoria === 'SERVICIO' ? (
+                      <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-[10px] font-semibold">
+                        Servicios & Operativos
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-semibold">
+                        Insumos & Materiales
+                      </Badge>
+                    )}
+                    <span className="text-[10px] text-[#75695D] font-mono">
+                      {tag.totalEgresos} {tag.totalEgresos === 1 ? 'ítem' : 'ítems'}
+                    </span>
+                  </div>
+
+                  <span className="font-mono font-bold text-[#A36F4C] text-xs">
+                    {formatCurrency(tag.gastoAcumulado)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <Table className="w-full min-w-[650px]">
             <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent">
                 <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Tag / Subcategoría</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Categoría Asociada</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Descripción / Uso</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Categoría Asociada</TableHead>
+                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Descripción / Uso</TableHead>
                 <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Insumos Registrados</TableHead>
                 <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Gasto Acumulado</TableHead>
                 <TableHead className="text-[#241C15] font-bold px-4 py-3 text-center">Acciones</TableHead>
@@ -421,53 +498,53 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
               )}
             </TableBody>
           </Table>
-
-          {/* Paginación */}
-          {totalPages > 1 && (
-            <div className="p-4 bg-[#FDFBF7] border-t border-[#E2D9CC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <span className="text-[#75695D]">
-                Mostrando página <strong className="text-[#241C15]">{currentPage}</strong> de <strong className="text-[#241C15]">{totalPages}</strong> ({filteredTags.length} tags)
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Anterior
-                </Button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        currentPage === page
-                          ? 'bg-[#A36F4C] text-[#FFFFFF] shadow-sm'
-                          : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
-                >
-                  Siguiente
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className="p-4 bg-[#FDFBF7] border-t border-[#E2D9CC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <span className="text-[#75695D]">
+              Mostrando página <strong className="text-[#241C15]">{currentPage}</strong> de <strong className="text-[#241C15]">{totalPages}</strong> ({filteredTags.length} tags)
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Anterior
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      currentPage === page
+                        ? 'bg-[#A36F4C] text-[#FFFFFF] shadow-sm'
+                        : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* ========================================================================= */}

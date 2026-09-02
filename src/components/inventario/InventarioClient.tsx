@@ -704,7 +704,7 @@ export function InventarioClient({
                       }`}
                     >
                       {/* Fila 1: Nombre + Color Dot + Selector de Cantidad + Acciones */}
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
                         {/* Dot y Nombre */}
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <button
@@ -726,7 +726,7 @@ export function InventarioClient({
                         </div>
 
                         {/* Botones de Control en Fila 1 */}
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-auto sm:ml-0">
                           {/* Selector Compacto de Cantidad */}
                           <div className="flex items-center gap-1 bg-[#F4EFEA] border border-[#D4BEA7] rounded-lg px-1 py-0.5 shadow-2xs" title="Cantidad de bobinas (1 un. = 1,000g)">
                             <button
