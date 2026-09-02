@@ -36,6 +36,7 @@ import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
+import { MultiTagInput } from '@/components/ui/MultiTagInput'
 import { EgresoItem } from './FlujoCajaClient'
 
 interface EgresosClientProps {
@@ -143,21 +144,24 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     return tags.filter(t => t.categoria === formCategoria)
   }, [tags, formCategoria])
 
-  // Lista única de todos los nombres de tags para filtros generales (incluye todos los tags registrados)
+  // Lista única de todos los nombres de tags para filtros generales (incluye todos los tags registrados y tags en egresos)
   const availableTags = useMemo(() => {
-    const list: string[] = []
+    const set = new Set<string>()
 
     tags.forEach(t => {
-      if (t.nombre && t.nombre.trim() && !list.includes(t.nombre.trim())) {
-        list.push(t.nombre.trim())
+      if (t.nombre && t.nombre.trim()) {
+        set.add(t.nombre.trim())
       }
     })
     items.forEach(e => {
-      if (e.subcategoria && e.subcategoria.trim() && !list.includes(e.subcategoria.trim())) {
-        list.push(e.subcategoria.trim())
+      if (e.subcategoria) {
+        e.subcategoria.split(',').forEach(tag => {
+          const clean = tag.trim()
+          if (clean) set.add(clean)
+        })
       }
     })
-    return list.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [items, tags])
 
   // Tags para el dropdown de la barra de filtros, filtrados según la categoría activa
@@ -165,22 +169,25 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     if (categoriaFilter === 'TODOS') {
       return availableTags
     }
-    const matching: string[] = []
+    const set = new Set<string>()
     tags
       .filter(t => t.categoria === categoriaFilter)
       .forEach(t => {
-        if (t.nombre && t.nombre.trim() && !matching.includes(t.nombre.trim())) {
-          matching.push(t.nombre.trim())
+        if (t.nombre && t.nombre.trim()) {
+          set.add(t.nombre.trim())
         }
       })
     items
       .filter(e => e.categoria === categoriaFilter && e.subcategoria)
       .forEach(e => {
-        if (e.subcategoria && e.subcategoria.trim() && !matching.includes(e.subcategoria.trim())) {
-          matching.push(e.subcategoria.trim())
+        if (e.subcategoria) {
+          e.subcategoria.split(',').forEach(tag => {
+            const clean = tag.trim()
+            if (clean) set.add(clean)
+          })
         }
       })
-    return matching.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [categoriaFilter, tags, items, availableTags])
 
   const tagsComboboxItems: ComboboxItem[] = useMemo(() => {
@@ -190,10 +197,12 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
       badge: `${dropdownTags.length}`
     }
     const tagOptions: ComboboxItem[] = dropdownTags.map(tag => {
-      const count = items.filter(e => 
-        (categoriaFilter === 'TODOS' || e.categoria === categoriaFilter) &&
-        e.subcategoria?.trim().toLowerCase() === tag.toLowerCase()
-      ).length
+      const count = items.filter(e => {
+        const catMatch = categoriaFilter === 'TODOS' || e.categoria === categoriaFilter
+        if (!catMatch || !e.subcategoria) return false
+        const itemTags = e.subcategoria.split(',').map(s => s.trim().toLowerCase())
+        return itemTags.includes(tag.toLowerCase())
+      }).length
 
       return {
         id: tag,
@@ -218,7 +227,11 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
           (eg.especificacionColor && eg.especificacionColor.toLowerCase().includes(search.toLowerCase()))
 
         const matchCat = categoriaFilter === 'TODOS' || eg.categoria === categoriaFilter
-        const matchTag = tagFilter === 'TODOS' || eg.subcategoria?.trim().toLowerCase() === tagFilter.trim().toLowerCase()
+        const matchTag = tagFilter === 'TODOS' || (
+          eg.subcategoria 
+            ? eg.subcategoria.split(',').map(s => s.trim().toLowerCase()).includes(tagFilter.trim().toLowerCase())
+            : false
+        )
 
         return matchSearch && matchCat && matchTag
       })
@@ -261,12 +274,6 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
   // Handler cambio de categoría en modal
   const handleSelectCategoria = (cat: 'INSUMO' | 'ACTIVO_FIJO' | 'SERVICIO') => {
     setFormCategoria(cat)
-    const matching = tags.filter(t => t.categoria === cat)
-    if (matching.length > 0) {
-      setFormSubcategoria(matching[0].nombre)
-    } else {
-      setFormSubcategoria('')
-    }
   }
 
   // Open Create Modal
@@ -421,16 +428,28 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     }
   }
 
-  // Tag Badge Renderer con estilo Light Mode
+  // Tag Badge Renderer con soporte para múltiples tags
   const renderTagBadge = (tagText?: string | null) => {
     if (!tagText) return null
-    const colorStyle = getTagColor(tagText)
+    const tagsList = tagText.split(',').map(t => t.trim()).filter(Boolean)
+    if (tagsList.length === 0) return null
 
     return (
-      <Badge variant="outline" className={`text-[10px] font-semibold py-0.5 px-2 gap-1 ${colorStyle.badge}`}>
-        <Tag className="h-2.5 w-2.5" />
-        {tagText}
-      </Badge>
+      <div className="flex flex-wrap items-center gap-1">
+        {tagsList.map((tag, idx) => {
+          const colorStyle = getTagColor(tag)
+          return (
+            <Badge 
+              key={`${tag}-${idx}`} 
+              variant="outline" 
+              className={`text-[10px] font-semibold py-0.5 px-2 gap-1 ${colorStyle.badge}`}
+            >
+              <Tag className="h-2.5 w-2.5" />
+              {tag}
+            </Badge>
+          )
+        })}
+      </div>
     )
   }
 
@@ -943,13 +962,13 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 />
               </div>
 
-              {/* 3. Subcategoría Dinámica por Categoría Asociada */}
+              {/* 3. Subcategoría Dinámica con Multi-Tags */}
               <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
                     <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                    Subcategoría / Tag <span className="text-[#A36F4C]">*</span>
-                  </Label>
+                    Tags / Etiquetas del Egreso (Múltiples)
+                  </span>
                   <Link 
                     href="/finanzas/tags" 
                     className="text-[11px] text-[#A36F4C] font-semibold hover:underline flex items-center gap-1"
@@ -958,38 +977,12 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                   </Link>
                 </div>
 
-                {/* Chips con los tags asociados a la categoría seleccionada */}
-                {activeCategoryTags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {activeCategoryTags.map(tag => {
-                      const colorStyle = getTagColor(tag.nombre)
-                      const isSelected = formSubcategoria.trim().toLowerCase() === tag.nombre.trim().toLowerCase()
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => setFormSubcategoria(tag.nombre)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border ${
-                            isSelected
-                              ? colorStyle.chipActive
-                              : colorStyle.chip
-                          }`}
-                        >
-                          <Tag className="h-3 w-3" />
-                          {tag.nombre}
-                          {isSelected && <Check className="h-3 w-3 ml-1" />}
-                        </button>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC] text-xs text-[#75695D]">
-                    <span>No hay tags asociados a esta categoría.</span>
-                    <Link href="/finanzas/tags" className="text-[#A36F4C] font-bold hover:underline">
-                      + Crear tag en CRUD
-                    </Link>
-                  </div>
-                )}
+                <MultiTagInput
+                  value={formSubcategoria}
+                  onChange={(newTags) => setFormSubcategoria(newTags.join(', '))}
+                  suggestions={activeCategoryTags.map(t => t.nombre)}
+                  placeholder="Escribe un tag y presiona Enter o elige abajo..."
+                />
               </div>
 
               {/* 4. Costos y Cantidades */}
@@ -1229,13 +1222,13 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 />
               </div>
 
-              {/* 3. Subcategoría Dinámica por Categoría Asociada */}
+              {/* 3. Subcategoría Dinámica con Multi-Tags */}
               <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
                     <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                    Subcategoría / Tag <span className="text-[#A36F4C]">*</span>
-                  </Label>
+                    Tags / Etiquetas del Egreso (Múltiples)
+                  </span>
                   <Link 
                     href="/finanzas/tags" 
                     className="text-[11px] text-[#A36F4C] font-semibold hover:underline flex items-center gap-1"
@@ -1244,38 +1237,12 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                   </Link>
                 </div>
 
-                {/* Chips con los tags asociados a la categoría seleccionada */}
-                {activeCategoryTags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {activeCategoryTags.map(tag => {
-                      const colorStyle = getTagColor(tag.nombre)
-                      const isSelected = formSubcategoria.trim().toLowerCase() === tag.nombre.trim().toLowerCase()
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => setFormSubcategoria(tag.nombre)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer border ${
-                            isSelected
-                              ? colorStyle.chipActive
-                              : colorStyle.chip
-                          }`}
-                        >
-                          <Tag className="h-3 w-3" />
-                          {tag.nombre}
-                          {isSelected && <Check className="h-3 w-3 ml-1" />}
-                        </button>
-                      )
-                    })}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC] text-xs text-[#75695D]">
-                    <span>No hay tags asociados a esta categoría.</span>
-                    <Link href="/finanzas/tags" className="text-[#A36F4C] font-bold hover:underline">
-                      + Crear tag en CRUD
-                    </Link>
-                  </div>
-                )}
+                <MultiTagInput
+                  value={formSubcategoria}
+                  onChange={(newTags) => setFormSubcategoria(newTags.join(', '))}
+                  suggestions={activeCategoryTags.map(t => t.nombre)}
+                  placeholder="Escribe un tag y presiona Enter o elige abajo..."
+                />
               </div>
 
               {/* 4. Costos y Cantidades */}

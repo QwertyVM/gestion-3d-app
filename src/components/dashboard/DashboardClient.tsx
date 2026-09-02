@@ -28,7 +28,11 @@ import {
   Receipt,
   Palette,
   ArrowRight,
-  AlertTriangle
+  AlertTriangle,
+  ShieldCheck,
+  Lock,
+  Wallet,
+  Coins
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -140,6 +144,18 @@ export interface TopColorItem {
   porcentajeUso: number
 }
 
+export interface CapacidadGastoData {
+  saldoActualCaja: number
+  totalBlindadoMes: number
+  cuotaPrestamoMensual: number
+  reservaCapexMensual: number
+  gastosFijosTaller: number
+  gastoDisponibleHoy: number
+  gastoDisponibleProyectado: number
+  pedidosProyectadosMes: number
+  gananciaProyectadaMes: number
+}
+
 interface DashboardClientProps {
   kpis: {
     ingresosVentas: number
@@ -152,6 +168,7 @@ interface DashboardClientProps {
     ticketPromedio: number
     totalIngresosDirectos: number
   }
+  capacidadGasto?: CapacidadGastoData
   graficoEvolucion: { fecha: string; ingresos: number; costo: number; ganancia: number }[]
   graficoInversion: { name: string; value: number }[]
   cuentasPorCobrar: any[]
@@ -160,12 +177,30 @@ interface DashboardClientProps {
 
 export function DashboardClient({ 
   kpis, 
+  capacidadGasto,
   graficoEvolucion, 
   graficoInversion, 
   cuentasPorCobrar,
   topColores = []
 }: DashboardClientProps) {
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  // Default de capacidad de gasto si no está provisto (Sincronizado con Plan de Gastos)
+  const gasto = capacidadGasto || {
+    saldoActualCaja: Math.max(0, kpis.totalCobradoVentas + kpis.totalIngresosDirectos - kpis.egresosTotales),
+    totalBlindadoMes: 368.88 + 878.00 + 111.00,
+    cuotaPrestamoMensual: 368.88,
+    reservaCapexMensual: 878.00,
+    gastosFijosTaller: 111.00,
+    gastoDisponibleHoy: Math.max(0, (kpis.totalCobradoVentas + kpis.totalIngresosDirectos - kpis.egresosTotales) - (368.88 + 878.00 + 111.00)),
+    gastoDisponibleProyectado: Math.max(0, (kpis.totalCobradoVentas + kpis.totalIngresosDirectos - kpis.egresosTotales) + 1746 - (368.88 + 878.00 + 111.00)),
+    pedidosProyectadosMes: 18,
+    gananciaProyectadaMes: 1746.00
+  }
+
+  const porcentajeCubiertoBlindado = gasto.totalBlindadoMes > 0 
+    ? Math.min(100, Math.round((gasto.saldoActualCaja / gasto.totalBlindadoMes) * 100))
+    : 100
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
@@ -182,78 +217,161 @@ export function DashboardClient({
             Métricas clave de rendimiento, rentabilidad sobre costos y flujo comercial.
           </p>
         </div>
+
+        <Link
+          href="/finanzas/proyecciones"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#633E20] border border-[#D4BEA7] shadow-2xs transition-all self-start sm:self-auto"
+        >
+          <TrendingUp className="h-3.5 w-3.5 text-[#A36F4C]" />
+          <span>Simulador & Presupuesto del Mes</span>
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
 
-      {/* KPIs Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* ========================================================================= */}
+      {/* HERO BANNER: CAPACIDAD DE GASTO LIBRE + INDICADORES A LA DERECHA         */}
+      {/* ========================================================================= */}
+      <div className="bg-[#FFFFFF] border border-[#D4BEA7] rounded-2xl p-4 sm:p-5 shadow-xs relative overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          
+          {/* LADO IZQUIERDO: Capacidad de Gasto Libre */}
+          <div className="lg:col-span-6 flex items-center gap-3.5">
+            <div className={`p-3 rounded-2xl border flex-shrink-0 ${
+              gasto.gastoDisponibleHoy > 0 
+                ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
+                : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
+            }`}>
+              <ShieldCheck className="h-6 w-6 stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#75695D]">
+                  Capacidad de Gasto Libre
+                </span>
+                <Badge variant="outline" className={`text-[10px] font-bold py-0.5 px-2 ${
+                  gasto.gastoDisponibleHoy > 0
+                    ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
+                    : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
+                }`}>
+                  {gasto.gastoDisponibleHoy > 0 ? 'Excedente Libre Hoy' : 'Fondos Comprometidos'}
+                </Badge>
+              </div>
+              
+              <div className="text-2xl sm:text-3xl font-black font-mono leading-tight mt-0.5">
+                <span className={gasto.gastoDisponibleHoy > 0 ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'}>
+                  {formatCurrency(gasto.gastoDisponibleHoy)}
+                </span>
+              </div>
+              <span className="text-xs text-[#75695D] block mt-0.5">
+                disponibles para compras/insumos sin tocar lo blindado
+              </span>
+            </div>
+          </div>
+
+          {/* LADO DERECHO: Lo que tengo en Caja & Lo Blindado */}
+          <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* 1. Lo que tengo en Caja */}
+            <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1">
+              <div className="flex items-center justify-between text-[#75695D]">
+                <span className="font-bold text-[10px] uppercase">Lo que tengo en Caja</span>
+                <Wallet className="h-4 w-4 text-[#1E5E3A]" />
+              </div>
+              <div className="text-lg sm:text-xl font-black font-mono text-[#241C15]">
+                {formatCurrency(gasto.saldoActualCaja)}
+              </div>
+              <span className="text-[10px] text-[#75695D] block truncate">
+                Cobrado efectivo de ventas
+              </span>
+            </div>
+
+            {/* 2. Lo Blindado */}
+            <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1">
+              <div className="flex items-center justify-between text-[#75695D]">
+                <span className="font-bold text-[10px] uppercase">Lo Blindado / Intocable</span>
+                <Lock className="h-4 w-4 text-[#A36F4C]" />
+              </div>
+              <div className="text-lg sm:text-xl font-black font-mono text-[#633E20]">
+                {formatCurrency(gasto.totalBlindadoMes)}
+              </div>
+              <span className="text-[10px] text-[#75695D] block truncate">
+                Préstamo + CAPEX + Fijos
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* KPIs Grid - Compact Height */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* 1. GANANCIA NETA EN VENTAS */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#1E5E3A] transition-all relative overflow-hidden rounded-2xl">
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#1E5E3A] transition-all relative overflow-hidden rounded-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:px-5">
-            <CardTitle className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#1E5E3A]">
+          <CardHeader className="flex flex-row items-center justify-between pb-0.5 pt-2.5 px-3.5 sm:px-4">
+            <CardTitle className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A]">
               Ganancia Neta (Ventas)
             </CardTitle>
-            <div className="p-1.5 rounded-lg bg-[#EBF7EE] text-[#1E5E3A]">
-              <DollarSign className="h-4 w-4 stroke-[2.5]" />
+            <div className="p-1 rounded-md bg-[#EBF7EE] text-[#1E5E3A]">
+              <DollarSign className="h-3.5 w-3.5 stroke-[2.5]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
-            <div className="text-xl sm:text-2xl font-extrabold text-[#1E5E3A] font-mono truncate">
+          <CardContent className="space-y-0.5 pb-2.5 px-3.5 sm:px-4">
+            <div className="text-lg sm:text-xl font-extrabold text-[#1E5E3A] font-mono leading-tight truncate">
               +{formatCurrency(kpis.gananciaNeta)}
             </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D] pt-0.5">
+            <div className="flex items-center justify-between text-[11px] text-[#75695D]">
               <span>Margen sobre costo:</span>
               <span className="font-bold text-[#1E5E3A] font-mono">
                 +{kpis.margenPorcentaje.toFixed(1)}%
               </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-[#75695D] truncate">
+            <p className="text-[10px] text-[#75695D] truncate leading-tight">
               Ventas ({formatCurrency(kpis.ingresosVentas)}) - Costo Fab. ({formatCurrency(kpis.costoFabricacionTotal)})
             </p>
           </CardContent>
         </Card>
         
         {/* 2. INGRESOS TOTALES EN VENTAS */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#A36F4C] transition-all relative overflow-hidden rounded-2xl">
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#A36F4C] transition-all relative overflow-hidden rounded-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#A36F4C]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:px-5">
-            <CardTitle className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#A36F4C]">
+          <CardHeader className="flex flex-row items-center justify-between pb-0.5 pt-2.5 px-3.5 sm:px-4">
+            <CardTitle className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#A36F4C]">
               Ingresos por Ventas
             </CardTitle>
-            <div className="p-1.5 rounded-lg bg-[#EFE5D8] text-[#A36F4C]">
-              <TrendingUp className="h-4 w-4 stroke-[2.5]" />
+            <div className="p-1 rounded-md bg-[#EFE5D8] text-[#A36F4C]">
+              <TrendingUp className="h-3.5 w-3.5 stroke-[2.5]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
-            <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono truncate">
+          <CardContent className="space-y-0.5 pb-2.5 px-3.5 sm:px-4">
+            <div className="text-lg sm:text-xl font-extrabold text-[#241C15] font-mono leading-tight truncate">
               {formatCurrency(kpis.ingresosVentas)}
             </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D] pt-0.5">
+            <div className="flex items-center justify-between text-[11px] text-[#75695D]">
               <span>Ticket Promedio:</span>
               <span className="font-mono text-[#241C15] font-bold">
                 {formatCurrency(kpis.ticketPromedio)}
               </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-[#75695D] truncate">Total facturado en modelos 3D</p>
+            <p className="text-[10px] text-[#75695D] truncate leading-tight">Total facturado en modelos 3D</p>
           </CardContent>
         </Card>
 
         {/* 3. COSTO TOTAL DE FABRICACIÓN */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#944917] transition-all relative overflow-hidden rounded-2xl">
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#944917] transition-all relative overflow-hidden rounded-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#944917]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:px-5">
-            <CardTitle className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#944917]">
+          <CardHeader className="flex flex-row items-center justify-between pb-0.5 pt-2.5 px-3.5 sm:px-4">
+            <CardTitle className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#944917]">
               Costo de Fabricación
             </CardTitle>
-            <div className="p-1.5 rounded-lg bg-[#F4EFEA] text-[#944917]">
-              <Layers className="h-4 w-4 stroke-[2.5]" />
+            <div className="p-1 rounded-md bg-[#F4EFEA] text-[#944917]">
+              <Layers className="h-3.5 w-3.5 stroke-[2.5]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
-            <div className="text-xl sm:text-2xl font-extrabold text-[#944917] font-mono truncate">
+          <CardContent className="space-y-0.5 pb-2.5 px-3.5 sm:px-4">
+            <div className="text-lg sm:text-xl font-extrabold text-[#944917] font-mono leading-tight truncate">
               {formatCurrency(kpis.costoFabricacionTotal)}
             </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D] pt-0.5">
+            <div className="flex items-center justify-between text-[11px] text-[#75695D]">
               <span>Costo por modelo:</span>
               <span className="font-mono text-[#241C15] font-bold">
                 {kpis.ingresosVentas > 0 
@@ -261,32 +379,32 @@ export function DashboardClient({
                   : '0%'}
               </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-[#75695D] truncate">Filamento, energía y amortización</p>
+            <p className="text-[10px] text-[#75695D] truncate leading-tight">Filamento, energía y amortización</p>
           </CardContent>
         </Card>
 
         {/* 4. SALDO POR COBRAR / COBRADO */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#8C6D1F] transition-all relative overflow-hidden rounded-2xl">
+        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm hover:border-[#8C6D1F] transition-all relative overflow-hidden rounded-xl">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#8C6D1F]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1.5 sm:pb-2 pt-4 px-4 sm:px-5">
-            <CardTitle className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#8C6D1F]">
+          <CardHeader className="flex flex-row items-center justify-between pb-0.5 pt-2.5 px-3.5 sm:px-4">
+            <CardTitle className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[#8C6D1F]">
               Cobranzas & Saldos
             </CardTitle>
-            <div className="p-1.5 rounded-lg bg-[#FDF6E2] text-[#8C6D1F]">
-              <Clock className="h-4 w-4 stroke-[2.5]" />
+            <div className="p-1 rounded-md bg-[#FDF6E2] text-[#8C6D1F]">
+              <Clock className="h-3.5 w-3.5 stroke-[2.5]" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
-            <div className="text-xl sm:text-2xl font-extrabold text-[#8C6D1F] font-mono truncate">
+          <CardContent className="space-y-0.5 pb-2.5 px-3.5 sm:px-4">
+            <div className="text-lg sm:text-xl font-extrabold text-[#8C6D1F] font-mono leading-tight truncate">
               {formatCurrency(kpis.saldoPorCobrar)}
             </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D] pt-0.5">
+            <div className="flex items-center justify-between text-[11px] text-[#75695D]">
               <span>Cobrado en Caja:</span>
               <span className="font-mono text-[#1E5E3A] font-bold">
                 {formatCurrency(kpis.totalCobradoVentas)}
               </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-[#75695D] truncate">Saldos pendientes de entrega</p>
+            <p className="text-[10px] text-[#75695D] truncate leading-tight">Saldos pendientes de entrega</p>
           </CardContent>
         </Card>
       </div>

@@ -47,6 +47,7 @@ import {
   DialogDescription
 } from '@/components/ui/dialog'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
+import { MultiTagInput, getTagColorClass } from '@/components/ui/MultiTagInput'
 
 export interface ProductoItem {
   id: string
@@ -152,14 +153,19 @@ export function CatalogoClient({
     return margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`
   }
 
-  // Extract distinct category names for select options
+  // Extract distinct category names for select options (splits comma-separated tags)
   const categoryNamesList = useMemo(() => {
     const set = new Set<string>()
     categorias.forEach(c => set.add(c.nombre))
     productos.forEach(p => {
-      if (p.lineaCategoria) set.add(p.lineaCategoria.trim())
+      if (p.lineaCategoria) {
+        p.lineaCategoria.split(',').forEach(tag => {
+          const clean = tag.trim()
+          if (clean) set.add(clean)
+        })
+      }
     })
-    return Array.from(set).sort()
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [categorias, productos])
 
   const categoriasFilterComboboxItems: ComboboxItem[] = useMemo(() => {
@@ -172,7 +178,7 @@ export function CatalogoClient({
       id: cat,
       label: cat,
       icon: FolderTree,
-      badge: `${productos.filter(p => p.lineaCategoria === cat).length}`
+      badge: `${productos.filter(p => p.lineaCategoria.split(',').map(s => s.trim().toLowerCase()).includes(cat.toLowerCase())).length}`
     }))
     return [allOption, ...catOptions]
   }, [categoryNamesList, productos])
@@ -185,6 +191,28 @@ export function CatalogoClient({
     }))
   }, [categoryNamesList])
 
+  // Helper para renderizar badges de categorías / tags
+  const renderProductCategoryBadges = (lineaCategoria: string) => {
+    if (!lineaCategoria) return null
+    const tags = lineaCategoria.split(',').map(t => t.trim()).filter(Boolean)
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        {tags.map((tag, idx) => {
+          const colorClass = getTagColorClass(tag)
+          return (
+            <Badge 
+              key={`${tag}-${idx}`} 
+              variant="outline" 
+              className={`text-[10px] font-bold py-0.5 px-2 ${colorClass}`}
+            >
+              {tag}
+            </Badge>
+          )
+        })}
+      </div>
+    )
+  }
+
   // KPIs Products
   const totalProductsCount = productos.length
   const activeProductsCount = productos.filter(p => p.activo).length
@@ -193,7 +221,7 @@ export function CatalogoClient({
   // KPIs Categories
   const totalCategoriesCount = categorias.length
   const categoriesWithProductsCount = categorias.filter(c => {
-    const count = productos.filter(p => p.lineaCategoria === c.nombre).length
+    const count = productos.filter(p => p.lineaCategoria.split(',').map(s => s.trim().toLowerCase()).includes(c.nombre.toLowerCase())).length
     return count > 0
   }).length
   const emptyCategoriesCount = totalCategoriesCount - categoriesWithProductsCount
@@ -205,7 +233,8 @@ export function CatalogoClient({
         p.nombreModelo.toLowerCase().includes(search.toLowerCase()) ||
         p.lineaCategoria.toLowerCase().includes(search.toLowerCase())
 
-      const matchCat = categoriaFilter === 'TODOS' || p.lineaCategoria === categoriaFilter
+      const matchCat = categoriaFilter === 'TODOS' || 
+        p.lineaCategoria.split(',').map(s => s.trim().toLowerCase()).includes(categoriaFilter.trim().toLowerCase())
 
       let matchEstado = true
       if (estadoFilter === 'ACTIVOS') matchEstado = p.activo
@@ -700,9 +729,9 @@ export function CatalogoClient({
                               </Badge>
                             )}
                           </div>
-                          <Badge variant="outline" className="text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] text-[10px] font-semibold mt-1 inline-block">
-                            {p.lineaCategoria}
-                          </Badge>
+                          <div className="mt-1">
+                            {renderProductCategoryBadges(p.lineaCategoria)}
+                          </div>
                         </div>
 
                         <div className="flex-shrink-0">
@@ -763,7 +792,7 @@ export function CatalogoClient({
                   <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
                   <TableRow className="border-[#E2D9CC] hover:bg-transparent">
                     <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Producto / Modelo</TableHead>
-                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left hidden sm:table-cell">Categoría</TableHead>
+                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left hidden sm:table-cell">Categorías / Tags</TableHead>
                     <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Estado</TableHead>
                     <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">P. Amigos</TableHead>
                     <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">P. Mercado</TableHead>
@@ -790,7 +819,7 @@ export function CatalogoClient({
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className={`text-sm font-bold transition-colors ${
                                 isDiscontinued 
-                                  ? 'line-through text-[#75695D]' 
+                                    ? 'line-through text-[#75695D]' 
                                   : 'text-[#241C15] group-hover:text-[#A36F4C]'
                               }`}>
                                 {p.nombreModelo}
@@ -801,17 +830,15 @@ export function CatalogoClient({
                                 </Badge>
                               )}
                             </div>
-                            <span className="sm:hidden text-[11px] text-[#75695D] mt-0.5">
-                              {p.lineaCategoria}
-                            </span>
+                            <div className="sm:hidden mt-1">
+                              {renderProductCategoryBadges(p.lineaCategoria)}
+                            </div>
                           </div>
                         </TableCell>
 
-                        {/* Categoría (Desktop) */}
+                        {/* Categorías (Desktop) */}
                         <TableCell className="px-3 py-3 hidden sm:table-cell">
-                          <Badge variant="outline" className="text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] text-xs font-semibold truncate max-w-[170px]">
-                            {p.lineaCategoria}
-                          </Badge>
+                          {renderProductCategoryBadges(p.lineaCategoria)}
                         </TableCell>
 
                         {/* Estado */}
@@ -1384,68 +1411,15 @@ export function CatalogoClient({
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
-              {/* Categoría Selector with Quick Add */}
+              {/* Categorías / Tags Multi-Select */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                    Línea / Categoría *
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => setIsQuickAddingCat(!isQuickAddingCat)}
-                    className="text-xs text-[#A36F4C] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" />
-                    {isQuickAddingCat ? 'Elegir existente' : 'Crear nueva categoría'}
-                  </button>
-                </div>
-
-                {isQuickAddingCat ? (
-                  <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2">
-                    <div className="space-y-1">
-                      <Label className="text-[11px] text-[#75695D] font-medium">Nombre de la nueva categoría *</Label>
-                      <Input 
-                        value={quickCatName}
-                        onChange={(e) => setQuickCatName(e.target.value)}
-                        placeholder="Ej: Joyería & Accesorios..."
-                        className="h-9 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#A36F4C]"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2 pt-1">
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setIsQuickAddingCat(false)}
-                        className="h-8 px-2.5 text-[#75695D] text-xs rounded-xl cursor-pointer"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button 
-                        type="button" 
-                        size="sm"
-                        onClick={handleQuickAddCategory}
-                        disabled={!quickCatName.trim()}
-                        className="h-8 px-3 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                      >
-                        Guardar en BD
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <SearchableCombobox
-                    items={categoriasFormComboboxItems}
-                    value={formCategoria}
-                    onChange={(val) => setFormCategoria(val)}
-                    allowCustomInput={true}
-                    customCreateLabel="Crear categoría:"
-                    placeholder="Seleccionar o escribir categoría..."
-                    searchPlaceholder="Buscar categoría..."
-                    icon={FolderTree}
-                    inputClassName="bg-[#F4EFEA]"
-                  />
-                )}
+                <MultiTagInput
+                  value={formCategoria}
+                  onChange={(tags) => setFormCategoria(tags.join(', '))}
+                  suggestions={categoryNamesList}
+                  label="Categorías / Tags del Producto (Múltiples)"
+                  placeholder="Escribe una categoría y presiona Enter o elige abajo..."
+                />
               </div>
 
               <div className="space-y-1.5">
@@ -1667,68 +1641,15 @@ export function CatalogoClient({
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
-              {/* Categoría Selector with Quick Add */}
+              {/* Categorías / Tags Multi-Select */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                    Línea / Categoría *
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => setIsQuickAddingCat(!isQuickAddingCat)}
-                    className="text-xs text-[#A36F4C] font-semibold hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="h-3 w-3" />
-                    {isQuickAddingCat ? 'Elegir existente' : 'Crear nueva categoría'}
-                  </button>
-                </div>
-
-                {isQuickAddingCat ? (
-                  <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2">
-                    <div className="space-y-1">
-                      <Label className="text-[11px] text-[#75695D] font-medium">Nombre de la nueva categoría *</Label>
-                      <Input 
-                        value={quickCatName}
-                        onChange={(e) => setQuickCatName(e.target.value)}
-                        placeholder="Ej: Joyería & Accesorios..."
-                        className="h-9 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#A36F4C]"
-                        autoFocus
-                      />
-                    </div>
-                    <div className="flex justify-end gap-2 pt-1">
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => setIsQuickAddingCat(false)}
-                        className="h-8 px-2.5 text-[#75695D] text-xs rounded-xl cursor-pointer"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button 
-                        type="button" 
-                        size="sm"
-                        onClick={handleQuickAddCategory}
-                        disabled={!quickCatName.trim()}
-                        className="h-8 px-3 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold rounded-xl cursor-pointer shadow-sm"
-                      >
-                        Guardar en BD
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <SearchableCombobox
-                    items={categoriasFormComboboxItems}
-                    value={formCategoria}
-                    onChange={(val) => setFormCategoria(val)}
-                    allowCustomInput={true}
-                    customCreateLabel="Crear categoría:"
-                    placeholder="Seleccionar o escribir categoría..."
-                    searchPlaceholder="Buscar categoría..."
-                    icon={FolderTree}
-                    inputClassName="bg-[#F4EFEA]"
-                  />
-                )}
+                <MultiTagInput
+                  value={formCategoria}
+                  onChange={(tags) => setFormCategoria(tags.join(', '))}
+                  suggestions={categoryNamesList}
+                  label="Categorías / Tags del Producto (Múltiples)"
+                  placeholder="Escribe una categoría y presiona Enter o elige abajo..."
+                />
               </div>
 
               <div className="space-y-1.5">

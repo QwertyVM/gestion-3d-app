@@ -211,6 +211,18 @@ export async function getDashboardData() {
       porcentajeUso: totalGramosGeneral > 0 ? Math.min(100, Math.round((c.gramosTotal / totalGramosGeneral) * 100)) : 0
     }))
 
+  // 12. Indicador de Capacidad de Gasto del Mes Actual (Lo que tengo vs Lo Blindado vs Lo Proyectado)
+  const saldoActualCaja = Math.max(0, (totalCobradoVentas + totalIngresosDirectos) - egresosTotales)
+  const cuotaPrestamoMensual = 368.88
+  const reservaCapexMensual = 878.00
+  const gastosFijosTaller = 111.00
+  const totalBlindadoMes = cuotaPrestamoMensual + reservaCapexMensual + gastosFijosTaller
+  const gastoDisponibleHoy = Math.max(0, saldoActualCaja - totalBlindadoMes)
+  const margenUnitarioPromedio = ticketPromedio > 0 ? (gananciaNeta / Math.max(1, ventas.length)) : 97.00
+  const pedidosProyectadosMes = Math.max(8, Math.min(30, Math.round(ventas.length / Math.max(1, 2)) || 18))
+  const gananciaProyectadaMes = pedidosProyectadosMes * margenUnitarioPromedio
+  const gastoDisponibleProyectado = Math.max(0, (saldoActualCaja + gananciaProyectadaMes) - totalBlindadoMes)
+
   return {
     kpis: {
       ingresosVentas,
@@ -223,9 +235,21 @@ export async function getDashboardData() {
       ticketPromedio,
       totalIngresosDirectos
     },
+    capacidadGasto: {
+      saldoActualCaja,
+      totalBlindadoMes,
+      cuotaPrestamoMensual,
+      reservaCapexMensual,
+      gastosFijosTaller,
+      gastoDisponibleHoy,
+      gastoDisponibleProyectado,
+      pedidosProyectadosMes,
+      gananciaProyectadaMes
+    },
     graficoEvolucion,
     graficoInversion,
     cuentasPorCobrar,
     topColores
   }
 }
+

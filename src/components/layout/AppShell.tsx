@@ -62,7 +62,7 @@ export function AppShell({ children }: AppShellProps) {
     if (pathname === '/finanzas/tags') return 'Tags & Subcategorías'
     if (pathname === '/catalogo/categorias') return 'Categorías'
     if (pathname.startsWith('/catalogo')) return 'Catálogo de Productos'
-    if (pathname === '/finanzas/proyecciones') return 'Tesorería & Asignación'
+    if (pathname === '/finanzas/proyecciones') return 'Presupuesto & Tranquilidad'
     if (pathname === '/finanzas/cierres') return 'Cierres de Mes'
     return 'NOVA 3D'
   }
@@ -209,6 +209,21 @@ export function AppShell({ children }: AppShellProps) {
                 </div>
               )}
             </div>
+
+            {/* Proyecciones & Presupuesto */}
+            <Link
+              href="/finanzas/proyecciones"
+              onClick={() => isMobile && setMobileMenuOpen(false)}
+              className={cn(
+                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150 min-h-[40px]',
+                pathname === '/finanzas/proyecciones' || pathname === '/finanzas/caja-chica'
+                  ? 'bg-[#EFE5D8] text-[#633E20] font-bold border border-[#D4BEA7]'
+                  : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+              )}
+            >
+              <TrendingUp className="h-3.5 w-3.5 flex-shrink-0 text-[#A36F4C]" />
+              <span>Proyecciones & Presupuesto</span>
+            </Link>
           </div>
         )}
       </div>
@@ -278,76 +293,6 @@ export function AppShell({ children }: AppShellProps) {
             >
               <Palette className="h-3.5 w-3.5 flex-shrink-0" />
               <span>Inventario de Filamentos</span>
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* 5. Módulos de Prueba (Al mismo nivel de Catálogo) */}
-      <div className="space-y-1 pt-1">
-        <div
-          onClick={() => setPruebasOpen(!pruebasOpen)}
-          className={cn(
-            'flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer min-h-[44px]',
-            isPruebasSection
-              ? 'text-[#241C15] font-bold bg-[#F4EFEA]'
-              : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <FlaskConical className={cn('h-4 w-4 flex-shrink-0', isPruebasSection ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
-            <div className="flex items-center gap-1.5">
-              <span>Módulos de Prueba</span>
-            </div>
-          </div>
-          <ChevronDown 
-            className={cn(
-              'h-3.5 w-3.5 transition-transform duration-200 text-[#75695D]',
-              pruebasOpen ? 'rotate-0' : '-rotate-90'
-            )} 
-          />
-        </div>
-
-        {pruebasOpen && (
-          <div className="pl-4 pr-1 space-y-1 transition-all">
-            {/* Tesorería & Asignación */}
-            <Link
-              href="/finanzas/proyecciones"
-              onClick={() => isMobile && setMobileMenuOpen(false)}
-              className={cn(
-                'flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150 min-h-[40px]',
-                pathname === '/finanzas/proyecciones' || pathname === '/finanzas/caja-chica'
-                  ? 'bg-[#EFE5D8] text-[#633E20] font-bold border border-[#D4BEA7]'
-                  : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                <TrendingUp className="h-3.5 w-3.5 flex-shrink-0 text-[#A36F4C]" />
-                <span>Tesorería & Asignación</span>
-              </div>
-              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#F4EFEA] text-[#75695D] border border-[#E2D9CC]">
-                Prueba
-              </span>
-            </Link>
-
-            {/* Cierres Mensuales */}
-            <Link
-              href="/finanzas/cierres"
-              onClick={() => isMobile && setMobileMenuOpen(false)}
-              className={cn(
-                'flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150 min-h-[40px]',
-                pathname === '/finanzas/cierres'
-                  ? 'bg-[#EFE5D8] text-[#633E20] font-bold border border-[#D4BEA7]'
-                  : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
-              )}
-            >
-              <div className="flex items-center gap-2.5">
-                <FileCheck className="h-3.5 w-3.5 flex-shrink-0 text-[#633E20]" />
-                <span>Cierres de Mes</span>
-              </div>
-              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-[#F4EFEA] text-[#75695D] border border-[#E2D9CC]">
-                Prueba
-              </span>
             </Link>
           </div>
         )}
