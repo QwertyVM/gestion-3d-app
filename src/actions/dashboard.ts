@@ -4,9 +4,15 @@ import prisma from '@/lib/prisma'
 
 export async function getDashboardData() {
   const [inversiones, ventas, ingresosDirectos, filamentos] = await Promise.all([
-    prisma.inversion.findMany(),
+    prisma.inversion.findMany({
+      orderBy: { createdAt: 'desc' }
+    }),
     prisma.venta.findMany({
-      include: { producto: true, colorFilamento: true },
+      include: {
+        producto: true,
+        colorFilamento: true,
+        pagos: { orderBy: { fecha: 'asc' } }
+      },
       orderBy: { fecha: 'desc' }
     }),
     prisma.ingreso.findMany({
@@ -39,8 +45,14 @@ export async function getDashboardData() {
     ? (gananciaNeta / costoFabricacionTotal) * 100 
     : 0
 
-  // 6. Total Cobrado en Efectivo de Ventas
-  const totalCobradoVentas = ventas.reduce((sum, item) => sum + Number(item.montoPagado), 0)
+  // 6. Total Cobrado en Efectivo de Ventas (calculado desde pagos o montoPagado)
+  const totalCobradoVentas = ventas.reduce((sum, v) => {
+    if (v.pagos && v.pagos.length > 0) {
+      const sumP = v.pagos.reduce((pSum, p) => pSum + Number(p.monto), 0)
+      return sum + Math.max(sumP, Number(v.montoPagado || 0))
+    }
+    return sum + Number(v.montoPagado || 0)
+  }, 0)
 
   // 7. Saldo Total por Cobrar a Clientes
   const saldoPorCobrar = ventas.reduce((sum, item) => sum + Number(item.saldoPendiente), 0)
@@ -51,29 +63,48 @@ export async function getDashboardData() {
   // 9. Total Ingresos Directos / Financiamiento
   const totalIngresosDirectos = ingresosDirectos.reduce((sum, i) => sum + Number(i.monto), 0)
 
-  // 10. Evolución de ventas y ganancia
-  const ventasPorFecha = ventas.reduce((acc, venta) => {
-    const date = venta.fecha.toISOString().split('T')[0]
-    if (!acc[date]) {
-      acc[date] = { ingresos: 0, costo: 0, ganancia: 0 }
+  // 10. Evolución de ventas, recaudación y costo en todo el historial
+  const timelineMap: Record<string, { ingresos: number; costo: number; ganancia: number }> = {}
+
+  // A. Procesar costos y ventas base en la fecha de registro
+  ventas.forEach((venta) => {
+    const vDate = venta.fecha.toISOString().split('T')[0]
+    if (!timelineMap[vDate]) {
+      timelineMap[vDate] = { ingresos: 0, costo: 0, ganancia: 0 }
     }
-    const ventaTotal = Number(venta.total)
+
     const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
       ? Number(venta.costoBaseSnapshot) 
       : (Number(venta.producto?.costoBase) || 0)
     const ventaCosto = costoBaseUnit * venta.cantidad
-    acc[date].ingresos += ventaTotal
-    acc[date].costo += ventaCosto
-    acc[date].ganancia += (ventaTotal - ventaCosto)
-    return acc
-  }, {} as Record<string, { ingresos: number; costo: number; ganancia: number }>)
+    timelineMap[vDate].costo += ventaCosto
 
-  const graficoEvolucion = Object.entries(ventasPorFecha)
+    // Si la venta no cuenta con desglose de pagos (ventas anteriores a la tabla PagoVenta)
+    if (!venta.pagos || venta.pagos.length === 0) {
+      timelineMap[vDate].ingresos += Number(venta.montoPagado != null ? venta.montoPagado : venta.total)
+    }
+  })
+
+  // B. Procesar recaudaciones/abonos en sus fechas efectivas de pago (incluyendo Septiembre)
+  ventas.forEach((venta) => {
+    if (venta.pagos && venta.pagos.length > 0) {
+      venta.pagos.forEach((pago) => {
+        const pDate = pago.fecha.toISOString().split('T')[0]
+        if (!timelineMap[pDate]) {
+          timelineMap[pDate] = { ingresos: 0, costo: 0, ganancia: 0 }
+        }
+        timelineMap[pDate].ingresos += Number(pago.monto)
+      })
+    }
+  })
+
+  // C. Generar array ordenado cronológicamente con todo el historial
+  const graficoEvolucion = Object.entries(timelineMap)
     .map(([fecha, vals]) => ({ 
       fecha, 
-      ingresos: vals.ingresos,
-      costo: vals.costo,
-      ganancia: vals.ganancia
+      ingresos: Number(vals.ingresos.toFixed(2)),
+      costo: Number(vals.costo.toFixed(2)),
+      ganancia: Number((vals.ingresos - vals.costo).toFixed(2))
     }))
     .sort((a, b) => a.fecha.localeCompare(b.fecha))
 

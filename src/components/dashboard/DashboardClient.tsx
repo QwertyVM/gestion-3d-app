@@ -70,11 +70,11 @@ function CustomEvolucionTooltip({ active, payload, label }: any) {
 
         {/* Cuerpo del Tooltip: Flujo Contable */}
         <div className="p-2.5 sm:p-3.5 space-y-1.5 sm:space-y-2">
-          {/* Fila 1: Venta Total */}
+          {/* Fila 1: Ingresos / Cobrado */}
           <div className="flex items-center justify-between gap-3">
             <span className="text-[#A36F4C] font-bold flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-[#A36F4C]" />
-              Venta Total:
+              Ingresos / Cobrado:
             </span>
             <span className="font-mono font-bold text-[#A36F4C]">
               S/ {ingresos.toFixed(2)}
@@ -97,12 +97,12 @@ function CustomEvolucionTooltip({ active, payload, label }: any) {
 
           {/* Fila 3: Ganancia Neta */}
           <div className="flex items-center justify-between gap-3 pt-0.5">
-            <span className="text-[#1E5E3A] font-extrabold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#1E5E3A]" />
+            <span className={`${ganancia >= 0 ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'} font-extrabold flex items-center gap-1.5`}>
+              <span className={`w-2 h-2 rounded-full ${ganancia >= 0 ? 'bg-[#1E5E3A]' : 'bg-[#8C6D1F]'}`} />
               (=) Ganancia Neta:
             </span>
-            <span className="font-mono font-extrabold text-[#1E5E3A]">
-              S/ {ganancia.toFixed(2)}
+            <span className={`font-mono font-extrabold ${ganancia >= 0 ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'}`}>
+              {ganancia < 0 ? `-S/ ${Math.abs(ganancia).toFixed(2)}` : `+S/ ${ganancia.toFixed(2)}`}
             </span>
           </div>
         </div>
@@ -118,7 +118,7 @@ function CustomLegend() {
     <div className="flex flex-wrap items-center justify-start sm:justify-end gap-3 sm:gap-5 text-[11px] sm:text-xs pb-2 sm:pb-3 pt-1">
       <div className="flex items-center gap-1.5 font-bold text-[#A36F4C]">
         <span className="w-3 h-0.5 bg-[#A36F4C] rounded-full inline-block" />
-        <span>Ventas</span>
+        <span>Ingresos / Ventas</span>
       </div>
       <div className="flex items-center gap-1.5 font-medium text-[#75695D]">
         <span className="w-3 h-0 border-t-2 border-dashed border-[#75695D] inline-block" />
@@ -453,8 +453,7 @@ export function DashboardClient({
                     fontSize={10} 
                     tickLine={false} 
                     axisLine={false} 
-                    tickFormatter={(val) => `S/${val}`}
-                    domain={[0, 'auto']}
+                    tickFormatter={(val) => val < 0 ? `-S/${Math.abs(val)}` : `S/${val}`}
                   />
                   
                   <Tooltip content={<CustomEvolucionTooltip />} />
