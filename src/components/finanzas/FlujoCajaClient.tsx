@@ -61,6 +61,16 @@ export interface EgresoItem {
   createdAt: string
 }
 
+export interface PagoVentaItem {
+  id: string
+  ventaId: string
+  fecha: string
+  monto: number
+  metodoPago: string
+  tipo: string
+  notas?: string | null
+}
+
 export interface VentaItem {
   id: string
   fecha: string
@@ -75,6 +85,7 @@ export interface VentaItem {
     nombreModelo: string
     lineaCategoria: string
   }
+  pagos?: PagoVentaItem[]
 }
 
 export interface IngresoDirectoItem {
@@ -207,9 +218,18 @@ export function FlujoCajaClient({
   const chartTimelineData = useMemo(() => {
     const dayMap = new Map<string, { ingresos: number; egresos: number }>()
 
-    // Group Sales
+    // Group Sales Payments by actual payment date
     ventas.forEach(v => {
-      if (v.montoPagado > 0) {
+      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+        v.pagos.forEach(p => {
+          if (p.monto > 0) {
+            const day = p.fecha.split('T')[0]
+            const curr = dayMap.get(day) || { ingresos: 0, egresos: 0 }
+            curr.ingresos += p.monto
+            dayMap.set(day, curr)
+          }
+        })
+      } else if (v.montoPagado > 0) {
         const day = v.fecha.split('T')[0]
         const curr = dayMap.get(day) || { ingresos: 0, egresos: 0 }
         curr.ingresos += v.montoPagado
@@ -323,9 +343,27 @@ export function FlujoCajaClient({
       isPositive: boolean
     }> = []
 
-    // 1. Incomes from Product Sales
+    // 1. Incomes from Product Sales & Abonos
     ventas.forEach(v => {
-      if (v.montoPagado > 0) {
+      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+        v.pagos.forEach((p, idx) => {
+          if (p.monto > 0) {
+            const isSingleFull = ((v.pagos?.length || 0) === 1 && v.saldoPendiente <= 0) || p.tipo === 'PAGO_TOTAL'
+            const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${idx + 1}`
+
+            movements.push({
+              id: `pago-${p.id || `${v.id}-${idx}`}`,
+              fecha: p.fecha,
+              tipo: 'INGRESO_VENTA',
+              concepto: `${tipoLabel}: ${v.producto.nombreModelo} (x${v.cantidad})`,
+              entidad: v.cliente,
+              monto: p.monto,
+              detalle: `${p.metodoPago || 'Yape'}${p.notas ? ` • ${p.notas}` : ''}${v.saldoPendiente > 0 ? ` (Resta: ${formatCurrency(v.saldoPendiente)})` : ''}`,
+              isPositive: true,
+            })
+          }
+        })
+      } else if (v.montoPagado > 0) {
         movements.push({
           id: `v-${v.id}`,
           fecha: v.fecha,

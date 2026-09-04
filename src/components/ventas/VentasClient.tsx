@@ -33,15 +33,18 @@ import {
   Palette,
   ShoppingBag,
   AlertTriangle,
-  XCircle
+  XCircle,
+  Pencil
 } from 'lucide-react'
 import { 
   updateEstadoVenta, 
   registrarAbono, 
   liquidarSaldoTotal, 
-  createVenta,
+  createVenta, 
   deleteVenta,
-  updateVenta
+  updateVenta,
+  deletePagoVenta,
+  updatePagoVenta
 } from '@/actions/ventas'
 import { toast } from 'sonner'
 import { EstadoVenta, TipoPrecio } from '@prisma/client'
@@ -60,6 +63,18 @@ export interface FilamentoOption {
   stockBobinas: number
   estado: string
   alertaCritica?: boolean
+}
+
+export interface PagoVentaItem {
+  id: string
+  ventaId: string
+  fecha: string
+  monto: number
+  metodoPago: string
+  tipo: string // ANTICIPO, SALDO_ENTREGA, ABONO, PAGO_TOTAL
+  notas?: string | null
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface VentaItem {
@@ -94,6 +109,7 @@ export interface VentaItem {
   diaEntregaPrometida?: string | null
   destinoEnvio?: string | null
   canalVenta?: string | null
+  pagos?: PagoVentaItem[]
   createdAt: string
   updatedAt: string
   producto: {
@@ -140,6 +156,7 @@ export function VentasClient({
 
   useEffect(() => {
     setItems(ventas)
+    setSelectedVenta(prev => prev ? (ventas.find(v => v.id === prev.id) || prev) : null)
   }, [ventas])
 
   const [search, setSearch] = useState('')
@@ -152,12 +169,45 @@ export function VentasClient({
   const [openDetailsModal, setOpenDetailsModal] = useState(false)
   const [openAbonoModal, setOpenAbonoModal] = useState(false)
   const [openCreateModal, setOpenCreateModal] = useState(false)
+  const [openEditModal, setOpenEditModal] = useState(false)
+  const [openEditPagoModal, setOpenEditPagoModal] = useState(false)
+  const [editingPago, setEditingPago] = useState<{
+    id: string
+    ventaId: string
+    fecha: string
+    monto: string
+    metodoPago: string
+    tipo: string
+    notas: string
+  } | null>(null)
+  const [editingVenta, setEditingVenta] = useState<VentaItem | null>(null)
   const [isChangingColor, setIsChangingColor] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmittingPago, setIsSubmittingPago] = useState(false)
   const [isLiquidating, setIsLiquidating] = useState(false)
+
+  // Edit order form state
+  const [editFecha, setEditFecha] = useState('')
+  const [editCliente, setEditCliente] = useState('')
+  const [editProductoId, setEditProductoId] = useState('')
+  const [editCantidad, setEditCantidad] = useState('1')
+  const [editTipoPrecio, setEditTipoPrecio] = useState<TipoPrecio>('COMUNIDAD')
+  const [editPrecioUnitario, setEditPrecioUnitario] = useState('')
+  const [editEstado, setEditEstado] = useState<EstadoVenta>('PENDIENTE')
+  const [editCanalVenta, setEditCanalVenta] = useState('')
+  const [editDestinoEnvio, setEditDestinoEnvio] = useState('')
+  const [editDiaEntrega, setEditDiaEntrega] = useState('')
+  const [editColorFilamentoId, setEditColorFilamentoId] = useState('')
+  const [editPersonalizacion, setEditPersonalizacion] = useState('')
+  const [editCostoPackaging, setEditCostoPackaging] = useState('0')
+  const [editPorcentajeAdicional, setEditPorcentajeAdicional] = useState('0')
 
   // Abono form state
   const [montoAbono, setMontoAbono] = useState('')
+  const [fechaAbono, setFechaAbono] = useState(new Date().toISOString().split('T')[0])
+  const [metodoPagoAbono, setMetodoPagoAbono] = useState('YAPE')
+  const [tipoAbono, setTipoAbono] = useState<'ANTICIPO' | 'SALDO_ENTREGA' | 'ABONO'>('SALDO_ENTREGA')
+  const [notasAbono, setNotasAbono] = useState('')
 
   // Create order form state
   const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
@@ -168,6 +218,9 @@ export function VentasClient({
   const [formPrecioBase, setFormPrecioBase] = useState('0')
   const [formPrecioUnitario, setFormPrecioUnitario] = useState('')
   const [formMontoPagado, setFormMontoPagado] = useState('')
+  const [formMetodoPagoInicial, setFormMetodoPagoInicial] = useState('YAPE')
+  const [formFechaPagoInicial, setFormFechaPagoInicial] = useState(new Date().toISOString().split('T')[0])
+  const [formNotasPagoInicial, setFormNotasPagoInicial] = useState('')
   const [formEstado, setFormEstado] = useState<EstadoVenta>('PENDIENTE')
   const [formCanalVenta, setFormCanalVenta] = useState('Instagram')
   const [formDestinoEnvio, setFormDestinoEnvio] = useState('')
@@ -295,16 +348,25 @@ export function VentasClient({
     }
   }
 
-  // Settle full payment (100% pagado)
-  const handleLiquidarTotal = async (id: string, e?: React.MouseEvent) => {
+  // Settle full payment (100% pagado - liquidación de saldo contra entrega)
+  const handleLiquidarTotal = async (id: string, e?: React.MouseEvent, fechaLiquidacion?: string, metodoLiquidacion?: string) => {
     if (e) e.stopPropagation()
+    const ventaTarget = items.find(v => v.id === id) || (selectedVenta?.id === id ? selectedVenta : null)
+    if (!ventaTarget) return
+
     try {
-      setItems(prev => prev.map(v => v.id === id ? { ...v, montoPagado: v.total, saldoPendiente: 0 } : v))
-      await liquidarSaldoTotal(id)
+      const fecha = fechaLiquidacion || new Date().toISOString().split('T')[0]
+      const metodo = metodoLiquidacion || 'YAPE'
+      const updated = await liquidarSaldoTotal(id, {
+        fecha,
+        metodoPago: metodo,
+        notas: 'Liquidación de saldo contra entrega'
+      })
+      setItems(prev => prev.map(v => v.id === id ? (updated as any) : v))
       if (selectedVenta && selectedVenta.id === id) {
-        setSelectedVenta(prev => prev ? { ...prev, montoPagado: prev.total, saldoPendiente: 0 } : null)
+        setSelectedVenta(updated as any)
       }
-      toast.success('¡Pedido marcado como 100% Pagado!')
+      toast.success('¡Pedido marcado como 100% Pagado (Saldo Liquidado)!')
       setOpenAbonoModal(false)
       router.refresh()
     } catch (err) {
@@ -312,7 +374,7 @@ export function VentasClient({
     }
   }
 
-  // Register partial payment
+  // Register partial or final payment (Abono en fecha específica)
   const handleRegistrarAbonoSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedVenta) return
@@ -324,17 +386,118 @@ export function VentasClient({
 
     setIsSubmitting(true)
     try {
-      const updated = await registrarAbono(selectedVenta.id, monto)
-      setItems(prev => prev.map(v => v.id === selectedVenta.id ? { ...v, montoPagado: updated.montoPagado, saldoPendiente: updated.saldoPendiente } : v))
-      toast.success(`Abono de ${formatCurrency(monto)} registrado con éxito`)
+      const updated = await registrarAbono(selectedVenta.id, {
+        monto,
+        fecha: fechaAbono || new Date().toISOString().split('T')[0],
+        metodoPago: metodoPagoAbono,
+        tipo: tipoAbono,
+        notas: notasAbono.trim() || undefined
+      })
+      setItems(prev => prev.map(v => v.id === selectedVenta.id ? { 
+        ...v, 
+        montoPagado: updated.montoPagado, 
+        saldoPendiente: updated.saldoPendiente,
+        pagos: updated.pagos 
+      } : v))
+      if (selectedVenta.id === updated.id) {
+        setSelectedVenta(updated as any)
+      }
+      toast.success(`Abono de ${formatCurrency(monto)} registrado con éxito (${metodoPagoAbono})`)
       setOpenAbonoModal(false)
       setMontoAbono('')
-      setOpenDetailsModal(false)
+      setNotasAbono('')
       router.refresh()
     } catch (err: any) {
       toast.error(err?.message || 'Error al registrar abono')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  // Open Edit Individual Payment Modal
+  const handleOpenEditPago = (pago: any, venta: VentaItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setEditingPago({
+      id: pago.id,
+      ventaId: venta.id,
+      fecha: pago.fecha ? new Date(pago.fecha).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      monto: (pago.monto || 0).toString(),
+      metodoPago: pago.metodoPago || 'YAPE',
+      tipo: pago.tipo || 'ANTICIPO',
+      notas: pago.notas || ''
+    })
+    setOpenEditPagoModal(true)
+  }
+
+  // Submit Edit Individual Payment
+  const handleEditPagoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingPago) return
+    const monto = parseFloat(editingPago.monto)
+    if (isNaN(monto) || monto < 0) {
+      toast.error('Ingresa un monto válido')
+      return
+    }
+
+    setIsSubmittingPago(true)
+    try {
+      const updated = await updatePagoVenta(editingPago.id, {
+        fecha: editingPago.fecha,
+        monto,
+        metodoPago: editingPago.metodoPago,
+        tipo: editingPago.tipo,
+        notas: editingPago.notas.trim() || undefined,
+        ventaId: editingPago.ventaId
+      })
+
+      if (typeof updated === 'object' && 'id' in updated) {
+        setItems(prev => prev.map(v => v.id === editingPago.ventaId ? (updated as any) : v))
+        if (selectedVenta && selectedVenta.id === editingPago.ventaId) {
+          setSelectedVenta(updated as any)
+        }
+      }
+      toast.success('Abono actualizado correctamente')
+      setOpenEditPagoModal(false)
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al actualizar abono')
+    } finally {
+      setIsSubmittingPago(false)
+    }
+  }
+
+  // Delete individual payment / abono
+  const handleDeletePago = async (pagoId: string, monto: number, ventaId?: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const targetVentaId = ventaId || selectedVenta?.id
+    if (!targetVentaId) return
+
+    if (confirm(`¿Eliminar este registro de abono de ${formatCurrency(monto)}? Se reajustará el saldo pendiente del pedido.`)) {
+      try {
+        const updated = await deletePagoVenta(pagoId, targetVentaId)
+        if (typeof updated === 'object' && 'id' in updated) {
+          setItems(prev => prev.map(v => v.id === targetVentaId ? (updated as any) : v))
+          if (selectedVenta && selectedVenta.id === targetVentaId) {
+            setSelectedVenta(updated as any)
+          }
+        } else if (selectedVenta) {
+          const newPagos = (selectedVenta.pagos || []).filter(p => p.id !== pagoId)
+          const newMontoPagado = newPagos.reduce((sum, p) => sum + p.monto, 0)
+          const newSaldo = Math.max(0, selectedVenta.total - newMontoPagado)
+          const updatedV = {
+            ...selectedVenta,
+            montoPagado: newMontoPagado,
+            saldoPendiente: newSaldo,
+            pagos: newPagos
+          }
+          setSelectedVenta(updatedV)
+          setItems(prev => prev.map(v => v.id === targetVentaId ? updatedV : v))
+        }
+        toast.success('Abono eliminado y saldo del pedido reajustado')
+        router.refresh()
+      } catch (err: any) {
+        toast.error(err?.message || 'Error al eliminar abono')
+      }
     }
   }
 
@@ -359,11 +522,15 @@ export function VentasClient({
     }
   }
 
-  // Open Abono Modal
+  // Open Abono Modal (Defaults to delivery/today date and proper tipo)
   const handleOpenAbono = (v: VentaItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     setSelectedVenta(v)
-    setMontoAbono(v.saldoPendiente.toString())
+    setMontoAbono(v.saldoPendiente > 0 ? v.saldoPendiente.toString() : '')
+    setFechaAbono(new Date().toISOString().split('T')[0])
+    setMetodoPagoAbono('YAPE')
+    setTipoAbono(v.montoPagado > 0 ? 'SALDO_ENTREGA' : 'ANTICIPO')
+    setNotasAbono('')
     setOpenAbonoModal(true)
   }
 
@@ -372,6 +539,119 @@ export function VentasClient({
     setSelectedVenta(v)
     setIsChangingColor(false)
     setOpenDetailsModal(true)
+  }
+
+  // Open Edit Order Modal
+  const handleOpenEdit = (v: VentaItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    setEditingVenta(v)
+    setEditFecha(v.fecha ? new Date(v.fecha).toISOString().split('T')[0] : '')
+    setEditCliente(v.cliente)
+    setEditProductoId(v.productoId)
+    setEditCantidad(v.cantidad.toString())
+    setEditTipoPrecio(v.tipoPrecio)
+    setEditPrecioUnitario(v.precioUnitario.toString())
+    setEditEstado(v.estado)
+    setEditCanalVenta(v.canalVenta || 'Instagram')
+    setEditDestinoEnvio(v.destinoEnvio || '')
+    setEditDiaEntrega(v.diaEntregaPrometida || '')
+    setEditColorFilamentoId(v.colorFilamentoId || '')
+    setEditPersonalizacion(v.personalizacion || '')
+    setEditCostoPackaging((v.costoPackaging || 0).toString())
+    setEditPorcentajeAdicional((v.porcentajeAdicional || 0).toString())
+    setOpenEditModal(true)
+  }
+
+  // Submit Edit Order
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingVenta) return
+    if (!editCliente.trim() || !editProductoId || !editPrecioUnitario) {
+      toast.error('Por favor completa los campos requeridos')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const cant = parseInt(editCantidad) || 1
+      const prod = productos.find(p => p.id === editProductoId)
+      const pesoUnitario = prod 
+        ? (prod.pesoGramos != null && prod.pesoGramos > 0 ? Number(prod.pesoGramos) : Number((Number(prod.costoBase) / 0.065).toFixed(1))) 
+        : 0
+      const pesoTotalEstimado = Math.round(pesoUnitario * cant)
+
+      const updated = await updateVenta(editingVenta.id, {
+        cliente: editCliente.trim(),
+        productoId: editProductoId,
+        cantidad: cant,
+        tipoPrecio: editTipoPrecio,
+        precioUnitario: parseFloat(editPrecioUnitario) || 0,
+        fecha: editFecha || undefined,
+        diaEntregaPrometida: editDiaEntrega.trim() || undefined,
+        destinoEnvio: editDestinoEnvio.trim() || undefined,
+        canalVenta: editCanalVenta.trim() || undefined,
+        colorFilamentoId: editColorFilamentoId ? editColorFilamentoId : null,
+        personalizacion: editPersonalizacion.trim() ? editPersonalizacion.trim() : null,
+        gramosConsumidos: pesoTotalEstimado,
+        costoPackaging: parseFloat(editCostoPackaging) || 0,
+        porcentajeAdicional: parseFloat(editPorcentajeAdicional) || 0,
+        estado: editEstado,
+      })
+
+      const selectedFil = filamentos.find(f => f.id === editColorFilamentoId)
+      const fullUpdated = {
+        ...updated,
+        colorFilamento: updated.colorFilamento || (selectedFil ? {
+          id: selectedFil.id,
+          nombreColor: selectedFil.nombreColor,
+          codigoHex: selectedFil.codigoHex,
+          tipoMaterial: selectedFil.tipoMaterial,
+          marca: selectedFil.marca,
+          stockBobinas: selectedFil.stockBobinas
+        } : null),
+        producto: prod || updated.producto
+      }
+
+      setItems(prev => prev.map(v => v.id === editingVenta.id ? (fullUpdated as any) : v))
+      if (selectedVenta && selectedVenta.id === editingVenta.id) {
+        setSelectedVenta(fullUpdated as any)
+      }
+      toast.success('Pedido actualizado correctamente')
+      setOpenEditModal(false)
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al actualizar el pedido')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Helper for edit modal product / tier change
+  const handleEditProductoOrTierChange = (prodId: string, tier: TipoPrecio) => {
+    setEditProductoId(prodId)
+    setEditTipoPrecio(tier)
+    const found = productos.find(p => p.id === prodId)
+    if (found && tier !== 'PERSONALIZADO') {
+      let base = found.precioComunidad
+      if (tier === 'AMIGOS') base = found.precioAmigos
+      else if (tier === 'MERCADO') base = found.precioMercado
+      else if (tier === 'COMUNIDAD') base = found.precioComunidad
+      const pack = parseFloat(editCostoPackaging) || 0
+      setEditPrecioUnitario((base + pack).toFixed(2))
+    }
+  }
+
+  // Steppers for edit quantity
+  const handleEditIncrementCantidad = () => {
+    const current = parseInt(editCantidad) || 1
+    setEditCantidad((current + 1).toString())
+  }
+
+  const handleEditDecrementCantidad = () => {
+    const current = parseInt(editCantidad) || 1
+    if (current > 1) {
+      setEditCantidad((current - 1).toString())
+    }
   }
 
   // Bidirectional Synchronization: Product or Tier selected
@@ -599,6 +879,9 @@ export function VentasClient({
         tipoPrecio: formTipoPrecio,
         precioUnitario: parseFloat(formPrecioUnitario) || 0,
         montoPagado: parseFloat(formMontoPagado) || 0,
+        fechaPagoInicial: formFechaPagoInicial || formFecha || undefined,
+        metodoPagoInicial: formMetodoPagoInicial || 'YAPE',
+        notasPagoInicial: formNotasPagoInicial.trim() || undefined,
         costoPackaging: incluirPackaging ? montoProrrateoPackaging : 0,
         porcentajeAdicional: incluirPackaging ? (parseFloat(porcentajePackaging) || 0) : 0,
         estado: formEstado,
@@ -944,12 +1227,22 @@ export function VentasClient({
                       <Button
                         size="icon"
                         variant="ghost"
+                        onClick={(e) => handleOpenEdit(v, e)}
+                        className="h-7 w-7 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] rounded-lg cursor-pointer transition-colors"
+                        title="Editar pedido"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDeleteVenta(v.id, v.cliente)
                         }}
                         disabled={deletingId === v.id}
                         className="h-7 w-7 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                        title="Eliminar pedido"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -1139,6 +1432,17 @@ export function VentasClient({
                           </>
                         )}
 
+                        {/* Botón Editar Pedido */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => handleOpenEdit(v, e)}
+                          className="h-7 w-7 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] rounded-lg cursor-pointer transition-colors"
+                          title="Editar pedido completo"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+
                         {/* Botón Eliminar Pedido */}
                         <Button
                           size="icon"
@@ -1227,12 +1531,15 @@ export function VentasClient({
               <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
                 {/* 1. Cabecera Limpia & Contextual */}
                 <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between gap-3 flex-shrink-0">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="h-10 w-10 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] flex items-center justify-center text-[#A36F4C] flex-shrink-0 shadow-2xs">
                       <ShoppingBag className="h-5 w-5 stroke-[2.2]" />
                     </div>
-                    <div className="min-w-0">
-                      <DialogTitle className="text-base sm:text-lg font-black text-[#241C15] tracking-tight truncate">
+                    <div className="min-w-0 flex-1">
+                      <DialogTitle 
+                        className="text-base sm:text-lg font-black text-[#241C15] tracking-tight truncate"
+                        title={`Pedido de ${selectedVenta.cliente}`}
+                      >
                         Pedido de {selectedVenta.cliente}
                       </DialogTitle>
                       <DialogDescription 
@@ -1246,12 +1553,12 @@ export function VentasClient({
 
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                     {selectedVenta.saldoPendiente > 0 ? (
-                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-2.5 py-1 flex items-center gap-1 sm:gap-1.5 shadow-2xs">
+                      <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-2.5 py-1 flex items-center gap-1 sm:gap-1.5 shadow-2xs whitespace-nowrap">
                         <Clock className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span>Abonado {pctPagado}%<span className="hidden sm:inline"> - Falta {formatCurrency(selectedVenta.saldoPendiente)}</span></span>
+                        <span>Falta {formatCurrency(selectedVenta.saldoPendiente)}</span>
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-2.5 py-1 flex items-center gap-1 sm:gap-1.5 shadow-2xs">
+                      <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[11px] sm:text-xs font-bold font-mono px-2 sm:px-2.5 py-1 flex items-center gap-1 sm:gap-1.5 shadow-2xs whitespace-nowrap">
                         <Check className="h-3.5 w-3.5 stroke-[2.5] flex-shrink-0" />
                         <span>Pagado 100%</span>
                       </Badge>
@@ -1306,6 +1613,101 @@ export function VentasClient({
                         <span className="font-bold text-[#1E5E3A]">{pctPagado}%</span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Historial Contable de Cobros y Abonos */}
+                  <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider flex items-center gap-1.5">
+                        <DollarSign className="h-3.5 w-3.5 text-[#1E5E3A]" />
+                        Historial Contable de Abonos ({selectedVenta.pagos?.length || 0})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMontoAbono(selectedVenta.saldoPendiente > 0 ? selectedVenta.saldoPendiente.toString() : '')
+                          setFechaAbono(new Date().toISOString().split('T')[0])
+                          setMetodoPagoAbono('YAPE')
+                          setNotasAbono('')
+                          setOpenAbonoModal(true)
+                        }}
+                        className="text-[11px] text-[#1E5E3A] hover:underline font-bold flex items-center gap-1 cursor-pointer bg-[#EBF7EE] px-2.5 py-1 rounded-lg border border-[#B4E3C0] shadow-2xs hover:bg-[#DDF2E3] transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {selectedVenta.saldoPendiente > 0 ? 'Registrar Abono' : 'Agregar Abono'}
+                      </button>
+                    </div>
+
+                    {selectedVenta.pagos && selectedVenta.pagos.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedVenta.pagos.map((pago, idx) => {
+                          const totalPagos = selectedVenta.pagos?.length || 1
+                          const isSingleFull = totalPagos === 1 && selectedVenta.saldoPendiente <= 0
+                          const tipoLabel = isSingleFull ? 'Pago Total (100%)' : `Abono #${idx + 1}`
+
+                          return (
+                            <div 
+                              key={pago.id || idx}
+                              className="flex items-center justify-between p-2.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#FDFBF7] transition-colors"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-bold font-mono ${
+                                  idx === 0 
+                                    ? 'bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]' 
+                                    : 'bg-[#EFE5D8] text-[#633E20] border border-[#D4BEA7]'
+                                }`}>
+                                  {idx + 1}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs font-bold text-[#241C15]">
+                                      {tipoLabel}
+                                    </span>
+                                    <Badge variant="outline" className="bg-white border-[#E2D9CC] text-[#75695D] text-[10px] px-1.5 py-0 font-medium">
+                                      {pago.metodoPago || 'YAPE'}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[11px] text-[#75695D] font-mono mt-0.5">
+                                    <span>📅 {formatDate(pago.fecha)}</span>
+                                    {pago.notas && <span className="truncate italic">({pago.notas})</span>}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <span className="text-sm font-black font-mono text-[#1E5E3A] mr-1">
+                                  +{formatCurrency(pago.monto)}
+                                </span>
+
+                                {/* Botón Editar Pago Individual */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenEditPago(pago, selectedVenta, e)}
+                                  className="text-[#75695D] hover:text-[#A36F4C] p-1.5 rounded-lg hover:bg-white border border-[#E2D9CC]/60 transition-all cursor-pointer shadow-2xs"
+                                  title="Editar fecha contable, monto o método de este pago"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+
+                                {/* Botón Eliminar Pago Individual */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeletePago(pago.id, pago.monto, selectedVenta.id, e)}
+                                  className="text-[#DC2626] hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-200 transition-all cursor-pointer shadow-2xs"
+                                  title="Eliminar este abono y recalcular saldo"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-[#FAF8F5] border border-dashed border-[#E2D9CC] text-center text-xs text-[#75695D]">
+                        No hay abonos registrados para este pedido.
+                      </div>
+                    )}
                   </div>
 
                   {/* Bloque de Color de Filamento */}
@@ -1512,17 +1914,31 @@ export function VentasClient({
 
                 {/* 3. Footer & Acciones de Cobranza Consistentes (h-11, rounded-xl) */}
                 <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FAF8F5] flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
-                  {/* Izquierda: Botón eliminar */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleDeleteVenta(selectedVenta.id, selectedVenta.cliente)}
-                    disabled={deletingId === selectedVenta.id}
-                    className="border border-red-200 text-[#DC2626] hover:bg-red-50 hover:text-red-700 h-11 px-3.5 rounded-xl text-xs font-semibold cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 active:scale-[0.98]"
-                  >
-                    <Trash2 className="h-4 w-4 text-[#DC2626]" />
-                    Eliminar Pedido
-                  </Button>
+                  {/* Izquierda: Botones secundarios (Editar & Eliminar) */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setOpenDetailsModal(false)
+                        handleOpenEdit(selectedVenta)
+                      }}
+                      className="border border-[#D4BEA7] text-[#633E20] hover:bg-[#EAE4DC] h-11 px-3.5 rounded-xl text-xs font-bold cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                    >
+                      <Pencil className="h-4 w-4 text-[#A36F4C]" />
+                      Editar Pedido
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleDeleteVenta(selectedVenta.id, selectedVenta.cliente)}
+                      disabled={deletingId === selectedVenta.id}
+                      className="border border-red-200 text-[#DC2626] hover:bg-red-50 hover:text-red-700 h-11 px-3.5 rounded-xl text-xs font-semibold cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                    >
+                      <Trash2 className="h-4 w-4 text-[#DC2626]" />
+                      Eliminar
+                    </Button>
+                  </div>
 
                   {/* Derecha: Grupo de acciones primarias */}
                   <div className="flex items-center justify-end gap-2.5">
@@ -1537,7 +1953,7 @@ export function VentasClient({
                           className="bg-white hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] text-xs font-bold h-11 px-4 rounded-xl cursor-pointer shadow-2xs active:scale-[0.98] flex items-center gap-1.5"
                         >
                           <Plus className="h-4 w-4 text-[#A36F4C]" />
-                          + Registrar Abono
+                          Registrar Abono
                         </Button>
                         <Button
                           type="button"
@@ -1593,6 +2009,7 @@ export function VentasClient({
               </div>
 
               <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+                {/* Monto */}
                 <div className="space-y-1.5">
                   <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Monto a Abonar (S/) *</Label>
                   <div className="relative">
@@ -1620,6 +2037,60 @@ export function VentasClient({
                       Pagar todo ({formatCurrency(selectedVenta.saldoPendiente)})
                     </button>
                   </div>
+                </div>
+
+                {/* Fecha del Abono */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5 text-[#A36F4C]" />
+                    Fecha de Cobro *
+                  </Label>
+                  <Input 
+                    type="date"
+                    value={fechaAbono}
+                    onChange={(e) => setFechaAbono(e.target.value)}
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-xs font-mono font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+
+                {/* Método de Pago */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                    Método de Pago
+                  </Label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {['YAPE', 'PLIN', 'TRANSFERENCIA', 'EFECTIVO'].map((metodo) => {
+                      const isSel = metodoPagoAbono === metodo
+                      return (
+                        <button
+                          key={metodo}
+                          type="button"
+                          onClick={() => setMetodoPagoAbono(metodo)}
+                          className={`py-2 px-1 text-center rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            isSel 
+                              ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs' 
+                              : 'bg-[#F4EFEA] border-[#DCD3C6] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                          }`}
+                        >
+                          {metodo === 'TRANSFERENCIA' ? 'TRANSF.' : metodo}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Notas / Comprobante */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                    Notas / Nro. Operación (Opcional)
+                  </Label>
+                  <Input 
+                    value={notasAbono}
+                    onChange={(e) => setNotasAbono(e.target.value)}
+                    placeholder="Ej: Yape contra entrega taller / Op. 48291"
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
                 </div>
               </div>
 
@@ -2056,6 +2527,47 @@ export function VentasClient({
                 </div>
               </div>
 
+              {/* Sub-bloque condicional para Pago Inicial / Abono */}
+              {parseFloat(formMontoPagado) > 0 && (
+                <div className="p-3 rounded-xl bg-[#EBF7EE]/70 border border-[#B4E3C0] space-y-2.5 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-[#1E5E3A] uppercase tracking-wider flex items-center gap-1">
+                      <DollarSign className="h-3.5 w-3.5" />
+                      Detalles del Pago Inicial / Abono
+                    </span>
+                    <Badge variant="outline" className="bg-white text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold">
+                      Abono Inicial
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-[#241C15] font-semibold">Fecha del 1er Pago</Label>
+                      <Input 
+                        type="date"
+                        value={formFechaPagoInicial}
+                        onChange={(e) => setFormFechaPagoInicial(e.target.value)}
+                        className="bg-white border-[#DCD3C6] text-[#241C15] text-xs font-mono font-bold rounded-xl h-9"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-[#241C15] font-semibold">Método de Cobro</Label>
+                      <select
+                        value={formMetodoPagoInicial}
+                        onChange={(e) => setFormMetodoPagoInicial(e.target.value)}
+                        className="w-full bg-white border border-[#DCD3C6] text-[#241C15] text-xs font-bold rounded-xl px-2.5 h-9 focus:border-[#1E5E3A] focus:outline-none cursor-pointer"
+                      >
+                        <option value="YAPE">YAPE</option>
+                        <option value="PLIN">PLIN</option>
+                        <option value="TRANSFERENCIA">Transferencia BCP</option>
+                        <option value="EFECTIVO">Efectivo</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Total Calculado & Saldo */}
               {(() => {
                 const cant = parseInt(formCantidad) || 1
@@ -2130,6 +2642,410 @@ export function VentasClient({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDITAR PEDIDO DE VENTA ANTERIOR                                    */}
+      {/* ========================================================================= */}
+      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[620px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          {editingVenta && (
+            <form onSubmit={handleEditSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                    <Pencil className="h-5 w-5 stroke-[2.2]" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                      Editar Pedido de {editingVenta.cliente}
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-[#75695D]">
+                      Modifica los datos del pedido, precios, cantidades, producto o estado.
+                    </DialogDescription>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenEditModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+                {/* 1. Fecha, Cliente y Canal */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha *</Label>
+                    <Input 
+                      type="date"
+                      value={editFecha}
+                      onChange={(e) => setEditFecha(e.target.value)}
+                      required
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cliente *</Label>
+                    <Input 
+                      value={editCliente}
+                      onChange={(e) => setEditCliente(e.target.value)}
+                      placeholder="Nombre del cliente"
+                      required
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Canal de Venta</Label>
+                    <Input 
+                      value={editCanalVenta}
+                      onChange={(e) => setEditCanalVenta(e.target.value)}
+                      placeholder="Instagram, WhatsApp..."
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Producto del Catálogo */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Producto del Catálogo *</Label>
+                  <SearchableCombobox
+                    items={productosComboboxItems}
+                    value={editProductoId}
+                    onChange={(val) => handleEditProductoOrTierChange(val, editTipoPrecio)}
+                    placeholder="Buscar y seleccionar producto..."
+                    searchPlaceholder="Buscar por modelo o categoría..."
+                    icon={Package}
+                    inputClassName="bg-[#F4EFEA]"
+                  />
+                </div>
+
+                {/* 3. Nivel de Precio y Cantidad */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Nivel de Precio *</Label>
+                    <SearchableCombobox
+                      items={nivelesPrecioComboboxItems}
+                      value={editTipoPrecio}
+                      onChange={(val) => handleEditProductoOrTierChange(editProductoId, val as TipoPrecio)}
+                      placeholder="Seleccionar nivel..."
+                      icon={Tag}
+                      clearable={false}
+                      inputClassName="bg-[#F4EFEA]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Cantidad *</Label>
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={handleEditDecrementCantidad}
+                        className="h-10 w-10 flex items-center justify-center bg-[#F4EFEA] border border-r-0 border-[#DCD3C6] rounded-l-xl text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15] transition-colors cursor-pointer"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                      <Input 
+                        type="number"
+                        min="1"
+                        value={editCantidad}
+                        onChange={(e) => setEditCantidad(e.target.value)}
+                        required
+                        className="rounded-none text-center bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm font-mono font-bold h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] focus:z-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleEditIncrementCantidad}
+                        className="h-10 w-10 flex items-center justify-center bg-[#F4EFEA] border border-l-0 border-[#DCD3C6] rounded-r-xl text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15] transition-colors cursor-pointer"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Precio Unitario Manual / Ajustado */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Precio Unitario (S/) *</Label>
+                    <Input 
+                      type="number"
+                      step="0.10"
+                      min="0"
+                      value={editPrecioUnitario}
+                      onChange={(e) => {
+                        setEditPrecioUnitario(e.target.value)
+                        setEditTipoPrecio('PERSONALIZADO')
+                      }}
+                      required
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono text-base font-bold rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Color de Filamento</Label>
+                    <SearchableCombobox
+                      items={filamentosComboboxItems}
+                      value={editColorFilamentoId}
+                      onChange={(val) => setEditColorFilamentoId(val)}
+                      placeholder="Seleccionar color..."
+                      icon={Palette}
+                      inputClassName="bg-[#F4EFEA]"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Personalización / Notas */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Detalles / Personalización</Label>
+                  <Input 
+                    value={editPersonalizacion}
+                    onChange={(e) => setEditPersonalizacion(e.target.value)}
+                    placeholder="Ej: Grabado de nombre 'Carlos', acabado en laca..."
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+
+                {/* 6. Estado del Pedido */}
+                <div className="p-3.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider block">
+                    Estado Operativo del Pedido
+                  </Label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {(['PENDIENTE', 'EN_PRODUCCION', 'ENTREGADO', 'CANCELADO'] as EstadoVenta[]).map((est) => {
+                      const isActive = editEstado === est
+                      return (
+                        <button
+                          key={est}
+                          type="button"
+                          onClick={() => setEditEstado(est)}
+                          className={`py-2 px-1 text-xs font-bold rounded-xl border transition-all cursor-pointer text-center ${
+                            isActive
+                              ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-xs'
+                              : 'bg-white border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
+                          }`}
+                        >
+                          {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'Producción' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* 7. Total Recalculado y Saldo */}
+                {(() => {
+                  const cant = parseInt(editCantidad) || 1
+                  const unit = parseFloat(editPrecioUnitario) || 0
+                  const total = cant * unit
+                  const pagado = editingVenta.montoPagado || 0
+                  const saldo = Math.max(0, total - pagado)
+
+                  return (
+                    <div className="grid grid-cols-3 gap-2.5 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
+                      <div>
+                        <span className="text-[10px] text-[#75695D] uppercase font-bold">Nuevo Total</span>
+                        <div className="text-base font-extrabold text-[#241C15] font-mono">{formatCurrency(total)}</div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#1E5E3A] uppercase font-bold">Abonado</span>
+                        <div className="text-base font-extrabold text-[#1E5E3A] font-mono">{formatCurrency(pagado)}</div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#8C6D1F] uppercase font-bold">Saldo</span>
+                        <div className="text-base font-extrabold text-[#8C6D1F] font-mono">{formatCurrency(saldo)}</div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* 8. Logística: Destino y Promesa de Entrega */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Destino de Envío</Label>
+                    <Input 
+                      value={editDestinoEnvio}
+                      onChange={(e) => setEditDestinoEnvio(e.target.value)}
+                      placeholder="Ej: Shalom / Lince / Recojo taller"
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Promesa de Entrega</Label>
+                    <Input 
+                      value={editDiaEntrega}
+                      onChange={(e) => setEditDiaEntrega(e.target.value)}
+                      placeholder="Ej: Viernes 28 de mañana"
+                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Modal Editar */}
+              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => setOpenEditModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    'Guardar Cambios'
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDITAR ABONO / PAGO ESPECÍFICO                                     */}
+      {/* ========================================================================= */}
+      <Dialog open={openEditPagoModal} onOpenChange={setOpenEditPagoModal}>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[420px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+          {editingPago && (
+            <form onSubmit={handleEditPagoSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] flex items-center justify-center text-[#1E5E3A] shadow-sm">
+                    <DollarSign className="h-5 w-5 stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                      Editar Registro de Abono
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-[#75695D]">
+                      Ajusta la fecha contable, monto o método de este abono.
+                    </DialogDescription>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpenEditPagoModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+                {/* Fecha del Abono */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-[#1E5E3A]" />
+                    Fecha Contable de Ingreso *
+                  </Label>
+                  <Input 
+                    type="date"
+                    value={editingPago.fecha}
+                    onChange={(e) => setEditingPago(prev => prev ? { ...prev, fecha: e.target.value } : null)}
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono text-sm font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                  <p className="text-[10px] text-[#75695D]">
+                    Esta fecha se reflejará exactamente en el Flujo de Caja e Ingresos de ese día.
+                  </p>
+                </div>
+
+                {/* Monto del Abono */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                    Monto Cobrado (S/) *
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#75695D]">S/</span>
+                    <Input 
+                      type="number"
+                      step="0.10"
+                      min="0"
+                      value={editingPago.monto}
+                      onChange={(e) => setEditingPago(prev => prev ? { ...prev, monto: e.target.value } : null)}
+                      required
+                      placeholder="0.00"
+                      className="pl-9 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                    />
+                  </div>
+                </div>
+
+                {/* Método de Cobro */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                    Método de Cobro *
+                  </Label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {['YAPE', 'PLIN', 'TRANSFERENCIA', 'EFECTIVO'].map(metodo => {
+                      const isSel = editingPago.metodoPago === metodo
+                      return (
+                        <button
+                          key={metodo}
+                          type="button"
+                          onClick={() => setEditingPago(prev => prev ? { ...prev, metodoPago: metodo } : null)}
+                          className={`py-2 px-1 text-center rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            isSel 
+                              ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs' 
+                              : 'bg-[#F4EFEA] border-[#DCD3C6] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                          }`}
+                        >
+                          {metodo === 'TRANSFERENCIA' ? 'TRANSF.' : metodo}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Notas / Comprobante */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                    Notas / Nro. Operación (Opcional)
+                  </Label>
+                  <Input 
+                    value={editingPago.notas}
+                    onChange={(e) => setEditingPago(prev => prev ? { ...prev, notas: e.target.value } : null)}
+                    placeholder="Ej: Yape contra entrega taller / Op. 48291"
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+              </div>
+
+              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex justify-end gap-2 flex-shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setOpenEditPagoModal(false)}
+                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingPago || !editingPago.monto}
+                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold px-5 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {isSubmittingPago ? 'Guardando...' : 'Guardar Cambios'}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

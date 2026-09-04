@@ -95,6 +95,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
     const list: Array<{
       id: string
       rawId: string
+      pagoId?: string
       fecha: string
       origen: 'VENTA_CATALOGO' | 'INGRESO_DIRECTO'
       cliente: string
@@ -104,27 +105,55 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
       totalOriginal?: number
       saldoPendiente?: number
       metodoPago?: string
+      tipoAbono?: string
+      tipoLabel?: string
       notas?: string
       canDelete: boolean
       rawItem?: IngresoDirectoItem
     }> = []
 
-    // From Sales
+    // From Sales & Abonos
     ventas.forEach(v => {
-      list.push({
-        id: `v-${v.id}`,
-        rawId: v.id,
-        fecha: v.fecha,
-        origen: 'VENTA_CATALOGO',
-        cliente: v.cliente,
-        concepto: `${v.producto.nombreModelo} (x${v.cantidad})`,
-        categoria: v.producto.lineaCategoria,
-        montoCobrado: v.montoPagado,
-        totalOriginal: v.total,
-        saldoPendiente: v.saldoPendiente,
-        metodoPago: 'Venta',
-        canDelete: false,
-      })
+      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+        v.pagos.forEach((p, idx) => {
+          const isSingleFull = ((v.pagos?.length || 0) === 1 && v.saldoPendiente <= 0) || p.tipo === 'PAGO_TOTAL'
+          const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${idx + 1}`
+
+          list.push({
+            id: `pago-${p.id || `${v.id}-${idx}`}`,
+            rawId: v.id,
+            fecha: p.fecha,
+            origen: 'VENTA_CATALOGO',
+            cliente: v.cliente,
+            concepto: `${v.producto.nombreModelo} (x${v.cantidad}) • ${tipoLabel}`,
+            categoria: v.producto.lineaCategoria,
+            montoCobrado: p.monto,
+            totalOriginal: v.total,
+            saldoPendiente: v.saldoPendiente,
+            metodoPago: p.metodoPago || 'YAPE',
+            tipoAbono: p.tipo,
+            tipoLabel,
+            notas: p.notas || undefined,
+            canDelete: false,
+          })
+        })
+      } else if (v.montoPagado > 0) {
+        list.push({
+          id: `v-${v.id}`,
+          rawId: v.id,
+          fecha: v.fecha,
+          origen: 'VENTA_CATALOGO',
+          cliente: v.cliente,
+          concepto: `${v.producto.nombreModelo} (x${v.cantidad})`,
+          categoria: v.producto.lineaCategoria,
+          montoCobrado: v.montoPagado,
+          totalOriginal: v.total,
+          saldoPendiente: v.saldoPendiente,
+          metodoPago: 'YAPE',
+          tipoAbono: 'ANTICIPO',
+          canDelete: false,
+        })
+      }
     })
 
     // From Direct Incomes
@@ -474,9 +503,15 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
 
                     <TableCell className="px-3 py-3 whitespace-nowrap">
                       {ing.origen === 'VENTA_CATALOGO' ? (
-                        <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-bold">
-                          Venta Catálogo
-                        </Badge>
+                        (ing as any).tipoLabel === 'Pago Total' ? (
+                          <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold">
+                            Pago Total (100%)
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-bold">
+                            {(ing as any).tipoLabel || 'Abono'}
+                          </Badge>
+                        )
                       ) : (
                         <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold">
                           Servicio Directo

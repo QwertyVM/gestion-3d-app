@@ -144,8 +144,22 @@ model Venta {
   diaEntregaPrometida    String?
   destinoEnvio           String?
   canalVenta             String?
+  pagos                  PagoVenta[]
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
+}
+
+model PagoVenta {
+  id          String   @id @default(uuid())
+  ventaId     String
+  venta       Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  fecha       DateTime @default(now())
+  monto       Decimal  @db.Decimal(10, 2)
+  metodoPago  String?  @default("YAPE") // YAPE, PLIN, TRANSFERENCIA, EFECTIVO
+  tipo        String?  @default("ANTICIPO") // ANTICIPO, SALDO_ENTREGA, ABONO
+  notas       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Ingreso {

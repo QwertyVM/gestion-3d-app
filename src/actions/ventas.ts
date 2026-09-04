@@ -19,6 +19,33 @@ function safeRevalidate() {
 }
 
 function serializeVenta(v: any) {
+  // If sale has montoPagado > 0 but empty pagos array (e.g. legacy data), synthesize a default initial payment
+  const rawPagos = Array.isArray(v.pagos) && v.pagos.length > 0
+    ? v.pagos
+    : (Number(v.montoPagado) > 0 ? [{
+        id: `legacy-${v.id}`,
+        ventaId: v.id,
+        fecha: v.fecha,
+        monto: v.montoPagado,
+        metodoPago: 'YAPE',
+        tipo: Number(v.montoPagado) >= Number(v.total) ? 'PAGO_TOTAL' : 'ANTICIPO',
+        notas: 'Pago inicial registrado en pedido',
+        createdAt: v.createdAt,
+        updatedAt: v.updatedAt,
+      }] : [])
+
+  const pagos = rawPagos.map((p: any) => ({
+    id: p.id,
+    ventaId: p.ventaId,
+    fecha: p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha),
+    monto: Number(p.monto),
+    metodoPago: p.metodoPago || 'YAPE',
+    tipo: p.tipo || 'ANTICIPO',
+    notas: p.notas || null,
+    createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt || p.fecha),
+    updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt || p.fecha),
+  }))
+
   return {
     id: v.id,
     fecha: v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha),
@@ -41,6 +68,7 @@ function serializeVenta(v: any) {
     diaEntregaPrometida: v.diaEntregaPrometida || null,
     destinoEnvio: v.destinoEnvio || null,
     canalVenta: v.canalVenta || null,
+    pagos,
     createdAt: v.createdAt instanceof Date ? v.createdAt.toISOString() : String(v.createdAt),
     updatedAt: v.updatedAt instanceof Date ? v.updatedAt.toISOString() : String(v.updatedAt),
     colorFilamento: v.colorFilamento ? {
@@ -86,7 +114,10 @@ export async function getVentas() {
   const ventas = await prisma.venta.findMany({
     include: {
       producto: true,
-      colorFilamento: true
+      colorFilamento: true,
+      pagos: {
+        orderBy: { fecha: 'asc' }
+      }
     },
     orderBy: { fecha: 'desc' }
   })
@@ -127,9 +158,14 @@ export async function createVenta(data: {
   destinoEnvio?: string
   canalVenta?: string
   fecha?: string | Date
+  fechaPagoInicial?: string | Date
+  metodoPagoInicial?: string
+  tipoPagoInicial?: string
+  notasPagoInicial?: string
 }) {
   const total = data.cantidad * data.precioUnitario
-  const saldoPendiente = total - data.montoPagado
+  const montoPagado = Math.min(total, Math.max(0, data.montoPagado || 0))
+  const saldoPendiente = Math.max(0, total - montoPagado)
 
   const producto = await prisma.producto.findUnique({
     where: { id: data.productoId }
@@ -142,6 +178,9 @@ export async function createVenta(data: {
   const gramosConsumidos = (data.gramosConsumidos !== undefined && data.gramosConsumidos !== null && data.gramosConsumidos > 0)
     ? data.gramosConsumidos
     : (prodGramosUnit * data.cantidad)
+
+  const fechaVenta = parseDateInput(data.fecha) || new Date()
+  const fechaPago = parseDateInput(data.fechaPagoInicial || data.fecha) || fechaVenta
 
   const venta = await prisma.venta.create({
     data: {
@@ -156,7 +195,7 @@ export async function createVenta(data: {
       tipoPrecio: data.tipoPrecio,
       precioUnitario: data.precioUnitario,
       total,
-      montoPagado: data.montoPagado,
+      montoPagado,
       saldoPendiente,
       costoPackaging: data.costoPackaging || 0,
       porcentajeAdicional: data.porcentajeAdicional || 0,
@@ -164,11 +203,25 @@ export async function createVenta(data: {
       diaEntregaPrometida: data.diaEntregaPrometida,
       destinoEnvio: data.destinoEnvio,
       canalVenta: data.canalVenta,
-      fecha: parseDateInput(data.fecha) || new Date(),
+      fecha: fechaVenta,
+      ...(montoPagado > 0 ? {
+        pagos: {
+          create: {
+            fecha: fechaPago,
+            monto: montoPagado,
+            metodoPago: data.metodoPagoInicial || 'YAPE',
+            tipo: data.tipoPagoInicial || (montoPagado >= total ? 'PAGO_TOTAL' : 'ANTICIPO'),
+            notas: data.notasPagoInicial || null
+          }
+        }
+      } : {})
     },
     include: {
       producto: true,
-      colorFilamento: true
+      colorFilamento: true,
+      pagos: {
+        orderBy: { fecha: 'asc' }
+      }
     }
   })
 
@@ -200,7 +253,7 @@ export async function updateVenta(id: string, data: {
 }) {
   const current = await prisma.venta.findUnique({
     where: { id },
-    include: { producto: true }
+    include: { producto: true, pagos: true }
   })
   if (!current) throw new Error("Venta no encontrada")
 
@@ -288,7 +341,10 @@ export async function updateVenta(id: string, data: {
     },
     include: {
       producto: true,
-      colorFilamento: true
+      colorFilamento: true,
+      pagos: {
+        orderBy: { fecha: 'asc' }
+      }
     }
   })
 
@@ -314,29 +370,90 @@ export async function updateEstadoVenta(id: string, estado: EstadoVenta) {
     data: { estado },
     include: {
       producto: true,
-      colorFilamento: true
+      colorFilamento: true,
+      pagos: {
+        orderBy: { fecha: 'asc' }
+      }
     }
   })
+
   safeRevalidate()
   return serializeVenta(venta)
 }
 
-export async function registrarAbono(id: string, montoAbono: number) {
-  const venta = await prisma.venta.findUnique({ where: { id } })
-  if (!venta) throw new Error("Venta no encontrada")
+export async function registrarAbono(
+  id: string, 
+  montoAbono: number | {
+    monto: number
+    fecha?: string | Date
+    metodoPago?: string
+    tipo?: string
+    notas?: string
+  }
+) {
+  const data = typeof montoAbono === 'number' 
+    ? { monto: montoAbono } 
+    : montoAbono
 
-  const nuevoMontoPagado = Number(venta.montoPagado) + montoAbono
-  const nuevoSaldo = Math.max(0, Number(venta.total) - nuevoMontoPagado)
+  const monto = Number(data.monto)
+  if (isNaN(monto) || monto <= 0) throw new Error("Monto de abono inválido")
+
+  const currentVenta = await prisma.venta.findUnique({
+    where: { id },
+    include: { pagos: { orderBy: { fecha: 'asc' } } }
+  })
+  if (!currentVenta) throw new Error("Venta no encontrada")
+
+  const fechaPago = parseDateInput(data.fecha) || new Date()
+  const tipoPago = data.tipo || 'ABONO'
+
+  // If sale had legacy payment and no rows in DB, create the baseline first
+  if ((!currentVenta.pagos || currentVenta.pagos.length === 0) && Number(currentVenta.montoPagado) > 0) {
+    const isTotal = Number(currentVenta.montoPagado) >= Number(currentVenta.total)
+    await prisma.pagoVenta.create({
+      data: {
+        ventaId: id,
+        fecha: currentVenta.fecha,
+        monto: Number(currentVenta.montoPagado),
+        metodoPago: 'YAPE',
+        tipo: isTotal ? 'PAGO_TOTAL' : 'ANTICIPO',
+        notas: 'Pago inicial registrado en pedido'
+      }
+    })
+  }
+
+  await prisma.pagoVenta.create({
+    data: {
+      ventaId: id,
+      fecha: fechaPago,
+      monto,
+      metodoPago: data.metodoPago || 'YAPE',
+      tipo: tipoPago,
+      notas: data.notas || null
+    }
+  })
+
+  const allPagos = await prisma.pagoVenta.findMany({
+    where: { ventaId: id },
+    orderBy: { fecha: 'asc' }
+  })
+
+  const totalPagado = allPagos.reduce((sum, p) => sum + Number(p.monto), 0)
+  const totalVenta = Number(currentVenta.total)
+  const saldoPendiente = Math.max(0, totalVenta - totalPagado)
 
   const updatedVenta = await prisma.venta.update({
     where: { id },
     data: {
-      montoPagado: nuevoMontoPagado,
-      saldoPendiente: nuevoSaldo,
+      montoPagado: totalPagado,
+      saldoPendiente,
     },
     include: {
       producto: true,
-      colorFilamento: true
+      colorFilamento: true,
+      pagos: {
+        orderBy: { fecha: 'asc' }
+      }
     }
   })
 
@@ -344,24 +461,221 @@ export async function registrarAbono(id: string, montoAbono: number) {
   return serializeVenta(updatedVenta)
 }
 
-export async function liquidarSaldoTotal(id: string) {
-  const venta = await prisma.venta.findUnique({ where: { id } })
-  if (!venta) throw new Error("Venta no encontrada")
+export async function liquidarSaldoTotal(
+  id: string,
+  options?: {
+    fecha?: string | Date
+    metodoPago?: string
+    notas?: string
+  }
+) {
+  const currentVenta = await prisma.venta.findUnique({
+    where: { id },
+    include: { pagos: { orderBy: { fecha: 'asc' } } }
+  })
+  if (!currentVenta) throw new Error("Venta no encontrada")
+
+  const saldoPendiente = Number(currentVenta.saldoPendiente)
+  if (saldoPendiente > 0) {
+    const fechaPago = parseDateInput(options?.fecha) || new Date()
+
+    if ((!currentVenta.pagos || currentVenta.pagos.length === 0) && Number(currentVenta.montoPagado) > 0) {
+      await prisma.pagoVenta.create({
+        data: {
+          ventaId: id,
+          fecha: currentVenta.fecha,
+          monto: Number(currentVenta.montoPagado),
+          metodoPago: 'YAPE',
+          tipo: 'ANTICIPO',
+          notas: 'Pago inicial registrado en pedido'
+        }
+      })
+    }
+
+    await prisma.pagoVenta.create({
+      data: {
+        ventaId: id,
+        fecha: fechaPago,
+        monto: saldoPendiente,
+        metodoPago: options?.metodoPago || 'YAPE',
+        tipo: 'SALDO_ENTREGA',
+        notas: options?.notas || 'Liquidación de saldo'
+      }
+    })
+  }
+
+  const allPagos = await prisma.pagoVenta.findMany({
+    where: { ventaId: id },
+    orderBy: { fecha: 'asc' }
+  })
+
+  const totalPagado = allPagos.length > 0 
+    ? allPagos.reduce((sum, p) => sum + Number(p.monto), 0) 
+    : Number(currentVenta.total)
 
   const updatedVenta = await prisma.venta.update({
     where: { id },
     data: {
-      montoPagado: venta.total,
-      saldoPendiente: 0,
+      montoPagado: totalPagado,
+      saldoPendiente: Math.max(0, Number(currentVenta.total) - totalPagado),
     },
     include: {
       producto: true,
-      colorFilamento: true
+      colorFilamento: true,
+      pagos: {
+        orderBy: { fecha: 'asc' }
+      }
     }
   })
 
   safeRevalidate()
   return serializeVenta(updatedVenta)
+}
+
+export async function deletePagoVenta(pagoId: string, ventaIdFallback?: string) {
+  let ventaId = ventaIdFallback
+
+  if (pagoId.startsWith('legacy-')) {
+    ventaId = pagoId.replace('legacy-', '')
+    const venta = await prisma.venta.findUnique({ where: { id: ventaId } })
+    if (venta) {
+      await prisma.pagoVenta.deleteMany({ where: { ventaId } })
+      const updated = await prisma.venta.update({
+        where: { id: ventaId },
+        data: {
+          montoPagado: 0,
+          saldoPendiente: Number(venta.total)
+        },
+        include: {
+          producto: true,
+          colorFilamento: true,
+          pagos: { orderBy: { fecha: 'asc' } }
+        }
+      })
+      safeRevalidate()
+      return serializeVenta(updated)
+    }
+  }
+
+  const pago = await prisma.pagoVenta.findUnique({ where: { id: pagoId } })
+  if (pago) {
+    ventaId = pago.ventaId
+    await prisma.pagoVenta.delete({ where: { id: pagoId } })
+  }
+
+  if (ventaId) {
+    const remainingPagos = await prisma.pagoVenta.findMany({ where: { ventaId } })
+    const totalPagado = remainingPagos.reduce((sum, p) => sum + Number(p.monto), 0)
+    const venta = await prisma.venta.findUnique({ where: { id: ventaId } })
+    if (venta) {
+      const saldoPendiente = Math.max(0, Number(venta.total) - totalPagado)
+      const updated = await prisma.venta.update({
+        where: { id: ventaId },
+        data: {
+          montoPagado: totalPagado,
+          saldoPendiente
+        },
+        include: {
+          producto: true,
+          colorFilamento: true,
+          pagos: { orderBy: { fecha: 'asc' } }
+        }
+      })
+      safeRevalidate()
+      return serializeVenta(updated)
+    }
+  }
+
+  safeRevalidate()
+  return { success: true }
+}
+
+export async function updatePagoVenta(pagoId: string, data: {
+  fecha?: string | Date
+  monto?: number
+  metodoPago?: string
+  tipo?: string
+  notas?: string
+  ventaId?: string
+}) {
+  let ventaId = data.ventaId
+  const newMonto = data.monto !== undefined ? Number(data.monto) : 0
+  const fechaPago = parseDateInput(data.fecha) || new Date()
+  const metodoPago = data.metodoPago || 'YAPE'
+  const tipo = data.tipo || 'ABONO'
+  const notas = data.notas || null
+
+  if (pagoId.startsWith('legacy-')) {
+    ventaId = pagoId.replace('legacy-', '')
+    await prisma.pagoVenta.deleteMany({ where: { ventaId } })
+    if (newMonto > 0) {
+      await prisma.pagoVenta.create({
+        data: {
+          ventaId,
+          fecha: fechaPago,
+          monto: newMonto,
+          metodoPago,
+          tipo,
+          notas
+        }
+      })
+    }
+  } else {
+    const existing = await prisma.pagoVenta.findUnique({ where: { id: pagoId } })
+    if (existing) {
+      ventaId = existing.ventaId
+      await prisma.pagoVenta.update({
+        where: { id: pagoId },
+        data: {
+          fecha: fechaPago,
+          monto: newMonto,
+          metodoPago,
+          tipo,
+          notas
+        }
+      })
+    } else if (ventaId && newMonto > 0) {
+      await prisma.pagoVenta.create({
+        data: {
+          ventaId,
+          fecha: fechaPago,
+          monto: newMonto,
+          metodoPago,
+          tipo,
+          notas
+        }
+      })
+    }
+  }
+
+  if (ventaId) {
+    const remainingPagos = await prisma.pagoVenta.findMany({
+      where: { ventaId },
+      orderBy: { fecha: 'asc' }
+    })
+    const totalPagado = remainingPagos.reduce((sum, p) => sum + Number(p.monto), 0)
+    const venta = await prisma.venta.findUnique({ where: { id: ventaId } })
+    if (venta) {
+      const saldoPendiente = Math.max(0, Number(venta.total) - totalPagado)
+      const updated = await prisma.venta.update({
+        where: { id: ventaId },
+        data: {
+          montoPagado: totalPagado,
+          saldoPendiente
+        },
+        include: {
+          producto: true,
+          colorFilamento: true,
+          pagos: { orderBy: { fecha: 'asc' } }
+        }
+      })
+      safeRevalidate()
+      return serializeVenta(updated)
+    }
+  }
+
+  safeRevalidate()
+  return { success: true }
 }
 
 export async function deleteVenta(id: string) {
