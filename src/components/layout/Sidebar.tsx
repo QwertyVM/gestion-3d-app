@@ -86,9 +86,7 @@ export function Sidebar() {
           </span>
         </Link>
 
-
-
-        {/* 4. Histórico Mensual */}
+        {/* 3. Histórico Mensual */}
         <Link
           href="/historico-mensual"
           className={cn(

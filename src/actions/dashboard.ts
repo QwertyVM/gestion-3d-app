@@ -1,20 +1,14 @@
 'use server'
 
 import prisma from '@/lib/prisma'
+import { getVentas } from '@/actions/ventas'
 
 export async function getDashboardData() {
   const [inversiones, ventas, ingresosDirectos, filamentos] = await Promise.all([
     prisma.inversion.findMany({
       orderBy: { createdAt: 'desc' }
     }),
-    prisma.venta.findMany({
-      include: {
-        producto: true,
-        colorFilamento: true,
-        pagos: { orderBy: { fecha: 'asc' } }
-      },
-      orderBy: { fecha: 'desc' }
-    }),
+    getVentas(),
     prisma.ingreso.findMany({
       orderBy: { fecha: 'desc' }
     }),
@@ -46,9 +40,9 @@ export async function getDashboardData() {
     : 0
 
   // 6. Total Cobrado en Efectivo de Ventas (calculado desde pagos o montoPagado)
-  const totalCobradoVentas = ventas.reduce((sum, v) => {
+  const totalCobradoVentas = ventas.reduce((sum: number, v: any) => {
     if (v.pagos && v.pagos.length > 0) {
-      const sumP = v.pagos.reduce((pSum, p) => pSum + Number(p.monto), 0)
+      const sumP = v.pagos.reduce((pSum: number, p: any) => pSum + Number(p.monto), 0)
       return sum + Math.max(sumP, Number(v.montoPagado || 0))
     }
     return sum + Number(v.montoPagado || 0)
@@ -67,8 +61,9 @@ export async function getDashboardData() {
   const timelineMap: Record<string, { ingresos: number; costo: number; ganancia: number }> = {}
 
   // A. Procesar costos y ventas base en la fecha de registro
-  ventas.forEach((venta) => {
-    const vDate = venta.fecha.toISOString().split('T')[0]
+  ventas.forEach((venta: any) => {
+    const rawFecha = venta.fecha instanceof Date ? venta.fecha.toISOString() : String(venta.fecha)
+    const vDate = rawFecha.split('T')[0]
     if (!timelineMap[vDate]) {
       timelineMap[vDate] = { ingresos: 0, costo: 0, ganancia: 0 }
     }
@@ -76,7 +71,7 @@ export async function getDashboardData() {
     const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
       ? Number(venta.costoBaseSnapshot) 
       : (Number(venta.producto?.costoBase) || 0)
-    const ventaCosto = costoBaseUnit * venta.cantidad
+    const ventaCosto = costoBaseUnit * Number(venta.cantidad || 1)
     timelineMap[vDate].costo += ventaCosto
 
     // Si la venta no cuenta con desglose de pagos (ventas anteriores a la tabla PagoVenta)
@@ -86,10 +81,11 @@ export async function getDashboardData() {
   })
 
   // B. Procesar recaudaciones/abonos en sus fechas efectivas de pago (incluyendo Septiembre)
-  ventas.forEach((venta) => {
+  ventas.forEach((venta: any) => {
     if (venta.pagos && venta.pagos.length > 0) {
-      venta.pagos.forEach((pago) => {
-        const pDate = pago.fecha.toISOString().split('T')[0]
+      venta.pagos.forEach((pago: any) => {
+        const rawPagoFecha = pago.fecha instanceof Date ? pago.fecha.toISOString() : String(pago.fecha)
+        const pDate = rawPagoFecha.split('T')[0]
         if (!timelineMap[pDate]) {
           timelineMap[pDate] = { ingresos: 0, costo: 0, ganancia: 0 }
         }
@@ -124,11 +120,11 @@ export async function getDashboardData() {
 
   // Cuentas por cobrar
   const cuentasPorCobrar = ventas
-    .filter((v) => Number(v.saldoPendiente) > 0)
-    .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
-    .map((v) => ({
+    .filter((v: any) => Number(v.saldoPendiente) > 0)
+    .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+    .map((v: any) => ({
       id: v.id,
-      fecha: v.fecha.toISOString(),
+      fecha: v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha),
       cliente: v.cliente,
       productoId: v.productoId,
       nombreProductoSnapshot: v.nombreProductoSnapshot || v.producto?.nombreModelo || '',
@@ -148,8 +144,8 @@ export async function getDashboardData() {
       diaEntregaPrometida: v.diaEntregaPrometida || null,
       destinoEnvio: v.destinoEnvio || null,
       canalVenta: v.canalVenta || null,
-      createdAt: v.createdAt.toISOString(),
-      updatedAt: v.updatedAt.toISOString(),
+      createdAt: v.createdAt instanceof Date ? v.createdAt.toISOString() : String(v.createdAt),
+      updatedAt: v.updatedAt instanceof Date ? v.updatedAt.toISOString() : String(v.updatedAt),
       producto: v.producto ? {
         id: v.producto.id,
         lineaCategoria: v.producto.lineaCategoria,
@@ -159,8 +155,8 @@ export async function getDashboardData() {
         precioMercado: Number(v.producto.precioMercado),
         precioComunidad: Number(v.producto.precioComunidad),
         activo: v.producto.activo,
-        createdAt: v.producto.createdAt.toISOString(),
-        updatedAt: v.producto.updatedAt.toISOString(),
+        createdAt: v.producto.createdAt instanceof Date ? v.producto.createdAt.toISOString() : String(v.producto.createdAt),
+        updatedAt: v.producto.updatedAt instanceof Date ? v.producto.updatedAt.toISOString() : String(v.producto.updatedAt),
       } : {
         id: v.productoId,
         lineaCategoria: 'General',

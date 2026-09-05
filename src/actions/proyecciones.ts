@@ -39,7 +39,12 @@ export async function getDatosCajaChica(): Promise<DatosCajaChica> {
   const totalFacturadoVentas = ventas.reduce((acc, v) => acc + (v.total || 0), 0)
   const ticketPromedioVenta = totalPedidosHistoricos > 0 ? Number((totalFacturadoVentas / totalPedidosHistoricos).toFixed(2)) : 135.00
 
-  const totalCostoFabricacion = ventas.reduce((acc, v) => acc + (v.cantidad * (v.producto?.costoBase || 0)), 0)
+  const totalCostoFabricacion = ventas.reduce((acc, v) => {
+    const costoUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0
+      ? Number(v.costoBaseSnapshot)
+      : (Number(v.producto?.costoBase) || 0)
+    return acc + (Number(v.cantidad || 1) * costoUnit)
+  }, 0)
   const costoPromedioFabricacionPorPedido = totalPedidosHistoricos > 0 
     ? Number((totalCostoFabricacion / totalPedidosHistoricos).toFixed(2)) 
     : 38.00

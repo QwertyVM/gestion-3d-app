@@ -1,6 +1,7 @@
 'use server'
 
 import prisma from '@/lib/prisma'
+import { getVentas } from '@/actions/ventas'
 
 export interface ColorRestockItem {
   id: string
@@ -40,10 +41,7 @@ export interface DatosPresupuestoTranquilidad {
 export async function getDatosPresupuestoTranquilidad(): Promise<DatosPresupuestoTranquilidad> {
   const [inversiones, ventas, ingresosDirectos, filamentos] = await Promise.all([
     prisma.inversion.findMany(),
-    prisma.venta.findMany({
-      include: { producto: true, colorFilamento: true },
-      orderBy: { fecha: 'desc' }
-    }),
+    getVentas(),
     prisma.ingreso.findMany({
       orderBy: { fecha: 'desc' }
     }),

@@ -7,9 +7,16 @@ import { ajustarStockBobina } from '@/actions/inventario'
 
 function safeRevalidate() {
   try {
+    revalidatePath('/pedidos')
     revalidatePath('/ventas')
+    revalidatePath('/finanzas')
     revalidatePath('/finanzas/flujo-caja')
+    revalidatePath('/finanzas/cierres')
+    revalidatePath('/finanzas/caja-chica')
+    revalidatePath('/finanzas/proyecciones')
     revalidatePath('/finanzas/balance')
+    revalidatePath('/historico-mensual')
+    revalidatePath('/flujo-mensual')
     revalidatePath('/inventario')
     revalidatePath('/catalogo/inventario')
     revalidatePath('/')
@@ -110,11 +117,153 @@ function serializeVenta(v: any) {
   }
 }
 
+function serializePedidoToVenta(p: any) {
+  const items = Array.isArray(p.items) ? p.items : []
+  const totalCantidad = items.reduce((sum: number, it: any) => sum + Number(it.cantidad || 0), 0) || 1
+  
+  // Costo base total de fabricación de los items del pedido
+  const costoBaseTotal = items.reduce((sum: number, it: any) => {
+    const costoUnit = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+      ? Number(it.costoBaseSnapshot)
+      : (Number(it.producto?.costoBase) || 0)
+    return sum + (costoUnit * Number(it.cantidad || 1))
+  }, 0)
+
+  const costoBaseSnapshotUnit = totalCantidad > 0 ? (costoBaseTotal / totalCantidad) : 0
+  const gramosConsumidosTotal = items.reduce((sum: number, it: any) => sum + Number(it.gramosConsumidos || 0), 0)
+
+  // Nombre representativo del producto
+  let nombreProducto = `Pedido ${p.codigo}`
+  let lineaCategoria = 'General'
+  let colorFilamento = null
+  let colorFilamentoId = null
+  let productoObj = null
+
+  if (items.length === 1) {
+    const single = items[0]
+    nombreProducto = single.nombreProductoSnapshot || single.producto?.nombreModelo || `Pedido ${p.codigo}`
+    lineaCategoria = single.producto?.lineaCategoria || 'General'
+    colorFilamento = single.colorFilamento ? {
+      id: single.colorFilamento.id,
+      nombreColor: single.colorFilamento.nombreColor,
+      numeroBobina: single.colorFilamento.numeroBobina || 1,
+      codigoHex: single.colorFilamento.codigoHex || '#1E1E1E',
+      tipoMaterial: single.colorFilamento.tipoMaterial,
+      marca: single.colorFilamento.marca || 'Genérica',
+      stockGramos: single.colorFilamento.stockGramos ? Number(single.colorFilamento.stockGramos) : 0,
+      stockBobinas: Number(single.colorFilamento.stockBobinas || 1),
+      alertaCritica: Boolean(single.colorFilamento.alertaCritica || (single.colorFilamento.stockGramos && Number(single.colorFilamento.stockGramos) < 300))
+    } : null
+    colorFilamentoId = single.colorFilamentoId || null
+    productoObj = single.producto ? {
+      id: single.producto.id,
+      lineaCategoria: single.producto.lineaCategoria,
+      nombreModelo: single.producto.nombreModelo,
+      costoBase: Number(single.producto.costoBase),
+      precioAmigos: Number(single.producto.precioAmigos),
+      precioMercado: Number(single.producto.precioMercado),
+      precioComunidad: Number(single.producto.precioComunidad),
+      pesoGramos: single.producto.pesoGramos != null ? Number(single.producto.pesoGramos) : 0,
+      activo: single.producto.activo,
+      createdAt: single.producto.createdAt instanceof Date ? single.producto.createdAt.toISOString() : String(single.producto.createdAt),
+      updatedAt: single.producto.updatedAt instanceof Date ? single.producto.updatedAt.toISOString() : String(single.producto.updatedAt),
+    } : null
+  } else if (items.length > 1) {
+    nombreProducto = items.map((it: any) => `${it.cantidad}x ${it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Modelo'}`).join(', ')
+    lineaCategoria = 'Multiproducto'
+    productoObj = {
+      id: p.id,
+      lineaCategoria: 'Multiproducto',
+      nombreModelo: `${p.codigo}: ${items.length} modelos (${totalCantidad} pzs)`,
+      costoBase: costoBaseSnapshotUnit,
+      precioAmigos: 0,
+      precioMercado: 0,
+      precioComunidad: 0,
+      pesoGramos: 0,
+      activo: true,
+      createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt),
+      updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt),
+    }
+  }
+
+  // Pagos
+  const rawPagos = Array.isArray(p.pagos) && p.pagos.length > 0
+    ? p.pagos
+    : (Number(p.montoPagado) > 0 ? [{
+        id: `pago-init-${p.id}`,
+        pedidoId: p.id,
+        fecha: p.fecha,
+        monto: p.montoPagado,
+        metodoPago: 'YAPE',
+        tipo: Number(p.montoPagado) >= Number(p.total) ? 'PAGO_TOTAL' : 'ANTICIPO',
+        notas: `Abono inicial ${p.codigo}`,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      }] : [])
+
+  const pagos = rawPagos.map((pg: any) => ({
+    id: pg.id,
+    ventaId: p.id,
+    fecha: pg.fecha instanceof Date ? pg.fecha.toISOString() : String(pg.fecha),
+    monto: Number(pg.monto),
+    metodoPago: pg.metodoPago || 'YAPE',
+    tipo: pg.tipo || 'ANTICIPO',
+    notas: pg.notas || null,
+    createdAt: pg.createdAt instanceof Date ? pg.createdAt.toISOString() : String(pg.createdAt || pg.fecha),
+    updatedAt: pg.updatedAt instanceof Date ? pg.updatedAt.toISOString() : String(pg.updatedAt || pg.fecha),
+  }))
+
+  return {
+    id: p.id,
+    fecha: p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha),
+    cliente: p.cliente,
+    productoId: items[0]?.productoId || p.id,
+    costoBaseSnapshot: costoBaseSnapshotUnit,
+    nombreProductoSnapshot: nombreProducto,
+    colorFilamentoId,
+    personalizacion: p.notas || null,
+    gramosConsumidos: gramosConsumidosTotal,
+    cantidad: totalCantidad,
+    tipoPrecio: items[0]?.tipoPrecio || 'COMUNIDAD',
+    precioUnitario: totalCantidad > 0 ? Number((Number(p.total) / totalCantidad).toFixed(2)) : Number(p.total),
+    total: Number(p.total),
+    montoPagado: Number(p.montoPagado),
+    saldoPendiente: Number(p.saldoPendiente),
+    costoPackaging: Number(p.costoEnvio || 0),
+    porcentajeAdicional: 0,
+    estado: p.estado as any,
+    diaEntregaPrometida: p.diaEntregaPrometida || null,
+    destinoEnvio: p.destinoEnvio || null,
+    canalVenta: p.canalVenta || null,
+    pagos,
+    createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt),
+    updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt),
+    colorFilamento,
+    producto: productoObj || {
+      id: p.id,
+      lineaCategoria,
+      nombreModelo: nombreProducto,
+      costoBase: costoBaseSnapshotUnit,
+      precioAmigos: 0,
+      precioMercado: 0,
+      precioComunidad: 0,
+      pesoGramos: 0,
+      activo: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  }
+}
+
 export async function getVentas() {
-  const ventas = await prisma.venta.findMany({
+  const pedidos = await prisma.pedido.findMany({
     include: {
-      producto: true,
-      colorFilamento: true,
+      items: {
+        include: {
+          producto: true,
+          colorFilamento: true
+        }
+      },
       pagos: {
         orderBy: { fecha: 'asc' }
       }
@@ -122,7 +271,9 @@ export async function getVentas() {
     orderBy: { fecha: 'desc' }
   })
 
-  return ventas.map(serializeVenta)
+  return pedidos.map(serializePedidoToVenta).sort((a, b) => {
+    return new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+  })
 }
 
 function parseDateInput(fecha?: string | Date) {

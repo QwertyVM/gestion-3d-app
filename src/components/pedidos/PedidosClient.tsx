@@ -157,10 +157,10 @@ interface FormItemState {
   productoId: string
   colorFilamentoId: string
   personalizacion: string
-  cantidad: number
+  cantidad: number | string
   tipoPrecio: TipoPrecio
-  precioUnitario: number
-  costoPackaging: number
+  precioUnitario: number | string
+  costoPackaging: number | string
   porcentajeAdicional: number
   gramosConsumidos: number
 }
@@ -242,8 +242,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   const [formDestino, setFormDestino] = useState('')
   const [formDiaEntrega, setFormDiaEntrega] = useState('')
   const [formNotas, setFormNotas] = useState('')
-  const [formCostoEnvio, setFormCostoEnvio] = useState<string>('0')
-  const [formMontoPagado, setFormMontoPagado] = useState<string>('0')
+  const [formCostoEnvio, setFormCostoEnvio] = useState<string>('')
+  const [formMontoPagado, setFormMontoPagado] = useState<string>('')
   const [formMetodoPago, setFormMetodoPago] = useState('YAPE')
   const [formNotasPago, setFormNotasPago] = useState('')
   const [formDescontarStock, setFormDescontarStock] = useState(true)
@@ -259,8 +259,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
-        precioUnitario: defaultProd ? defaultProd.precioComunidad : 0,
-        costoPackaging: 0,
+        precioUnitario: defaultProd ? defaultProd.precioComunidad : '',
+        costoPackaging: '',
         porcentajeAdicional: 0,
         gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
       }
@@ -283,8 +283,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
-        precioUnitario: defaultProd ? defaultProd.precioComunidad : 0,
-        costoPackaging: 0,
+        precioUnitario: defaultProd ? defaultProd.precioComunidad : '',
+        costoPackaging: '',
         porcentajeAdicional: 0,
         gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
       }
@@ -309,7 +309,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
           if (merged.tipoPrecio === 'AMIGOS') pUnit = p.precioAmigos
           if (merged.tipoPrecio === 'MERCADO') pUnit = p.precioMercado
           merged.precioUnitario = pUnit
-          merged.gramosConsumidos = p.pesoGramos * merged.cantidad
+          merged.gramosConsumidos = p.pesoGramos * (Number(merged.cantidad) || 1)
         }
       }
 
@@ -324,10 +324,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       }
 
       // Si cambió la cantidad, actualizar gramos estimados
-      if (updates.cantidad != null) {
+      if (updates.cantidad !== undefined) {
         const p = productos.find(prod => prod.id === merged.productoId)
         if (p && p.pesoGramos) {
-          merged.gramosConsumidos = p.pesoGramos * merged.cantidad
+          merged.gramosConsumidos = p.pesoGramos * (Number(merged.cantidad) || 0)
         }
       }
 
@@ -367,8 +367,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
     setFormDestino('')
     setFormDiaEntrega('')
     setFormNotas('')
-    setFormCostoEnvio('0')
-    setFormMontoPagado('0')
+    setFormCostoEnvio('')
+    setFormMontoPagado('')
     setFormMetodoPago('YAPE')
     setFormNotasPago('')
     setFormDescontarStock(true)
@@ -380,8 +380,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
-        precioUnitario: defaultProd ? defaultProd.precioComunidad : 0,
-        costoPackaging: 0,
+        precioUnitario: defaultProd ? defaultProd.precioComunidad : '',
+        costoPackaging: '',
         porcentajeAdicional: 0,
         gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
       }
@@ -457,7 +457,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
     setFormDestino(p.destinoEnvio || '')
     setFormDiaEntrega(p.diaEntregaPrometida || '')
     setFormNotas(p.notas || '')
-    setFormCostoEnvio(p.costoEnvio.toString())
+    setFormCostoEnvio(p.costoEnvio ? p.costoEnvio.toString() : '')
     setEditEstado(p.estado)
     setFormItems(p.items.map((it, idx) => ({
       id: it.id || `edit-item-${idx}`,
@@ -466,10 +466,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       personalizacion: it.personalizacion || '',
       cantidad: it.cantidad,
       tipoPrecio: it.tipoPrecio,
-      precioUnitario: it.precioUnitario,
-      costoPackaging: it.costoPackaging,
-      porcentajeAdicional: it.porcentajeAdicional,
-      gramosConsumidos: it.gramosConsumidos
+      precioUnitario: it.precioUnitario !== undefined && it.precioUnitario !== null ? it.precioUnitario : '',
+      costoPackaging: it.costoPackaging ? it.costoPackaging : '',
+      porcentajeAdicional: it.porcentajeAdicional || 0,
+      gramosConsumidos: it.gramosConsumidos || 0
     })))
     setIsEditModalOpen(true)
   }
@@ -1680,8 +1680,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             <Input
                               type="number"
                               min="1"
+                              placeholder="1"
                               value={item.cantidad}
-                              onChange={(e) => updateItem(item.id, { cantidad: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => updateItem(item.id, { cantidad: e.target.value })}
                               className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs font-bold font-mono rounded-lg"
                             />
                           </div>
@@ -1691,8 +1693,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             <Input
                               type="number"
                               step="0.01"
+                              placeholder="0.00"
                               value={item.precioUnitario}
-                              onChange={(e) => updateItem(item.id, { precioUnitario: parseFloat(e.target.value) || 0, tipoPrecio: 'PERSONALIZADO' })}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => updateItem(item.id, { precioUnitario: e.target.value, tipoPrecio: 'PERSONALIZADO' })}
                               className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs font-bold font-mono rounded-lg"
                             />
                           </div>
@@ -1703,8 +1707,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                               type="number"
                               step="0.01"
                               placeholder="0.00"
-                              value={item.costoPackaging || ''}
-                              onChange={(e) => updateItem(item.id, { costoPackaging: parseFloat(e.target.value) || 0 })}
+                              value={item.costoPackaging}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => updateItem(item.id, { costoPackaging: e.target.value })}
                               className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs font-mono rounded-lg"
                             />
                           </div>
@@ -1743,7 +1748,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                     <Input
                       type="number"
                       step="0.01"
+                      placeholder="0.00"
                       value={formCostoEnvio}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setFormCostoEnvio(e.target.value)}
                       className="bg-[#FFFFFF] border-[#E2D9CC] text-sm font-mono font-bold rounded-xl"
                     />
@@ -1754,7 +1761,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                     <Input
                       type="number"
                       step="0.01"
+                      placeholder="0.00"
                       value={formMontoPagado}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setFormMontoPagado(e.target.value)}
                       className="bg-[#FFFFFF] border-[#B4E3C0] text-sm font-mono font-black text-[#1E5E3A] rounded-xl"
                     />
@@ -2073,6 +2082,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                           required
                           placeholder={selectedPedidoDetail.saldoPendiente.toFixed(2)}
                           value={abonoMonto}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => setAbonoMonto(e.target.value)}
                           className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs font-mono font-bold"
                         />
@@ -2094,31 +2104,31 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-[#75695D] font-bold">Tipo</Label>
+                        <Label className="text-[10px] text-[#75695D] font-bold">Tipo de Abono</Label>
                         <select
                           value={abonoTipo}
                           onChange={(e) => setAbonoTipo(e.target.value)}
-                          className="w-full h-8 rounded-lg border border-[#E2D9CC] bg-[#FFFFFF] px-2 text-xs"
+                          className="w-full h-8 rounded-lg border border-[#E2D9CC] bg-[#FFFFFF] px-2 text-xs font-bold"
                         >
-                          <option value="SALDO_ENTREGA">Saldo Contra Entrega</option>
+                          <option value="SALDO_ENTREGA">Liquidación / Saldo Final</option>
                           <option value="ABONO">Abono Parcial</option>
-                          <option value="PAGO_TOTAL">Pago Total</option>
+                          <option value="ANTICIPO">Anticipo</option>
                         </select>
                       </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
                       <Input
-                        placeholder="Nota opcional del pago..."
+                        placeholder="Nota o número de operación (opcional)..."
                         value={abonoNotas}
                         onChange={(e) => setAbonoNotas(e.target.value)}
-                        className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs flex-1"
+                        className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs flex-1 rounded-lg"
                       />
-
                       <Button
                         type="submit"
+                        size="sm"
                         disabled={isSubmittingAbono}
-                        className="h-8 px-4 bg-[#1E5E3A] hover:bg-[#16482C] text-white font-extrabold text-xs rounded-xl cursor-pointer w-full sm:w-auto"
+                        className="h-8 px-4 bg-[#1E5E3A] hover:bg-[#16462B] text-white font-extrabold text-xs rounded-lg cursor-pointer flex-shrink-0"
                       >
                         {isSubmittingAbono ? 'Guardando...' : 'Registrar Abono'}
                       </Button>
@@ -2390,8 +2400,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             <Input
                               type="number"
                               min="1"
+                              placeholder="1"
                               value={item.cantidad}
-                              onChange={(e) => updateItem(item.id, { cantidad: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => updateItem(item.id, { cantidad: e.target.value })}
                               className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs font-bold font-mono rounded-lg"
                             />
                           </div>
@@ -2401,8 +2413,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             <Input
                               type="number"
                               step="0.01"
+                              placeholder="0.00"
                               value={item.precioUnitario}
-                              onChange={(e) => updateItem(item.id, { precioUnitario: parseFloat(e.target.value) || 0, tipoPrecio: 'PERSONALIZADO' })}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => updateItem(item.id, { precioUnitario: e.target.value, tipoPrecio: 'PERSONALIZADO' })}
                               className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs font-bold font-mono rounded-lg"
                             />
                           </div>
@@ -2413,8 +2427,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                               type="number"
                               step="0.01"
                               placeholder="0.00"
-                              value={item.costoPackaging || ''}
-                              onChange={(e) => updateItem(item.id, { costoPackaging: parseFloat(e.target.value) || 0 })}
+                              value={item.costoPackaging}
+                              onFocus={(e) => e.target.select()}
+                              onChange={(e) => updateItem(item.id, { costoPackaging: e.target.value })}
                               className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs font-mono rounded-lg"
                             />
                           </div>
@@ -2454,6 +2469,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       type="number"
                       step="0.01"
                       value={formCostoEnvio}
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setFormCostoEnvio(e.target.value)}
                       className="bg-[#FFFFFF] border-[#E2D9CC] text-sm font-mono font-bold rounded-xl"
                     />
