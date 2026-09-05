@@ -19,12 +19,15 @@ import {
   FileCheck,
   Palette,
   Calendar,
-  History
+  History,
+  Boxes,
+  ClipboardList
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function Sidebar() {
   const pathname = usePathname()
+  const isPedidos = pathname.startsWith('/pedidos')
   const isHistoricoMensual = pathname.startsWith('/historico-mensual') || pathname.startsWith('/flujo-mensual')
   const isFinanzasSection = pathname.startsWith('/finanzas') || pathname.startsWith('/inversiones')
   const isCatalogoSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario')
@@ -66,21 +69,26 @@ export function Sidebar() {
           Dashboard
         </Link>
 
-        {/* 2. Ventas y Pedidos */}
+        {/* 2. Pedidos Multiproducto (NUEVO MÓDULO) */}
         <Link
-          href="/ventas"
+          href="/pedidos"
           className={cn(
             'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
-            pathname === '/ventas'
+            isPedidos
               ? 'bg-[#EFE5D8] text-[#633E20] font-semibold shadow-sm border border-[#D4BEA7]'
               : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
           )}
         >
-          <ShoppingCart className="h-4 w-4" />
-          Ventas y Pedidos
+          <Boxes className={cn('h-4 w-4', isPedidos ? 'text-[#633E20]' : 'text-[#75695D]')} />
+          <span>Pedidos</span>
+          <span className="ml-auto text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
+            Multi
+          </span>
         </Link>
 
-        {/* 3. Histórico Mensual (Módulo Independiente de Todos los Meses) */}
+
+
+        {/* 4. Histórico Mensual */}
         <Link
           href="/historico-mensual"
           className={cn(

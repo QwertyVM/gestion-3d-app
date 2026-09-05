@@ -21,6 +21,14 @@ enum EstadoVenta {
   CANCELADO
 }
 
+enum EstadoPedido {
+  PENDIENTE
+  EN_PRODUCCION
+  LISTO_ENTREGA
+  ENTREGADO
+  CANCELADO
+}
+
 enum TipoPrecio {
   AMIGOS
   MERCADO
@@ -88,10 +96,11 @@ model InventarioFilamento {
   alertaCritica           Boolean  @default(false)
   notaProduccion          String?
   notas                   String?
-  activo                  Boolean  @default(true)
+  activo                  Boolean      @default(true)
   ventas                  Venta[]
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  itemPedidos             ItemPedido[]
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 }
 
 model ConsumibleTaller {
@@ -106,18 +115,19 @@ model ConsumibleTaller {
 }
 
 model Producto {
-  id               String   @id @default(uuid())
+  id               String       @id @default(uuid())
   lineaCategoria   String
-  nombreModelo     String   @unique
-  costoBase        Decimal  @db.Decimal(10, 2)
-  precioAmigos     Decimal  @db.Decimal(10, 2)
-  precioMercado    Decimal  @db.Decimal(10, 2)
-  precioComunidad  Decimal  @db.Decimal(10, 2)
-  pesoGramos       Decimal? @default(0.00) @db.Decimal(10, 2)
-  activo           Boolean  @default(true)
+  nombreModelo     String       @unique
+  costoBase        Decimal      @db.Decimal(10, 2)
+  precioAmigos     Decimal      @db.Decimal(10, 2)
+  precioMercado    Decimal      @db.Decimal(10, 2)
+  precioComunidad  Decimal      @db.Decimal(10, 2)
+  pesoGramos       Decimal?     @default(0.00) @db.Decimal(10, 2)
+  activo           Boolean      @default(true)
   ventas           Venta[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  itemPedidos      ItemPedido[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 }
 
 model Venta {
@@ -214,5 +224,66 @@ model CierreMes {
   notas                    String?
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+}
+
+model Pedido {
+  id                  String        @id @default(uuid())
+  codigo              String        @unique // Ej: "PED-001"
+  fecha               DateTime      @default(now())
+  cliente             String
+  telefono            String?
+  canalVenta          String?       // WhatsApp, Instagram, TikTok, Feria, Recomendación, Directo
+  destinoEnvio        String?
+  diaEntregaPrometida String?
+  notas               String?
+  estado              EstadoPedido  @default(PENDIENTE)
+  
+  costoEnvio          Decimal       @default(0.00) @db.Decimal(10, 2)
+  subtotal            Decimal       @default(0.00) @db.Decimal(10, 2)
+  total               Decimal       @default(0.00) @db.Decimal(10, 2)
+  montoPagado         Decimal       @default(0.00) @db.Decimal(10, 2)
+  saldoPendiente      Decimal       @default(0.00) @db.Decimal(10, 2)
+  
+  items               ItemPedido[]
+  pagos               PagoPedido[]
+  
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+}
+
+model ItemPedido {
+  id                     String               @id @default(uuid())
+  pedidoId               String
+  pedido                 Pedido               @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  productoId             String
+  producto               Producto             @relation(fields: [productoId], references: [id])
+  nombreProductoSnapshot String?
+  costoBaseSnapshot      Decimal?             @default(0.00) @db.Decimal(10, 2)
+  colorFilamentoId       String?
+  colorFilamento         InventarioFilamento? @relation(fields: [colorFilamentoId], references: [id])
+  personalizacion        String?
+  cantidad               Int                  @default(1)
+  tipoPrecio             TipoPrecio           @default(COMUNIDAD)
+  precioUnitario         Decimal              @db.Decimal(10, 2)
+  costoPackaging         Decimal?             @default(0.00) @db.Decimal(10, 2)
+  porcentajeAdicional    Decimal?             @default(0.00) @db.Decimal(5, 2)
+  gramosConsumidos       Decimal?             @default(0.00) @db.Decimal(10, 2)
+  subtotal               Decimal              @db.Decimal(10, 2)
+  
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+}
+
+model PagoPedido {
+  id          String   @id @default(uuid())
+  pedidoId    String
+  pedido      Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  fecha       DateTime @default(now())
+  monto       Decimal  @db.Decimal(10, 2)
+  metodoPago  String?  @default("YAPE") // YAPE, PLIN, TRANSFERENCIA, EFECTIVO
+  tipo        String?  @default("ANTICIPO") // ANTICIPO, SALDO_ENTREGA, ABONO, PAGO_TOTAL
+  notas       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 

@@ -39,12 +39,13 @@ import { VentaItem, IngresoDirectoItem } from './FlujoCajaClient'
 
 interface IngresosClientProps {
   ventas: VentaItem[]
+  pedidos?: any[]
   ingresosDirectos: IngresoDirectoItem[]
 }
 
 const ITEMS_PER_PAGE = 5
 
-export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps) {
+export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosClientProps) {
   const router = useRouter()
   const [directos, setDirectos] = useState<IngresoDirectoItem[]>(ingresosDirectos)
 
@@ -58,9 +59,12 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
   const [openEditModal, setOpenEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<IngresoDirectoItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeTab, setActiveTab] = useState<'MOVIMIENTOS' | 'SALDOS'>('MOVIMIENTOS')
+
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Form states (Create & Edit)
+  // Form states (Create & Edit for Direct Incomes)
   const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
   const [formCliente, setFormCliente] = useState('')
   const [formConcepto, setFormConcepto] = useState('')
@@ -69,26 +73,36 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
   const [formMetodoPago, setFormMetodoPago] = useState('YAPE')
   const [formNotas, setFormNotas] = useState('')
 
-  const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
-  // Financial KPIs
-  const totalIngresosCobradosVentas = useMemo(() => {
+  // Quick stats
+  const totalCobradoCatalogo = useMemo(() => {
+    if (pedidos && pedidos.length > 0) {
+      return pedidos.reduce((acc, p) => acc + (p.montoPagado || 0), 0)
+    }
     return ventas.reduce((acc, v) => acc + (v.montoPagado || 0), 0)
-  }, [ventas])
+  }, [ventas, pedidos])
 
-  const totalIngresosDirectos = useMemo(() => {
-    return directos.reduce((acc, i) => acc + (i.monto || 0), 0)
+  const totalDirectos = useMemo(() => {
+    return directos.reduce((acc, i) => acc + i.monto, 0)
   }, [directos])
 
-  const totalIngresosCobrados = totalIngresosCobradosVentas + totalIngresosDirectos
+  const totalSaldoPendiente = useMemo(() => {
+    if (pedidos && pedidos.length > 0) {
+      return pedidos.reduce((acc, p) => acc + (p.saldoPendiente || 0), 0)
+    }
+    return ventas.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0)
+  }, [ventas, pedidos])
 
   const totalFacturadoVentas = useMemo(() => {
+    if (pedidos && pedidos.length > 0) {
+      return pedidos.reduce((acc, p) => acc + (p.total || 0), 0)
+    }
     return ventas.reduce((acc, v) => acc + (v.total || 0), 0)
-  }, [ventas])
+  }, [ventas, pedidos])
 
-  const totalSaldosPorCobrar = useMemo(() => {
-    return ventas.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0)
-  }, [ventas])
+  const totalSaldosPorCobrar = totalSaldoPendiente
+  const totalIngresosCobrados = totalCobradoCatalogo + totalDirectos
+
+  const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Consolidated Incomes List
   const unifiedIngresos = useMemo(() => {
@@ -112,49 +126,111 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
       rawItem?: IngresoDirectoItem
     }> = []
 
-    // From Sales & Abonos
-    ventas.forEach(v => {
-      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
-        v.pagos.forEach((p, idx) => {
-          const isSingleFull = ((v.pagos?.length || 0) === 1 && v.saldoPendiente <= 0) || p.tipo === 'PAGO_TOTAL'
-          const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${idx + 1}`
+    // From Pedidos (Multi-product orders)
+    if (pedidos && pedidos.length > 0) {
+      pedidos.forEach(p => {
+        const itemsSummary = p.items && p.items.length > 0
+          ? p.items.map((it: any) => `${it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Modelo 3D'} (x${it.cantidad})`).join(', ')
+          : 'Modelos 3D'
+        const categoria = p.items?.[0]?.producto?.lineaCategoria || 'General'
 
+        if (Array.isArray(p.pagos) && p.pagos.length > 0) {
+          p.pagos.forEach((pg: any, idx: number) => {
+            const isSingleFull = ((p.pagos?.length || 0) === 1 && p.saldoPendiente <= 0) || pg.tipo === 'PAGO_TOTAL'
+            const numAbono = idx + 1
+            const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${numAbono}`
+            const concepto = isSingleFull
+              ? `Pago Total del pedido ${p.codigo}: ${itemsSummary}`
+              : `Abono número ${numAbono} del pedido ${p.codigo}: ${itemsSummary}`
+
+            list.push({
+              id: `pago-ped-${pg.id || `${p.id}-${idx}`}`,
+              rawId: p.id,
+              fecha: pg.fecha,
+              origen: 'VENTA_CATALOGO',
+              cliente: p.cliente,
+              concepto,
+              categoria,
+              montoCobrado: pg.monto,
+              totalOriginal: p.total,
+              saldoPendiente: p.saldoPendiente,
+              metodoPago: pg.metodoPago || 'YAPE',
+              tipoAbono: pg.tipo,
+              tipoLabel,
+              notas: pg.notas || undefined,
+              canDelete: false,
+            })
+          })
+        } else if (p.montoPagado > 0) {
           list.push({
-            id: `pago-${p.id || `${v.id}-${idx}`}`,
-            rawId: v.id,
+            id: `ped-${p.id}`,
+            rawId: p.id,
             fecha: p.fecha,
             origen: 'VENTA_CATALOGO',
-            cliente: v.cliente,
-            concepto: `${v.producto.nombreModelo} (x${v.cantidad}) • ${tipoLabel}`,
-            categoria: v.producto.lineaCategoria,
-            montoCobrado: p.monto,
-            totalOriginal: v.total,
-            saldoPendiente: v.saldoPendiente,
-            metodoPago: p.metodoPago || 'YAPE',
-            tipoAbono: p.tipo,
-            tipoLabel,
-            notas: p.notas || undefined,
+            cliente: p.cliente,
+            concepto: `Abono número 1 del pedido ${p.codigo}: ${itemsSummary}`,
+            categoria,
+            montoCobrado: p.montoPagado,
+            totalOriginal: p.total,
+            saldoPendiente: p.saldoPendiente,
+            metodoPago: 'YAPE',
+            tipoAbono: 'ANTICIPO',
+            tipoLabel: 'Abono #1',
             canDelete: false,
           })
-        })
-      } else if (v.montoPagado > 0) {
-        list.push({
-          id: `v-${v.id}`,
-          rawId: v.id,
-          fecha: v.fecha,
-          origen: 'VENTA_CATALOGO',
-          cliente: v.cliente,
-          concepto: `${v.producto.nombreModelo} (x${v.cantidad})`,
-          categoria: v.producto.lineaCategoria,
-          montoCobrado: v.montoPagado,
-          totalOriginal: v.total,
-          saldoPendiente: v.saldoPendiente,
-          metodoPago: 'YAPE',
-          tipoAbono: 'ANTICIPO',
-          canDelete: false,
-        })
-      }
-    })
+        }
+      })
+    } else {
+      // Fallback from Sales & Abonos
+      ventas.forEach((v, vIdx) => {
+        const codigo = (v as any).codigo || `PED-${String(ventas.length - vIdx).padStart(3, '0')}`
+        if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+          v.pagos.forEach((p, idx) => {
+            const isSingleFull = ((v.pagos?.length || 0) === 1 && v.saldoPendiente <= 0) || p.tipo === 'PAGO_TOTAL'
+            const numAbono = idx + 1
+            const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${numAbono}`
+            const concepto = isSingleFull
+              ? `Pago Total del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
+              : `Abono número ${numAbono} del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
+
+            list.push({
+              id: `pago-${p.id || `${v.id}-${idx}`}`,
+              rawId: v.id,
+              fecha: p.fecha,
+              origen: 'VENTA_CATALOGO',
+              cliente: v.cliente,
+              concepto,
+              categoria: v.producto.lineaCategoria,
+              montoCobrado: p.monto,
+              totalOriginal: v.total,
+              saldoPendiente: v.saldoPendiente,
+              metodoPago: p.metodoPago || 'YAPE',
+              tipoAbono: p.tipo,
+              tipoLabel,
+              notas: p.notas || undefined,
+              canDelete: false,
+            })
+          })
+        } else if (v.montoPagado > 0) {
+          list.push({
+            id: `v-${v.id}`,
+            rawId: v.id,
+            fecha: v.fecha,
+            origen: 'VENTA_CATALOGO',
+            cliente: v.cliente,
+            concepto: `Abono número 1 del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`,
+            categoria: v.producto.lineaCategoria,
+            montoCobrado: v.montoPagado,
+            totalOriginal: v.total,
+            saldoPendiente: v.saldoPendiente,
+            metodoPago: 'YAPE',
+            tipoAbono: 'ANTICIPO',
+            tipoLabel: 'Abono #1',
+            canDelete: false,
+          })
+        }
+      })
+    }
 
     // From Direct Incomes
     directos.forEach(i => {
@@ -175,7 +251,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
     })
 
     return list.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-  }, [ventas, directos])
+  }, [ventas, pedidos, directos])
 
   // Filtered List
   const filteredIngresos = useMemo(() => {
@@ -607,7 +683,7 @@ export function IngresosClient({ ventas, ingresosDirectos }: IngresosClientProps
                           </Button>
                         </div>
                       ) : (
-                        <Link href="/ventas">
+                        <Link href="/pedidos">
                           <Button
                             size="sm"
                             variant="ghost"

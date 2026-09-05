@@ -225,6 +225,58 @@ export async function createVenta(data: {
     }
   })
 
+  // Sincronizar creación como Pedido
+  try {
+    const nextNum = (await prisma.pedido.count()) + 1
+    const codigo = `PED-${String(nextNum).padStart(3, '0')}`
+    await prisma.pedido.create({
+      data: {
+        codigo,
+        fecha: fechaVenta,
+        cliente: data.cliente,
+        canalVenta: data.canalVenta || 'WhatsApp',
+        destinoEnvio: data.destinoEnvio,
+        diaEntregaPrometida: data.diaEntregaPrometida,
+        notas: data.personalizacion ? `Personalización: ${data.personalizacion}` : null,
+        estado: (data.estado === 'CANCELADO' ? 'CANCELADO' : data.estado === 'EN_PRODUCCION' ? 'EN_PRODUCCION' : data.estado === 'PENDIENTE' ? 'PENDIENTE' : 'ENTREGADO') as any,
+        costoEnvio: 0,
+        subtotal: total,
+        total,
+        montoPagado,
+        saldoPendiente,
+        items: {
+          create: [{
+            productoId: data.productoId,
+            nombreProductoSnapshot: producto?.nombreModelo || 'Modelo 3D',
+            costoBaseSnapshot: producto?.costoBase || 0,
+            colorFilamentoId: data.colorFilamentoId,
+            personalizacion: data.personalizacion,
+            cantidad: data.cantidad,
+            tipoPrecio: data.tipoPrecio,
+            precioUnitario: data.precioUnitario,
+            costoPackaging: data.costoPackaging || 0,
+            porcentajeAdicional: data.porcentajeAdicional || 0,
+            gramosConsumidos: gramosConsumidos || 0,
+            subtotal: total
+          }]
+        },
+        ...(montoPagado > 0 ? {
+          pagos: {
+            create: [{
+              fecha: fechaPago,
+              monto: montoPagado,
+              metodoPago: data.metodoPagoInicial || 'YAPE',
+              tipo: data.tipoPagoInicial || (montoPagado >= total ? 'PAGO_TOTAL' : 'ANTICIPO'),
+              notas: data.notasPagoInicial || null
+            }]
+          }
+        } : {})
+      }
+    })
+  } catch (syncErr) {
+    console.warn('No se pudo sincronizar automáticamente como Pedido:', syncErr)
+  }
+
   if (data.colorFilamentoId && gramosConsumidos > 0 && data.estado !== 'CANCELADO') {
     await ajustarStockBobina(data.colorFilamentoId, gramosConsumidos)
   }

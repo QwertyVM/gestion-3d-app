@@ -364,18 +364,23 @@ export function FlujoCajaClient({
     }> = []
 
     // 1. Incomes from Product Sales & Abonos
-    ventas.forEach(v => {
+    ventas.forEach((v, vIdx) => {
+      const codigo = (v as any).codigo || `PED-${String(ventas.length - vIdx).padStart(3, '0')}`
       if (Array.isArray(v.pagos) && v.pagos.length > 0) {
         v.pagos.forEach((p, idx) => {
           if (p.monto > 0) {
             const isSingleFull = ((v.pagos?.length || 0) === 1 && v.saldoPendiente <= 0) || p.tipo === 'PAGO_TOTAL'
-            const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${idx + 1}`
+            const numAbono = idx + 1
+            const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${numAbono}`
+            const concepto = isSingleFull
+              ? `Pago Total del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
+              : `Abono número ${numAbono} del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
 
             movements.push({
               id: `pago-${p.id || `${v.id}-${idx}`}`,
               fecha: p.fecha,
               tipo: 'INGRESO_VENTA',
-              concepto: `${tipoLabel}: ${v.producto.nombreModelo} (x${v.cantidad})`,
+              concepto,
               entidad: v.cliente,
               monto: p.monto,
               detalle: `${p.metodoPago || 'Yape'}${p.notas ? ` • ${p.notas}` : ''}${v.saldoPendiente > 0 ? ` (Resta: ${formatCurrency(v.saldoPendiente)})` : ''}`,
@@ -388,7 +393,7 @@ export function FlujoCajaClient({
           id: `v-${v.id}`,
           fecha: v.fecha,
           tipo: 'INGRESO_VENTA',
-          concepto: `Venta: ${v.producto.nombreModelo} (x${v.cantidad})`,
+          concepto: `Abono número 1 del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`,
           entidad: v.cliente,
           monto: v.montoPagado,
           detalle: v.saldoPendiente > 0 ? `Saldo pend: ${formatCurrency(v.saldoPendiente)}` : 'Cobrado total',

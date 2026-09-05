@@ -22,7 +22,9 @@ import {
   Landmark,
   FlaskConical,
   Sparkles,
-  Palette
+  Palette,
+  Boxes,
+  History
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -35,6 +37,8 @@ export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Section dropdown states
+  const isPedidos = pathname.startsWith('/pedidos')
+  const isHistoricoMensual = pathname.startsWith('/historico-mensual') || pathname.startsWith('/flujo-mensual')
   const isFinanzasSection = pathname === '/finanzas/flujo-caja' || pathname === '/finanzas/ingresos' || pathname.startsWith('/finanzas/egresos') || pathname.startsWith('/finanzas/tags')
   const isCatalogoSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario')
   const isEgresosSection = pathname.startsWith('/finanzas/egresos') || pathname.startsWith('/finanzas/tags')
@@ -54,6 +58,8 @@ export function AppShell({ children }: AppShellProps) {
   // Get current page name for mobile topbar
   const getPageTitle = () => {
     if (pathname === '/') return 'Dashboard General'
+    if (pathname.startsWith('/pedidos')) return 'Gestión de Pedidos'
+    if (pathname.startsWith('/historico-mensual')) return 'Histórico Mensual'
     if (pathname.startsWith('/ventas')) return 'Ventas y Pedidos'
     if (pathname === '/catalogo/inventario' || pathname.startsWith('/inventario')) return 'Inventario de Filamentos'
     if (pathname === '/finanzas/flujo-caja') return 'Flujo de Caja'
@@ -84,19 +90,39 @@ export function AppShell({ children }: AppShellProps) {
         <span>Dashboard</span>
       </Link>
 
-      {/* 2. Ventas y Pedidos */}
+      {/* 2. Pedidos Multiproducto (NUEVO MÓDULO) */}
       <Link
-        href="/ventas"
+        href="/pedidos"
         onClick={() => isMobile && setMobileMenuOpen(false)}
         className={cn(
           'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 min-h-[44px]',
-          pathname === '/ventas'
+          isPedidos
             ? 'bg-[#EFE5D8] text-[#633E20] font-bold shadow-sm border border-[#D4BEA7]'
             : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
         )}
       >
-        <ShoppingCart className="h-4 w-4 flex-shrink-0 text-[#633E20]" />
-        <span>Ventas y Pedidos</span>
+        <Boxes className="h-4 w-4 flex-shrink-0 text-[#A36F4C]" />
+        <span>Pedidos</span>
+        <span className="ml-auto text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
+          Multi
+        </span>
+      </Link>
+
+
+
+      {/* 4. Histórico Mensual */}
+      <Link
+        href="/historico-mensual"
+        onClick={() => isMobile && setMobileMenuOpen(false)}
+        className={cn(
+          'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 min-h-[44px]',
+          isHistoricoMensual
+            ? 'bg-[#EFE5D8] text-[#633E20] font-bold shadow-sm border border-[#D4BEA7]'
+            : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+        )}
+      >
+        <History className="h-4 w-4 flex-shrink-0 text-[#A36F4C]" />
+        <span>Histórico Mensual</span>
       </Link>
 
       {/* 3. Finanzas */}

@@ -606,8 +606,9 @@ export function HistoricoMensualClient({
     })
 
     // 2. PROCESAR COBRANZAS DE VENTAS EN CAJA EFECTIVA
-    ventas.forEach(v => {
+    ventas.forEach((v, vIdx) => {
       const vMonthKey = getMonthKey(v.fecha)
+      const codigo = (v as any).codigo || `PED-${String(ventas.length - vIdx).padStart(3, '0')}`
       if (Array.isArray(v.pagos) && v.pagos.length > 0) {
         v.pagos.forEach((p, idx) => {
           if (p.monto > 0) {
@@ -636,7 +637,11 @@ export function HistoricoMensualClient({
             })
 
             const isSingleFull = ((v.pagos?.length || 0) === 1 && v.saldoPendiente <= 0) || p.tipo === 'PAGO_TOTAL'
-            const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${idx + 1}`
+            const numAbono = idx + 1
+            const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${numAbono}`
+            const concepto = isSingleFull
+              ? `Pago Total del pedido ${codigo}: ${v.producto?.nombreModelo || 'Producto 3D'} (x${v.cantidad})`
+              : `Abono número ${numAbono} del pedido ${codigo}: ${v.producto?.nombreModelo || 'Producto 3D'} (x${v.cantidad})`
 
             pMonth.movimientos.push({
               id: `pago-${p.id || `${v.id}-${idx}`}`,
@@ -644,7 +649,7 @@ export function HistoricoMensualClient({
               tipo: 'INGRESO_VENTA',
               categoria: 'Ventas de Pedidos 3D',
               subcategoria: 'Cobranza de Pedidos',
-              concepto: `${tipoLabel}: ${v.producto?.nombreModelo || 'Producto 3D'} (x${v.cantidad})`,
+              concepto,
               entidad: v.cliente,
               monto,
               esIngreso: true,
