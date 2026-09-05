@@ -38,11 +38,9 @@ import {
   CheckSquare,
   Square,
   SlidersHorizontal,
-  Landmark,
   Package,
   Megaphone,
-  Boxes,
-  RotateCcw
+  Boxes
 } from 'lucide-react'
 import { 
   ComposedChart, 
@@ -112,6 +110,21 @@ export interface IngresoDirectoItem {
   notas?: string
 }
 
+export interface CobranzaRecibidaItem {
+  id: string
+  ventaId: string
+  cliente: string
+  modelo: string
+  cantidad: number
+  monto: number
+  fechaPago: string
+  metodoPago: string
+  tipo: string
+  notas?: string | null
+  mesOrigenVenta: string
+  esDeMesAnterior: boolean
+}
+
 export interface ClienteCarteraDetalle {
   ventaId: string
   cliente: string
@@ -135,7 +148,7 @@ export interface MonthlyMovimiento {
   fecha: string
   tipo: string
   categoria: string
-  subcategoria?: string
+  subcategoria: string
   concepto: string
   entidad: string
   monto: number
@@ -162,6 +175,7 @@ export interface MonthlyCashflowItem {
   saldoPendienteCobrarHoy: number
   efectividadCobroMesOrigenPct: number
   clientesCartera: ClienteCarteraDetalle[]
+  cobranzasRecaudadasEnMes: CobranzaRecibidaItem[]
   
   // Totales Dinámicos según Checklist Activo
   ingresosTotalesCalculados: number
@@ -169,21 +183,12 @@ export interface MonthlyCashflowItem {
   flujoNetoCalculado: number
   margenCalculadoPct: number
 
-  // Desglose de Ingresos
+  // Desgloses Reales
   ingresosVentasCobradas: number
-  ingresosPrestamos: number
-  ingresosServiciosDirectos: number
-  
-  // Desglose de Egresos
-  egresosInsumosFilamentos: number
-  egresosInsumosPackaging: number
-  egresosInsumosAccesorios: number
-  egresosInsumosOtros: number
-  egresosServiciosLogistica: number
-  egresosServiciosPauta: number
-  egresosServiciosOtros: number
-  egresosActivosFijosMaquinaria: number
-  egresosAportesCapital: number
+  ingresosDirectosDetalle: Record<string, number>
+  egresosInsumosDetalle: Record<string, number>
+  egresosServiciosDetalle: Record<string, number>
+  egresosActivosFijosDetalle: Record<string, number>
   
   // Lista de Movimientos
   movimientos: MonthlyMovimiento[]
@@ -279,141 +284,212 @@ export function HistoricoMensualClient({
   const [modalSearch, setModalSearch] = useState('')
   const [showFiltersPanel, setShowFiltersPanel] = useState(true)
 
-  // =========================================================================
-  // ESTADO DEL CHECKLIST DE CONCEPTOS CONTABLES
-  // =========================================================================
-  // 1. Ingresos
-  const [includeVentas, setIncludeVentas] = useState(true)
-  const [includePrestamosIngreso, setIncludePrestamosIngreso] = useState(false)
-  const [includeServiciosIngreso, setIncludeServiciosIngreso] = useState(true)
-
-  // 2. Egresos
-  const [includeActivosFijos, setIncludeActivosFijos] = useState(false) // Por defecto apagado para flujo operativo, pero activable
-  const [includeFilamentos, setIncludeFilamentos] = useState(true)
-  const [includePackaging, setIncludePackaging] = useState(true)
-  const [includeAccesoriosInsumo, setIncludeAccesoriosInsumo] = useState(true)
-  const [includeOtrosInsumos, setIncludeOtrosInsumos] = useState(true)
-  const [includeLogisticaEnvios, setIncludeLogisticaEnvios] = useState(true)
-  const [includePublicidadPauta, setIncludePublicidadPauta] = useState(true)
-  const [includeServiciosGenerales, setIncludeServiciosGenerales] = useState(true)
-  const [includeAporteCapitalEgreso, setIncludeAporteCapitalEgreso] = useState(false)
-
-  // Presets Rápidos
-  const applyPreset = (preset: 'OPERATIVO' | 'TOTAL_CON_MAQUINARIA' | 'SOLO_COMERCIAL' | 'TODO_MARCADO' | 'LIMPIAR') => {
-    if (preset === 'OPERATIVO') {
-      setIncludeVentas(true)
-      setIncludePrestamosIngreso(false)
-      setIncludeServiciosIngreso(true)
-      setIncludeActivosFijos(false)
-      setIncludeFilamentos(true)
-      setIncludePackaging(true)
-      setIncludeAccesoriosInsumo(true)
-      setIncludeOtrosInsumos(true)
-      setIncludeLogisticaEnvios(true)
-      setIncludePublicidadPauta(true)
-      setIncludeServiciosGenerales(true)
-      setIncludeAporteCapitalEgreso(false)
-    } else if (preset === 'TOTAL_CON_MAQUINARIA') {
-      setIncludeVentas(true)
-      setIncludePrestamosIngreso(true)
-      setIncludeServiciosIngreso(true)
-      setIncludeActivosFijos(true)
-      setIncludeFilamentos(true)
-      setIncludePackaging(true)
-      setIncludeAccesoriosInsumo(true)
-      setIncludeOtrosInsumos(true)
-      setIncludeLogisticaEnvios(true)
-      setIncludePublicidadPauta(true)
-      setIncludeServiciosGenerales(true)
-      setIncludeAporteCapitalEgreso(true)
-    } else if (preset === 'SOLO_COMERCIAL') {
-      setIncludeVentas(true)
-      setIncludePrestamosIngreso(false)
-      setIncludeServiciosIngreso(false)
-      setIncludeActivosFijos(false)
-      setIncludeFilamentos(true)
-      setIncludePackaging(true)
-      setIncludeAccesoriosInsumo(false)
-      setIncludeOtrosInsumos(false)
-      setIncludeLogisticaEnvios(false)
-      setIncludePublicidadPauta(false)
-      setIncludeServiciosGenerales(false)
-      setIncludeAporteCapitalEgreso(false)
-    } else if (preset === 'TODO_MARCADO') {
-      setIncludeVentas(true)
-      setIncludePrestamosIngreso(true)
-      setIncludeServiciosIngreso(true)
-      setIncludeActivosFijos(true)
-      setIncludeFilamentos(true)
-      setIncludePackaging(true)
-      setIncludeAccesoriosInsumo(true)
-      setIncludeOtrosInsumos(true)
-      setIncludeLogisticaEnvios(true)
-      setIncludePublicidadPauta(true)
-      setIncludeServiciosGenerales(true)
-      setIncludeAporteCapitalEgreso(true)
-    } else if (preset === 'LIMPIAR') {
-      setIncludeVentas(false)
-      setIncludePrestamosIngreso(false)
-      setIncludeServiciosIngreso(false)
-      setIncludeActivosFijos(false)
-      setIncludeFilamentos(false)
-      setIncludePackaging(false)
-      setIncludeAccesoriosInsumo(false)
-      setIncludeOtrosInsumos(false)
-      setIncludeLogisticaEnvios(false)
-      setIncludePublicidadPauta(false)
-      setIncludeServiciosGenerales(false)
-      setIncludeAporteCapitalEgreso(false)
-    }
-  }
-
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // Clasificador auxiliar de Egresos por subcategoría
-  const classifyEgreso = (e: EgresoItem) => {
-    const sub = (e.subcategoria || '').toLowerCase()
-    const con = (e.itemConcepto || '').toLowerCase()
+  // =========================================================================
+  // 1. DESCUBRIMIENTO DINÁMICO 100% REAL DE TAGS Y CATEGORÍAS EN LA BASE DE DATOS
+  // =========================================================================
+  const availableTags = useMemo(() => {
+    // Categorías reales de ingresos directos en la BD
+    const ingresosDirectosCats = Array.from(
+      new Set(ingresosDirectos.map(i => (i.categoria || 'Sin categoría').trim()))
+    ).filter(Boolean)
 
-    if (e.categoria === 'ACTIVO_FIJO' || sub.includes('maquinaria') || con.includes('bambu') || con.includes('impresora') || con.includes('twotrees')) {
-      return 'ACTIVO_FIJO'
-    }
-    if (sub.includes('filamento') || con.includes('pla') || con.includes('petg') || con.includes('resina') || con.includes('bobina')) {
-      return 'FILAMENTOS'
-    }
-    if (sub.includes('caja') || sub.includes('plástico burbuja') || sub.includes('papel film') || sub.includes('stickers') || con.includes('caja') || con.includes('burbuja') || con.includes('empaque')) {
-      return 'PACKAGING'
-    }
-    if (sub.includes('incienso') || sub.includes('vela led') || con.includes('vela') || con.includes('incienso')) {
-      return 'ACCESORIOS_INSUMO'
-    }
-    if (sub.includes('logística') || sub.includes('envío') || con.includes('olva') || con.includes('shoppee') || con.includes('flete') || con.includes('delivery')) {
-      return 'LOGISTICA_ENVIOS'
-    }
-    if (sub.includes('publicidad') || sub.includes('marketing') || con.includes('meta') || con.includes('pauta') || con.includes('ads')) {
-      return 'PUBLICIDAD_PAUTA'
-    }
-    if (e.categoria === 'APORTE_CAPITAL' || sub.includes('aporte') || sub.includes('capital')) {
-      return 'APORTE_CAPITAL'
-    }
-    if (e.categoria === 'SERVICIO' || sub.includes('servicio') || sub.includes('taller')) {
-      return 'SERVICIOS_OTROS'
-    }
-    return 'INSUMOS_OTROS'
-  }
+    // Subcategorías reales de insumos en la BD
+    const insumosSubcats = Array.from(
+      new Set(egresos.filter(e => e.categoria === 'INSUMO').map(e => (e.subcategoria || 'Sin subcategoría').trim()))
+    ).filter(Boolean)
 
-  // Clasificador auxiliar de Ingresos directos
-  const classifyIngresoDirecto = (i: IngresoDirectoItem) => {
-    const cat = (i.categoria || '').toLowerCase()
-    const con = (i.concepto || '').toLowerCase()
-    if (cat.includes('préstamo') || cat.includes('prestamo') || cat.includes('financiamiento') || con.includes('préstamo') || con.includes('prestamo')) {
-      return 'PRESTAMO'
+    // Subcategorías reales de servicios en la BD
+    const serviciosSubcats = Array.from(
+      new Set(egresos.filter(e => e.categoria === 'SERVICIO').map(e => (e.subcategoria || 'Sin subcategoría').trim()))
+    ).filter(Boolean)
+
+    // Subcategorías reales de activos fijos en la BD
+    const activosFijosSubcats = Array.from(
+      new Set(egresos.filter(e => e.categoria === 'ACTIVO_FIJO').map(e => (e.subcategoria || 'Sin subcategoría').trim()))
+    ).filter(Boolean)
+
+    // Aportes de capital si existen
+    const hasAportesCapital = egresos.some(e => e.categoria === 'APORTE_CAPITAL')
+
+    // Totales históricos reales por tag
+    const totalVentasCobrado = ventas.reduce((sum, v) => {
+      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+        return sum + v.pagos.reduce((pSum, p) => pSum + (Number(p.monto) || 0), 0)
+      }
+      return sum + (Number(v.montoPagado) || 0)
+    }, 0)
+
+    const ingresosDirectosTotales: Record<string, number> = {}
+    ingresosDirectos.forEach(i => {
+      const k = (i.categoria || 'Sin categoría').trim()
+      ingresosDirectosTotales[k] = (ingresosDirectosTotales[k] || 0) + Number(i.monto)
+    })
+
+    const insumosTotales: Record<string, number> = {}
+    const serviciosTotales: Record<string, number> = {}
+    const activosFijosTotales: Record<string, number> = {}
+
+    egresos.forEach(e => {
+      const k = (e.subcategoria || 'Sin subcategoría').trim()
+      const c = Number(e.costoTotal) || 0
+      if (e.categoria === 'INSUMO') insumosTotales[k] = (insumosTotales[k] || 0) + c
+      if (e.categoria === 'SERVICIO') serviciosTotales[k] = (serviciosTotales[k] || 0) + c
+      if (e.categoria === 'ACTIVO_FIJO') activosFijosTotales[k] = (activosFijosTotales[k] || 0) + c
+    })
+
+    return {
+      ingresosDirectosCats,
+      insumosSubcats,
+      serviciosSubcats,
+      activosFijosSubcats,
+      hasAportesCapital,
+      totalVentasCobrado,
+      ingresosDirectosTotales,
+      insumosTotales,
+      serviciosTotales,
+      activosFijosTotales
     }
-    return 'SERVICIO_DIRECTO'
+  }, [ingresosDirectos, egresos, ventas])
+
+  // =========================================================================
+  // 2. ESTADO DEL CHECKLIST BASADO ESTRICTAMENTE EN DATOS REALES
+  // =========================================================================
+  const [includeVentas, setIncludeVentas] = useState<boolean>(true)
+  
+  // Categorías de ingresos directos seleccionadas (por defecto solo ventas directas/servicios, préstamos apagado)
+  const [selectedIngresoCats, setSelectedIngresoCats] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    availableTags.ingresosDirectosCats.forEach(cat => {
+      const isLoan = cat.toLowerCase().includes('préstamo') || cat.toLowerCase().includes('prestamo')
+      init[cat] = !isLoan // Préstamos apagados por defecto en flujo operativo
+    })
+    return init
+  })
+
+  // Subcategorías de Insumos seleccionadas (todas activas por defecto)
+  const [selectedInsumos, setSelectedInsumos] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    availableTags.insumosSubcats.forEach(sub => { init[sub] = true })
+    return init
+  })
+
+  // Subcategorías de Servicios seleccionadas (todas activas por defecto)
+  const [selectedServicios, setSelectedServicios] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    availableTags.serviciosSubcats.forEach(sub => { init[sub] = true })
+    return init
+  })
+
+  // Subcategorías de Activos Fijos seleccionadas (apagadas por defecto para flujo operativo)
+  const [selectedActivosFijos, setSelectedActivosFijos] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    availableTags.activosFijosSubcats.forEach(sub => { init[sub] = false })
+    return init
+  })
+
+  const [includeAportesCapital, setIncludeAportesCapital] = useState<boolean>(false)
+
+  // Presets Rápidos
+  const applyPreset = (preset: 'OPERATIVO' | 'TOTAL_CON_MAQUINARIA' | 'SOLO_VENTAS_INSUMOS' | 'TODO_MARCADO' | 'LIMPIAR') => {
+    if (preset === 'OPERATIVO') {
+      setIncludeVentas(true)
+      const ings: Record<string, boolean> = {}
+      availableTags.ingresosDirectosCats.forEach(c => {
+        ings[c] = !(c.toLowerCase().includes('préstamo') || c.toLowerCase().includes('prestamo'))
+      })
+      setSelectedIngresoCats(ings)
+
+      const ins: Record<string, boolean> = {}
+      availableTags.insumosSubcats.forEach(s => { ins[s] = true })
+      setSelectedInsumos(ins)
+
+      const srv: Record<string, boolean> = {}
+      availableTags.serviciosSubcats.forEach(s => { srv[s] = true })
+      setSelectedServicios(srv)
+
+      const af: Record<string, boolean> = {}
+      availableTags.activosFijosSubcats.forEach(s => { af[s] = false })
+      setSelectedActivosFijos(af)
+      setIncludeAportesCapital(false)
+    } else if (preset === 'TOTAL_CON_MAQUINARIA') {
+      setIncludeVentas(true)
+      const ings: Record<string, boolean> = {}
+      availableTags.ingresosDirectosCats.forEach(c => { ings[c] = true })
+      setSelectedIngresoCats(ings)
+
+      const ins: Record<string, boolean> = {}
+      availableTags.insumosSubcats.forEach(s => { ins[s] = true })
+      setSelectedInsumos(ins)
+
+      const srv: Record<string, boolean> = {}
+      availableTags.serviciosSubcats.forEach(s => { srv[s] = true })
+      setSelectedServicios(srv)
+
+      const af: Record<string, boolean> = {}
+      availableTags.activosFijosSubcats.forEach(s => { af[s] = true })
+      setSelectedActivosFijos(af)
+      setIncludeAportesCapital(true)
+    } else if (preset === 'SOLO_VENTAS_INSUMOS') {
+      setIncludeVentas(true)
+      const ings: Record<string, boolean> = {}
+      availableTags.ingresosDirectosCats.forEach(c => { ings[c] = false })
+      setSelectedIngresoCats(ings)
+
+      const ins: Record<string, boolean> = {}
+      availableTags.insumosSubcats.forEach(s => { ins[s] = true })
+      setSelectedInsumos(ins)
+
+      const srv: Record<string, boolean> = {}
+      availableTags.serviciosSubcats.forEach(s => { srv[s] = false })
+      setSelectedServicios(srv)
+
+      const af: Record<string, boolean> = {}
+      availableTags.activosFijosSubcats.forEach(s => { af[s] = false })
+      setSelectedActivosFijos(af)
+      setIncludeAportesCapital(false)
+    } else if (preset === 'TODO_MARCADO') {
+      setIncludeVentas(true)
+      const ings: Record<string, boolean> = {}
+      availableTags.ingresosDirectosCats.forEach(c => { ings[c] = true })
+      setSelectedIngresoCats(ings)
+
+      const ins: Record<string, boolean> = {}
+      availableTags.insumosSubcats.forEach(s => { ins[s] = true })
+      setSelectedInsumos(ins)
+
+      const srv: Record<string, boolean> = {}
+      availableTags.serviciosSubcats.forEach(s => { srv[s] = true })
+      setSelectedServicios(srv)
+
+      const af: Record<string, boolean> = {}
+      availableTags.activosFijosSubcats.forEach(s => { af[s] = true })
+      setSelectedActivosFijos(af)
+      setIncludeAportesCapital(true)
+    } else if (preset === 'LIMPIAR') {
+      setIncludeVentas(false)
+      const ings: Record<string, boolean> = {}
+      availableTags.ingresosDirectosCats.forEach(c => { ings[c] = false })
+      setSelectedIngresoCats(ings)
+
+      const ins: Record<string, boolean> = {}
+      availableTags.insumosSubcats.forEach(s => { ins[s] = false })
+      setSelectedInsumos(ins)
+
+      const srv: Record<string, boolean> = {}
+      availableTags.serviciosSubcats.forEach(s => { srv[s] = false })
+      setSelectedServicios(srv)
+
+      const af: Record<string, boolean> = {}
+      availableTags.activosFijosSubcats.forEach(s => { af[s] = false })
+      setSelectedActivosFijos(af)
+      setIncludeAportesCapital(false)
+    }
   }
 
   // =========================================================================
-  // MODELADO CONTABLE DINÁMICO EN TIEMPO REAL SEGÚN EL CHECKLIST
+  // 3. MODELADO CONTABLE Y RECALCULOS DINÁMICOS MES A MES
   // =========================================================================
   const monthlyData = useMemo(() => {
     const monthMap: Record<string, MonthlyCashflowItem> = {}
@@ -465,6 +541,7 @@ export function HistoricoMensualClient({
           saldoPendienteCobrarHoy: 0,
           efectividadCobroMesOrigenPct: 0,
           clientesCartera: [],
+          cobranzasRecaudadasEnMes: [],
           
           ingresosTotalesCalculados: 0,
           egresosTotalesCalculados: 0,
@@ -472,18 +549,10 @@ export function HistoricoMensualClient({
           margenCalculadoPct: 0,
           
           ingresosVentasCobradas: 0,
-          ingresosPrestamos: 0,
-          ingresosServiciosDirectos: 0,
-          
-          egresosInsumosFilamentos: 0,
-          egresosInsumosPackaging: 0,
-          egresosInsumosAccesorios: 0,
-          egresosInsumosOtros: 0,
-          egresosServiciosLogistica: 0,
-          egresosServiciosPauta: 0,
-          egresosServiciosOtros: 0,
-          egresosActivosFijosMaquinaria: 0,
-          egresosAportesCapital: 0,
+          ingresosDirectosDetalle: {},
+          egresosInsumosDetalle: {},
+          egresosServiciosDetalle: {},
+          egresosActivosFijosDetalle: {},
           
           movimientos: []
         }
@@ -491,7 +560,7 @@ export function HistoricoMensualClient({
       return monthMap[key]
     }
 
-    // 1. PROCESAR VENTAS Y CARTERA DE COBRANZAS
+    // 1. PROCESAR VENTAS Y CARTERA POR COBRAR
     ventas.forEach(v => {
       const vMonthKey = getMonthKey(v.fecha)
       const vMonth = ensureMonth(vMonthKey)
@@ -536,8 +605,9 @@ export function HistoricoMensualClient({
       }
     })
 
-    // 2. PROCESAR COBRANZAS DE VENTAS EN CAJA EFECTIVA (CON CHECKLIST)
+    // 2. PROCESAR COBRANZAS DE VENTAS EN CAJA EFECTIVA
     ventas.forEach(v => {
+      const vMonthKey = getMonthKey(v.fecha)
       if (Array.isArray(v.pagos) && v.pagos.length > 0) {
         v.pagos.forEach((p, idx) => {
           if (p.monto > 0) {
@@ -550,6 +620,21 @@ export function HistoricoMensualClient({
               pMonth.ingresosTotalesCalculados += monto
             }
 
+            pMonth.cobranzasRecaudadasEnMes.push({
+              id: p.id || `${v.id}-${idx}`,
+              ventaId: v.id,
+              cliente: v.cliente,
+              modelo: v.producto?.nombreModelo || 'Modelo 3D',
+              cantidad: Number(v.cantidad),
+              monto,
+              fechaPago: p.fecha,
+              metodoPago: p.metodoPago || 'YAPE',
+              tipo: p.tipo || 'ABONO',
+              notas: p.notas,
+              mesOrigenVenta: vMonthKey,
+              esDeMesAnterior: vMonthKey < pMonthKey
+            })
+
             const isSingleFull = ((v.pagos?.length || 0) === 1 && v.saldoPendiente <= 0) || p.tipo === 'PAGO_TOTAL'
             const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${idx + 1}`
 
@@ -557,19 +642,18 @@ export function HistoricoMensualClient({
               id: `pago-${p.id || `${v.id}-${idx}`}`,
               fecha: p.fecha,
               tipo: 'INGRESO_VENTA',
-              categoria: 'Ventas (Pedidos 3D)',
+              categoria: 'Ventas de Pedidos 3D',
               subcategoria: 'Cobranza de Pedidos',
               concepto: `${tipoLabel}: ${v.producto?.nombreModelo || 'Producto 3D'} (x${v.cantidad})`,
               entidad: v.cliente,
               monto,
               esIngreso: true,
               incluidoEnCalculo: includeVentas,
-              detalle: `${p.metodoPago || 'Yape'}${p.notas ? ` • ${p.notas}` : ''}${getMonthKey(v.fecha) < pMonthKey ? ` (Venta originada en ${monthNames[getMonthKey(v.fecha).split('-')[1]]})` : ''}`
+              detalle: `${p.metodoPago || 'Yape'}${p.notas ? ` • ${p.notas}` : ''}${vMonthKey < pMonthKey ? ` (Pedido originado en ${monthNames[vMonthKey.split('-')[1]]})` : ''}`
             })
           }
         })
       } else if (v.montoPagado > 0) {
-        const vMonthKey = getMonthKey(v.fecha)
         const vMonth = ensureMonth(vMonthKey)
         const monto = Number(v.montoPagado)
         
@@ -578,51 +662,57 @@ export function HistoricoMensualClient({
           vMonth.ingresosTotalesCalculados += monto
         }
 
+        vMonth.cobranzasRecaudadasEnMes.push({
+          id: `v-${v.id}`,
+          ventaId: v.id,
+          cliente: v.cliente,
+          modelo: v.producto?.nombreModelo || 'Modelo 3D',
+          cantidad: Number(v.cantidad),
+          monto,
+          fechaPago: v.fecha,
+          metodoPago: 'PAGO_DIRECTO',
+          tipo: 'PAGO_TOTAL',
+          mesOrigenVenta: vMonthKey,
+          esDeMesAnterior: false
+        })
+
         vMonth.movimientos.push({
           id: `v-${v.id}`,
           fecha: v.fecha,
           tipo: 'INGRESO_VENTA',
-          categoria: 'Ventas (Pedidos 3D)',
+          categoria: 'Ventas de Pedidos 3D',
           subcategoria: 'Venta Directa',
           concepto: `Venta: ${v.producto?.nombreModelo || 'Producto 3D'} (x${v.cantidad})`,
           entidad: v.cliente,
           monto,
           esIngreso: true,
           incluidoEnCalculo: includeVentas,
-          detalle: 'Pago directo registrado en pedido'
+          detalle: 'Pago registrado al crear pedido'
         })
       }
     })
 
-    // 3. PROCESAR INGRESOS DIRECTOS (PRÉSTAMOS / SERVICIOS CON CHECKLIST)
+    // 3. PROCESAR INGRESOS DIRECTOS DE BD
     ingresosDirectos.forEach(i => {
       if (i.monto > 0) {
         const iMonthKey = getMonthKey(i.fecha)
         const iMonth = ensureMonth(iMonthKey)
         const monto = Number(i.monto)
-        const classification = classifyIngresoDirecto(i)
+        const catName = (i.categoria || 'Sin categoría').trim()
 
-        let isIncluded = false
-        if (classification === 'PRESTAMO') {
-          iMonth.ingresosPrestamos += monto
-          if (includePrestamosIngreso) {
-            iMonth.ingresosTotalesCalculados += monto
-            isIncluded = true
-          }
-        } else {
-          iMonth.ingresosServiciosDirectos += monto
-          if (includeServiciosIngreso) {
-            iMonth.ingresosTotalesCalculados += monto
-            isIncluded = true
-          }
+        iMonth.ingresosDirectosDetalle[catName] = (iMonth.ingresosDirectosDetalle[catName] || 0) + monto
+        const isIncluded = Boolean(selectedIngresoCats[catName])
+
+        if (isIncluded) {
+          iMonth.ingresosTotalesCalculados += monto
         }
 
         iMonth.movimientos.push({
           id: `ing-${i.id}`,
           fecha: i.fecha,
-          tipo: classification === 'PRESTAMO' ? 'INGRESO_PRESTAMO' : 'INGRESO_SERVICIO',
-          categoria: classification === 'PRESTAMO' ? 'Préstamos & Financiamiento' : 'Servicios Directos & Otros',
-          subcategoria: i.categoria || 'Ingreso Directo',
+          tipo: 'INGRESO_DIRECTO',
+          categoria: catName,
+          subcategoria: catName,
           concepto: i.concepto,
           entidad: i.cliente || 'Taller',
           monto,
@@ -633,105 +723,46 @@ export function HistoricoMensualClient({
       }
     })
 
-    // 4. PROCESAR EGRESOS (CON CLASIFICADOR Y CHECKLIST DETALLADO)
+    // 4. PROCESAR EGRESOS DE BD
     egresos.forEach(e => {
       if (e.costoTotal > 0) {
         const eMonthKey = getMonthKey(e.createdAt)
         const eMonth = ensureMonth(eMonthKey)
         const costo = Number(e.costoTotal)
-        const egType = classifyEgreso(e)
+        const subName = (e.subcategoria || 'Sin subcategoría').trim()
 
         let isIncluded = false
-        let labelCategoria = 'Insumos'
 
-        switch (egType) {
-          case 'ACTIVO_FIJO':
-            labelCategoria = 'Maquinaria & Activos Fijos'
-            eMonth.egresosActivosFijosMaquinaria += costo
-            if (includeActivosFijos) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
-          case 'FILAMENTOS':
-            labelCategoria = 'Filamentos (PLA/PETG)'
-            eMonth.egresosInsumosFilamentos += costo
-            if (includeFilamentos) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
-          case 'PACKAGING':
-            labelCategoria = 'Empaques & Cajas'
-            eMonth.egresosInsumosPackaging += costo
-            if (includePackaging) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
-          case 'ACCESORIOS_INSUMO':
-            labelCategoria = 'Accesorios de Insumo'
-            eMonth.egresosInsumosAccesorios += costo
-            if (includeAccesoriosInsumo) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
-          case 'LOGISTICA_ENVIOS':
-            labelCategoria = 'Logística & Envíos'
-            eMonth.egresosServiciosLogistica += costo
-            if (includeLogisticaEnvios) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
-          case 'PUBLICIDAD_PAUTA':
-            labelCategoria = 'Publicidad & Pauta'
-            eMonth.egresosServiciosPauta += costo
-            if (includePublicidadPauta) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
-          case 'APORTE_CAPITAL':
-            labelCategoria = 'Aportes de Capital'
-            eMonth.egresosAportesCapital += costo
-            if (includeAporteCapitalEgreso) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
-          case 'SERVICIOS_OTROS':
-            labelCategoria = 'Servicios Operativos'
-            eMonth.egresosServiciosOtros += costo
-            if (includeServiciosGenerales) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
-          default:
-            labelCategoria = 'Otros Insumos'
-            eMonth.egresosInsumosOtros += costo
-            if (includeOtrosInsumos) {
-              eMonth.egresosTotalesCalculados += costo
-              isIncluded = true
-            }
-            break
+        if (e.categoria === 'INSUMO') {
+          eMonth.egresosInsumosDetalle[subName] = (eMonth.egresosInsumosDetalle[subName] || 0) + costo
+          isIncluded = Boolean(selectedInsumos[subName])
+        } else if (e.categoria === 'SERVICIO') {
+          eMonth.egresosServiciosDetalle[subName] = (eMonth.egresosServiciosDetalle[subName] || 0) + costo
+          isIncluded = Boolean(selectedServicios[subName])
+        } else if (e.categoria === 'ACTIVO_FIJO') {
+          eMonth.egresosActivosFijosDetalle[subName] = (eMonth.egresosActivosFijosDetalle[subName] || 0) + costo
+          isIncluded = Boolean(selectedActivosFijos[subName])
+        } else if (e.categoria === 'APORTE_CAPITAL') {
+          isIncluded = includeAportesCapital
+        }
+
+        if (isIncluded) {
+          eMonth.egresosTotalesCalculados += costo
         }
 
         eMonth.movimientos.push({
           id: `eg-${e.id}`,
           fecha: e.createdAt,
-          tipo: `EGRESO_${egType}`,
-          categoria: labelCategoria,
-          subcategoria: e.subcategoria || undefined,
+          tipo: `EGRESO_${e.categoria}`,
+          categoria: e.categoria === 'ACTIVO_FIJO' ? 'Activo Fijo' : e.categoria === 'INSUMO' ? 'Insumo' : 'Servicio',
+          subcategoria: subName,
           concepto: e.itemConcepto,
           entidad: e.persona || 'Taller',
           monto: costo,
           esIngreso: false,
-          esActivoFijo: egType === 'ACTIVO_FIJO',
+          esActivoFijo: e.categoria === 'ACTIVO_FIJO',
           incluidoEnCalculo: isIncluded,
-          detalle: e.subcategoria ? `Subcat: ${e.subcategoria}` : undefined
+          detalle: e.subcategoria ? `Tag: ${e.subcategoria}` : undefined
         })
       }
     })
@@ -739,7 +770,7 @@ export function HistoricoMensualClient({
     // Ordenar cronológicamente
     const sorted = Object.values(monthMap).sort((a, b) => a.monthKey.localeCompare(b.monthKey))
 
-    // 5. CÁLCULO FINAL DE FLUJO NETO Y RATIOS
+    // 5. CÁLCULO FINAL DE RATIOS
     sorted.forEach(m => {
       m.flujoNetoCalculado = Number((m.ingresosTotalesCalculados - m.egresosTotalesCalculados).toFixed(2))
       m.margenCalculadoPct = m.ingresosTotalesCalculados > 0
@@ -759,17 +790,11 @@ export function HistoricoMensualClient({
     ingresosDirectos, 
     egresos, 
     includeVentas, 
-    includePrestamosIngreso, 
-    includeServiciosIngreso, 
-    includeActivosFijos, 
-    includeFilamentos, 
-    includePackaging, 
-    includeAccesoriosInsumo, 
-    includeOtrosInsumos, 
-    includeLogisticaEnvios, 
-    includePublicidadPauta, 
-    includeServiciosGenerales, 
-    includeAporteCapitalEgreso
+    selectedIngresoCats, 
+    selectedInsumos, 
+    selectedServicios, 
+    selectedActivosFijos, 
+    includeAportesCapital
   ])
 
   // Métricas Consolidadas Históricas Globales
@@ -782,9 +807,12 @@ export function HistoricoMensualClient({
     const margenGlobal = sumaIngresosCalculados > 0 ? (sumaFlujoNetoCalculado / sumaIngresosCalculados) * 100 : 0
     const sumaSaldoPendienteActual = monthlyData.reduce((sum, m) => sum + m.saldoPendienteCobrarHoy, 0)
 
-    // Conteo de filtros activos
-    const totalFiltrosIngresos = (includeVentas ? 1 : 0) + (includePrestamosIngreso ? 1 : 0) + (includeServiciosIngreso ? 1 : 0)
-    const totalFiltrosEgresos = (includeActivosFijos ? 1 : 0) + (includeFilamentos ? 1 : 0) + (includePackaging ? 1 : 0) + (includeAccesoriosInsumo ? 1 : 0) + (includeOtrosInsumos ? 1 : 0) + (includeLogisticaEnvios ? 1 : 0) + (includePublicidadPauta ? 1 : 0) + (includeServiciosGenerales ? 1 : 0) + (includeAporteCapitalEgreso ? 1 : 0)
+    const activeIngresosCount = (includeVentas ? 1 : 0) + Object.values(selectedIngresoCats).filter(Boolean).length
+    const activeInsumosCount = Object.values(selectedInsumos).filter(Boolean).length
+    const activeServiciosCount = Object.values(selectedServicios).filter(Boolean).length
+    const activeActivosFijosCount = Object.values(selectedActivosFijos).filter(Boolean).length
+
+    const totalActiveCount = activeIngresosCount + activeInsumosCount + activeServiciosCount + activeActivosFijosCount + (includeAportesCapital ? 1 : 0)
 
     return {
       totalMeses,
@@ -794,39 +822,33 @@ export function HistoricoMensualClient({
       sumaFlujoNetoCalculado,
       margenGlobal,
       sumaSaldoPendienteActual,
-      totalFiltrosIngresos,
-      totalFiltrosEgresos,
-      totalFiltrosActivos: totalFiltrosIngresos + totalFiltrosEgresos
+      activeIngresosCount,
+      activeInsumosCount,
+      activeServiciosCount,
+      activeActivosFijosCount,
+      totalActiveCount
     }
   }, [
     monthlyData, 
     includeVentas, 
-    includePrestamosIngreso, 
-    includeServiciosIngreso, 
-    includeActivosFijos, 
-    includeFilamentos, 
-    includePackaging, 
-    includeAccesoriosInsumo, 
-    includeOtrosInsumos, 
-    includeLogisticaEnvios, 
-    includePublicidadPauta, 
-    includeServiciosGenerales, 
-    includeAporteCapitalEgreso
+    selectedIngresoCats, 
+    selectedInsumos, 
+    selectedServicios, 
+    selectedActivosFijos, 
+    includeAportesCapital
   ])
 
-  // Filtrado de meses a mostrar si se selecciona un mes específico
   const displayedMonths = useMemo(() => {
     if (selectedMonthFilter === 'TODOS') return monthlyData
     return monthlyData.filter(m => m.monthKey === selectedMonthFilter)
   }, [monthlyData, selectedMonthFilter])
 
-  // Mes de Agosto específico
   const agostoData = monthlyData.find(m => m.monthKey === '2026-08')
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-12">
       {/* ========================================================================= */}
-      {/* 1. ENCABEZADO PRINCIPAL DEL MÓDULO HISTÓRICO                              */}
+      {/* 1. ENCABEZADO DEL MÓDULO                                                  */}
       {/* ========================================================================= */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#FDFBF7] p-5 rounded-3xl border border-[#E2D9CC] shadow-xs">
         <div>
@@ -835,18 +857,18 @@ export function HistoricoMensualClient({
               <History className="h-6 w-6 stroke-[2.5]" />
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241C15]">
-              Histórico Mensual & Auditoría
+              Histórico Mensual
             </h1>
             <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-extrabold px-3 py-1">
-              {metricasHistoricas.totalFiltrosActivos} Filtros Activos
+              {metricasHistoricas.totalActiveCount} Tags/Conceptos Activos
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-[#75695D] mt-1.5 max-w-3xl">
-            Control contable histórico multimes. Selecciona qué conceptos de ingresos y egresos sumar al cálculo (ventas, préstamos, insumos por tags, servicios, maquinaria) y todos los indicadores se actualizarán en tiempo real.
+            Control contable histórico multimes. Selecciona qué tags y conceptos reales de tu base de datos sumar a los indicadores y todos los valores se recalcularán al instante.
           </p>
         </div>
 
-        {/* Acciones y Toggle del Panel de Checklist */}
+        {/* Acciones */}
         <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
           <Button
             variant="outline"
@@ -855,7 +877,7 @@ export function HistoricoMensualClient({
             className="h-9 px-3.5 text-xs font-bold border-[#D4BEA7] bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#241C15] rounded-xl shadow-2xs flex items-center gap-1.5 cursor-pointer"
           >
             <SlidersHorizontal className="h-3.5 w-3.5 text-[#A36F4C]" />
-            <span>{showFiltersPanel ? 'Ocultar Checklist' : 'Configurar Checklist'}</span>
+            <span>{showFiltersPanel ? 'Ocultar Filtros' : 'Configurar Filtros'}</span>
           </Button>
 
           {/* Selector de Mes */}
@@ -877,7 +899,7 @@ export function HistoricoMensualClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. PANEL DE CONTROL DE INDICADORES (CHECKLIST DE CONCEPTOS CONTABLES)     */}
+      {/* 2. CHECKLIST 100% REAL DE CONCEPTOS Y TAGS DE LA BASE DE DATOS            */}
       {/* ========================================================================= */}
       {showFiltersPanel && (
         <Card className="bg-[#FFFFFF] border-[#D4BEA7] shadow-sm rounded-3xl p-5 sm:p-6 space-y-4 border-2">
@@ -887,11 +909,11 @@ export function HistoricoMensualClient({
               <div className="flex items-center gap-2">
                 <SlidersHorizontal className="h-4 w-4 text-[#A36F4C]" />
                 <h2 className="text-sm sm:text-base font-extrabold text-[#241C15]">
-                  Checklist de Conceptos: Elige qué sumar a los Indicadores
+                  Checklist de Conceptos Reales: Elige qué sumar a los Indicadores
                 </h2>
               </div>
               <p className="text-xs text-[#75695D] mt-0.5">
-                Marca o desmarca los conceptos. Todos los KPI, gráficas y tablas mensuales se recalcularán al instante.
+                Generado directamente desde tus registros y tags en base de datos.
               </p>
             </div>
 
@@ -903,21 +925,21 @@ export function HistoricoMensualClient({
                 onClick={() => applyPreset('OPERATIVO')}
                 className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#EBF7EE] text-[#1E5E3A] hover:bg-[#D7EFE0] border border-[#B4E3C0] transition-colors cursor-pointer"
               >
-                Operativo Puro
+                Operativo
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('TOTAL_CON_MAQUINARIA')}
                 className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#EFE5D8] text-[#633E20] hover:bg-[#E5D5C2] border border-[#D4BEA7] transition-colors cursor-pointer"
               >
-                + Con Maquinaria (CAPEX)
+                + Con Activos Fijos
               </button>
               <button
                 type="button"
-                onClick={() => applyPreset('SOLO_COMERCIAL')}
+                onClick={() => applyPreset('SOLO_VENTAS_INSUMOS')}
                 className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#FAF8F5] text-[#241C15] hover:bg-[#F4EFEA] border border-[#E2D9CC] transition-colors cursor-pointer"
               >
-                Solo Ventas vs Insumos
+                Ventas vs Insumos
               </button>
               <button
                 type="button"
@@ -936,191 +958,144 @@ export function HistoricoMensualClient({
             </div>
           </div>
 
-          {/* Grid de Checkboxes Dividido por Secciones Contables */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
-            {/* SECCIÓN 1: INGRESOS (ENTRADAS DE DINERO) */}
-            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/70">
+          {/* Grid de Checkboxes Reales */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+            {/* 1. INGRESOS */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5">
+              <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]/70">
                 <span className="text-xs font-extrabold text-[#1E5E3A] uppercase tracking-wider flex items-center gap-1.5">
-                  <ArrowUpRight className="h-4 w-4" />
-                  Ingresos (Entradas)
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  Ingresos
                 </span>
-                <Badge variant="outline" className="text-[10px] font-bold bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]">
-                  {metricasHistoricas.totalFiltrosIngresos} activos
-                </Badge>
+                <span className="text-[10px] text-[#75695D] font-mono">BD</span>
               </div>
 
-              <div className="space-y-2 text-xs">
-                {/* 1. Cobranzas de Ventas */}
-                <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
+              <div className="space-y-1.5 text-xs">
+                {/* Ventas de Pedidos 3D */}
+                <label className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={includeVentas}
                     onChange={(e) => setIncludeVentas(e.target.checked)}
                     className="mt-0.5 rounded text-[#1E5E3A] focus:ring-[#1E5E3A] cursor-pointer"
                   />
-                  <div>
-                    <span className="font-bold text-[#241C15] block">Ventas de Modelos 3D (Abonos)</span>
-                    <span className="text-[11px] text-[#75695D]">Cobros y liquidaciones de pedidos</span>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-[#241C15] block truncate">Ventas (Pedidos 3D)</span>
+                    <span className="text-[10px] text-[#1E5E3A] font-mono font-semibold block">{formatCurrency(availableTags.totalVentasCobrado)}</span>
                   </div>
                 </label>
 
-                {/* 2. Préstamos & Financiamiento */}
-                <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includePrestamosIngreso}
-                    onChange={(e) => setIncludePrestamosIngreso(e.target.checked)}
-                    className="mt-0.5 rounded text-[#1E5E3A] focus:ring-[#1E5E3A] cursor-pointer"
-                  />
-                  <div>
-                    <span className="font-bold text-[#241C15] block">Préstamos & Financiamiento</span>
-                    <span className="text-[11px] text-[#75695D]">Ingresos por préstamos bancarios / terceros</span>
-                  </div>
-                </label>
-
-                {/* 3. Servicios Directos & Otros */}
-                <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeServiciosIngreso}
-                    onChange={(e) => setIncludeServiciosIngreso(e.target.checked)}
-                    className="mt-0.5 rounded text-[#1E5E3A] focus:ring-[#1E5E3A] cursor-pointer"
-                  />
-                  <div>
-                    <span className="font-bold text-[#241C15] block">Servicios Directos & CAD</span>
-                    <span className="text-[11px] text-[#75695D]">Diseños, reparaciones y ventas directas</span>
-                  </div>
-                </label>
+                {/* Categorías reales de ingresos directos */}
+                {availableTags.ingresosDirectosCats.map(cat => (
+                  <label key={cat} className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(selectedIngresoCats[cat])}
+                      onChange={(e) => setSelectedIngresoCats(prev => ({ ...prev, [cat]: e.target.checked }))}
+                      className="mt-0.5 rounded text-[#1E5E3A] focus:ring-[#1E5E3A] cursor-pointer"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <span className="font-semibold text-[#241C15] block truncate">{cat}</span>
+                      <span className="text-[10px] text-[#1E5E3A] font-mono font-semibold block">{formatCurrency(availableTags.ingresosDirectosTotales[cat] || 0)}</span>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
-            {/* SECCIÓN 2: EGRESOS - INSUMOS Y MATERIALES (POR TAGS) */}
-            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/70">
+            {/* 2. EGRESOS - INSUMOS (TAGS REALES) */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5">
+              <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]/70">
                 <span className="text-xs font-extrabold text-[#8C6D1F] uppercase tracking-wider flex items-center gap-1.5">
-                  <ShoppingBag className="h-4 w-4" />
-                  Insumos (Tags de Taller)
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  Insumos (Tags)
                 </span>
-                <span className="text-[10px] text-[#75695D] font-mono">Materiales</span>
+                <span className="text-[10px] text-[#75695D] font-mono">{availableTags.insumosSubcats.length} tags</span>
               </div>
 
-              <div className="space-y-1.5 text-xs">
-                {/* 1. Filamentos */}
-                <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeFilamentos}
-                    onChange={(e) => setIncludeFilamentos(e.target.checked)}
-                    className="rounded text-[#8C6D1F] focus:ring-[#8C6D1F] cursor-pointer"
-                  />
-                  <span className="font-semibold text-[#241C15] flex-1">Filamentos (PLA, PETG, Resinas)</span>
-                </label>
-
-                {/* 2. Packaging */}
-                <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includePackaging}
-                    onChange={(e) => setIncludePackaging(e.target.checked)}
-                    className="rounded text-[#8C6D1F] focus:ring-[#8C6D1F] cursor-pointer"
-                  />
-                  <span className="font-semibold text-[#241C15] flex-1">Packaging (Cajas, Burbuja, Film, Stickers)</span>
-                </label>
-
-                {/* 3. Accesorios de Insumo */}
-                <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeAccesoriosInsumo}
-                    onChange={(e) => setIncludeAccesoriosInsumo(e.target.checked)}
-                    className="rounded text-[#8C6D1F] focus:ring-[#8C6D1F] cursor-pointer"
-                  />
-                  <span className="font-semibold text-[#241C15] flex-1">Accesorios de Insumo (Incienso, Velas LED)</span>
-                </label>
-
-                {/* 4. Otros Insumos */}
-                <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeOtrosInsumos}
-                    onChange={(e) => setIncludeOtrosInsumos(e.target.checked)}
-                    className="rounded text-[#8C6D1F] focus:ring-[#8C6D1F] cursor-pointer"
-                  />
-                  <span className="font-semibold text-[#241C15] flex-1">Otros Insumos y Repuestos menores</span>
-                </label>
+              <div className="space-y-1.5 text-xs max-h-56 overflow-y-auto pr-1">
+                {availableTags.insumosSubcats.map(sub => (
+                  <label key={sub} className="flex items-start gap-2 p-1 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(selectedInsumos[sub])}
+                      onChange={(e) => setSelectedInsumos(prev => ({ ...prev, [sub]: e.target.checked }))}
+                      className="mt-0.5 rounded text-[#8C6D1F] focus:ring-[#8C6D1F] cursor-pointer"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <span className="font-semibold text-[#241C15] block truncate">{sub}</span>
+                      <span className="text-[10px] text-[#A36F4C] font-mono block">{formatCurrency(availableTags.insumosTotales[sub] || 0)}</span>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
-            {/* SECCIÓN 3: EGRESOS - SERVICIOS, ACTIVOS FIJOS Y CAPITAL */}
-            <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/70">
+            {/* 3. EGRESOS - SERVICIOS (TAGS REALES) */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5">
+              <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]/70">
                 <span className="text-xs font-extrabold text-[#A36F4C] uppercase tracking-wider flex items-center gap-1.5">
-                  <Wrench className="h-4 w-4" />
-                  Servicios, Maquinaria & Capital
+                  <Truck className="h-3.5 w-3.5" />
+                  Servicios (Tags)
                 </span>
-                <span className="text-[10px] text-[#75695D] font-mono">Operativo/CAPEX</span>
+                <span className="text-[10px] text-[#75695D] font-mono">{availableTags.serviciosSubcats.length} tags</span>
               </div>
 
               <div className="space-y-1.5 text-xs">
-                {/* 1. Activos Fijos (Maquinaria) */}
-                <label className={`flex items-start gap-2.5 p-2 rounded-xl transition-all cursor-pointer select-none ${includeActivosFijos ? 'bg-[#EFE5D8] border border-[#D4BEA7]' : 'hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC]'}`}>
-                  <input
-                    type="checkbox"
-                    checked={includeActivosFijos}
-                    onChange={(e) => setIncludeActivosFijos(e.target.checked)}
-                    className="mt-0.5 rounded text-[#633E20] focus:ring-[#633E20] cursor-pointer"
-                  />
-                  <div>
-                    <span className="font-extrabold text-[#633E20] block">Activos Fijos (Bambu Lab, Secadores)</span>
-                    <span className="text-[11px] text-[#75695D]">Maquinaria y herramientas mayores (CAPEX)</span>
-                  </div>
-                </label>
-
-                {/* 2. Logística y Envíos */}
-                <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeLogisticaEnvios}
-                    onChange={(e) => setIncludeLogisticaEnvios(e.target.checked)}
-                    className="rounded text-[#A36F4C] focus:ring-[#A36F4C] cursor-pointer"
-                  />
-                  <span className="font-semibold text-[#241C15] flex-1">Logística & Envíos (Olva, Shoppee)</span>
-                </label>
-
-                {/* 3. Publicidad y Pauta */}
-                <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includePublicidadPauta}
-                    onChange={(e) => setIncludePublicidadPauta(e.target.checked)}
-                    className="rounded text-[#A36F4C] focus:ring-[#A36F4C] cursor-pointer"
-                  />
-                  <span className="font-semibold text-[#241C15] flex-1">Publicidad & Pauta Digital (Meta Ads)</span>
-                </label>
-
-                {/* 4. Servicios Generales / Aportes */}
-                <div className="flex items-center gap-3 pt-1">
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                {availableTags.serviciosSubcats.map(sub => (
+                  <label key={sub} className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={includeServiciosGenerales}
-                      onChange={(e) => setIncludeServiciosGenerales(e.target.checked)}
-                      className="rounded text-[#A36F4C] focus:ring-[#A36F4C] cursor-pointer"
+                      checked={Boolean(selectedServicios[sub])}
+                      onChange={(e) => setSelectedServicios(prev => ({ ...prev, [sub]: e.target.checked }))}
+                      className="mt-0.5 rounded text-[#A36F4C] focus:ring-[#A36F4C] cursor-pointer"
                     />
-                    <span className="text-[11px] font-semibold text-[#241C15]">Servicios Taller</span>
+                    <div className="min-w-0 flex-1">
+                      <span className="font-semibold text-[#241C15] block truncate">{sub}</span>
+                      <span className="text-[10px] text-[#A36F4C] font-mono block">{formatCurrency(availableTags.serviciosTotales[sub] || 0)}</span>
+                    </div>
                   </label>
+                ))}
+              </div>
+            </div>
 
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            {/* 4. EGRESOS - ACTIVOS FIJOS (TAGS REALES) */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5">
+              <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]/70">
+                <span className="text-xs font-extrabold text-[#633E20] uppercase tracking-wider flex items-center gap-1.5">
+                  <Wrench className="h-3.5 w-3.5" />
+                  Activos Fijos (CAPEX)
+                </span>
+                <span className="text-[10px] text-[#75695D] font-mono">{availableTags.activosFijosSubcats.length} tags</span>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                {availableTags.activosFijosSubcats.map(sub => (
+                  <label key={sub} className={`flex items-start gap-2 p-1.5 rounded-lg transition-all cursor-pointer select-none ${selectedActivosFijos[sub] ? 'bg-[#EFE5D8] border border-[#D4BEA7]' : 'hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC]'}`}>
                     <input
                       type="checkbox"
-                      checked={includeAporteCapitalEgreso}
-                      onChange={(e) => setIncludeAporteCapitalEgreso(e.target.checked)}
-                      className="rounded text-[#A36F4C] focus:ring-[#A36F4C] cursor-pointer"
+                      checked={Boolean(selectedActivosFijos[sub])}
+                      onChange={(e) => setSelectedActivosFijos(prev => ({ ...prev, [sub]: e.target.checked }))}
+                      className="mt-0.5 rounded text-[#633E20] focus:ring-[#633E20] cursor-pointer"
                     />
-                    <span className="text-[11px] font-semibold text-[#241C15]">Aportes Capital</span>
+                    <div className="min-w-0 flex-1">
+                      <span className="font-extrabold text-[#633E20] block truncate">{sub}</span>
+                      <span className="text-[10px] text-[#633E20] font-mono font-bold block">{formatCurrency(availableTags.activosFijosTotales[sub] || 0)}</span>
+                    </div>
                   </label>
-                </div>
+                ))}
+
+                {availableTags.hasAportesCapital && (
+                  <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={includeAportesCapital}
+                      onChange={(e) => setIncludeAportesCapital(e.target.checked)}
+                      className="rounded text-[#633E20] focus:ring-[#633E20] cursor-pointer"
+                    />
+                    <span className="font-semibold text-[#241C15]">Aportes de Capital</span>
+                  </label>
+                )}
               </div>
             </div>
           </div>
@@ -1128,7 +1103,7 @@ export function HistoricoMensualClient({
       )}
 
       {/* ========================================================================= */}
-      {/* 3. INDICADORES DINÁMICOS GLOBALES SEGÚN EL CHECKLIST                      */}
+      {/* 3. INDICADORES DINÁMICOS GLOBALES                                         */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* KPI 1: Flujo Neto Dinámico Calculado */}
@@ -1161,7 +1136,7 @@ export function HistoricoMensualClient({
             </div>
           </CardHeader>
           <CardContent className="pb-3 px-4 text-[11px] text-[#75695D]">
-            <span>{metricasHistoricas.totalFiltrosIngresos} de 3 conceptos de ingreso activos</span>
+            <span>{metricasHistoricas.activeIngresosCount} conceptos de ingreso activos</span>
           </CardContent>
         </Card>
 
@@ -1178,7 +1153,7 @@ export function HistoricoMensualClient({
             </div>
           </CardHeader>
           <CardContent className="pb-3 px-4 text-[11px] text-[#75695D]">
-            <span>{metricasHistoricas.totalFiltrosEgresos} de 9 conceptos de egreso activos</span>
+            <span>{metricasHistoricas.activeInsumosCount + metricasHistoricas.activeServiciosCount + metricasHistoricas.activeActivosFijosCount} tags de egreso activos</span>
           </CardContent>
         </Card>
 
@@ -1195,7 +1170,7 @@ export function HistoricoMensualClient({
             </div>
           </CardHeader>
           <CardContent className="pb-3 px-4 text-[11px] text-[#75695D]">
-            <span>100% de los pedidos cobrados en caja</span>
+            <span>100% cobrado en caja</span>
           </CardContent>
         </Card>
       </div>
@@ -1267,7 +1242,7 @@ export function HistoricoMensualClient({
       )}
 
       {/* ========================================================================= */}
-      {/* 5. EVOLUCIÓN HISTÓRICA RECALCULADA SEGÚN EL CHECKLIST                    */}
+      {/* 5. EVOLUCIÓN HISTÓRICA RECALCULADA                                        */}
       {/* ========================================================================= */}
       <Card className="bg-[#FFFFFF] border-[#D4BEA7] shadow-sm rounded-3xl p-4 sm:p-6 space-y-5">
         {/* Cabecera de Vistas */}
@@ -1278,7 +1253,7 @@ export function HistoricoMensualClient({
               <span>Evolución Histórica Dinámica</span>
             </h2>
             <p className="text-xs text-[#75695D]">
-              Comparativa mes a mes de ingresos y egresos según los conceptos activos en el checklist.
+              Comparativa mes a mes de ingresos y egresos según los tags y conceptos activos.
             </p>
           </div>
 
@@ -1442,7 +1417,7 @@ export function HistoricoMensualClient({
                     <div className="grid grid-cols-3 gap-2 text-center bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2D9CC]/70">
                       <div className="space-y-0.5">
                         <span className="text-[10px] uppercase font-bold text-[#1E5E3A] block">
-                          Ingresos (+)]
+                          Ingresos (+)
                         </span>
                         <span className="font-mono font-extrabold text-sm sm:text-base text-[#1E5E3A] block truncate">
                           +{formatCurrency(m.ingresosTotalesCalculados)}
@@ -1468,41 +1443,45 @@ export function HistoricoMensualClient({
                       </div>
                     </div>
 
-                    {/* Desglose de Conceptos Activos que sumaron en este Mes */}
+                    {/* Desglose de Conceptos Reales que sumaron en este Mes */}
                     <div className="space-y-1.5 p-3 rounded-xl bg-[#FAF8F5]/60 border border-[#E2D9CC]/60 text-xs text-[#75695D]">
                       <div className="flex justify-between items-center text-[#241C15] font-semibold pb-1 border-b border-[#E2D9CC]/50">
-                        <span>Desglose de Conceptos en {m.mesCorto}:</span>
+                        <span>Desglose de Partidas en {m.mesCorto}:</span>
                         <span className="font-mono text-[11px] text-[#1E5E3A]">Margen: {m.margenCalculadoPct}%</span>
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <span>Ventas Cobradas (Abonos):</span>
+                        <span>Ventas (Abonos de Pedidos 3D):</span>
                         <span className="font-mono font-bold text-[#1E5E3A]">+{formatCurrency(m.ingresosVentasCobradas)}</span>
                       </div>
 
-                      {includePrestamosIngreso && m.ingresosPrestamos > 0 && (
-                        <div className="flex justify-between items-center text-[#1E5E3A]">
-                          <span>Préstamos / Financiamiento:</span>
-                          <span className="font-mono font-bold">+{formatCurrency(m.ingresosPrestamos)}</span>
+                      {Object.entries(m.ingresosDirectosDetalle).map(([cat, val]) => (
+                        <div key={cat} className="flex justify-between items-center text-[#1E5E3A]">
+                          <span>{cat}:</span>
+                          <span className="font-mono font-semibold">+{formatCurrency(val)}</span>
                         </div>
-                      )}
+                      ))}
 
-                      <div className="flex justify-between items-center">
-                        <span>Insumos & Materiales:</span>
-                        <span className="font-mono font-semibold text-[#A36F4C]">-{formatCurrency(m.egresosInsumosFilamentos + m.egresosInsumosPackaging + m.egresosInsumosAccesorios + m.egresosInsumosOtros)}</span>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <span>Servicios & Envíos / Pauta:</span>
-                        <span className="font-mono font-semibold text-[#A36F4C]">-{formatCurrency(m.egresosServiciosLogistica + m.egresosServiciosPauta + m.egresosServiciosOtros)}</span>
-                      </div>
-
-                      {includeActivosFijos && m.egresosActivosFijosMaquinaria > 0 && (
-                        <div className="flex justify-between items-center text-[#633E20] font-bold bg-[#EFE5D8]/50 p-1 rounded">
-                          <span>Activos Fijos (Maquinaria):</span>
-                          <span className="font-mono">-{formatCurrency(m.egresosActivosFijosMaquinaria)}</span>
+                      {Object.entries(m.egresosInsumosDetalle).map(([sub, val]) => (
+                        <div key={sub} className="flex justify-between items-center text-[#A36F4C]">
+                          <span>Insumo ({sub}):</span>
+                          <span className="font-mono font-semibold">-{formatCurrency(val)}</span>
                         </div>
-                      )}
+                      ))}
+
+                      {Object.entries(m.egresosServiciosDetalle).map(([sub, val]) => (
+                        <div key={sub} className="flex justify-between items-center text-[#A36F4C]">
+                          <span>Servicio ({sub}):</span>
+                          <span className="font-mono font-semibold">-{formatCurrency(val)}</span>
+                        </div>
+                      ))}
+
+                      {Object.entries(m.egresosActivosFijosDetalle).map(([sub, val]) => (
+                        <div key={sub} className="flex justify-between items-center text-[#633E20] font-bold bg-[#EFE5D8]/50 p-1 rounded">
+                          <span>Activo Fijo ({sub}):</span>
+                          <span className="font-mono">-{formatCurrency(val)}</span>
+                        </div>
+                      ))}
                     </div>
 
                     {/* Botón Auditar Movimientos */}
@@ -1534,12 +1513,11 @@ export function HistoricoMensualClient({
                 <TableRow className="border-[#E2D9CC] hover:bg-transparent text-xs font-bold">
                   <TableHead className="text-[#241C15] px-4 py-3">Mes / Período</TableHead>
                   <TableHead className="text-[#1E5E3A] px-3 py-3 text-right">Ventas (+)</TableHead>
-                  <TableHead className="text-[#1E5E3A] px-3 py-3 text-right">Préstamos (+)</TableHead>
-                  <TableHead className="text-[#1E5E3A] px-3 py-3 text-right font-bold bg-[#EBF7EE]/40">Ingresos Tot. (+)</TableHead>
+                  <TableHead className="text-[#1E5E3A] px-3 py-3 text-right font-bold bg-[#EBF7EE]/40">Ingresos Sel. (+)</TableHead>
                   <TableHead className="text-[#A36F4C] px-3 py-3 text-right">Insumos (-)</TableHead>
                   <TableHead className="text-[#A36F4C] px-3 py-3 text-right">Servicios (-)</TableHead>
                   <TableHead className="text-[#633E20] px-3 py-3 text-right">Act. Fijos (-)</TableHead>
-                  <TableHead className="text-[#633E20] px-3 py-3 text-right font-black bg-[#FAF8F5]">Egresos Tot. (-)</TableHead>
+                  <TableHead className="text-[#633E20] px-3 py-3 text-right font-black bg-[#FAF8F5]">Egresos Sel. (-)</TableHead>
                   <TableHead className="text-[#1E5E3A] px-4 py-3 text-right font-black">Flujo Neto (=)</TableHead>
                   <TableHead className="text-[#241C15] px-3 py-3 text-center">Auditar</TableHead>
                 </TableRow>
@@ -1547,6 +1525,10 @@ export function HistoricoMensualClient({
               <TableBody>
                 {displayedMonths.map((m) => {
                   const isPos = m.flujoNetoCalculado >= 0
+                  const sumaInsumosMes = Object.values(m.egresosInsumosDetalle).reduce((s, v) => s + v, 0)
+                  const sumaServiciosMes = Object.values(m.egresosServiciosDetalle).reduce((s, v) => s + v, 0)
+                  const sumaActivosFijosMes = Object.values(m.egresosActivosFijosDetalle).reduce((s, v) => s + v, 0)
+
                   return (
                     <TableRow key={m.monthKey} className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors text-xs">
                       <TableCell className="px-4 py-3 font-bold text-[#241C15] whitespace-nowrap">
@@ -1564,24 +1546,20 @@ export function HistoricoMensualClient({
                         +{formatCurrency(m.ingresosVentasCobradas)}
                       </TableCell>
 
-                      <TableCell className="px-3 py-3 text-right font-mono text-[#1E5E3A]">
-                        {m.ingresosPrestamos > 0 ? `+${formatCurrency(m.ingresosPrestamos)}` : '—'}
-                      </TableCell>
-
                       <TableCell className="px-3 py-3 text-right font-mono font-bold text-[#1E5E3A] bg-[#EBF7EE]/40">
                         +{formatCurrency(m.ingresosTotalesCalculados)}
                       </TableCell>
 
                       <TableCell className="px-3 py-3 text-right font-mono text-[#A36F4C]">
-                        -{formatCurrency(m.egresosInsumosFilamentos + m.egresosInsumosPackaging + m.egresosInsumosAccesorios + m.egresosInsumosOtros)}
+                        -{formatCurrency(sumaInsumosMes)}
                       </TableCell>
 
                       <TableCell className="px-3 py-3 text-right font-mono text-[#A36F4C]">
-                        -{formatCurrency(m.egresosServiciosLogistica + m.egresosServiciosPauta + m.egresosServiciosOtros)}
+                        -{formatCurrency(sumaServiciosMes)}
                       </TableCell>
 
                       <TableCell className="px-3 py-3 text-right font-mono text-[#633E20]">
-                        {m.egresosActivosFijosMaquinaria > 0 ? formatCurrency(m.egresosActivosFijosMaquinaria) : '—'}
+                        {sumaActivosFijosMes > 0 ? formatCurrency(sumaActivosFijosMes) : '—'}
                       </TableCell>
 
                       <TableCell className="px-3 py-3 text-right font-mono font-extrabold text-[#633E20] bg-[#FAF8F5]/60">
@@ -1615,68 +1593,152 @@ export function HistoricoMensualClient({
           </div>
         )}
 
-        {/* VISTA 3: Historial y Auditoría de Cuentas por Cobrar */}
+        {/* VISTA 3: Historial y Auditoría de Cuentas por Cobrar y Cobranzas Recibidas */}
         {viewMode === 'AUDITORIA_CARTERA' && (
           <div className="space-y-4">
-            <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E2D9CC] text-xs text-[#75695D]">
-              <span className="font-bold text-[#241C15] block">Auditoría Histórica de Cartera y Recuperaciones por Mes:</span>
-              Supervisa mes a mes cuánto quedó pendiente contra entrega, cuántos clientes adeudaban y las fechas en que fue liquidado.
+            <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E2D9CC] text-xs text-[#75695D] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="font-bold text-[#241C15] block">Auditoría Histórica de Cobranzas Efectivas y Cartera:</span>
+                Supervisa mes a mes tanto el dinero cobrado que ingresó a caja como los saldos pendientes generados por nuevos pedidos.
+              </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               {monthlyData.map((m) => (
-                <div key={m.monthKey} className="p-4 rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#E2D9CC]/70">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4 text-[#A36F4C]" />
-                      <span className="font-extrabold text-sm text-[#241C15]">{m.nombreMes}</span>
-                      <Badge variant="outline" className="text-[10px] font-bold bg-[#FAF8F5] text-[#75695D] border-[#D4BEA7]">
-                        {m.cantidadPedidos} pedidos
-                      </Badge>
+                <div key={m.monthKey} className="p-4 sm:p-5 rounded-3xl bg-[#FFFFFF] border border-[#E2D9CC] shadow-xs space-y-4">
+                  {/* Encabezado del Mes */}
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#E2D9CC]/70">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-[#A36F4C]">
+                        <CalendarDays className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-base sm:text-lg text-[#241C15]">{m.nombreMes}</span>
+                          {m.esMesActual && (
+                            <Badge variant="outline" className="text-[10px] font-bold bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]">
+                              Mes en Curso
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-[#75695D]">
+                          {m.cantidadPedidos} pedidos nuevos creados • {m.cobranzasRecaudadasEnMes.length} cobranzas ingresadas a caja
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs">
-                      <div>
-                        <span className="text-[10px] text-[#75695D]">Facturado:</span>{' '}
-                        <strong className="font-mono text-[#241C15]">{formatCurrency(m.totalFacturadoVentas)}</strong>
+                    {/* Resumen de Cifras del Mes */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
+                      <div className="p-2 rounded-xl bg-[#EBF7EE]/60 border border-[#B4E3C0]">
+                        <span className="text-[10px] font-bold text-[#1E5E3A] block uppercase">Cobrado a Caja:</span>
+                        <strong className="font-mono text-sm text-[#1E5E3A]">+{formatCurrency(m.ingresosVentasCobradas)}</strong>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-[#8C6D1F]">Faltó al Cierre:</span>{' '}
-                        <strong className="font-mono text-[#8C6D1F]">S/ {m.saldoFaltoCobrarAlCierre.toFixed(2)}</strong>
+                      <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
+                        <span className="text-[10px] font-bold text-[#75695D] block uppercase">Facturado Pedidos:</span>
+                        <strong className="font-mono text-sm text-[#241C15]">{formatCurrency(m.totalFacturadoVentas)}</strong>
                       </div>
-                      <div>
-                        <span className="text-[10px] text-[#1E5E3A]">Recuperado:</span>{' '}
-                        <strong className="font-mono text-[#1E5E3A]">+{formatCurrency(m.recuperadoEnMesesPosteriores)}</strong>
-                      </div>
+                      {m.saldoFaltoCobrarAlCierre > 0 && (
+                        <div className="p-2 rounded-xl bg-[#FDF6E2] border border-[#E8D49B]">
+                          <span className="text-[10px] font-bold text-[#8C6D1F] block uppercase">Faltó al Cierre:</span>
+                          <strong className="font-mono text-sm text-[#8C6D1F]">S/ {m.saldoFaltoCobrarAlCierre.toFixed(2)}</strong>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {m.clientesCartera.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                      {m.clientesCartera.map((c) => (
-                        <div key={c.ventaId} className="p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1.5">
-                          <div className="flex items-start justify-between gap-1">
-                            <div className="min-w-0 flex-1">
-                              <span className="font-bold text-xs text-[#241C15] block truncate">{c.cliente}</span>
-                              <span className="text-[10px] text-[#75695D] block truncate">{c.modelo} (x{c.cantidad})</span>
-                            </div>
-                            <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[9px] font-bold flex-shrink-0">
-                              Saneado
-                            </Badge>
-                          </div>
-
-                          <div className="flex justify-between items-center text-[11px] pt-1 border-t border-[#E2D9CC]/60">
-                            <span className="text-[#75695D]">Total Factura: {formatCurrency(c.totalFacturado)}</span>
-                            <span className="font-mono font-extrabold text-[#1E5E3A]">+{formatCurrency(c.cobradoPosterior)} cobrado</span>
-                          </div>
-                        </div>
-                      ))}
+                  {/* BLOQUE 1: Cobranzas Efectivas Ingresadas a Caja en este Mes */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-[#1E5E3A] uppercase tracking-wider flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Cobranzas Percibidas en {m.mesCorto} (Flujo Real de Caja)
+                      </span>
+                      <span className="text-[11px] font-mono text-[#75695D]">
+                        Total Recaudado: <strong className="text-[#1E5E3A]">+{formatCurrency(m.ingresosVentasCobradas)}</strong>
+                      </span>
                     </div>
-                  ) : (
-                    <p className="text-xs text-[#75695D] italic">
-                      No hubo saldos pendientes de cobranza en este período. 100% cobrado al momento de la venta.
-                    </p>
-                  )}
+
+                    {m.cobranzasRecaudadasEnMes.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {m.cobranzasRecaudadasEnMes.map((p) => (
+                          <div key={p.id} className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1.5 hover:border-[#B4E3C0] transition-colors">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div className="min-w-0 flex-1">
+                                <span className="font-extrabold text-xs text-[#241C15] block truncate">{p.cliente}</span>
+                                <span className="text-[10px] text-[#75695D] block truncate">{p.modelo} (x{p.cantidad})</span>
+                              </div>
+                              <span className="font-mono font-black text-xs sm:text-sm text-[#1E5E3A] flex-shrink-0">
+                                +{formatCurrency(p.monto)}
+                              </span>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[10px] pt-1.5 border-t border-[#E2D9CC]/60">
+                              <span className="text-[#75695D] font-mono">
+                                {formatDate(p.fechaPago)} • {p.metodoPago}
+                              </span>
+                              {p.esDeMesAnterior ? (
+                                <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[9px] font-bold py-0">
+                                  Recuperación de Cartera (Pedido de Ago)
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-[#FAF8F5] text-[#75695D] border-[#D4BEA7] text-[9px] font-semibold py-0">
+                                  {p.tipo}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-[#FAF8F5] border border-dashed border-[#E2D9CC] text-xs text-[#75695D] italic">
+                        No se registraron cobranzas recibidas en este mes.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* BLOQUE 2: Cartera / Cuentas por Cobrar Originadas por Pedidos de este Mes */}
+                  <div className="space-y-2.5 pt-2 border-t border-[#E2D9CC]/50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-[#8C6D1F] uppercase tracking-wider flex items-center gap-1.5">
+                        <History className="h-3.5 w-3.5" />
+                        Cartera Originada por Pedidos de {m.mesCorto}
+                      </span>
+                      {m.saldoFaltoCobrarAlCierre > 0 && (
+                        <span className="text-[11px] font-mono text-[#75695D]">
+                          Faltó al Cierre: <strong className="text-[#8C6D1F]">S/ {m.saldoFaltoCobrarAlCierre.toFixed(2)}</strong> • Recuperado: <strong className="text-[#1E5E3A]">+{formatCurrency(m.recuperadoEnMesesPosteriores)}</strong>
+                        </span>
+                      )}
+                    </div>
+
+                    {m.clientesCartera.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {m.clientesCartera.map((c) => (
+                          <div key={c.ventaId} className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1.5">
+                            <div className="flex items-start justify-between gap-1">
+                              <div className="min-w-0 flex-1">
+                                <span className="font-bold text-xs text-[#241C15] block truncate">{c.cliente}</span>
+                                <span className="text-[10px] text-[#75695D] block truncate">{c.modelo} (x{c.cantidad})</span>
+                              </div>
+                              <Badge variant="outline" className={`text-[9px] font-bold flex-shrink-0 ${c.saldoPendienteHoy <= 0 ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]' : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'}`}>
+                                {c.saldoPendienteHoy <= 0 ? 'Saneado 100%' : `Debe S/ ${c.saldoPendienteHoy.toFixed(2)}`}
+                              </Badge>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[11px] pt-1 border-t border-[#E2D9CC]/60">
+                              <span className="text-[#75695D]">Total Factura: {formatCurrency(c.totalFacturado)}</span>
+                              <span className="font-mono font-extrabold text-[#1E5E3A]">+{formatCurrency(c.cobradoPosterior)} cobrado</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 rounded-xl bg-[#FAF8F5]/60 border border-[#E2D9CC]/60 text-xs text-[#75695D]">
+                        {m.cantidadPedidos > 0 
+                          ? 'Todos los pedidos creados en este período fueron cobrados al 100% al momento de la venta.' 
+                          : 'No se crearon nuevos pedidos de venta en este período.'}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -1855,11 +1917,11 @@ export function HistoricoMensualClient({
                               ? 'bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7]'
                               : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
                           }`}>
-                            {m.categoria}
+                            {m.subcategoria || m.categoria}
                           </Badge>
                           {!m.incluidoEnCalculo && (
                             <Badge variant="outline" className="text-[8px] bg-neutral-100 text-neutral-500 border-neutral-300">
-                              Excluido por Checklist
+                              Excluido por Filtro
                             </Badge>
                           )}
                         </div>
