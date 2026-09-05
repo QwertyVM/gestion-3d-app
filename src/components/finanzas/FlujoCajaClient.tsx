@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -9,25 +10,31 @@ import { Input } from '@/components/ui/input'
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
+  ArrowRight,
   Wallet, 
   Clock, 
   Search, 
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Wrench,
-  ShoppingBag,
-  Truck,
-  DollarSign,
-  TrendingUp,
-  Activity,
-  ShieldCheck,
-  Zap,
-  Calendar,
-  Layers,
-  Sparkles,
-  PieChart as PieIcon,
-  BarChart3
+  X, 
+  ChevronLeft, 
+  ChevronRight, 
+  Wrench, 
+  ShoppingBag, 
+  Truck, 
+  DollarSign, 
+  TrendingUp, 
+  Activity, 
+  ShieldCheck, 
+  Zap, 
+  Calendar, 
+  Layers, 
+  Sparkles, 
+  PieChart as PieIcon, 
+  BarChart3,
+  Info,
+  Eye,
+  CheckCircle2,
+  ChevronDown,
+  FileSpreadsheet
 } from 'lucide-react'
 import { 
   ComposedChart, 
@@ -97,6 +104,19 @@ export interface IngresoDirectoItem {
   monto: number
   metodoPago?: string
   notas?: string
+}
+
+export interface MonthlyMovimiento {
+  id: string
+  fecha: string
+  tipo: string
+  categoria: string
+  concepto: string
+  entidad: string
+  monto: number
+  esIngreso: boolean
+  esActivoFijo?: boolean
+  detalle?: string
 }
 
 interface FlujoCajaClientProps {
@@ -463,16 +483,26 @@ export function FlujoCajaClient({
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
-            <Wallet className="h-6 w-6 stroke-[2.5]" />
-          </div>
-          Flujo de Caja (Cash Flow)
-        </h1>
-        <p className="text-sm text-[#75695D] mt-1">
-          Balance financiero consolidado entre ingresos efectivamente cobrados y egresos operativos del taller.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
+              <Wallet className="h-6 w-6 stroke-[2.5]" />
+            </div>
+            <span>Flujo de Caja (Cash Flow)</span>
+          </h1>
+          <p className="text-sm text-[#75695D] mt-1">
+            Balance financiero consolidado entre ingresos efectivamente cobrados y egresos operativos del taller.
+          </p>
+        </div>
+
+        <Link
+          href="/historico-mensual"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#633E20] border border-[#D4BEA7] shadow-2xs transition-all"
+        >
+          <TrendingUp className="h-3.5 w-3.5 text-[#A36F4C]" />
+          <span>Histórico Mensual</span>
+        </Link>
       </div>
 
       {/* KPI Financial Overview Cards */}
@@ -552,6 +582,10 @@ export function FlujoCajaClient({
           </CardContent>
         </Card>
       </div>
+
+      {/* ========================================================================= */}
+      {/* CASH FLOW INSIGHTS ANALYTICAL DASHBOARD                                   */}
+      {/* ========================================================================= */}
 
       {/* ========================================================================= */}
       {/* CASH FLOW INSIGHTS ANALYTICAL DASHBOARD                                   */}
@@ -1062,6 +1096,7 @@ export function FlujoCajaClient({
           </div>
         )}
       </Card>
+
     </div>
   )
 }

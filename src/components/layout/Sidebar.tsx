@@ -17,12 +17,15 @@ import {
   Tag,
   Receipt,
   FileCheck,
-  Palette
+  Palette,
+  Calendar,
+  History
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export function Sidebar() {
   const pathname = usePathname()
+  const isHistoricoMensual = pathname.startsWith('/historico-mensual') || pathname.startsWith('/flujo-mensual')
   const isFinanzasSection = pathname.startsWith('/finanzas') || pathname.startsWith('/inversiones')
   const isCatalogoSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario')
   const isEgresosSection = pathname.startsWith('/finanzas/egresos') || pathname.startsWith('/finanzas/tags')
@@ -77,7 +80,21 @@ export function Sidebar() {
           Ventas y Pedidos
         </Link>
 
-        {/* 3. Finanzas con Subdivisiones */}
+        {/* 3. Histórico Mensual (Módulo Independiente de Todos los Meses) */}
+        <Link
+          href="/historico-mensual"
+          className={cn(
+            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+            isHistoricoMensual
+              ? 'bg-[#EFE5D8] text-[#633E20] font-semibold shadow-sm border border-[#D4BEA7]'
+              : 'text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+          )}
+        >
+          <History className={cn('h-4 w-4', isHistoricoMensual ? 'text-[#633E20]' : 'text-[#75695D]')} />
+          <span>Histórico Mensual</span>
+        </Link>
+
+        {/* 4. Finanzas con Subdivisiones */}
         <div className="space-y-1 pt-1">
           <div
             onClick={() => setFinanzasOpen(!finanzasOpen)}
@@ -103,7 +120,7 @@ export function Sidebar() {
           {/* Subitems Finanzas */}
           {finanzasOpen && (
             <div className="pl-3 pr-1 space-y-1 transition-all">
-              {/* Flujo de Caja */}
+              {/* Flujo de Caja (Diario) */}
               <Link
                 href="/finanzas/flujo-caja"
                 className={cn(
@@ -114,7 +131,7 @@ export function Sidebar() {
                 )}
               >
                 <DollarSign className="h-3.5 w-3.5 text-[#1E5E3A]" />
-                <span>Flujo de Caja</span>
+                <span>Flujo de Caja (Diario)</span>
               </Link>
 
               {/* Ingresos */}
