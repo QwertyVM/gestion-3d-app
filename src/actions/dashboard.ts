@@ -1,7 +1,8 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { getVentas } from '@/actions/ventas'
+import { getVentas, registrarAbono } from '@/actions/ventas'
+import { addPagoPedido } from '@/actions/pedidos'
 
 export async function getDashboardData() {
   const [inversiones, ventas, ingresosDirectos, filamentos] = await Promise.all([
@@ -277,6 +278,35 @@ export async function getDashboardData() {
     graficoInversion,
     cuentasPorCobrar,
     topColores
+  }
+}
+
+export async function registrarAbonoDashboard(
+  id: string,
+  data: {
+    monto: number
+    metodoPago?: string
+    tipo?: string
+    notas?: string
+    fecha?: string | Date
+  }
+) {
+  try {
+    // Check if it's a Pedido
+    const ped = await prisma.pedido.findUnique({ where: { id } })
+    if (ped) {
+      return await addPagoPedido(id, data)
+    }
+    // Otherwise it's a Venta
+    const v = await prisma.venta.findUnique({ where: { id } })
+    if (v) {
+      const res = await registrarAbono(id, data)
+      return { success: true, venta: res, error: undefined }
+    }
+    return { success: false, error: 'Registro de cuenta por cobrar no encontrado' }
+  } catch (error: any) {
+    console.error('Error al registrar abono desde dashboard:', error)
+    return { success: false, error: error.message || 'Error al registrar abono' }
   }
 }
 

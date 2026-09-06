@@ -1,14 +1,10 @@
-import { getProductos } from '@/actions/productos'
 import { getCategorias } from '@/actions/categorias'
-import { CatalogoClient } from '@/components/catalogo/CatalogoClient'
+import { CategoriasClient } from '@/components/categorias/CategoriasClient'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CategoriasPage() {
-  const [productos, categorias] = await Promise.all([
-    getProductos(),
-    getCategorias(),
-  ])
+  const categorias = await getCategorias()
 
-  return <CatalogoClient productos={productos} categoriasIniciales={categorias} initialTab="categorias" />
+  return <CategoriasClient categoriasIniciales={categorias} />
 }

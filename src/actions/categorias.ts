@@ -3,10 +3,38 @@
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
-export async function getCategorias() {
-  // Get all products to ensure any categories are synchronized in DB
+export interface CategoriaProductoSummary {
+  id: string
+  nombreModelo: string
+  costoBase: number
+  precioMercado: number
+  pesoGramos?: number | null
+  activo: boolean
+}
+
+export interface CategoriaItem {
+  id: string
+  nombre: string
+  descripcion: string
+  totalProductos: number
+  productos: CategoriaProductoSummary[]
+  createdAt: string
+  updatedAt: string
+}
+
+export async function getCategorias(): Promise<CategoriaItem[]> {
+  // Get all active and inactive products to ensure all categories are synchronized
   const productos = await prisma.producto.findMany({
-    select: { lineaCategoria: true },
+    select: { 
+      id: true,
+      lineaCategoria: true,
+      nombreModelo: true,
+      costoBase: true,
+      precioMercado: true,
+      pesoGramos: true,
+      activo: true
+    },
+    orderBy: { nombreModelo: 'asc' }
   })
 
   // Ensure any product categories exist in Categoria table in database
@@ -23,22 +51,38 @@ export async function getCategorias() {
     orderBy: { nombre: 'asc' },
   })
 
-  const countMap: Record<string, number> = {}
+  // Map products to categories
+  const productosPorCategoria: Record<string, CategoriaProductoSummary[]> = {}
   productos.forEach(p => {
-    countMap[p.lineaCategoria] = (countMap[p.lineaCategoria] || 0) + 1
+    const cat = p.lineaCategoria || 'General'
+    if (!productosPorCategoria[cat]) {
+      productosPorCategoria[cat] = []
+    }
+    productosPorCategoria[cat].push({
+      id: p.id,
+      nombreModelo: p.nombreModelo,
+      costoBase: Number(p.costoBase),
+      precioMercado: Number(p.precioMercado),
+      pesoGramos: p.pesoGramos != null ? Number(p.pesoGramos) : null,
+      activo: p.activo
+    })
   })
 
-  return categorias.map(c => ({
-    id: c.id,
-    nombre: c.nombre,
-    descripcion: c.descripcion || '',
-    totalProductos: countMap[c.nombre] || 0,
-    createdAt: c.createdAt.toISOString(),
-    updatedAt: c.updatedAt.toISOString(),
-  }))
+  return categorias.map(c => {
+    const prods = productosPorCategoria[c.nombre] || []
+    return {
+      id: c.id,
+      nombre: c.nombre,
+      descripcion: c.descripcion || '',
+      totalProductos: prods.length,
+      productos: prods,
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString(),
+    }
+  })
 }
 
-export async function createCategoria(data: { nombre: string; descripcion?: string }) {
+export async function createCategoria(data: { nombre: string; descripcion?: string }): Promise<CategoriaItem> {
   const cleanNombre = data.nombre.trim()
   if (!cleanNombre) {
     throw new Error('El nombre de la categoría es obligatorio')
@@ -65,17 +109,20 @@ export async function createCategoria(data: { nombre: string; descripcion?: stri
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/catalogo/categorias')
+
   return {
     id: categoria.id,
     nombre: categoria.nombre,
     descripcion: categoria.descripcion || '',
     totalProductos: 0,
+    productos: [],
     createdAt: categoria.createdAt.toISOString(),
     updatedAt: categoria.updatedAt.toISOString(),
   }
 }
 
-export async function updateCategoria(id: string, data: { nombre: string; descripcion?: string }) {
+export async function updateCategoria(id: string, data: { nombre: string; descripcion?: string }): Promise<CategoriaItem> {
   const cleanNombre = data.nombre.trim()
   if (!cleanNombre) {
     throw new Error('El nombre de la categoría es obligatorio')
@@ -120,13 +167,37 @@ export async function updateCategoria(id: string, data: { nombre: string; descri
     },
   })
 
+  // Get products for updated category
+  const prods = await prisma.producto.findMany({
+    where: { lineaCategoria: cleanNombre },
+    select: {
+      id: true,
+      nombreModelo: true,
+      costoBase: true,
+      precioMercado: true,
+      pesoGramos: true,
+      activo: true
+    },
+    orderBy: { nombreModelo: 'asc' }
+  })
+
   revalidatePath('/catalogo')
+  revalidatePath('/catalogo/categorias')
   revalidatePath('/ventas')
 
   return {
     id: updated.id,
     nombre: updated.nombre,
     descripcion: updated.descripcion || '',
+    totalProductos: prods.length,
+    productos: prods.map(p => ({
+      id: p.id,
+      nombreModelo: p.nombreModelo,
+      costoBase: Number(p.costoBase),
+      precioMercado: Number(p.precioMercado),
+      pesoGramos: p.pesoGramos != null ? Number(p.pesoGramos) : null,
+      activo: p.activo
+    })),
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   }
@@ -147,7 +218,7 @@ export async function deleteCategoria(id: string) {
   })
 
   if (count > 0) {
-    throw new Error(`No se puede eliminar la categoría "${current.nombre}" porque tiene ${count} producto(s) asignado(s). Reasigna los productos primero.`)
+    throw new Error(`No se puede eliminar la categoría "${current.nombre}" porque tiene ${count} producto(s) asignado(s). Reasigna o elimina los productos primero.`)
   }
 
   await prisma.categoria.delete({
@@ -155,5 +226,6 @@ export async function deleteCategoria(id: string) {
   })
 
   revalidatePath('/catalogo')
+  revalidatePath('/catalogo/categorias')
   return { success: true, message: `Categoría "${current.nombre}" eliminada exitosamente.` }
 }

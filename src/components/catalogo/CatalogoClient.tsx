@@ -1,53 +1,44 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useMemo, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { 
   Plus, 
   Search, 
+  X, 
   Package, 
+  PackageCheck, 
   Archive, 
   RotateCcw, 
-  Sparkles, 
-  X,
-  ChevronLeft,
-  ChevronRight,
-  FolderTree,
+  Pencil, 
+  CopyPlus, 
+  Share2, 
+  Check, 
+  Layers, 
+  Palette, 
+  Clock, 
+  Weight, 
+  DollarSign, 
+  Boxes, 
+  Calculator, 
+  MoreHorizontal,
   Trash2,
-  Check,
-  Tag,
-  ArrowRight,
-  Database,
-  Loader2,
-  Pencil,
-  Palette
+  ExternalLink,
+  ChevronDown
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 import { 
   createProducto, 
   updateProducto, 
-  toggleEstadoProducto 
+  toggleEstadoProducto, 
+  duplicarProducto, 
+  deleteProducto 
 } from '@/actions/productos'
-import { 
-  createCategoria, 
-  updateCategoria, 
-  deleteCategoria 
-} from '@/actions/categorias'
-import { toast } from 'sonner'
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogTitle,
-  DialogDescription
-} from '@/components/ui/dialog'
-import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
-import { MultiTagInput, getTagColorClass } from '@/components/ui/MultiTagInput'
 
 export interface ProductoItem {
   id: string
@@ -75,74 +66,52 @@ export interface CategoriaItem {
 interface CatalogoClientProps {
   productos: ProductoItem[]
   categoriasIniciales?: CategoriaItem[]
-  initialTab?: 'productos' | 'categorias'
 }
 
-const ITEMS_PER_PAGE = 5
+type EstadoFilter = 'TODOS' | 'ACTIVOS' | 'DESCONTINUADOS'
 
 export function CatalogoClient({ 
-  productos, 
-  categoriasIniciales = [], 
-  initialTab = 'productos' 
+  productos: initialProductos, 
+  categoriasIniciales = [] 
 }: CatalogoClientProps) {
-  const router = useRouter()
-
-  // Main sub-section tab: 'productos' or 'categorias'
-  const [activeTab, setActiveTab] = useState<'productos' | 'categorias'>(initialTab)
-
-  useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab)
-    }
-  }, [initialTab])
-
-  const handleTabChange = (tab: 'productos' | 'categorias') => {
-    setActiveTab(tab)
-    if (tab === 'productos') {
-      router.push('/catalogo')
-    } else {
-      router.push('/catalogo/categorias')
-    }
-  }
-
-  // Products filters and view
-  const [search, setSearch] = useState('')
-  const [categoriaFilter, setCategoriaFilter] = useState<string>('TODOS')
-  const [estadoFilter, setEstadoFilter] = useState<'TODOS' | 'ACTIVOS' | 'DESCONTINUADOS'>('TODOS')
-  const [sortBy, setSortBy] = useState<'categoria' | 'nombre' | 'amigosDesc' | 'mercadoDesc' | 'comunidadDesc'>('categoria')
-  const [currentPage, setCurrentPage] = useState(1)
-
-  // Categorias state
+  const [productos, setProductos] = useState<ProductoItem[]>(initialProductos)
   const [categorias, setCategorias] = useState<CategoriaItem[]>(categoriasIniciales)
-  const [editingCatId, setEditingCatId] = useState<string | null>(null)
-  const [editingCatNombre, setEditingCatNombre] = useState('')
-  const [editingCatDesc, setEditingCatDesc] = useState('')
-  const [newCatNombre, setNewCatNombre] = useState('')
-  const [newCatDesc, setNewCatDesc] = useState('')
-  const [isCatSubmitting, setIsCatSubmitting] = useState(false)
-  const [catSearch, setCatSearch] = useState('')
+  
+  // Toolbar and Filters
+  const [search, setSearch] = useState('')
+  const [categoriaFilter, setCategoriaFilter] = useState<string>('TODAS')
+  const [estadoFilter, setEstadoFilter] = useState<EstadoFilter>('TODOS')
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [isPending, startTransition] = useTransition()
 
-  // Quick inline category creator in product modal
-  const [isQuickAddingCat, setIsQuickAddingCat] = useState(false)
-  const [quickCatName, setQuickCatName] = useState('')
-  const [quickCatDesc, setQuickCatDesc] = useState('')
-
-  // Product Modals
-  const [openCreate, setOpenCreate] = useState(false)
-  const [openEdit, setOpenEdit] = useState(false)
-  const [openDetails, setOpenDetails] = useState(false)
-  const [selectedProducto, setSelectedProducto] = useState<ProductoItem | null>(null)
+  // Modal State
+  const [openModal, setOpenModal] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    nombreModelo: '',
+    lineaCategoria: '',
+    pesoGramos: '',
+    tiempoHoras: '',
+    costoBase: '',
+    precioAmigos: '',
+    precioMercado: '',
+    precioComunidad: '',
+    activo: true
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Form states for Product Create/Edit
-  const [formCategoria, setFormCategoria] = useState('')
-  const [formNombre, setFormNombre] = useState('')
-  const [formPesoGramos, setFormPesoGramos] = useState<string>('')
-  const [formCostoBase, setFormCostoBase] = useState<string>('')
-  const [formPrecioAmigos, setFormPrecioAmigos] = useState<string>('')
-  const [formPrecioMercado, setFormPrecioMercado] = useState<string>('')
-  const [formPrecioComunidad, setFormPrecioComunidad] = useState<string>('')
-  const [formActivo, setFormActivo] = useState(true)
+  // Close context menu on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setActiveMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -153,1660 +122,1042 @@ export function CatalogoClient({
     return margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`
   }
 
-  // Extract distinct category names for select options (splits comma-separated tags)
+  // Estimate print time (approx 22g/hour as workshop baseline)
+  const estimarTiempoImpresion = (gramos: number) => {
+    if (!gramos || gramos <= 0) return '—'
+    const horas = gramos / 22
+    if (horas < 1) return `${Math.round(horas * 60)} min`
+    return `${horas.toFixed(1)}h`
+  }
+
+  // Categories list for dropdown
   const categoryNamesList = useMemo(() => {
     const set = new Set<string>()
     categorias.forEach(c => set.add(c.nombre))
     productos.forEach(p => {
-      if (p.lineaCategoria) {
-        p.lineaCategoria.split(',').forEach(tag => {
-          const clean = tag.trim()
-          if (clean) set.add(clean)
-        })
-      }
+      if (p.lineaCategoria) set.add(p.lineaCategoria.trim())
     })
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [categorias, productos])
 
-  const categoriasFilterComboboxItems: ComboboxItem[] = useMemo(() => {
-    const allOption: ComboboxItem = {
-      id: 'TODOS',
-      label: 'Todas las Categorías',
-      badge: `${productos.length}`
-    }
-    const catOptions: ComboboxItem[] = categoryNamesList.map(cat => ({
-      id: cat,
-      label: cat,
-      icon: FolderTree,
-      badge: `${productos.filter(p => p.lineaCategoria.split(',').map(s => s.trim().toLowerCase()).includes(cat.toLowerCase())).length}`
-    }))
-    return [allOption, ...catOptions]
-  }, [categoryNamesList, productos])
+  // KPIs
+  const totalModelos = productos.length
+  const activosCount = useMemo(() => productos.filter(p => p.activo).length, [productos])
+  const descontinuadosCount = useMemo(() => productos.filter(p => !p.activo).length, [productos])
+  const categoriasActivasCount = useMemo(() => {
+    const activeCats = new Set(productos.filter(p => p.activo).map(p => p.lineaCategoria))
+    return activeCats.size
+  }, [productos])
 
-  const categoriasFormComboboxItems: ComboboxItem[] = useMemo(() => {
-    return categoryNamesList.map(cat => ({
-      id: cat,
-      label: cat,
-      icon: FolderTree
-    }))
-  }, [categoryNamesList])
-
-  // Helper para renderizar badges de categorías / tags
-  const renderProductCategoryBadges = (lineaCategoria: string) => {
-    if (!lineaCategoria) return null
-    const tags = lineaCategoria.split(',').map(t => t.trim()).filter(Boolean)
-    return (
-      <div className="flex flex-wrap items-center gap-1">
-        {tags.map((tag, idx) => {
-          const colorClass = getTagColorClass(tag)
-          return (
-            <Badge 
-              key={`${tag}-${idx}`} 
-              variant="outline" 
-              className={`text-[10px] font-bold py-0.5 px-2 ${colorClass}`}
-            >
-              {tag}
-            </Badge>
-          )
-        })}
-      </div>
-    )
-  }
-
-  // KPIs Products
-  const totalProductsCount = productos.length
-  const activeProductsCount = productos.filter(p => p.activo).length
-  const discontinuedProductsCount = totalProductsCount - activeProductsCount
-
-  // KPIs Categories
-  const totalCategoriesCount = categorias.length
-  const categoriesWithProductsCount = categorias.filter(c => {
-    const count = productos.filter(p => p.lineaCategoria.split(',').map(s => s.trim().toLowerCase()).includes(c.nombre.toLowerCase())).length
-    return count > 0
-  }).length
-  const emptyCategoriesCount = totalCategoriesCount - categoriesWithProductsCount
-
-  // Filter and sort products
+  // Filtered Products List
   const filteredProductos = useMemo(() => {
-    return productos.filter(p => {
-      const matchSearch = 
-        p.nombreModelo.toLowerCase().includes(search.toLowerCase()) ||
-        p.lineaCategoria.toLowerCase().includes(search.toLowerCase())
+    let list = productos
 
-      const matchCat = categoriaFilter === 'TODOS' || 
-        p.lineaCategoria.split(',').map(s => s.trim().toLowerCase()).includes(categoriaFilter.trim().toLowerCase())
+    if (estadoFilter === 'ACTIVOS') {
+      list = list.filter(p => p.activo)
+    } else if (estadoFilter === 'DESCONTINUADOS') {
+      list = list.filter(p => !p.activo)
+    }
 
-      let matchEstado = true
-      if (estadoFilter === 'ACTIVOS') matchEstado = p.activo
-      if (estadoFilter === 'DESCONTINUADOS') matchEstado = !p.activo
+    if (categoriaFilter !== 'TODAS') {
+      list = list.filter(p => p.lineaCategoria.toLowerCase() === categoriaFilter.toLowerCase())
+    }
 
-      return matchSearch && matchCat && matchEstado
-    }).sort((a, b) => {
-      if (estadoFilter === 'TODOS' && a.activo !== b.activo) {
-        return a.activo ? -1 : 1
-      }
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(p => 
+        p.nombreModelo.toLowerCase().includes(q) ||
+        p.lineaCategoria.toLowerCase().includes(q) ||
+        (p.pesoGramos && p.pesoGramos.toString().includes(q))
+      )
+    }
 
-      if (sortBy === 'categoria') {
-        const catCompare = a.lineaCategoria.localeCompare(b.lineaCategoria)
-        if (catCompare !== 0) return catCompare
-        return a.nombreModelo.localeCompare(b.nombreModelo)
-      }
-      if (sortBy === 'nombre') {
-        return a.nombreModelo.localeCompare(b.nombreModelo)
-      }
-      if (sortBy === 'amigosDesc') {
-        return b.precioAmigos - a.precioAmigos
-      }
-      if (sortBy === 'mercadoDesc') {
-        return b.precioMercado - a.precioMercado
-      }
-      if (sortBy === 'comunidadDesc') {
-        return b.precioComunidad - a.precioComunidad
-      }
-      return 0
+    return list.sort((a, b) => {
+      if (a.activo && !b.activo) return -1
+      if (!a.activo && b.activo) return 1
+      return a.nombreModelo.localeCompare(b.nombreModelo, 'es', { sensitivity: 'base' })
     })
-  }, [productos, search, categoriaFilter, estadoFilter, sortBy])
+  }, [productos, estadoFilter, categoriaFilter, search])
 
-  // Filter categories
-  const filteredCategorias = useMemo(() => {
-    return categorias.filter(c => 
-      c.nombre.toLowerCase().includes(catSearch.toLowerCase()) ||
-      (c.descripcion && c.descripcion.toLowerCase().includes(catSearch.toLowerCase()))
-    )
-  }, [categorias, catSearch])
-
-  // Reset to page 1 whenever product filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [search, categoriaFilter, estadoFilter, sortBy])
-
-  // Pagination calculation (7 items per page)
-  const totalPages = Math.max(1, Math.ceil(filteredProductos.length / ITEMS_PER_PAGE))
-  const paginatedProductos = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
-    return filteredProductos.slice(startIndex, startIndex + ITEMS_PER_PAGE)
-  }, [filteredProductos, currentPage])
-
-  // Auto-calculate suggested prices
-  const handleAutoCalculatePrices = (baseCostStr: string) => {
-    const base = parseFloat(baseCostStr)
-    if (!isNaN(base) && base > 0) {
-      setFormPrecioAmigos(Math.round(base * 1.35).toString())
-      setFormPrecioMercado(Math.round(base * 1.60).toString())
-      setFormPrecioComunidad(Math.round(base * 1.80).toString())
-    }
+  // Copy Quotation to Clipboard for WhatsApp: "[Nombre] - Precio: S/ [Mercado]"
+  const handleCopiarCotizacion = (p: ProductoItem) => {
+    const message = `${p.nombreModelo} - Precio: ${formatCurrency(p.precioMercado)}`
+    navigator.clipboard.writeText(message)
+    setCopiedId(p.id)
+    setTimeout(() => setCopiedId(null), 2000)
+    toast.success(`Cotización de "${p.nombreModelo}" copiada`)
   }
 
-  // CATEGORY CRUD ACTIONS
-  const handleCreateCategoria = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newCatNombre.trim()) {
-      toast.error('El nombre de la categoría es obligatorio')
-      return
-    }
+  // Toggle Active/Discontinued
+  const handleToggleEstado = async (p: ProductoItem) => {
+    const nuevoEstado = !p.activo
+    setProductos(prev => prev.map(item => item.id === p.id ? { ...item, activo: nuevoEstado } : item))
+    setActiveMenuId(null)
 
-    setIsCatSubmitting(true)
     try {
-      const created = await createCategoria({
-        nombre: newCatNombre,
-        descripcion: newCatDesc,
-      })
-      setCategorias(prev => [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre)))
-      setNewCatNombre('')
-      setNewCatDesc('')
-      toast.success(`Categoría "${created.nombre}" guardada con éxito`)
-    } catch (err: any) {
-      toast.error(err?.message || 'Error al crear la categoría')
-    } finally {
-      setIsCatSubmitting(false)
+      await toggleEstadoProducto(p.id)
+      toast.success(`"${p.nombreModelo}" marcado como ${nuevoEstado ? 'Activo' : 'Descontinuado'}`)
+    } catch (e: any) {
+      toast.error('Error al cambiar estado: ' + e.message)
+      setProductos(prev => prev.map(item => item.id === p.id ? { ...item, activo: !nuevoEstado } : item))
     }
   }
 
-  const handleStartEditCat = (cat: CategoriaItem) => {
-    setEditingCatId(cat.id)
-    setEditingCatNombre(cat.nombre)
-    setEditingCatDesc(cat.descripcion || '')
-  }
-
-  const handleSaveEditCat = async (id: string) => {
-    if (!editingCatNombre.trim()) {
-      toast.error('El nombre no puede estar vacío')
-      return
-    }
-
-    setIsCatSubmitting(true)
+  // Duplicate product
+  const handleDuplicar = async (p: ProductoItem) => {
+    setActiveMenuId(null)
     try {
-      const updated = await updateCategoria(id, {
-        nombre: editingCatNombre,
-        descripcion: editingCatDesc,
-      })
-      setCategorias(prev => prev.map(c => c.id === id ? { ...c, ...updated } : c))
-      setEditingCatId(null)
-      toast.success('Categoría actualizada')
-    } catch (err: any) {
-      toast.error(err?.message || 'Error al actualizar categoría')
-    } finally {
-      setIsCatSubmitting(false)
+      const duplicado = await duplicarProducto(p.id)
+      setProductos(prev => [duplicado, ...prev])
+      toast.success(`Modelo "${duplicado.nombreModelo}" duplicado`)
+    } catch (e: any) {
+      toast.error('Error al duplicar modelo: ' + e.message)
     }
   }
 
-  const handleDeleteCat = async (id: string, nombre: string) => {
-    if (confirm(`¿Deseas eliminar la categoría "${nombre}"?`)) {
-      try {
-        const res = await deleteCategoria(id)
-        setCategorias(prev => prev.filter(c => c.id !== id))
+  // Delete product
+  const handleDelete = async (p: ProductoItem) => {
+    setActiveMenuId(null)
+    if (!confirm(`¿Estás seguro de eliminar o archivar "${p.nombreModelo}"?`)) return
+
+    try {
+      const res = await deleteProducto(p.id)
+      if (res.discontinued) {
+        setProductos(prev => prev.map(item => item.id === p.id ? { ...item, activo: false } : item))
+        toast.info(res.message)
+      } else {
+        setProductos(prev => prev.filter(item => item.id !== p.id))
         toast.success(res.message)
-      } catch (err: any) {
-        toast.error(err?.message || 'Error al eliminar categoría')
       }
+    } catch (e: any) {
+      toast.error('Error al eliminar: ' + e.message)
     }
   }
 
-  const handleFilterByCategoryFromTab = (catName: string) => {
-    setCategoriaFilter(catName)
-    setActiveTab('productos')
-    router.push('/catalogo')
-  }
-
-  // Quick inline category add inside product modal
-  const handleQuickAddCategory = async () => {
-    if (!quickCatName.trim()) return
-    try {
-      const created = await createCategoria({ 
-        nombre: quickCatName,
-        descripcion: quickCatDesc || undefined
-      })
-      setCategorias(prev => [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre)))
-      setFormCategoria(created.nombre)
-      setQuickCatName('')
-      setQuickCatDesc('')
-      setIsQuickAddingCat(false)
-      toast.success(`Categoría "${created.nombre}" creada y seleccionada`)
-    } catch (err: any) {
-      toast.error(err?.message || 'Error al agregar categoría')
-    }
-  }
-
+  // Open Create Modal
   const handleOpenCreate = () => {
-    setFormCategoria(categoryNamesList[0] || 'JUEGOS DE MESA')
-    setFormNombre('')
-    setFormPesoGramos('')
-    setFormCostoBase('')
-    setFormPrecioAmigos('')
-    setFormPrecioMercado('')
-    setFormPrecioComunidad('')
-    setFormActivo(true)
-    setIsQuickAddingCat(false)
-    setOpenCreate(true)
+    setEditingId(null)
+    setFormData({
+      nombreModelo: '',
+      lineaCategoria: categoryNamesList[0] || 'General',
+      pesoGramos: '150',
+      tiempoHoras: '4.5',
+      costoBase: '9.75',
+      precioAmigos: '18.00',
+      precioMercado: '30.00',
+      precioComunidad: '25.00',
+      activo: true
+    })
+    setOpenModal(true)
   }
 
-  const handleOpenDetails = (prod: ProductoItem) => {
-    setSelectedProducto(prod)
-    setOpenDetails(true)
+  // Open Edit Modal
+  const handleOpenEdit = (p: ProductoItem) => {
+    setEditingId(p.id)
+    const gramos = p.pesoGramos || 0
+    setFormData({
+      nombreModelo: p.nombreModelo,
+      lineaCategoria: p.lineaCategoria || 'General',
+      pesoGramos: gramos > 0 ? gramos.toString() : '',
+      tiempoHoras: gramos > 0 ? (gramos / 22).toFixed(1) : '',
+      costoBase: p.costoBase.toString(),
+      precioAmigos: p.precioAmigos.toString(),
+      precioMercado: p.precioMercado.toString(),
+      precioComunidad: p.precioComunidad.toString(),
+      activo: p.activo
+    })
+    setOpenModal(true)
   }
 
-  const handleOpenEdit = (prod: ProductoItem, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation()
-    setSelectedProducto(prod)
-    setFormCategoria(prod.lineaCategoria)
-    setFormNombre(prod.nombreModelo)
-    setFormPesoGramos(prod.pesoGramos != null ? prod.pesoGramos.toString() : '')
-    setFormCostoBase(prod.costoBase.toString())
-    setFormPrecioAmigos(prod.precioAmigos.toString())
-    setFormPrecioMercado(prod.precioMercado.toString())
-    setFormPrecioComunidad(prod.precioComunidad.toString())
-    setFormActivo(prod.activo)
-    setIsQuickAddingCat(false)
-    setOpenDetails(false)
-    setOpenEdit(true)
+  // Recalculate base cost automatically from grams
+  const handleGramosChange = (val: string) => {
+    const g = parseFloat(val) || 0
+    const horas = g > 0 ? (g / 22).toFixed(1) : ''
+    const costoEstimado = g > 0 ? (g * 0.065).toFixed(2) : ''
+    
+    setFormData(prev => ({
+      ...prev,
+      pesoGramos: val,
+      tiempoHoras: horas,
+      costoBase: costoEstimado || prev.costoBase
+    }))
   }
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
+  // Submit Modal
+  const handleSubmitModal = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formNombre.trim() || !formCategoria.trim() || !formCostoBase) {
-      toast.error('Por favor completa los campos obligatorios')
+    if (!formData.nombreModelo.trim()) {
+      toast.error('El nombre del modelo es obligatorio')
       return
     }
 
-    setIsSubmitting(true)
-    try {
-      await createProducto({
-        lineaCategoria: formCategoria,
-        nombreModelo: formNombre,
-        pesoGramos: parseFloat(formPesoGramos) || 0,
-        costoBase: parseFloat(formCostoBase) || 0,
-        precioAmigos: parseFloat(formPrecioAmigos) || 0,
-        precioMercado: parseFloat(formPrecioMercado) || 0,
-        precioComunidad: parseFloat(formPrecioComunidad) || 0,
-        activo: formActivo,
-      })
-      toast.success('Producto creado con éxito')
-      setOpenCreate(false)
-      router.refresh()
-    } catch (error: any) {
-      toast.error(error?.message || 'Error al crear producto (verifica que el nombre no esté duplicado)')
-    } finally {
-      setIsSubmitting(false)
+    const payload = {
+      nombreModelo: formData.nombreModelo.trim(),
+      lineaCategoria: formData.lineaCategoria.trim() || 'General',
+      pesoGramos: formData.pesoGramos ? parseFloat(formData.pesoGramos) : 0,
+      costoBase: parseFloat(formData.costoBase) || 0,
+      precioAmigos: parseFloat(formData.precioAmigos) || 0,
+      precioMercado: parseFloat(formData.precioMercado) || 0,
+      precioComunidad: parseFloat(formData.precioComunidad) || 0,
+      activo: formData.activo
     }
-  }
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedProducto) return
 
     setIsSubmitting(true)
     try {
-      await updateProducto(selectedProducto.id, {
-        lineaCategoria: formCategoria,
-        nombreModelo: formNombre,
-        pesoGramos: parseFloat(formPesoGramos) || 0,
-        costoBase: parseFloat(formCostoBase) || 0,
-        precioAmigos: parseFloat(formPrecioAmigos) || 0,
-        precioMercado: parseFloat(formPrecioMercado) || 0,
-        precioComunidad: parseFloat(formPrecioComunidad) || 0,
-        activo: formActivo,
-      })
-      toast.success('Producto actualizado con éxito')
-      setOpenEdit(false)
-      router.refresh()
-    } catch (error: any) {
-      toast.error(error?.message || 'Error al actualizar producto')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleToggleEstado = async (id: string, currentlyActive: boolean, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation()
-    try {
-      await toggleEstadoProducto(id)
-      if (selectedProducto && selectedProducto.id === id) {
-        setSelectedProducto(prev => prev ? { ...prev, activo: !currentlyActive } : null)
+      if (editingId) {
+        const updated = await updateProducto(editingId, payload)
+        setProductos(prev => prev.map(p => p.id === editingId ? updated : p))
+        toast.success(`Modelo "${payload.nombreModelo}" actualizado`)
+      } else {
+        const created = await createProducto(payload)
+        setProductos(prev => [created, ...prev])
+        toast.success(`Modelo "${payload.nombreModelo}" registrado en catálogo`)
       }
-      toast.success(currentlyActive ? 'Producto marcado como Descontinuado' : 'Producto Reactivado')
-      router.refresh()
-    } catch (error) {
-      toast.error('Error al cambiar el estado del producto')
+      setOpenModal(false)
+    } catch (e: any) {
+      toast.error('Error al guardar: ' + e.message)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
-              {activeTab === 'productos' ? (
-                <Package className="h-6 w-6 stroke-[2.5]" />
-              ) : (
-                <FolderTree className="h-6 w-6 stroke-[2.5]" />
-              )}
-            </div>
-            {activeTab === 'productos' ? 'Catálogo de Productos' : 'Gestión de Categorías'}
-          </h1>
-          <p className="text-sm text-[#75695D] mt-1">
-            {activeTab === 'productos' 
-              ? 'Modelos 3D disponibles con costos base, precios escalonados y control de estado.' 
-              : 'Estructura de clasificación de productos sincronizada en base de datos.'}
-          </p>
+    <div className="w-full space-y-4 sm:space-y-6 animate-in fade-in duration-200">
+      
+      {/* ========================================================================= */}
+      {/* 1. CABECERA Y BARRA DE ACCIONES                                           */}
+      {/* ========================================================================= */}
+      <div className="w-full bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
+        
+        {/* Breadcrumb Contextual */}
+        <div className="flex items-center gap-1.5 text-xs text-[#75695D] font-medium">
+          <Link href="/catalogo" className="hover:text-[#A36F4C] transition-colors flex items-center gap-1">
+            <Package className="h-3.5 w-3.5 text-[#A36F4C]" />
+            <span>Catálogo</span>
+          </Link>
+          <span className="text-[#D4BEA7]">/</span>
+          <span className="text-[#241C15] font-bold">Catálogo de Productos</span>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/catalogo/inventario">
-            <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
-              <Palette className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
-              Inventario de Filamentos
-            </Button>
-          </Link>
+        {/* Título & Botones de Acción */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#241C15] tracking-tight flex items-center gap-2.5">
+              <Boxes className="h-6 w-6 sm:h-7 sm:w-7 text-[#A36F4C] flex-shrink-0" />
+              <span>Catálogo de Productos</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-[#75695D] mt-1">
+              Modelos 3D disponibles con costos base, tiempos de impresión y precios escalonados.
+            </p>
+          </div>
 
-          {activeTab === 'productos' ? (
-            <>
-              <Link href="/catalogo/categorias">
-                <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
-                  <FolderTree className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
-                  Gestionar Categorías
-                </Button>
-              </Link>
-
-              <Button 
-                onClick={handleOpenCreate}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
-              >
-                <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
-                Nuevo Producto
-              </Button>
-            </>
-          ) : (
-            <Link href="/catalogo">
-              <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
-                <Package className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
-                Ver Productos
-              </Button>
+          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+            {/* Botón Inventario de Filamentos */}
+            <Link
+              href="/catalogo/inventario"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] shadow-2xs transition-all cursor-pointer flex-1 sm:flex-initial justify-center"
+            >
+              <Palette className="h-4 w-4 text-[#A36F4C]" />
+              <span>Filamentos</span>
             </Link>
-          )}
+
+            {/* Botón Gestionar Categorías */}
+            <Link
+              href="/catalogo/categorias"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] shadow-2xs transition-all cursor-pointer flex-1 sm:flex-initial justify-center"
+            >
+              <Layers className="h-4 w-4 text-[#A36F4C]" />
+              <span>Categorías</span>
+            </Link>
+
+            {/* Botón Primario + Nuevo Producto */}
+            <Button
+              type="button"
+              onClick={handleOpenCreate}
+              className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs h-10 px-4 rounded-xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex-1 sm:flex-initial flex items-center gap-2 justify-center"
+            >
+              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <span>Nuevo Producto</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 2. FILA SUPERIOR DE KPIS (GRID 4 COLUMNAS)                                */}
+        {/* ========================================================================= */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 pt-1">
+          {/* KPI 1: Total Modelos */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between shadow-2xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
+                Total Modelos
+              </span>
+              <div className="p-1.5 rounded-xl bg-[#F5EBE1] text-[#A36F4C] flex-shrink-0">
+                <Boxes className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="text-lg sm:text-2xl font-black text-[#241C15] font-mono tracking-tight">
+                {totalModelos} diseños
+              </div>
+              <span className="text-[10px] sm:text-xs text-[#75695D] font-medium mt-0.5 block truncate">
+                En base de datos del taller
+              </span>
+            </div>
+          </div>
+
+          {/* KPI 2: Activos en Venta (Verde #1E5E3A) */}
+          <div 
+            onClick={() => setEstadoFilter('ACTIVOS')}
+            className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] hover:border-[#1E5E3A]/50 flex flex-col justify-between shadow-2xs cursor-pointer transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
+                Activos en Venta
+              </span>
+              <div className="p-1.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A] flex-shrink-0">
+                <PackageCheck className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="text-lg sm:text-2xl font-black text-[#1E5E3A] font-mono tracking-tight">
+                {activosCount} modelos
+              </div>
+              <span className="text-[10px] sm:text-xs text-[#1E5E3A] font-bold mt-0.5 block truncate">
+                Disponibles para pedidos
+              </span>
+            </div>
+          </div>
+
+          {/* KPI 3: Descontinuados */}
+          <div 
+            onClick={() => setEstadoFilter('DESCONTINUADOS')}
+            className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] hover:border-[#75695D]/50 flex flex-col justify-between shadow-2xs cursor-pointer transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
+                Descontinuados
+              </span>
+              <div className="p-1.5 rounded-xl bg-[#EAE4DC] text-[#75695D] flex-shrink-0">
+                <Archive className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="text-lg sm:text-2xl font-black text-[#75695D] font-mono tracking-tight">
+                {descontinuadosCount} archivados
+              </div>
+              <span className="text-[10px] sm:text-xs text-[#75695D] font-medium mt-0.5 block truncate">
+                Fuera de catálogo activo
+              </span>
+            </div>
+          </div>
+
+          {/* KPI 4: Categorías Activas */}
+          <Link
+            href="/catalogo/categorias"
+            className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] hover:border-[#A36F4C]/50 flex flex-col justify-between shadow-2xs transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
+                Categorías Activas
+              </span>
+              <div className="p-1.5 rounded-xl bg-[#F5EBE1] text-[#A36F4C] flex-shrink-0">
+                <Layers className="h-3.5 w-3.5" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="text-lg sm:text-2xl font-black text-[#A36F4C] font-mono tracking-tight">
+                {categoriasActivasCount} familias
+              </div>
+              <span className="text-[10px] sm:text-xs text-[#A36F4C] font-bold mt-0.5 block truncate">
+                Organización de catálogo →
+              </span>
+            </div>
+          </Link>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* SUBSECTION 1: PRODUCTOS                                                  */}
+      {/* 3. BARRA DE HERRAMIENTAS Y FILTROS (SINGLE-ROW TOOLBAR)                   */}
       {/* ========================================================================= */}
-      {activeTab === 'productos' && (
-        <div className="space-y-6">
-          {/* KPI Stats Chips Light Mode */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-                <Package className="h-3.5 w-3.5" /> Total Modelos
-              </span>
-              <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">{totalProductsCount}</div>
-            </div>
-
-            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#1E5E3A] animate-pulse"></span>
-                Activos en Venta
-              </span>
-              <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">{activeProductsCount}</div>
-            </div>
-
-            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#75695D] flex items-center gap-1.5">
-                <Archive className="h-3.5 w-3.5" />
-                Descontinuados
-              </span>
-              <div className="text-2xl font-extrabold text-[#75695D] font-mono mt-1">{discontinuedProductsCount}</div>
-            </div>
-
-            <div 
-              onClick={() => router.push('/catalogo/categorias')}
-              className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm cursor-pointer hover:border-[#A36F4C] hover:bg-[#FDFBF7] transition-all group"
-            >
-              <span className="text-xs font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
-                Categorías
-                <ArrowRight className="h-3.5 w-3.5 text-[#A36F4C] group-hover:translate-x-0.5 transition-transform" />
-              </span>
-              <div className="text-2xl font-extrabold text-[#A36F4C] font-mono mt-1">{totalCategoriesCount}</div>
-            </div>
-          </div>
-
-          {/* 1-Row Compact Filter Toolbar */}
-          <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-            {/* Lado Izquierdo: Campo de Búsqueda */}
-            <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-3 sm:p-4 shadow-xs space-y-3">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          
+          {/* Lado Izquierdo: Buscador + Dropdown Categorías */}
+          <div className="flex items-center gap-2.5 flex-1 min-w-0 flex-wrap sm:flex-nowrap">
+            {/* Buscador */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
               <Input 
-                placeholder="Buscar modelo o categoría..." 
+                placeholder="Buscar modelo, tag o gramaje..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
+                className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-2xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
               />
               {search && (
                 <button 
                   onClick={() => setSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-1 rounded-md cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Lado Derecho: Controles y Selectores */}
-            <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
-              {/* Category Combobox */}
-              <div className="w-full sm:w-56 flex-shrink-0">
-                <SearchableCombobox
-                  items={categoriasFilterComboboxItems}
-                  value={categoriaFilter}
-                  onChange={(val) => setCategoriaFilter(val || 'TODOS')}
-                  size="sm"
-                  icon={FolderTree}
-                  placeholder="Todas las Categorías"
-                  searchPlaceholder="Buscar categoría..."
-                  clearable={false}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Sort Dropdown */}
-              <select 
-                className="bg-[#F4EFEA] border border-[#E2D9CC] text-[#241C15] rounded-xl px-3 py-1.5 text-xs font-medium focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] cursor-pointer outline-none h-9 shadow-sm hidden lg:block"
-                value={sortBy}
-                onChange={(e: any) => setSortBy(e.target.value)}
-              >
-                <option value="categoria">Ordenar: Categoría</option>
-                <option value="nombre">Ordenar: Nombre (A-Z)</option>
-                <option value="amigosDesc">P. Amigos: Mayor a Menor</option>
-                <option value="mercadoDesc">P. Mercado: Mayor a Menor</option>
-                <option value="comunidadDesc">P. Comunidad: Mayor a Menor</option>
-              </select>
-
-              {/* Status Tabs Pills */}
-              <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC]">
-                <button
-                  onClick={() => setEstadoFilter('TODOS')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    estadoFilter === 'TODOS'
-                      ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
-                      : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                  }`}
-                >
-                  Todos
-                </button>
-                <button
-                  onClick={() => setEstadoFilter('ACTIVOS')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    estadoFilter === 'ACTIVOS'
-                      ? 'bg-[#1E5E3A] text-white font-bold shadow-sm'
-                      : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                  }`}
-                >
-                  Activos
-                </button>
-                <button
-                  onClick={() => setEstadoFilter('DESCONTINUADOS')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    estadoFilter === 'DESCONTINUADOS'
-                      ? 'bg-[#75695D] text-white font-bold shadow-sm'
-                      : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                  }`}
-                >
-                  Descontinuados
-                </button>
-              </div>
-            </div>
+            {/* Dropdown de Categorías */}
+            <select
+              value={categoriaFilter}
+              onChange={(e) => setCategoriaFilter(e.target.value)}
+              className="h-10 px-3 bg-[#F8F6F2] border border-[#E2D9CC] text-xs font-bold text-[#241C15] rounded-2xl focus:border-[#A36F4C] focus:bg-white cursor-pointer min-w-[150px]"
+            >
+              <option value="TODAS">Todas las Categorías</option>
+              {categoryNamesList.map(cat => (
+                <option key={cat} value={cat}>
+                  {cat} ({productos.filter(p => p.lineaCategoria.toLowerCase() === cat.toLowerCase()).length})
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Main Table View (Light Mode NOVA) */}
-          {filteredProductos.length === 0 ? (
-            <Card className="bg-[#FFFFFF] border-[#E2D9CC] p-12 text-center rounded-2xl shadow-sm">
-              <div className="flex flex-col items-center justify-center space-y-3">
-                <Package className="h-12 w-12 text-[#A89B8D]" />
-                <h3 className="text-lg font-bold text-[#241C15]">No se encontraron productos</h3>
-                <p className="text-sm text-[#75695D] max-w-sm">
-                  {search || categoriaFilter !== 'TODOS' || estadoFilter !== 'TODOS'
-                    ? 'Prueba ajustando los filtros de búsqueda para ver más resultados.'
-                    : 'Comienza agregando tu primer producto al catálogo.'}
-                </p>
-                <Button 
-                  onClick={handleOpenCreate}
-                  className="mt-2 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuevo Producto
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-              {/* Mobile View: Cards */}
-              <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
-                {paginatedProductos.map((p) => {
-                  const isDiscontinued = !p.activo
+          {/* Lado Derecho: Segmented Control Estado */}
+          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-between sm:justify-end">
+            <div className="bg-[#EAE4DC] p-1 rounded-2xl border border-[#D4BEA7] flex items-center gap-1 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setEstadoFilter('TODOS')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  estadoFilter === 'TODOS'
+                    ? 'bg-[#FFFFFF] text-[#241C15] shadow-xs'
+                    : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+                }`}
+              >
+                Todos ({productos.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEstadoFilter('ACTIVOS')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  estadoFilter === 'ACTIVOS'
+                    ? 'bg-[#FFFFFF] text-[#1E5E3A] shadow-xs'
+                    : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+                }`}
+              >
+                <span className="h-2 w-2 rounded-full bg-[#1E5E3A]" />
+                <span>Activos ({activosCount})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEstadoFilter('DESCONTINUADOS')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  estadoFilter === 'DESCONTINUADOS'
+                    ? 'bg-[#FFFFFF] text-[#75695D] shadow-xs'
+                    : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+                }`}
+              >
+                Archivados ({descontinuadosCount})
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4. TABLA OPERATIVA PRINCIPAL (EXCLUSIVA Y 100% RESPONSIVE)               */}
+      {/* ========================================================================= */}
+      
+      {/* VISTA ESCRITORIO (>= md / 768px): Tabla estructurada con scroll seguro y sin cortes */}
+      <div className="hidden md:block w-full bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse table-auto sm:table-fixed text-xs min-w-[760px]">
+            <colgroup>
+              <col className="w-[28%]" />
+              <col className="w-[14%]" />
+              <col className="w-[12%]" />
+              <col className="w-[26%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+            </colgroup>
+            <thead>
+              <tr className="bg-[#F4EFEA] border-b border-[#E2D9CC] text-[#75695D] text-[11px] font-semibold">
+                <th className="py-3.5 px-4 font-bold text-left">Modelo & Familia</th>
+                <th className="py-3.5 px-4 font-bold text-center">Especificaciones</th>
+                <th className="py-3.5 px-4 font-bold text-right">Costo Base</th>
+                <th className="py-3.5 px-4 font-bold text-center">Niveles de Precios (Amigos / Mercado / Comunidad)</th>
+                <th className="py-3.5 px-4 font-bold text-center">Estado</th>
+                <th className="py-3.5 px-4 font-bold text-right pr-4">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2D9CC]">
+              {filteredProductos.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-[#75695D] italic bg-[#FFFFFF]">
+                    No se encontraron productos con ese criterio de búsqueda
+                  </td>
+                </tr>
+              ) : (
+                filteredProductos.map((p) => {
+                  const gramos = p.pesoGramos || 0
+                  const costo = p.costoBase || 0
+                  const isMenuOpen = activeMenuId === p.id
 
                   return (
-                    <div 
+                    <tr 
                       key={p.id} 
-                      onClick={() => handleOpenDetails(p)}
-                      className={`p-3.5 space-y-2.5 transition-colors cursor-pointer active:bg-[#F8F6F2] ${
-                        isDiscontinued 
-                          ? 'bg-[#FAF8F5]/60 opacity-80' 
-                          : 'bg-[#FFFFFF] hover:bg-[#FDFBF7]'
+                      className={`h-16 transition-colors ${
+                        !p.activo ? 'bg-[#FAF8F5]/60 opacity-80' : 'hover:bg-[#FAF8F5]'
                       }`}
                     >
-                      {/* Fila 1: Nombre, Peso, Categoría y Estado */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`text-sm font-bold truncate ${
-                              isDiscontinued ? 'line-through text-[#75695D]' : 'text-[#241C15]'
-                            }`}>
+                      {/* Columna 1: Modelo & Familia */}
+                      <td className="py-3 px-4 min-w-[200px]">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-2xl bg-[#F5EBE1] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center flex-shrink-0 shadow-2xs">
+                            <Package className="h-4.5 w-4.5 stroke-[2.2]" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-bold text-sm text-[#241C15] block truncate" title={p.nombreModelo}>
                               {p.nombreModelo}
                             </span>
-                            {p.pesoGramos != null && p.pesoGramos > 0 && (
-                              <Badge variant="outline" className="text-[10px] font-mono font-bold bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] px-1.5 py-0">
-                                ⚖️ {p.pesoGramos}g
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="mt-1">
-                            {renderProductCategoryBadges(p.lineaCategoria)}
+                            <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] mt-0.5">
+                              {p.lineaCategoria || 'General'}
+                            </Badge>
                           </div>
                         </div>
+                      </td>
 
-                        <div className="flex-shrink-0">
-                          {p.activo ? (
-                            <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] gap-1 inline-flex items-center px-2 py-0.5 font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
-                              Activo
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-[#F4EFEA] text-[#75695D] border-[#E2D9CC] text-[10px] gap-1 inline-flex items-center px-2 py-0.5 font-medium">
-                              <Archive className="w-3 h-3" />
-                              Descontinuado
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
+                      {/* Columna 2: Especificaciones Técnicas */}
+                      <td className="py-3 px-4 text-center font-mono text-xs text-[#241C15] min-w-[110px]">
+                        <span className="font-bold block">
+                          {gramos > 0 ? `${gramos}g` : '—'}
+                        </span>
+                        <span className="text-[10px] text-[#75695D] block">
+                          {estimarTiempoImpresion(gramos)}
+                        </span>
+                      </td>
 
-                      {/* Fila 2: 3 Precios en Grid */}
-                      <div className="grid grid-cols-3 gap-1.5 p-2 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
-                        <div className="p-1">
-                          <span className="text-[9px] uppercase font-bold text-[#1E5E3A] block">P. Amigos</span>
-                          <span className="text-xs font-bold text-[#1E5E3A] font-mono block mt-0.5">
-                            {formatCurrency(p.precioAmigos)}
-                          </span>
-                          <span className="text-[8px] text-[#1E5E3A]/80 font-medium block truncate">
-                            +{calcMargen(p.precioAmigos, p.costoBase)}
-                          </span>
-                        </div>
+                      {/* Columna 3: Costo Base */}
+                      <td className="py-3 px-4 text-right font-mono font-semibold text-[#241C15] text-xs min-w-[90px] tabular-nums">
+                        {formatCurrency(costo)}
+                      </td>
 
-                        <div className="p-1 border-x border-[#E2D9CC]">
-                          <span className="text-[9px] uppercase font-bold text-[#944917] block">P. Mercado</span>
-                          <span className="text-xs font-bold text-[#944917] font-mono block mt-0.5">
-                            {formatCurrency(p.precioMercado)}
-                          </span>
-                          <span className="text-[8px] text-[#944917]/80 font-medium block truncate">
-                            +{calcMargen(p.precioMercado, p.costoBase)}
-                          </span>
-                        </div>
-
-                        <div className="p-1">
-                          <span className="text-[9px] uppercase font-bold text-[#A36F4C] block">Comunidad</span>
-                          <span className="text-xs font-bold text-[#A36F4C] font-mono block mt-0.5">
-                            {formatCurrency(p.precioComunidad)}
-                          </span>
-                          <span className="text-[8px] text-[#A36F4C]/80 font-medium block truncate">
-                            +{calcMargen(p.precioComunidad, p.costoBase)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Desktop View: Table */}
-              <div className="hidden md:block overflow-x-auto scrollbar-thin">
-                <Table className="w-full min-w-[650px]">
-                  <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
-                  <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-                    <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Producto / Modelo</TableHead>
-                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left hidden sm:table-cell">Categorías / Tags</TableHead>
-                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Estado</TableHead>
-                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">P. Amigos</TableHead>
-                    <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">P. Mercado</TableHead>
-                    <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">P. Comunidad</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedProductos.map((p) => {
-                    const isDiscontinued = !p.activo
-
-                    return (
-                      <TableRow 
-                        key={p.id} 
-                        onClick={() => handleOpenDetails(p)}
-                        className={`border-[#E2D9CC]/70 transition-colors cursor-pointer group ${
-                          isDiscontinued 
-                            ? 'bg-[#FDFBF7]/50 opacity-70 hover:opacity-100 hover:bg-[#FDFBF7]' 
-                            : 'hover:bg-[#FDFBF7]'
-                        }`}
-                      >
-                        {/* Modelo & mobile category */}
-                        <TableCell className="font-medium text-[#241C15] px-4 py-3">
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className={`text-sm font-bold transition-colors ${
-                                isDiscontinued 
-                                    ? 'line-through text-[#75695D]' 
-                                  : 'text-[#241C15] group-hover:text-[#A36F4C]'
-                              }`}>
-                                {p.nombreModelo}
-                              </span>
-                              {p.pesoGramos != null && p.pesoGramos > 0 && (
-                                <Badge variant="outline" className="text-[10px] font-mono font-bold bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] px-1.5 py-0">
-                                  ⚖️ {p.pesoGramos}g
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="sm:hidden mt-1">
-                              {renderProductCategoryBadges(p.lineaCategoria)}
-                            </div>
-                          </div>
-                        </TableCell>
-
-                        {/* Categorías (Desktop) */}
-                        <TableCell className="px-3 py-3 hidden sm:table-cell">
-                          {renderProductCategoryBadges(p.lineaCategoria)}
-                        </TableCell>
-
-                        {/* Estado */}
-                        <TableCell className="text-center px-3 py-3 whitespace-nowrap">
-                          {p.activo ? (
-                            <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs gap-1 inline-flex items-center px-2 py-0.5 font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
-                              Activo
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-[#F4EFEA] text-[#75695D] border-[#E2D9CC] text-xs gap-1 inline-flex items-center px-2 py-0.5 font-medium">
-                              <Archive className="w-3 h-3" />
-                              Descontinuado
-                            </Badge>
-                          )}
-                        </TableCell>
-
-                        {/* 1. Precio Amigos */}
-                        <TableCell className="text-right px-3 py-3 whitespace-nowrap">
-                          <div className="flex flex-col items-end">
-                            <span className="font-semibold text-[#1E5E3A] text-sm font-mono">
+                      {/* Columna 4: Niveles de Precios (3 Columnas delgadas) */}
+                      <td className="py-3 px-4 min-w-[280px]">
+                        <div className="grid grid-cols-3 gap-1.5 text-center font-mono text-xs tabular-nums">
+                          {/* Amigos */}
+                          <div className="p-1 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
+                            <span className="text-[9px] text-[#75695D] block font-sans">Amigos</span>
+                            <span className="font-semibold text-[#241C15] block">
                               {formatCurrency(p.precioAmigos)}
                             </span>
-                            <span className="text-[10px] text-[#1E5E3A]/80 font-medium">
-                              {calcMargen(p.precioAmigos, p.costoBase)} ganancia
+                            <span className="text-[9px] text-[#1E5E3A] font-bold block">
+                              {calcMargen(p.precioAmigos, costo)}
                             </span>
                           </div>
-                        </TableCell>
 
-                        {/* 2. Precio Mercado */}
-                        <TableCell className="text-right px-3 py-3 whitespace-nowrap">
-                          <div className="flex flex-col items-end">
-                            <span className="font-semibold text-[#944917] text-sm font-mono">
+                          {/* Mercado */}
+                          <div className="p-1 rounded-xl bg-[#FFFFFF] border border-[#A36F4C]/40 shadow-2xs ring-1 ring-[#A36F4C]/10">
+                            <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Mercado</span>
+                            <span className="font-black text-[#A36F4C] block">
                               {formatCurrency(p.precioMercado)}
                             </span>
-                            <span className="text-[10px] text-[#944917]/80 font-medium">
-                              {calcMargen(p.precioMercado, p.costoBase)} ganancia
+                            <span className="text-[9px] text-[#1E5E3A] font-bold block">
+                              {calcMargen(p.precioMercado, costo)}
                             </span>
                           </div>
-                        </TableCell>
 
-                        {/* 3. Precio Comunidad */}
-                        <TableCell className="text-right px-4 py-3 whitespace-nowrap">
-                          <div className="flex flex-col items-end">
-                            <span className="font-bold text-[#A36F4C] text-sm font-mono">
+                          {/* Comunidad */}
+                          <div className="p-1 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
+                            <span className="text-[9px] text-[#75695D] block font-sans">Comunidad</span>
+                            <span className="font-semibold text-[#241C15] block">
                               {formatCurrency(p.precioComunidad)}
                             </span>
-                            <span className="text-[10px] text-[#A36F4C]/80 font-medium">
-                              {calcMargen(p.precioComunidad, p.costoBase)} ganancia
+                            <span className="text-[9px] text-[#1E5E3A] font-bold block">
+                              {calcMargen(p.precioComunidad, costo)}
                             </span>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-              </div>
+                        </div>
+                      </td>
 
-              {/* Pagination Footer */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#F4EFEA] text-xs text-[#75695D]">
-                <div>
-                  Mostrando página <span className="text-[#241C15] font-bold">{currentPage}</span> de <span className="text-[#241C15] font-bold">{totalPages}</span> ({filteredProductos.length} modelos)
-                </div>
+                      {/* Columna 5: Estado */}
+                      <td className="py-3 px-4 text-center min-w-[100px]">
+                        {p.activo ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] border border-[#B4E3C0] text-[#1E5E3A] text-[11px] font-bold">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
+                            <span>Activo</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] text-[11px] font-medium">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#75695D]" />
+                            <span>Archivado</span>
+                          </span>
+                        )}
+                      </td>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Anterior
-                    </Button>
+                      {/* Columna 6: Acciones Rápidas (Extremo Derecho Visible) */}
+                      <td className="py-3 px-4 text-right pr-4 min-w-[120px]">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Botón Copiar Cotización */}
+                          <button
+                            type="button"
+                            onClick={() => handleCopiarCotizacion(p)}
+                            className="p-1.5 rounded-xl border border-[#E2D9CC] bg-white hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#A36F4C] transition-colors cursor-pointer shadow-2xs"
+                            title="Copiar cotización para WhatsApp"
+                          >
+                            {copiedId === p.id ? (
+                              <Check className="h-3.5 w-3.5 text-[#1E5E3A]" />
+                            ) : (
+                              <Share2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
 
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            currentPage === page
-                              ? 'bg-[#A36F4C] text-white shadow-sm'
-                              : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
+                          {/* Botón Editar */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(p)}
+                            className="p-1.5 rounded-xl border border-[#E2D9CC] bg-white hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#A36F4C] transition-colors cursor-pointer shadow-2xs"
+                            title="Editar producto"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
-                    >
-                      Siguiente
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
+                          {/* Menú de Tres Puntos */}
+                          <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
+                            <button
+                              type="button"
+                              onClick={() => setActiveMenuId(isMenuOpen ? null : p.id)}
+                              className="p-1.5 rounded-xl border border-[#E2D9CC] bg-white hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer shadow-2xs"
+                              title="Más opciones"
+                            >
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </button>
 
-      {/* ========================================================================= */}
-      {/* SUBSECTION 2: GESTIÓN DE CATEGORÍAS (CRUD COMPLETO EN BD)               */}
-      {/* ========================================================================= */}
-      {activeTab === 'categorias' && (
-        <div className="space-y-6 animate-in fade-in duration-300">
-          {/* Categories KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                Categorías Registradas
-              </span>
-              <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">{totalCategoriesCount}</div>
-            </div>
-            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Con Productos Asignados
-              </span>
-              <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">{categoriesWithProductsCount}</div>
-            </div>
-            <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#75695D] flex items-center gap-2">
-                <Tag className="h-4 w-4" />
-                Categorías Sin Modelos
-              </span>
-              <div className="text-2xl font-extrabold text-[#75695D] font-mono mt-1">{emptyCategoriesCount}</div>
-            </div>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-6 items-start">
-            {/* Column 1: Create Category Card Form */}
-            <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl">
-              <CardHeader>
-                <CardTitle className="text-base font-bold flex items-center gap-2 text-[#241C15]">
-                  <Plus className="h-5 w-5 text-[#A36F4C]" />
-                  Nueva Categoría
-                </CardTitle>
-                <CardDescription className="text-xs text-[#75695D]">
-                  Registra una nueva categoría directamente en la base de datos para organizar tus modelos 3D.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleCreateCategoria} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                      Nombre de la Categoría *
-                    </Label>
-                    <Input 
-                      placeholder="Ej: Joyería & Moda"
-                      value={newCatNombre}
-                      onChange={(e) => setNewCatNombre(e.target.value)}
-                      required
-                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                      Descripción (Opcional)
-                    </Label>
-                    <Input 
-                      placeholder="Ej: Anillos, dijes y accesorios 3D"
-                      value={newCatDesc}
-                      onChange={(e) => setNewCatDesc(e.target.value)}
-                      className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                    />
-                  </div>
-
-                  <Button 
-                    type="submit" 
-                    disabled={isCatSubmitting || !newCatNombre.trim()}
-                    className="w-full bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4 mr-2 stroke-[2.5]" />
-                    {isCatSubmitting ? 'Guardando en BD...' : 'Guardar Categoría en BD'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-
-            {/* Column 2 & 3: Categories List and Table */}
-            <Card className="lg:col-span-2 bg-[#FFFFFF] border-[#E2D9CC] shadow-sm rounded-2xl overflow-hidden">
-              <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FDFBF7] border-b border-[#E2D9CC]">
-                <div>
-                  <CardTitle className="text-base font-bold flex items-center gap-2 text-[#241C15]">
-                    <FolderTree className="h-5 w-5 text-[#A36F4C]" />
-                    Listado de Categorías
-                  </CardTitle>
-                  <CardDescription className="text-xs text-[#75695D]">
-                    Edita el nombre de las categorías o elimínalas si no tienen productos asociados.
-                  </CardDescription>
-                </div>
-
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#75695D]" />
-                  <Input 
-                    placeholder="Filtrar categorías..."
-                    value={catSearch}
-                    onChange={(e) => setCatSearch(e.target.value)}
-                    className="pl-8 h-9 bg-[#F4EFEA] border-[#DCD3C6] text-xs text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                  />
-                  {catSearch && (
-                    <button 
-                      onClick={() => setCatSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15]"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent className="p-0">
-                {filteredCategorias.length === 0 ? (
-                  <div className="p-10 text-center text-[#75695D]">
-                    No se encontraron categorías registradas.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-[#E2D9CC]/70 max-h-[360px] overflow-y-auto">
-                    {filteredCategorias.map((cat) => {
-                      const isEditing = editingCatId === cat.id
-                      const prodCount = productos.filter(p => p.lineaCategoria === cat.nombre).length
-
-                      return (
-                        <div key={cat.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FDFBF7] transition-colors">
-                          {isEditing ? (
-                            <div className="flex-1 grid sm:grid-cols-2 gap-2">
-                              <Input 
-                                value={editingCatNombre}
-                                onChange={(e) => setEditingCatNombre(e.target.value)}
-                                placeholder="Nombre de categoría"
-                                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs h-9 rounded-xl focus:border-[#A36F4C]"
-                                autoFocus
-                              />
-                              <Input 
-                                value={editingCatDesc}
-                                onChange={(e) => setEditingCatDesc(e.target.value)}
-                                placeholder="Descripción (opcional)"
-                                className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-xs h-9 rounded-xl focus:border-[#A36F4C]"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-bold text-sm text-[#241C15]">
-                                  {cat.nombre}
-                                </span>
+                            {/* Dropdown contextual */}
+                            {isMenuOpen && (
+                              <div className="absolute right-0 mt-1 w-44 bg-white border border-[#E2D9CC] rounded-2xl shadow-xl p-1 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
                                 <button
-                                  onClick={() => handleFilterByCategoryFromTab(cat.nombre)}
-                                  className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-colors flex items-center gap-1 font-semibold cursor-pointer ${
-                                    prodCount > 0 
-                                      ? 'bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] hover:bg-[#EAE4DC]' 
-                                      : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D]'
-                                  }`}
-                                  title="Ver productos en el catálogo"
+                                  type="button"
+                                  onClick={() => handleDuplicar(p)}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left rounded-xl hover:bg-[#F4EFEA] text-xs font-bold text-[#241C15] cursor-pointer"
                                 >
-                                  <span>{prodCount} {prodCount === 1 ? 'modelo' : 'modelos'}</span>
-                                  {prodCount > 0 && <ArrowRight className="h-2.5 w-2.5" />}
+                                  <CopyPlus className="h-3.5 w-3.5 text-[#A36F4C]" />
+                                  <span>Duplicar Modelo</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleEstado(p)}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left rounded-xl hover:bg-[#F4EFEA] text-xs font-bold text-[#241C15] cursor-pointer"
+                                >
+                                  {p.activo ? (
+                                    <>
+                                      <Archive className="h-3.5 w-3.5 text-[#75695D]" />
+                                      <span>Descontinuar</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <RotateCcw className="h-3.5 w-3.5 text-[#1E5E3A]" />
+                                      <span>Reactivar</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                <div className="border-t border-[#E2D9CC]/60 my-0.5" />
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(p)}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left rounded-xl hover:bg-red-50 text-xs font-bold text-[#DC2626] cursor-pointer"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <span>Eliminar / Archivar</span>
                                 </button>
                               </div>
-                              {cat.descripcion && (
-                                <p className="text-xs text-[#75695D] mt-1">
-                                  {cat.descripcion}
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          <div className="flex items-center gap-2 self-end sm:self-center">
-                            {isEditing ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setEditingCatId(null)}
-                                  className="h-8 px-2.5 text-[#75695D] hover:text-[#241C15] text-xs rounded-xl cursor-pointer"
-                                >
-                                  Cancelar
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSaveEditCat(cat.id)}
-                                  disabled={isCatSubmitting || !editingCatNombre.trim()}
-                                  className="h-8 px-3 bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold rounded-xl cursor-pointer"
-                                >
-                                  <Check className="h-3.5 w-3.5 mr-1" />
-                                  Guardar
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleStartEditCat(cat)}
-                                  className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] text-xs rounded-xl cursor-pointer font-medium"
-                                >
-                                  <Pencil className="h-3 w-3 mr-1 text-[#A36F4C]" />
-                                  Editar
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDeleteCat(cat.id, cat.nombre)}
-                                  disabled={prodCount > 0}
-                                  className={`h-8 px-2.5 text-xs transition-colors rounded-xl cursor-pointer ${
-                                    prodCount > 0 
-                                      ? 'text-[#A89B8D] cursor-not-allowed opacity-40' 
-                                      : 'text-[#A34335] hover:text-red-700 hover:bg-red-50 font-medium'
-                                  }`}
-                                  title={prodCount > 0 ? `Tiene ${prodCount} producto(s) asignado(s)` : 'Eliminar categoría'}
-                                >
-                                  <Trash2 className="h-3 w-3 mr-1" />
-                                  Eliminar
-                                </Button>
-                              </>
                             )}
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
-      {/* ========================================================================= */}
-      {/* MODAL: VER DETALLE DEL PRODUCTO (LIGHT MODE NOVA)                         */}
-      {/* ========================================================================= */}
-      <Dialog open={openDetails} onOpenChange={setOpenDetails}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[560px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
-          {selectedProducto && (
-            <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-              {/* Modal Header Fijo */}
-              <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                    <Package className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <Badge variant="outline" className="text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] text-[10px] font-semibold">
-                        {selectedProducto.lineaCategoria}
-                      </Badge>
-                      {selectedProducto.activo ? (
-                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] gap-1 font-semibold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
-                          Activo
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-[#F4EFEA] text-[#75695D] border-[#E2D9CC] text-[10px]">
-                          <Archive className="w-2.5 h-2.5" />
-                          Descontinuado
-                        </Badge>
-                      )}
-                    </div>
-                    <DialogTitle className="text-lg font-bold text-[#241C15] tracking-tight">
-                      {selectedProducto.nombreModelo}
-                    </DialogTitle>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOpenDetails(false)}
-                  className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
-                {/* Costo Base Hero Box */}
-                <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] flex items-center justify-between shadow-sm">
-                  <div>
-                    <span className="text-xs uppercase tracking-wider text-[#75695D] font-bold">Costo Base de Fabricación</span>
-                    <p className="text-[11px] text-[#75695D] mt-0.5">Filamento, energía y depreciación estimada</p>
-                  </div>
-                  <div className="text-2xl font-extrabold text-[#241C15] font-mono">
-                    {formatCurrency(selectedProducto.costoBase)}
-                  </div>
-                </div>
-
-                {/* Consumo y Rendimiento de Filamento */}
-                <div className="p-4 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] flex items-center justify-between shadow-2xs">
-                  <div className="space-y-0.5">
-                    <span className="text-xs uppercase tracking-wider text-[#75695D] font-bold flex items-center gap-1.5">
-                      <span>⚖️</span> Consumo de Filamento
-                    </span>
-                    <p className="text-[11px] text-[#75695D]">
-                      {selectedProducto.pesoGramos && selectedProducto.pesoGramos > 0
-                        ? `Rendimiento: ~${Math.floor(1000 / selectedProducto.pesoGramos)} unidades por bobina (1kg)`
-                        : 'Sin peso de filamento especificado'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xl font-extrabold text-[#241C15] font-mono">
-                      {selectedProducto.pesoGramos && selectedProducto.pesoGramos > 0 ? `${selectedProducto.pesoGramos} g` : '--'}
-                    </div>
-                    <span className="text-[10px] text-[#75695D]">por unidad</span>
-                  </div>
-                </div>
-
-                {/* Precios & Márgenes */}
-                <div className="space-y-2.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#75695D]">
-                    Estructura de Precios y Márgenes
-                  </span>
-
-                  {/* 1. Amigos */}
-                  {(() => {
-                    const ganancia = selectedProducto.precioAmigos - selectedProducto.costoBase
-                    const margen = selectedProducto.costoBase > 0 ? (ganancia / selectedProducto.costoBase) * 100 : 0
-                    return (
-                      <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#1E5E3A]"></span>
-                          <div>
-                            <span className="text-xs font-bold text-[#1E5E3A]">Precio Amigos</span>
-                            <span className="block text-[11px] text-[#75695D]">
-                              Ganancia: +{formatCurrency(ganancia)} ({margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`})
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-base font-bold text-[#1E5E3A] font-mono">
-                          {formatCurrency(selectedProducto.precioAmigos)}
-                        </span>
-                      </div>
-                    )
-                  })()}
-
-                  {/* 2. Mercado */}
-                  {(() => {
-                    const ganancia = selectedProducto.precioMercado - selectedProducto.costoBase
-                    const margen = selectedProducto.costoBase > 0 ? (ganancia / selectedProducto.costoBase) * 100 : 0
-                    return (
-                      <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#E2D9CC] flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#944917]"></span>
-                          <div>
-                            <span className="text-xs font-bold text-[#944917]">Precio Mercado</span>
-                            <span className="block text-[11px] text-[#75695D]">
-                              Ganancia: +{formatCurrency(ganancia)} ({margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`})
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-base font-bold text-[#944917] font-mono">
-                          {formatCurrency(selectedProducto.precioMercado)}
-                        </span>
-                      </div>
-                    )
-                  })()}
-
-                  {/* 3. Comunidad */}
-                  {(() => {
-                    const ganancia = selectedProducto.precioComunidad - selectedProducto.costoBase
-                    const margen = selectedProducto.costoBase > 0 ? (ganancia / selectedProducto.costoBase) * 100 : 0
-                    return (
-                      <div className="p-3 rounded-xl bg-[#FDFBF7] border border-[#D4BEA7] flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#A36F4C]"></span>
-                          <div>
-                            <span className="text-xs font-bold text-[#A36F4C]">Precio Comunidad</span>
-                            <span className="block text-[11px] text-[#75695D]">
-                              Ganancia: +{formatCurrency(ganancia)} ({margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`})
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-base font-extrabold text-[#A36F4C] font-mono">
-                          {formatCurrency(selectedProducto.precioComunidad)}
-                        </span>
-                      </div>
-                    )
-                  })()}
-                </div>
-              </div>
-
-              {/* Quick actions inside Detail Modal Fijo */}
-              <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 flex-shrink-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleToggleEstado(selectedProducto.id, selectedProducto.activo)}
-                  className={`border-[#E2D9CC] text-xs rounded-xl cursor-pointer font-medium active:scale-[0.98] ${
-                    selectedProducto.activo 
-                      ? 'text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]' 
-                      : 'text-[#1E5E3A] hover:text-[#16472C] hover:bg-emerald-50'
-                  }`}
-                >
-                  {selectedProducto.activo ? (
-                    <>
-                      <Archive className="h-3.5 w-3.5 mr-1.5" />
-                      Descontinuar Producto
-                    </>
-                  ) : (
-                    <>
-                      <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                      Reactivar Producto
-                    </>
-                  )}
-                </Button>
-
-                <div className="flex items-center justify-end gap-2">
-                  <Button 
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setOpenDetails(false)}
-                    className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
-                  >
-                    Cerrar
-                  </Button>
-                  <Button 
-                    type="button"
-                    onClick={() => handleOpenEdit(selectedProducto)}
-                    className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer active:scale-[0.98]"
-                  >
-                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                    Editar Producto
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ========================================================================= */}
-      {/* MODAL: NUEVO PRODUCTO (LIGHT MODE NOVA)                                   */}
-      {/* ========================================================================= */}
-      <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[540px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
-          <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                  <Package className="h-5 w-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                    Nuevo Producto en Catálogo
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                    Registra un modelo 3D con sus costos base y precios de venta.
-                  </DialogDescription>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpenCreate(false)}
-                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
-              {/* Categorías / Tags Multi-Select */}
-              <div className="space-y-1.5">
-                <MultiTagInput
-                  value={formCategoria}
-                  onChange={(tags) => setFormCategoria(tags.join(', '))}
-                  suggestions={categoryNamesList}
-                  label="Categorías / Tags del Producto (Múltiples)"
-                  placeholder="Escribe una categoría y presiona Enter o elige abajo..."
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                  Nombre del Modelo / Producto *
-                </Label>
-                <Input 
-                  value={formNombre}
-                  onChange={(e) => setFormNombre(e.target.value)}
-                  placeholder="Ej: Inserto Catan 3D (5 Placas)"
-                  required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
-              </div>
-
-              {/* Gramos de Filamento por Unidad */}
-              <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <span>⚖️</span> Peso de Filamento (Gramos)
-                  </Label>
-                  {formPesoGramos && parseFloat(formPesoGramos) > 0 && (
-                    <span className="text-[11px] font-semibold text-[#A36F4C]">
-                      ~{Math.floor(1000 / parseFloat(formPesoGramos))} u. por bobina (1kg)
-                    </span>
-                  )}
-                </div>
-                <div className="relative flex items-center w-full">
-                  <Input 
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={formPesoGramos}
-                    onChange={(e) => {
-                      setFormPesoGramos(e.target.value)
-                      if ((!formCostoBase || formCostoBase === '0') && e.target.value && parseFloat(e.target.value) > 0) {
-                        // Costo aprox de filamento S/ 0.065 por gramo
-                        const costoAprox = (parseFloat(e.target.value) * 0.065).toFixed(2)
-                        setFormCostoBase(costoAprox)
-                        handleAutoCalculatePrices(costoAprox)
-                      }
-                    }}
-                    placeholder="Ej: 85 (gramos por unidad)"
-                    className="pr-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">g</span>
-                </div>
-              </div>
-
-            {/* Costo Base & Auto-calculate Button */}
-            <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                  Costo Base de Fabricación (S/) *
-                </Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAutoCalculatePrices(formCostoBase)}
-                  disabled={!formCostoBase || parseFloat(formCostoBase) <= 0}
-                  className="h-6 text-xs text-[#A36F4C] font-semibold hover:underline p-0 cursor-pointer"
-                >
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Sugerir Precios
-                </Button>
-              </div>
-              <div className="relative flex items-center w-full">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formCostoBase}
-                  onChange={(e) => {
-                    setFormCostoBase(e.target.value)
-                    if (!formPrecioAmigos && !formPrecioMercado && !formPrecioComunidad) {
-                      handleAutoCalculatePrices(e.target.value)
-                    }
-                  }}
-                  placeholder="0.00"
-                  required
-                  className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
-              </div>
-            </div>
-
-            {/* Price Tiers Grid: 1. Amigos, 2. Mercado, 3. Comunidad */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#1E5E3A] font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#1E5E3A]"></span>
-                  P. Amigos
-                </Label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formPrecioAmigos}
-                    onChange={(e) => setFormPrecioAmigos(e.target.value)}
-                    placeholder="0.00"
-                    required
-                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#944917] font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#944917]"></span>
-                  P. Mercado
-                </Label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formPrecioMercado}
-                    onChange={(e) => setFormPrecioMercado(e.target.value)}
-                    placeholder="0.00"
-                    required
-                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#A36F4C] font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#A36F4C]"></span>
-                  P. Comunidad
-                </Label>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formPrecioComunidad}
-                    onChange={(e) => setFormPrecioComunidad(e.target.value)}
-                    placeholder="0.00"
-                    required
-                    className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <label className="flex items-center gap-2 text-xs text-[#241C15] font-medium cursor-pointer">
-                <input 
-                  type="checkbox"
-                  checked={formActivo}
-                  onChange={(e) => setFormActivo(e.target.checked)}
-                  className="rounded border-[#DCD3C6] text-[#A36F4C] focus:ring-[#A36F4C]"
-                />
-                Producto activo disponible para ventas
-              </label>
-            </div>
+      {/* VISTA MÓVIL (< md / 768px): Tarjetas colapsables limpias y táctiles */}
+      <div className="block md:hidden space-y-3">
+        {filteredProductos.length === 0 ? (
+          <div className="p-8 text-center bg-[#FFFFFF] rounded-3xl border border-dashed border-[#E2D9CC] text-[#75695D] italic text-xs">
+            No se encontraron productos
           </div>
+        ) : (
+          filteredProductos.map((p) => {
+            const gramos = p.pesoGramos || 0
+            const costo = p.costoBase || 0
 
-          <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                onClick={() => setOpenCreate(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+            return (
+              <div
+                key={p.id}
+                className={`bg-[#FFFFFF] border rounded-3xl p-4 shadow-2xs space-y-3 ${
+                  !p.activo ? 'border-[#E2D9CC] opacity-85 bg-[#FAF8F5]' : 'border-[#E2D9CC]'
+                }`}
               >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  'Guardar Producto'
-                )}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+                {/* Fila 1: Header móvil con Avatar, Título y Estado */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="h-9 w-9 rounded-2xl bg-[#F5EBE1] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center flex-shrink-0 shadow-2xs">
+                      <Package className="h-4.5 w-4.5 stroke-[2.2]" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="font-bold text-sm text-[#241C15] block truncate" title={p.nombreModelo}>
+                        {p.nombreModelo}
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] mt-0.5">
+                        {p.lineaCategoria || 'General'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {p.activo ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#ECFDF5] border border-[#B4E3C0] text-[#1E5E3A] text-[10px] font-bold shrink-0">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
+                      <span>Activo</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] text-[10px] shrink-0 font-medium">
+                      Archivado
+                    </span>
+                  )}
+                </div>
+
+                {/* Fila 2: Especificaciones Técnicas y Costo Base */}
+                <div className="flex items-center justify-between text-xs font-mono bg-[#FAF8F5] p-2.5 rounded-2xl border border-[#E2D9CC]/70">
+                  <div className="flex items-center gap-3">
+                    <span className="text-[#75695D]">
+                      Peso: <strong className="text-[#241C15]">{gramos > 0 ? `${gramos}g` : '—'}</strong>
+                    </span>
+                    <span className="text-[#75695D]">
+                      Tiempo: <strong className="text-[#241C15]">{estimarTiempoImpresion(gramos)}</strong>
+                    </span>
+                  </div>
+                  <span className="font-bold text-[#241C15]">
+                    Costo: {formatCurrency(costo)}
+                  </span>
+                </div>
+
+                {/* Fila 3: Precios Escalonados (3 Cols) */}
+                <div className="grid grid-cols-3 gap-1.5 text-center font-mono text-xs tabular-nums">
+                  <div className="p-1.5 bg-[#FAF8F5] rounded-xl border border-[#E2D9CC]/70">
+                    <span className="text-[9px] text-[#75695D] block font-sans">Amigos</span>
+                    <span className="font-bold text-[#241C15] block">{formatCurrency(p.precioAmigos)}</span>
+                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioAmigos, costo)}</span>
+                  </div>
+
+                  <div className="p-1.5 bg-[#FFFFFF] rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10">
+                    <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Mercado</span>
+                    <span className="font-black text-[#A36F4C] block">{formatCurrency(p.precioMercado)}</span>
+                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioMercado, costo)}</span>
+                  </div>
+
+                  <div className="p-1.5 bg-[#FAF8F5] rounded-xl border border-[#E2D9CC]/70">
+                    <span className="text-[9px] text-[#75695D] block font-sans">Comunidad</span>
+                    <span className="font-bold text-[#241C15] block">{formatCurrency(p.precioComunidad)}</span>
+                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioComunidad, costo)}</span>
+                  </div>
+                </div>
+
+                {/* Fila 4: Acciones Móvil */}
+                <div className="pt-2 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCopiarCotizacion(p)}
+                    className="flex-1 h-8 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#241C15] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                  >
+                    {copiedId === p.id ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-[#1E5E3A]" />
+                        <span className="text-[#1E5E3A]">¡Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="h-3.5 w-3.5 text-[#A36F4C]" />
+                        <span>Copiar Cotización</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(p)}
+                    className="h-8 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#A36F4C] font-bold text-xs flex items-center gap-1 shadow-2xs"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    <span>Editar</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDuplicar(p)}
+                    className="h-8 w-8 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#75695D] flex items-center justify-center shadow-2xs"
+                    title="Duplicar"
+                  >
+                    <CopyPlus className="h-3.5 w-3.5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleEstado(p)}
+                    className={`h-8 w-8 rounded-xl border flex items-center justify-center shadow-2xs ${
+                      p.activo ? 'border-[#E2D9CC] text-[#75695D]' : 'border-[#B4E3C0] bg-[#EBF7EE] text-[#1E5E3A]'
+                    }`}
+                    title={p.activo ? 'Descontinuar' : 'Reactivar'}
+                  >
+                    {p.activo ? <Archive className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
 
       {/* ========================================================================= */}
-      {/* MODAL: EDITAR PRODUCTO (LIGHT MODE NOVA)                                  */}
+      {/* 5. MODAL: CREAR / EDITAR PRODUCTO 3D (2 COLUMNAS)                         */}
       {/* ========================================================================= */}
-      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[540px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
-          <form onSubmit={handleEditSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+      <Dialog open={openModal} onOpenChange={setOpenModal}>
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[560px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
+          <form onSubmit={handleSubmitModal} className="p-5 sm:p-6 space-y-4">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#E2D9CC] pb-3.5">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                  <Pencil className="h-5 w-5" />
+                <div className="h-10 w-10 rounded-2xl bg-[#F5EBE1] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center flex-shrink-0 shadow-2xs">
+                  {editingId ? <Pencil className="h-5 w-5" /> : <Boxes className="h-5 w-5" />}
                 </div>
                 <div>
-                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                    Editar Producto
+                  <DialogTitle className="text-base sm:text-lg font-black text-[#241C15]">
+                    {editingId ? 'Editar Modelo 3D' : 'Registrar Nuevo Producto 3D'}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                    Actualiza los datos del modelo, categoría o estructura de precios.
+                    Define costos base, parámetros técnicos y precios escalonados
                   </DialogDescription>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setOpenEdit(false)}
-                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                onClick={() => setOpenModal(false)}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-xl hover:bg-[#F4EFEA] transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
-              {/* Categorías / Tags Multi-Select */}
-              <div className="space-y-1.5">
-                <MultiTagInput
-                  value={formCategoria}
-                  onChange={(tags) => setFormCategoria(tags.join(', '))}
-                  suggestions={categoryNamesList}
-                  label="Categorías / Tags del Producto (Múltiples)"
-                  placeholder="Escribe una categoría y presiona Enter o elige abajo..."
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                  Nombre del Modelo / Producto *
-                </Label>
-                <Input 
-                  value={formNombre}
-                  onChange={(e) => setFormNombre(e.target.value)}
-                  required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
-              </div>
-
-              {/* Gramos de Filamento por Unidad */}
-              <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    <span>⚖️</span> Peso de Filamento (Gramos)
+            {/* Formulario en 2 Columnas */}
+            <div className="space-y-4">
+              
+              {/* Fila 1: Nombre & Categoría */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                    Nombre del Modelo *
                   </Label>
-                  {formPesoGramos && parseFloat(formPesoGramos) > 0 && (
-                    <span className="text-[11px] font-semibold text-[#A36F4C]">
-                      ~{Math.floor(1000 / parseFloat(formPesoGramos))} u. por bobina (1kg)
-                    </span>
-                  )}
-                </div>
-                <div className="relative flex items-center w-full">
                   <Input 
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={formPesoGramos}
-                    onChange={(e) => setFormPesoGramos(e.target.value)}
-                    placeholder="Ej: 85 (gramos por unidad)"
-                    className="pr-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                  />
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">g</span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 pt-2 border-t border-[#E2D9CC]">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
-                    Costo Base de Fabricación (S/) *
-                  </Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleAutoCalculatePrices(formCostoBase)}
-                    disabled={!formCostoBase || parseFloat(formCostoBase) <= 0}
-                    className="h-6 text-xs text-[#A36F4C] font-semibold hover:underline p-0 cursor-pointer"
-                  >
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Recalcular Sugeridos
-                  </Button>
-                </div>
-                <div className="relative flex items-center w-full">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                  <Input 
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formCostoBase}
-                    onChange={(e) => setFormCostoBase(e.target.value)}
+                    value={formData.nombreModelo}
+                    onChange={(e) => setFormData(prev => ({ ...prev, nombreModelo: e.target.value }))}
+                    placeholder="Ej: Maceta Hexagonal XL"
                     required
-                    className="pl-10 bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    autoFocus
+                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                    Categoría / Familia *
+                  </Label>
+                  <Input 
+                    value={formData.lineaCategoria}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lineaCategoria: e.target.value }))}
+                    placeholder="Ej: Macetas & Jardín"
+                    required
+                    list="categorias-list"
+                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
+                  />
+                  <datalist id="categorias-list">
+                    {categoryNamesList.map(cat => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 
-              {/* Price Tiers Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#1E5E3A] font-bold">P. Amigos</Label>
-                  <div className="relative flex items-center w-full">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formPrecioAmigos}
-                      onChange={(e) => setFormPrecioAmigos(e.target.value)}
-                      required
-                      className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#1E5E3A] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
-                    />
-                  </div>
+              {/* Fila 2: Parámetros Técnicos (Gramos, Tiempo, Costo Base) */}
+              <div className="p-3.5 bg-[#FAF8F5] border border-[#E2D9CC] rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
+                    <Calculator className="h-3.5 w-3.5 text-[#A36F4C]" />
+                    Parámetros de Taller & Costo
+                  </span>
+                  <span className="text-[10px] text-[#75695D]">
+                    Auto-cálculo de costo sugerido
+                  </span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#944917] font-bold">P. Mercado</Label>
-                  <div className="relative flex items-center w-full">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-bold text-[#75695D]">Peso (g)</Label>
                     <Input 
                       type="number"
-                      step="0.01"
-                      min="0"
-                      value={formPrecioMercado}
-                      onChange={(e) => setFormPrecioMercado(e.target.value)}
-                      required
-                      className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#944917] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                      step="1"
+                      value={formData.pesoGramos}
+                      onChange={(e) => handleGramosChange(e.target.value)}
+                      placeholder="150"
+                      className="bg-white border-[#E2D9CC] rounded-xl text-xs font-mono font-bold h-9"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-[#A36F4C] font-bold">P. Comunidad</Label>
-                  <div className="relative flex items-center w-full">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D] pointer-events-none">S/</span>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-bold text-[#75695D]">Tiempo (h)</Label>
+                    <Input 
+                      type="number"
+                      step="0.1"
+                      value={formData.tiempoHoras}
+                      onChange={(e) => setFormData(prev => ({ ...prev, tiempoHoras: e.target.value }))}
+                      placeholder="4.5"
+                      className="bg-white border-[#E2D9CC] rounded-xl text-xs font-mono font-bold h-9"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-bold text-[#1E5E3A]">Costo Base (S/)</Label>
                     <Input 
                       type="number"
                       step="0.01"
-                      min="0"
-                      value={formPrecioComunidad}
-                      onChange={(e) => setFormPrecioComunidad(e.target.value)}
+                      value={formData.costoBase}
+                      onChange={(e) => setFormData(prev => ({ ...prev, costoBase: e.target.value }))}
+                      placeholder="9.75"
                       required
-                      className="pl-8 bg-[#F4EFEA] border-[#DCD3C6] text-[#A36F4C] font-mono font-bold text-sm rounded-xl focus:border-[#A36F4C]"
+                      className="bg-white border-[#B4E3C0] text-[#1E5E3A] rounded-xl text-xs font-mono font-black h-9"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <label className="flex items-center gap-2 text-xs text-[#241C15] font-medium cursor-pointer">
-                  <input 
-                    type="checkbox"
-                    checked={formActivo}
-                    onChange={(e) => setFormActivo(e.target.checked)}
-                    className="rounded border-[#DCD3C6] text-[#A36F4C] focus:ring-[#A36F4C]"
-                  />
-                  Producto activo disponible para ventas
-                </label>
+              {/* Fila 3: Precios Escalonados & Márgenes en Tiempo Real */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                  Precios Escalonados de Venta (S/)
+                </Label>
+
+                <div className="grid grid-cols-3 gap-2.5">
+                  {/* Amigos */}
+                  <div className="space-y-1 p-2 bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="font-bold text-[#75695D]">Amigos</span>
+                      <span className="font-mono font-bold text-[#1E5E3A]">
+                        {calcMargen(parseFloat(formData.precioAmigos) || 0, parseFloat(formData.costoBase) || 0)}
+                      </span>
+                    </div>
+                    <Input 
+                      type="number"
+                      step="0.5"
+                      value={formData.precioAmigos}
+                      onChange={(e) => setFormData(prev => ({ ...prev, precioAmigos: e.target.value }))}
+                      placeholder="18.00"
+                      className="bg-white border-[#E2D9CC] rounded-lg text-xs font-mono font-bold h-8"
+                    />
+                  </div>
+
+                  {/* Mercado */}
+                  <div className="space-y-1 p-2 bg-[#FAF8F5] rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="font-bold text-[#A36F4C]">Mercado</span>
+                      <span className="font-mono font-bold text-[#1E5E3A]">
+                        {calcMargen(parseFloat(formData.precioMercado) || 0, parseFloat(formData.costoBase) || 0)}
+                      </span>
+                    </div>
+                    <Input 
+                      type="number"
+                      step="0.5"
+                      value={formData.precioMercado}
+                      onChange={(e) => setFormData(prev => ({ ...prev, precioMercado: e.target.value }))}
+                      placeholder="30.00"
+                      className="bg-white border-[#A36F4C]/50 rounded-lg text-xs font-mono font-black h-8 text-[#A36F4C]"
+                    />
+                  </div>
+
+                  {/* Comunidad */}
+                  <div className="space-y-1 p-2 bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
+                    <div className="flex items-center justify-between text-[10px]">
+                      <span className="font-bold text-[#75695D]">Comunidad</span>
+                      <span className="font-mono font-bold text-[#1E5E3A]">
+                        {calcMargen(parseFloat(formData.precioComunidad) || 0, parseFloat(formData.costoBase) || 0)}
+                      </span>
+                    </div>
+                    <Input 
+                      type="number"
+                      step="0.5"
+                      value={formData.precioComunidad}
+                      onChange={(e) => setFormData(prev => ({ ...prev, precioComunidad: e.target.value }))}
+                      placeholder="25.00"
+                      className="bg-white border-[#E2D9CC] rounded-lg text-xs font-mono font-bold h-8"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Fila 4: Estado Inicial */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                  Estado del Producto
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, activo: true }))}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      formData.activo
+                        ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] shadow-2xs'
+                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC]'
+                    }`}
+                  >
+                    🟢 Activo en Venta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, activo: false }))}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      !formData.activo
+                        ? 'bg-[#FAF8F5] text-[#75695D] border-[#D4BEA7] shadow-2xs'
+                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC]'
+                    }`}
+                  >
+                    📁 Descontinuado
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                onClick={() => setOpenEdit(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-[#E2D9CC]">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpenModal(false)}
+                className="text-xs rounded-xl cursor-pointer text-[#75695D]"
               >
                 Cancelar
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                size="sm"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 rounded-xl cursor-pointer shadow-xs"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  'Guardar Cambios'
-                )}
+                {isSubmitting ? 'Guardando...' : 'Guardar Producto'}
               </Button>
             </div>
           </form>

@@ -290,7 +290,19 @@ export async function createPedido(data: CreatePedidoInput) {
         })
       }
 
-      return p
+      const fullPedido = await tx.pedido.findUnique({
+        where: { id: p.id },
+        include: {
+          items: {
+            include: { producto: true, colorFilamento: true }
+          },
+          pagos: {
+            orderBy: { fecha: 'asc' }
+          }
+        }
+      })
+
+      return fullPedido || p
     })
 
     // 4. Stock deduction if requested

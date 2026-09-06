@@ -7,6 +7,7 @@ import { ajustarStockBobina } from '@/actions/inventario'
 function safeRevalidate() {
   try {
     revalidatePath('/catalogo')
+    revalidatePath('/catalogo/productos')
     revalidatePath('/catalogo/inventario')
     revalidatePath('/inventario')
     revalidatePath('/ventas')
@@ -163,6 +164,43 @@ export async function toggleEstadoProducto(id: string) {
   }
 }
 
+export async function duplicarProducto(id: string) {
+  const current = await prisma.producto.findUnique({ where: { id } })
+  if (!current) throw new Error('Producto no encontrado')
+
+  let nuevoNombre = `${current.nombreModelo} (Copia)`
+  let count = 1
+  while (await prisma.producto.findUnique({ where: { nombreModelo: nuevoNombre } })) {
+    count++
+    nuevoNombre = `${current.nombreModelo} (Copia ${count})`
+  }
+
+  const duplicado = await prisma.producto.create({
+    data: {
+      lineaCategoria: current.lineaCategoria,
+      nombreModelo: nuevoNombre,
+      costoBase: current.costoBase,
+      precioAmigos: current.precioAmigos,
+      precioMercado: current.precioMercado,
+      precioComunidad: current.precioComunidad,
+      pesoGramos: current.pesoGramos,
+      activo: true
+    }
+  })
+
+  safeRevalidate()
+  return {
+    ...duplicado,
+    costoBase: Number(duplicado.costoBase),
+    precioAmigos: Number(duplicado.precioAmigos),
+    precioMercado: Number(duplicado.precioMercado),
+    precioComunidad: Number(duplicado.precioComunidad),
+    pesoGramos: duplicado.pesoGramos != null ? Number(duplicado.pesoGramos) : 0,
+    createdAt: duplicado.createdAt.toISOString(),
+    updatedAt: duplicado.updatedAt.toISOString(),
+  }
+}
+
 export async function deleteProducto(id: string) {
   const ventasCount = await prisma.venta.count({ where: { productoId: id } })
   if (ventasCount > 0) {
@@ -178,4 +216,3 @@ export async function deleteProducto(id: string) {
   safeRevalidate()
   return { deleted: true, message: 'Producto eliminado correctamente.' }
 }
-

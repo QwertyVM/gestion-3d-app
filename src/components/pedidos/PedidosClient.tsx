@@ -165,6 +165,13 @@ interface FormItemState {
   gramosConsumidos: number
 }
 
+function getDefaultFilamentoId(fils: FilamentoOption[]): string {
+  if (!fils || fils.length === 0) return ''
+  const negro = fils.find(f => f.nombreColor.toLowerCase().includes('negro'))
+  if (negro) return negro.id
+  return fils[0]?.id || ''
+}
+
 const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; colorText: string; colorBorder: string; icon: any }> = {
   PENDIENTE: {
     label: 'Pendiente',
@@ -251,11 +258,12 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   // Lista dinámica de ítems
   const [formItems, setFormItems] = useState<FormItemState[]>(() => {
     const defaultProd = productos[0]
+    const defaultFilId = getDefaultFilamentoId(filamentos)
     return [
       {
         id: 'item-1',
         productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: filamentos[0] ? filamentos[0].id : '',
+        colorFilamentoId: defaultFilId,
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
@@ -274,12 +282,13 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   // =========================================================================
   const addItem = () => {
     const defaultProd = productos[0]
+    const defaultFilId = getDefaultFilamentoId(filamentos)
     setFormItems(prev => [
       ...prev,
       {
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: filamentos[0] ? filamentos[0].id : '',
+        colorFilamentoId: defaultFilId,
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
@@ -360,6 +369,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   // =========================================================================
   const resetForm = () => {
     const defaultProd = productos[0]
+    const defaultFilId = getDefaultFilamentoId(filamentos)
     setFormFecha(new Date().toISOString().split('T')[0])
     setFormCliente('')
     setFormTelefono('')
@@ -376,7 +386,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       {
         id: 'item-1',
         productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: filamentos[0] ? filamentos[0].id : '',
+        colorFilamentoId: defaultFilId,
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
@@ -1643,7 +1653,22 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-[11px] text-[#241C15] font-bold">Bobina / Color de Filamento</Label>
+                            <div className="flex items-center justify-between">
+                              <Label className="text-[11px] text-[#241C15] font-bold">Bobina / Color de Filamento</Label>
+                              {(() => {
+                                const selectedFil = filamentos.find(f => f.id === item.colorFilamentoId)
+                                if (!selectedFil) return <span className="text-[10px] text-[#75695D] italic">Sin asignar</span>
+                                return (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-[#633E20]">
+                                    <span
+                                      className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
+                                      style={{ backgroundColor: selectedFil.codigoHex || '#1E1E1E' }}
+                                    />
+                                    <span className="truncate max-w-[110px]">{selectedFil.nombreColor}</span>
+                                  </span>
+                                )
+                              })()}
+                            </div>
                             <select
                               value={item.colorFilamentoId}
                               onChange={(e) => updateItem(item.id, { colorFilamentoId: e.target.value })}
@@ -2363,7 +2388,22 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                           </div>
 
                           <div className="space-y-1">
-                            <Label className="text-[11px] text-[#241C15] font-bold">Bobina / Color de Filamento</Label>
+                            <div className="flex items-center justify-between">
+                              <Label className="text-[11px] text-[#241C15] font-bold">Bobina / Color de Filamento</Label>
+                              {(() => {
+                                const selectedFil = filamentos.find(f => f.id === item.colorFilamentoId)
+                                if (!selectedFil) return <span className="text-[10px] text-[#75695D] italic">Sin asignar</span>
+                                return (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-[#633E20]">
+                                    <span
+                                      className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
+                                      style={{ backgroundColor: selectedFil.codigoHex || '#1E1E1E' }}
+                                    />
+                                    <span className="truncate max-w-[110px]">{selectedFil.nombreColor}</span>
+                                  </span>
+                                )
+                              })()}
+                            </div>
                             <select
                               value={item.colorFilamentoId}
                               onChange={(e) => updateItem(item.id, { colorFilamentoId: e.target.value })}
