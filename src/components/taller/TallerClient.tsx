@@ -367,19 +367,19 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
     return Array.from(map.values()).sort((a, b) => b.totalUnidades - a.totalUnidades)
   }, [piezasProcesadas, data.gruposPorColor])
 
-  // Acción para cambiar estado
+  // Acción para cambiar estado de la pieza individual
   const handleCambiarEstado = async (
     tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
-    registroId: string,
+    piezaId: string,
     nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'
   ) => {
     startTransition(async () => {
-      const res = await updateEstadoPieza(tipoRegistro, registroId, nuevoEstado)
+      const res = await updateEstadoPieza(tipoRegistro, piezaId, nuevoEstado)
       if (res.success) {
         if (nuevoEstado === 'EN_PRODUCCION') {
-          toast.success('🖨️ Pieza y pedido pasados a EN IMPRESIÓN (reflejado en Ventas)')
+          toast.success('🖨️ Pieza pasada a EN IMPRESIÓN')
         } else if (nuevoEstado === 'LISTO_ENTREGA') {
-          toast.success('✅ Pieza marcada como LISTA PARA ENTREGA (reflejado en Ventas)')
+          toast.success('✅ Pieza marcada como LISTA PARA ENTREGA')
         } else if (nuevoEstado === 'ENTREGADO') {
           toast.success('🎉 Pedido marcado como ENTREGADO')
         } else {
@@ -606,7 +606,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                           <Button
                             size="sm"
                             disabled={isPending}
-                            onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.registroId, 'EN_PRODUCCION')}
+                            onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_PRODUCCION')}
                             className="h-7 px-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
                           >
                             <Play className="w-3 h-3 fill-current" />
@@ -618,7 +618,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                           <Button
                             size="sm"
                             disabled={isPending}
-                            onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.registroId, 'LISTO_ENTREGA')}
+                            onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'LISTO_ENTREGA')}
                             className="h-7 px-2.5 rounded-xl bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
                           >
                             <Check className="w-3 h-3" />
@@ -630,7 +630,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                           <Button
                             size="sm"
                             disabled={isPending}
-                            onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.registroId, 'PENDIENTE')}
+                            onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'PENDIENTE')}
                             variant="outline"
                             className="h-7 px-2 rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] text-[11px] font-semibold cursor-pointer whitespace-nowrap"
                             title="Volver a poner pendiente"

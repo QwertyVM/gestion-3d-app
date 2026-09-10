@@ -191,7 +191,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
           pesoGramosTotal: Number(pesoTotal.toFixed(1)),
           costoBaseUnitario: item.costoBaseSnapshot != null ? Number(item.costoBaseSnapshot) : (item.producto ? Number(item.producto.costoBase) : 0),
-          estado: ped.estado as any,
+          estado: (item.estado || ped.estado) as any,
           notas: ped.notas || null
         })
       })
@@ -411,29 +411,46 @@ export async function updateEstadoPieza(
 ) {
   try {
     if (tipoRegistro === 'PEDIDO_ITEM') {
-      await prisma.pedido.update({
+      // 1. Actualizar el estado de la pieza individual (ItemPedido)
+      const itemActualizado = await prisma.itemPedido.update({
         where: { id: registroId },
-        data: { estado: nuevoEstado as EstadoPedido }
+        data: { estado: nuevoEstado as EstadoPedido },
+        include: {
+          pedido: {
+            include: {
+              items: true
+            }
+          }
+        }
       })
-      // Sincronizar venta individual si existe con el mismo ID
-      try {
-        await prisma.venta.update({
-          where: { id: registroId },
-          data: { estado: (nuevoEstado === 'LISTO_ENTREGA' ? 'ENTREGADO' : nuevoEstado) as EstadoVenta }
+
+      // 2. Recalcular el estado consolidado del Pedido padre
+      if (itemActualizado.pedido) {
+        const todosItems = itemActualizado.pedido.items
+        const todosListos = todosItems.every(it => it.estado === 'LISTO_ENTREGA' || it.estado === 'ENTREGADO')
+        const algunEnProduccionOListo = todosItems.some(it => it.estado === 'EN_PRODUCCION' || it.estado === 'LISTO_ENTREGA')
+        const todosPendientes = todosItems.every(it => it.estado === 'PENDIENTE')
+
+        let nuevoEstadoPedido: EstadoPedido = 'PENDIENTE'
+        if (todosListos) {
+          nuevoEstadoPedido = 'LISTO_ENTREGA'
+        } else if (algunEnProduccionOListo) {
+          nuevoEstadoPedido = 'EN_PRODUCCION'
+        } else if (todosPendientes) {
+          nuevoEstadoPedido = 'PENDIENTE'
+        }
+
+        await prisma.pedido.update({
+          where: { id: itemActualizado.pedidoId },
+          data: { estado: nuevoEstadoPedido }
         })
-      } catch {}
+      }
     } else {
+      // Venta individual
       await prisma.venta.update({
         where: { id: registroId },
         data: { estado: (nuevoEstado === 'LISTO_ENTREGA' ? 'ENTREGADO' : nuevoEstado) as EstadoVenta }
       })
-      // Sincronizar pedido si existe con el mismo ID
-      try {
-        await prisma.pedido.update({
-          where: { id: registroId },
-          data: { estado: nuevoEstado as EstadoPedido }
-        })
-      } catch {}
     }
 
     safeRevalidate()

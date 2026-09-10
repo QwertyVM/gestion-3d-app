@@ -269,6 +269,7 @@ model ItemPedido {
   porcentajeAdicional    Decimal?             @default(0.00) @db.Decimal(5, 2)
   gramosConsumidos       Decimal?             @default(0.00) @db.Decimal(10, 2)
   subtotal               Decimal              @db.Decimal(10, 2)
+  estado                 EstadoPedido         @default(PENDIENTE)
   
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt

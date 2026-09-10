@@ -69,6 +69,7 @@ function serializePedido(p: any) {
     porcentajeAdicional: it.porcentajeAdicional != null ? Number(it.porcentajeAdicional) : 0,
     gramosConsumidos: it.gramosConsumidos != null ? Number(it.gramosConsumidos) : 0,
     subtotal: Number(it.subtotal),
+    estado: (it.estado || p.estado) as EstadoPedido,
     createdAt: it.createdAt instanceof Date ? it.createdAt.toISOString() : String(it.createdAt),
     updatedAt: it.updatedAt instanceof Date ? it.updatedAt.toISOString() : String(it.updatedAt),
     producto: it.producto ? {
@@ -328,15 +329,23 @@ export async function createPedido(data: CreatePedidoInput) {
 
 export async function updateEstadoPedido(id: string, nuevoEstado: EstadoPedido) {
   try {
-    const pedido = await prisma.pedido.update({
-      where: { id },
-      data: { estado: nuevoEstado },
-      include: {
-        items: {
-          include: { producto: true, colorFilamento: true }
-        },
-        pagos: true
-      }
+    const pedido = await prisma.$transaction(async (tx) => {
+      await tx.itemPedido.updateMany({
+        where: { pedidoId: id },
+        data: { estado: nuevoEstado }
+      })
+
+      const p = await tx.pedido.update({
+        where: { id },
+        data: { estado: nuevoEstado },
+        include: {
+          items: {
+            include: { producto: true, colorFilamento: true }
+          },
+          pagos: true
+        }
+      })
+      return p
     })
 
     safeRevalidate()
@@ -495,7 +504,8 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
         costoPackaging: packCost,
         porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
         gramosConsumidos: Number(item.gramosConsumidos) || (prod?.pesoGramos ? Number(prod.pesoGramos) * qty : 0),
-        subtotal: itemSubtotal
+        subtotal: itemSubtotal,
+        estado: data.estado || current.estado || 'PENDIENTE'
       }
     })
 
