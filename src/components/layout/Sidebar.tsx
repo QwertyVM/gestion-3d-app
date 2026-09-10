@@ -19,7 +19,8 @@ import {
   CircleDot, 
   ChevronDown, 
   X,
-  AlertTriangle
+  AlertTriangle,
+  Hammer
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getNavLiveMetrics } from '@/actions/nav'
@@ -33,13 +34,15 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const pathname = usePathname()
 
   // Dynamic live counters
-  const [metrics, setMetrics] = useState<{ pedidosPendientes: number; filamentosCriticos: number }>({
+  const [metrics, setMetrics] = useState<{ pedidosPendientes: number; filamentosCriticos: number; piezasTallerPendientes?: number }>({
     pedidosPendientes: 0,
-    filamentosCriticos: 0
+    filamentosCriticos: 0,
+    piezasTallerPendientes: 0
   })
 
   // Active section matchers
   const isDashboard = pathname === '/'
+  const isTaller = pathname.startsWith('/taller')
   const isPedidos = pathname.startsWith('/pedidos') || pathname.startsWith('/ventas')
   const isHistorico = pathname.startsWith('/historico-mensual') || pathname.startsWith('/flujo-mensual')
   
@@ -137,6 +140,32 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         >
           <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboard ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
           <span>Dashboard</span>
+        </Link>
+
+        {/* TALLER DE PRODUCCIÓN (COLA DE FABRICACIÓN) */}
+        <Link
+          href="/taller"
+          onClick={handleLinkClick}
+          className={cn(
+            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 min-h-[44px]',
+            isTaller
+              ? 'bg-[#EFE5D8] text-[#241C15] font-bold shadow-2xs border border-[#D4BEA7]'
+              : 'text-[#75695D] font-semibold hover:bg-[#F1ECE4] hover:text-[#241C15]'
+          )}
+        >
+          <Hammer className={cn('h-4 w-4 shrink-0', isTaller ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
+          <span>Taller de Producción</span>
+
+          {/* Badge de Piezas Pendientes en Taller */}
+          {(metrics.piezasTallerPendientes ?? 0) > 0 ? (
+            <span className="ml-auto text-[10px] font-mono font-black px-2 py-0.5 rounded-full bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0] shadow-2xs">
+              {metrics.piezasTallerPendientes} pzas
+            </span>
+          ) : (
+            <span className="ml-auto text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC]">
+              Libre
+            </span>
+          )}
         </Link>
 
         {/* PEDIDOS (CON BADGE INTERACTIVO EN TIEMPO REAL) */}

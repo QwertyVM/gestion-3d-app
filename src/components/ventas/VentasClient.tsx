@@ -1050,7 +1050,7 @@ export function VentasClient({
                   : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
               }`}
             >
-              En Producción ({items.filter(v => v.estado === 'EN_PRODUCCION').length})
+              En Impresión ({items.filter(v => v.estado === 'EN_PRODUCCION').length})
             </button>
             <button
               onClick={() => { setEstadoFilter('ENTREGADO'); setCurrentPage(1); }}
@@ -1135,7 +1135,7 @@ export function VentasClient({
                         }`}
                       >
                         <option value="PENDIENTE">Pendiente</option>
-                        <option value="EN_PRODUCCION">En Producción</option>
+                        <option value="EN_PRODUCCION">En Impresión</option>
                         <option value="ENTREGADO">Entregado</option>
                         <option value="CANCELADO">Cancelado</option>
                       </select>
@@ -1372,7 +1372,7 @@ export function VentasClient({
                         }`}
                       >
                         <option value="PENDIENTE">Pendiente</option>
-                        <option value="EN_PRODUCCION">En Producción</option>
+                        <option value="EN_PRODUCCION">En Impresión</option>
                         <option value="ENTREGADO">Entregado</option>
                         <option value="CANCELADO">Cancelado</option>
                       </select>
@@ -1889,7 +1889,7 @@ export function VentasClient({
                                 : 'bg-white border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
                             }`}
                           >
-                            {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'Producción' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
+                            {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'En Impresión' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
                           </button>
                         )
                       })}
@@ -2828,7 +2828,7 @@ export function VentasClient({
                               : 'bg-white border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
                           }`}
                         >
-                          {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'Producción' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
+                          {est === 'PENDIENTE' ? 'Pendiente' : est === 'EN_PRODUCCION' ? 'En Impresión' : est === 'ENTREGADO' ? 'Entregado' : 'Cancelado'}
                         </button>
                       )
                     })}
