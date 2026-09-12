@@ -5,13 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { 
   ComposedChart, 
-  Bar,
-  Line, 
+  Bar, 
+  Line,
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -20,31 +17,25 @@ import {
   PieChart, 
   Pie, 
   Cell, 
-  Legend 
+  Legend,
+  ReferenceLine
 } from 'recharts'
 import { 
-  DollarSign, 
   TrendingUp, 
   Layers, 
-  Clock, 
   Sparkles,
-  Palette,
   ArrowRight,
   ShieldCheck,
   Lock,
   Wallet,
-  CreditCard,
-  X,
-  CheckCircle2,
-  Receipt,
-  RefreshCw,
-  AlertTriangle,
-  Package
+  RefreshCw
 } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
-import { registrarAbonoDashboard } from '@/actions/dashboard'
 
-const NOVA_DONUT_COLORS = ['#A36F4C', '#1E5E3A', '#854D0E', '#633E20', '#944917', '#B57D68']
+// Jerarquía de colores cálidos + verde para la distribución de gastos (Donut Chart)
+// 1. Maquinaria & Equipos: Moca / Café cálido (#7C5835)
+// 2. Insumos & Materiales: Taupe medio cálido (#B8A99A)
+// 3. Servicios & Operativos: Verde esmeralda (#059669)
+const WARM_DONUT_COLORS = ['#7C5835', '#B8A99A', '#059669', '#8C6239', '#D5C7B8', '#10B981']
 
 // Formateador de fecha para el tooltip y eje X (ej: 26 Ago)
 function formatFechaEvolucion(rawDate: string, conAnio = false) {
@@ -60,58 +51,85 @@ function formatFechaEvolucion(rawDate: string, conAnio = false) {
   return rawDate
 }
 
-// Custom Tooltip ordenado en cascada: 1) Venta Total, 2) (-) Costo Fabricación, 3) (=) Ganancia Neta
+// Custom Tooltip ejecutivo con estado de resultados (P&L diario)
 function CustomEvolucionTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const data = payload[0]?.payload || {}
     const ingresos = Number(data.ingresos || 0)
     const costo = Number(data.costo || 0)
     const ganancia = Number(data.ganancia != null ? data.ganancia : (ingresos - costo))
+    const isNegative = ganancia < 0
+    const margenPct = ingresos > 0 ? ((ganancia / ingresos) * 100).toFixed(1) : null
 
     return (
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xl overflow-hidden min-w-[220px] text-xs font-sans animate-in fade-in duration-150">
-        {/* Cabecera */}
-        <div className="bg-[#FAF8F5] border-b border-[#E2D9CC] px-3.5 py-2 flex items-center justify-between">
-          <span className="font-black text-[#241C15]">{formatFechaEvolucion(label, true)}</span>
-          <span className="text-[10px] text-[#75695D] font-mono uppercase font-bold">Cascada Contable</span>
+      <div className="bg-[#FFFFFF] border border-[#E5DCD3] rounded-2xl shadow-xl overflow-hidden min-w-[240px] text-xs font-sans animate-in fade-in duration-150">
+        {/* Cabecera con estado de resultado */}
+        <div className={`px-3.5 py-2 flex items-center justify-between border-b ${
+          isNegative 
+            ? 'bg-[#FEF2F2] border-[#FEE2E2]' 
+            : 'bg-[#ECFDF5] border-[#D1FAE5]'
+        }`}>
+          <span className="font-black text-[#1F2937]">{formatFechaEvolucion(label, true)}</span>
+          <span className={`text-[10px] font-mono uppercase font-black tracking-wider ${
+            isNegative ? 'text-[#DC2626]' : 'text-[#059669]'
+          }`}>
+            {isNegative ? '⚠️ Pérdida / Costo' : '✓ Utilidad Neta'}
+          </span>
         </div>
 
-        {/* Cuerpo del Tooltip: Cascada Contable */}
+        {/* Desglose P&L */}
         <div className="p-3.5 space-y-2">
-          {/* Fila 1: Venta Total / Ingreso Bruto */}
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[#A36F4C] font-bold flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#A36F4C]" />
-              1. Venta Total:
+          {/* 1. Ingreso Facturado */}
+          <div className="flex items-center justify-between gap-3 text-[#6B7280]">
+            <span className="font-semibold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#B8A99A]" />
+              Facturación Bruta:
             </span>
-            <span className="font-mono font-black text-[#A36F4C] tabular-nums">
+            <span className="font-mono font-bold text-[#1F2937] tabular-nums">
               S/ {ingresos.toFixed(2)}
             </span>
           </div>
 
-          {/* Fila 2: Costo de Fabricación */}
-          <div className="flex items-center justify-between gap-3 text-[#75695D]">
-            <span className="flex items-center gap-1.5 font-semibold">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#75695D]" />
-              2. (-) Costo Fab.:
+          {/* 2. Costo Fabricación */}
+          <div className="flex items-center justify-between gap-3 text-[#6B7280]">
+            <span className="font-semibold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#7C5835]" />
+              (-) Costo Fabricación:
             </span>
-            <span className="font-mono font-bold tabular-nums">
+            <span className="font-mono font-bold text-[#1F2937] tabular-nums">
               S/ {costo.toFixed(2)}
             </span>
           </div>
 
-          {/* Divisor sutil */}
-          <div className="border-t border-[#E2D9CC] my-1" />
+          {/* Línea divisoria */}
+          <div className="pt-2 border-t border-[#E5DCD3] flex items-center justify-between">
+            <span className={`font-black flex items-center gap-1.5 ${
+              isNegative ? 'text-[#DC2626]' : 'text-[#059669]'
+            }`}>
+              <span className={`w-2.5 h-2.5 rounded-full ${isNegative ? 'bg-[#DC2626]' : 'bg-[#059669]'}`} />
+              (=) Resultado Neto:
+            </span>
+            <span className={`font-mono font-black text-sm tabular-nums ${
+              isNegative ? 'text-[#DC2626]' : 'text-[#059669]'
+            }`}>
+              {isNegative ? `-S/ ${Math.abs(ganancia).toFixed(2)}` : `+S/ ${ganancia.toFixed(2)}`}
+            </span>
+          </div>
 
-          {/* Fila 3: Ganancia Neta */}
-          <div className="flex items-center justify-between gap-3 pt-0.5">
-            <span className={`${ganancia >= 0 ? 'text-[#1E5E3A]' : 'text-[#854D0E]'} font-black flex items-center gap-1.5`}>
-              <span className={`w-2.5 h-2.5 rounded-full ${ganancia >= 0 ? 'bg-[#1E5E3A]' : 'bg-[#854D0E]'}`} />
-              3. (=) Ganancia Neta:
-            </span>
-            <span className={`font-mono font-black tabular-nums ${ganancia >= 0 ? 'text-[#1E5E3A]' : 'text-[#854D0E]'}`}>
-              {ganancia < 0 ? `-S/ ${Math.abs(ganancia).toFixed(2)}` : `+S/ ${ganancia.toFixed(2)}`}
-            </span>
+          {/* Subtexto / Margen o aclaración */}
+          <div className="pt-1.5 border-t border-[#F5EFEB] flex items-center justify-between text-[10px] text-[#6B7280]">
+            {margenPct !== null ? (
+              <>
+                <span>Margen de Rentabilidad:</span>
+                <strong className={`font-mono font-black ${isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
+                  {isNegative ? '' : '+'}{margenPct}%
+                </strong>
+              </>
+            ) : (
+              <span className="italic text-center w-full text-[#7C5835] font-medium">
+                Día de producción sin ventas registradas
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -120,21 +138,24 @@ function CustomEvolucionTooltip({ active, payload, label }: any) {
   return null
 }
 
-// Leyenda personalizada para el gráfico de evolución
+// Leyenda personalizada para el gráfico: Resultado Neto (Barras) + Facturación Bruta (Línea)
 function CustomEvolutionLegend() {
   return (
     <div className="flex flex-wrap items-center justify-start sm:justify-end gap-3 sm:gap-4 text-xs pb-3 pt-1">
-      <div className="flex items-center gap-1.5 font-bold text-[#A36F4C]">
-        <span className="w-3.5 h-1 bg-[#A36F4C] rounded-full inline-block" />
-        <span>Ingreso Bruto</span>
+      <div className="flex items-center gap-1.5 font-bold text-[#059669]">
+        <span className="w-3 h-3 bg-[#059669] rounded-xs inline-block" />
+        <span>Utilidad Neta (+)</span>
       </div>
-      <div className="flex items-center gap-1.5 font-semibold text-[#75695D]">
-        <span className="w-3 h-3 bg-[#75695D] rounded-xs inline-block" />
-        <span>Costo de Fabricación</span>
+      <div className="flex items-center gap-1.5 font-bold text-[#DC2626]">
+        <span className="w-3 h-3 bg-[#DC2626] rounded-xs inline-block" />
+        <span>Pérdida / Costo (-)</span>
       </div>
-      <div className="flex items-center gap-1.5 font-bold text-[#1E5E3A]">
-        <span className="w-3 h-3 bg-[#1E5E3A] rounded-xs inline-block" />
-        <span>Ganancia Neta</span>
+      <div className="flex items-center gap-1.5 font-bold text-[#7C5835]">
+        <span className="relative flex items-center justify-center w-4 h-3">
+          <span className="w-full h-0.5 bg-[#7C5835] rounded-full inline-block" />
+          <span className="absolute w-2 h-2 rounded-full bg-[#7C5835] border border-white" />
+        </span>
+        <span>Facturación Bruta</span>
       </div>
     </div>
   )
@@ -179,7 +200,7 @@ interface DashboardClientProps {
   capacidadGasto?: CapacidadGastoData
   graficoEvolucion: { fecha: string; ingresos: number; costo: number; ganancia: number }[]
   graficoInversion: { name: string; value: number }[]
-  cuentasPorCobrar: any[]
+  cuentasPorCobrar?: any[]
   topColores?: TopColorItem[]
 }
 
@@ -189,22 +210,11 @@ export function DashboardClient({
   kpis, 
   capacidadGasto,
   graficoEvolucion, 
-  graficoInversion, 
-  cuentasPorCobrar,
-  topColores = []
+  graficoInversion
 }: DashboardClientProps) {
   const router = useRouter()
   const [rangoTemporal, setRangoTemporal] = useState<RangoTemporal>('30D')
   const [isRefreshing, setIsRefreshing] = useState(false)
-
-  // Estado del Modal de Cobro Rápido
-  const [modalCobroOpen, setModalCobroOpen] = useState(false)
-  const [selectedCuentaCobro, setSelectedCuentaCobro] = useState<any>(null)
-  const [cobroMonto, setCobroMonto] = useState('')
-  const [cobroMetodo, setCobroMetodo] = useState('YAPE')
-  const [cobroTipo, setCobroTipo] = useState('PAGO_TOTAL')
-  const [cobroNotas, setCobroNotas] = useState('')
-  const [isSubmittingCobro, setIsSubmittingCobro] = useState(false)
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -221,26 +231,34 @@ export function DashboardClient({
     gananciaProyectadaMes: 1746.00
   }
 
-  // Filtrado temporal interactivo del gráfico de evolución
+  // Filtrado temporal interactivo del gráfico de evolución (Resultado Diario)
   const graficoFiltrado = useMemo(() => {
     if (!graficoEvolucion || graficoEvolucion.length === 0) return []
-    if (rangoTemporal === 'TODO') return graficoEvolucion
-
     const sorted = [...graficoEvolucion].sort((a, b) => a.fecha.localeCompare(b.fecha))
     
+    let baseList = sorted
     if (rangoTemporal === '15D') {
-      return sorted.slice(-15)
-    }
-    if (rangoTemporal === '30D') {
-      return sorted.slice(-30)
-    }
-    if (rangoTemporal === 'MES') {
+      baseList = sorted.slice(-15)
+    } else if (rangoTemporal === '30D') {
+      baseList = sorted.slice(-30)
+    } else if (rangoTemporal === 'MES') {
       const now = new Date()
       const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
       const mesActualItems = sorted.filter(item => item.fecha.startsWith(currentYearMonth))
-      return mesActualItems.length > 0 ? mesActualItems : sorted.slice(-15)
+      baseList = mesActualItems.length > 0 ? mesActualItems : sorted.slice(-15)
     }
-    return sorted
+
+    return baseList.map(item => {
+      const ingresos = Number(item.ingresos || 0)
+      const costo = Number(item.costo || 0)
+      const ganancia = Number(item.ganancia != null ? item.ganancia : (ingresos - costo))
+      return {
+        ...item,
+        ingresos,
+        costo,
+        ganancia,
+      }
+    })
   }, [graficoEvolucion, rangoTemporal])
 
   // Desglose de egresos
@@ -254,65 +272,30 @@ export function DashboardClient({
     setTimeout(() => setIsRefreshing(false), 600)
   }
 
-  const handleOpenCobroModal = (cuenta: any) => {
-    setSelectedCuentaCobro(cuenta)
-    const saldo = Number(cuenta.saldoPendiente || 0)
-    setCobroMonto(saldo > 0 ? saldo.toFixed(2) : '')
-    setCobroMetodo('YAPE')
-    setCobroTipo('PAGO_TOTAL')
-    setCobroNotas('')
-    setModalCobroOpen(true)
-  }
+  // Cálculos de porcentajes para el gráfico de composición de ventas y cobranzas
+  const totalVentasVal = kpis.ingresosVentas || 0
+  const costoPct = totalVentasVal > 0 ? Math.min(100, Math.max(0, (kpis.costoFabricacionTotal / totalVentasVal) * 100)) : 0
+  const gananciaPct = totalVentasVal > 0 ? Math.min(100, Math.max(0, (kpis.gananciaNeta / totalVentasVal) * 100)) : 0
 
-  const handleSubmitCobro = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedCuentaCobro) return
-
-    const montoNum = Number(cobroMonto)
-    if (!montoNum || montoNum <= 0) {
-      alert('Por favor ingresa un monto válido a liquidar.')
-      return
-    }
-
-    setIsSubmittingCobro(true)
-    try {
-      const res = await registrarAbonoDashboard(selectedCuentaCobro.id, {
-        monto: montoNum,
-        metodoPago: cobroMetodo,
-        tipo: cobroTipo,
-        notas: cobroNotas.trim() || undefined
-      })
-
-      if (res && res.success) {
-        setModalCobroOpen(false)
-        setSelectedCuentaCobro(null)
-        router.refresh()
-      } else {
-        alert(res?.error || 'No se pudo registrar el cobro.')
-      }
-    } catch (err: any) {
-      alert(err.message || 'Error inesperado al registrar el abono.')
-    } finally {
-      setIsSubmittingCobro(false)
-    }
-  }
+  const cobradoPct = totalVentasVal > 0 ? Math.min(100, Math.max(0, (kpis.totalCobradoVentas / totalVentasVal) * 100)) : 0
+  const saldoPct = totalVentasVal > 0 ? Math.min(100, Math.max(0, (kpis.saldoPorCobrar / totalVentasVal) * 100)) : 0
 
   return (
     <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300 pb-8">
       {/* ========================================================================= */}
       {/* 1. HEADER EJECUTIVO                                                       */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FFFFFF] p-4 sm:p-5 rounded-3xl border border-[#E2D9CC] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FFFFFF] p-4 sm:p-5 rounded-3xl border border-[#E5DCD3] shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="p-2.5 rounded-2xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-2xs flex-shrink-0">
+            <div className="p-2.5 rounded-2xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835] shadow-2xs flex-shrink-0">
               <Sparkles className="h-5 w-5 stroke-[2.5]" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#241C15]">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#1F2937]">
                 Dashboard General
               </h1>
-              <p className="text-xs text-[#75695D] mt-0.5">
+              <p className="text-xs text-[#6B7280] mt-0.5">
                 Métricas financieras, rentabilidad sobre costos y flujo comercial en tiempo real.
               </p>
             </div>
@@ -321,10 +304,10 @@ export function DashboardClient({
 
         <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
           {/* Pill informativa con dot verde pulsante */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] text-xs font-extrabold shadow-2xs">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0] text-[#059669] text-xs font-extrabold shadow-2xs">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1E5E3A] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#1E5E3A]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#059669] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#059669]"></span>
             </span>
             <span>Actualización automática activa</span>
           </div>
@@ -332,17 +315,17 @@ export function DashboardClient({
           <button
             onClick={handleManualRefresh}
             title="Refrescar métricas ahora"
-            className="p-2.5 rounded-2xl bg-[#FAF8F5] hover:bg-[#F4EFEA] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer"
+            className="p-2.5 rounded-2xl bg-[#F5EFEB] hover:bg-[#EFE8E1] border border-[#E5DCD3] text-[#6B7280] hover:text-[#1F2937] transition-colors cursor-pointer"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-[#A36F4C]' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-[#7C5835]' : ''}`} />
           </button>
 
           {/* Enlace al Simulador & Presupuesto */}
           <Link
             href="/finanzas/proyecciones"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl text-xs font-black bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#D4BEA7] shadow-2xs transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl text-xs font-black bg-[#F5EFEB] hover:bg-[#EFE8E1] text-[#1F2937] border border-[#E5DCD3] shadow-2xs transition-all"
           >
-            <TrendingUp className="h-4 w-4 text-[#A36F4C]" />
+            <TrendingUp className="h-4 w-4 text-[#7C5835]" />
             <span>Simulador & Presupuesto del Mes</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -350,238 +333,262 @@ export function DashboardClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. BANDA DE TESORERÍA EN CASCADA (GRID 3 COLUMNAS)                         */}
+      {/* 2. CONTROL DE TESORERÍA & ANATOMÍA FINANCIERA (LAYOUT SIDE-BY-SIDE)       */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        {/* Tarjeta Principal (Verde Bosque #1E5E3A) */}
-        <div className="bg-[#FFFFFF] border-2 border-[#B4E3C0] rounded-3xl p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#1E5E3A]" />
-          
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1">
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#1E5E3A] block">
-                Capacidad de Gasto Libre
-              </span>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-[#1E5E3A] tracking-tight tabular-nums">
-                {formatCurrency(gasto.gastoDisponibleHoy)}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        
+        {/* COLUMNA 1: Cuadro Unificado de Tesorería (Vertical - 5 cols) */}
+        <div className="lg:col-span-5 bg-[#FFFFFF] border border-[#E5DCD3] rounded-3xl shadow-xs overflow-hidden flex flex-col justify-between">
+          {/* Encabezado del Cuadro */}
+          <div className="bg-[#FAF7F4] px-4 sm:px-5 py-3 border-b border-[#E5DCD3] flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835]">
+                <Wallet className="h-4 w-4 stroke-[2.5]" />
+              </div>
+              <div>
+                <h2 className="text-xs font-black text-[#1F2937] uppercase tracking-wider">
+                  Control de Tesorería
+                </h2>
+                <p className="text-[10px] text-[#6B7280]">
+                  Disponibilidad, caja y blindaje del mes
+                </p>
               </div>
             </div>
-            <div className={`p-2.5 rounded-2xl border flex-shrink-0 ${
-              gasto.gastoDisponibleHoy > 0 
-                ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
-                : 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047]'
-            }`}>
-              <ShieldCheck className="h-5 w-5 stroke-[2.5]" />
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-[#E2D9CC]/60 flex items-center justify-between text-xs">
-            <span className="text-[#75695D] text-[11px]">
-              Excedente real disponible sin tocar lo blindado
-            </span>
             <Badge variant="outline" className={`text-[10px] font-bold px-2 py-0.5 shrink-0 ${
               gasto.gastoDisponibleHoy > 0
-                ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
-                : 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047]'
+                ? 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]'
+                : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
             }`}>
-              {gasto.gastoDisponibleHoy > 0 ? 'Excedente Libre Hoy' : 'Fondos Comprometidos'}
+              {gasto.gastoDisponibleHoy > 0 ? '✓ Excedente Libre' : '⚠️ Comprometido'}
             </Badge>
           </div>
-        </div>
 
-        {/* Tarjeta Neutra (#FFFFFF con top bar #241C15) */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between hover:border-[#241C15]/40 transition-all">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#241C15]" />
-          
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1">
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#75695D] block">
-                Lo que tengo en Caja
-              </span>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-[#241C15] tracking-tight tabular-nums">
-                {formatCurrency(gasto.saldoActualCaja)}
+          {/* 3 Filas Verticales */}
+          <div className="divide-y divide-[#E5DCD3] flex-1 flex flex-col justify-between">
+            
+            {/* 1. Capacidad de Gasto Libre */}
+            <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3 bg-[#FAF7F4]/50 hover:bg-[#FAF7F4] transition-colors relative flex-1">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#059669]" />
+              <div className="flex items-center gap-2.5 min-w-0 pl-1">
+                <div className={`p-2 rounded-xl border flex-shrink-0 ${
+                  gasto.gastoDisponibleHoy > 0 
+                    ? 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]'
+                    : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                }`}>
+                  <ShieldCheck className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#059669] truncate">
+                      Capacidad de Gasto Libre
+                    </span>
+                    <Badge variant="outline" className={`text-[9px] font-bold px-1.5 py-0 shrink-0 ${
+                      gasto.gastoDisponibleHoy > 0
+                        ? 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]'
+                        : 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]'
+                    }`}>
+                      {gasto.gastoDisponibleHoy > 0 ? 'Libre' : 'Ajustado'}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-[#6B7280] truncate">
+                    Excedente real sin tocar lo blindado
+                  </p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-lg sm:text-xl font-black font-mono text-[#059669] tracking-tight tabular-nums">
+                  {formatCurrency(gasto.gastoDisponibleHoy)}
+                </div>
               </div>
             </div>
-            <div className="p-2.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15] flex-shrink-0">
-              <Wallet className="h-5 w-5 stroke-[2.5]" />
-            </div>
-          </div>
 
-          <div className="pt-3 border-t border-[#E2D9CC]/60 text-xs text-[#75695D]">
-            <span className="text-[11px]">
-              Saldo efectivo cobrado y disponible en cuentas bancarias
-            </span>
+            {/* 2. Lo que tengo en Caja */}
+            <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3 hover:bg-[#FAF7F4] transition-colors relative flex-1">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#1F2937]" />
+              <div className="flex items-center gap-2.5 min-w-0 pl-1">
+                <div className="p-2 rounded-xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#1F2937] flex-shrink-0">
+                  <Wallet className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-black uppercase tracking-wider text-[#1F2937] block truncate">
+                    Lo que tengo en Caja
+                  </span>
+                  <p className="text-[11px] text-[#6B7280] truncate">
+                    Saldo efectivo disponible en cuentas
+                  </p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-lg sm:text-xl font-black font-mono text-[#1F2937] tracking-tight tabular-nums">
+                  {formatCurrency(gasto.saldoActualCaja)}
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Fondo Blindado e Intocable */}
+            <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3 hover:bg-[#FAF7F4] transition-colors relative flex-1">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#7C5835]" />
+              <div className="flex items-center gap-2.5 min-w-0 pl-1">
+                <div className="p-2 rounded-xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835] flex-shrink-0">
+                  <Lock className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.5]" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-black uppercase tracking-wider text-[#7C5835] block truncate">
+                    Fondo Blindado / Intocable
+                  </span>
+                  <p className="text-[11px] text-[#6B7280] truncate">
+                    Reserva cuota BCP (S/ {gasto.cuotaPrestamoMensual.toFixed(2)}) + Capex + Costos
+                  </p>
+                </div>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <div className="text-lg sm:text-xl font-black font-mono text-[#7C5835] tracking-tight tabular-nums">
+                  {formatCurrency(gasto.totalBlindadoMes)}
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
-        {/* Tarjeta Blindaje (Terracota #A36F4C) */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-4 sm:p-5 shadow-xs relative overflow-hidden flex flex-col justify-between hover:border-[#A36F4C] transition-all">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#A36F4C]" />
-          
-          <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1">
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#A36F4C] block">
-                Fondo Blindado / Intocable
-              </span>
-              <div className="text-2xl sm:text-3xl font-black font-mono text-[#633E20] tracking-tight tabular-nums">
-                {formatCurrency(gasto.totalBlindadoMes)}
+        {/* COLUMNA 2: Estructura de Ventas y Cobranzas (Derecha de Tesorería - 7 cols) */}
+        <div className="lg:col-span-7 bg-[#FFFFFF] border border-[#E5DCD3] rounded-3xl shadow-xs overflow-hidden flex flex-col justify-between">
+          {/* Encabezado del Cuadro */}
+          <div className="bg-[#FAF7F4] px-4 sm:px-5 py-3 border-b border-[#E5DCD3] flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835]">
+                <Layers className="h-4 w-4 stroke-[2.5]" />
+              </div>
+              <div>
+                <h2 className="text-xs font-black text-[#1F2937] uppercase tracking-wider">
+                  Estructura de Ventas y Cobranzas
+                </h2>
+                <p className="text-[10px] text-[#6B7280]">
+                  Facturación: <strong className="text-[#1F2937] font-bold">{formatCurrency(kpis.ingresosVentas)}</strong> • Ticket prom.: <strong className="text-[#1F2937] font-bold">{formatCurrency(kpis.ticketPromedio)}</strong>
+                </p>
               </div>
             </div>
-            <div className="p-2.5 rounded-2xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] flex-shrink-0">
-              <Lock className="h-5 w-5 stroke-[2.5]" />
-            </div>
+            <Badge variant="outline" className="text-[10px] font-bold px-2 py-0.5 bg-[#ECFDF5] text-[#059669] border-[#A7F3D0] shrink-0">
+              Rentabilidad: +{kpis.margenPorcentaje.toFixed(1)}%
+            </Badge>
           </div>
 
-          <div className="pt-3 border-t border-[#E2D9CC]/60 text-xs text-[#75695D]">
-            <span className="text-[11px]">
-              Reserva para cuota BCP (S/ {gasto.cuotaPrestamoMensual.toFixed(2)}) + Capex + Costos fijos
-            </span>
+          {/* Contenido Limpio en 2 Bloques */}
+          <div className="p-4 sm:p-5 space-y-4 flex-1 flex flex-col justify-around">
+            {/* 1. Margen sobre Ventas */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-extrabold text-[#1F2937]">
+                  Rentabilidad sobre Ventas
+                </span>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-[#6B7280]">
+                    Costo: <strong className="font-mono text-[#1F2937]">{formatCurrency(kpis.costoFabricacionTotal)}</strong> <span className="text-[10px] text-[#8C7A6B]">({costoPct.toFixed(1)}%)</span>
+                  </span>
+                  <span className="text-[#059669] font-bold">
+                    Ganancia: <strong className="font-mono">+{formatCurrency(kpis.gananciaNeta)}</strong> <span className="text-[10px]">({gananciaPct.toFixed(1)}%)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra segmentada */}
+              <div className="h-2.5 w-full bg-[#F5EFEB] rounded-full overflow-hidden flex border border-[#E5DCD3]/80 shadow-2xs">
+                <div 
+                  className="bg-[#B8A99A] h-full transition-all duration-500" 
+                  style={{ width: `${costoPct}%` }}
+                  title={`Costo: ${costoPct.toFixed(1)}% (${formatCurrency(kpis.costoFabricacionTotal)})`}
+                />
+                <div 
+                  className="bg-[#059669] h-full transition-all duration-500" 
+                  style={{ width: `${gananciaPct}%` }}
+                  title={`Ganancia Neta: ${gananciaPct.toFixed(1)}% (${formatCurrency(kpis.gananciaNeta)})`}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-[#6B7280]">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#B8A99A]" />
+                  Inversión en Insumos / Producción
+                </span>
+                <span className="flex items-center gap-1.5 text-[#059669] font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#059669]" />
+                  Utilidad Neta Real
+                </span>
+              </div>
+            </div>
+
+            {/* 2. Flujo de Cobranza */}
+            <div className="space-y-2 pt-3 border-t border-[#E5DCD3]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-extrabold text-[#1F2937]">
+                  Efectividad de Cobranza
+                </span>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-[#059669] font-bold">
+                    Cobrado: <strong className="font-mono">{formatCurrency(kpis.totalCobradoVentas)}</strong> <span className="text-[10px]">({cobradoPct.toFixed(1)}%)</span>
+                  </span>
+                  <span className="text-[#7C5835] font-bold">
+                    Por Cobrar: <strong className="font-mono">{formatCurrency(kpis.saldoPorCobrar)}</strong> <span className="text-[10px]">({saldoPct.toFixed(1)}%)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Barra segmentada */}
+              <div className="h-2.5 w-full bg-[#F5EFEB] rounded-full overflow-hidden flex border border-[#E5DCD3]/80 shadow-2xs">
+                <div 
+                  className="bg-[#059669] h-full transition-all duration-500" 
+                  style={{ width: `${cobradoPct}%` }}
+                  title={`Cobrado: ${cobradoPct.toFixed(1)}% (${formatCurrency(kpis.totalCobradoVentas)})`}
+                />
+                <div 
+                  className="bg-[#7C5835] h-full transition-all duration-500" 
+                  style={{ width: `${saldoPct}%` }}
+                  title={`Por Cobrar: ${saldoPct.toFixed(1)}% (${formatCurrency(kpis.saldoPorCobrar)})`}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-[#6B7280]">
+                <span className="flex items-center gap-1.5 text-[#059669] font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#059669]" />
+                  Ingreso en Caja / Cuentas
+                </span>
+                <span className="flex items-center gap-1.5 text-[#7C5835] font-medium">
+                  <span className="w-2 h-2 rounded-full bg-[#7C5835]" />
+                  Saldos Pendientes de Cobro
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. FILA DE RENDIMIENTO OPERATIVO (GRID 4 COLUMNAS)                         */}
-      {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        {/* KPI 1: GANANCIA NETA DE VENTAS */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-xs hover:border-[#1E5E3A] transition-all relative overflow-hidden rounded-3xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4 sm:px-5">
-            <CardTitle className="text-[11px] font-black uppercase tracking-wider text-[#1E5E3A]">
-              Ganancia Neta de Ventas
-            </CardTitle>
-            <div className="p-1.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A]">
-              <DollarSign className="h-4 w-4 stroke-[2.5]" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
-            <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono leading-tight tabular-nums">
-              +{formatCurrency(kpis.gananciaNeta)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D]">
-              <span>Margen neto:</span>
-              <Badge variant="outline" className="font-mono text-[#1E5E3A] font-bold bg-[#EBF7EE] border-[#B4E3C0] text-[10px] px-1.5 py-0">
-                +{kpis.margenPorcentaje.toFixed(1)}%
-              </Badge>
-            </div>
-            <p className="text-[10px] text-[#75695D] pt-1 border-t border-[#E2D9CC]/50 truncate">
-              Ventas ({formatCurrency(kpis.ingresosVentas)}) - Costos ({formatCurrency(kpis.costoFabricacionTotal)})
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* KPI 2: INGRESOS POR VENTAS */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-xs hover:border-[#A36F4C] transition-all relative overflow-hidden rounded-3xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#A36F4C]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4 sm:px-5">
-            <CardTitle className="text-[11px] font-black uppercase tracking-wider text-[#A36F4C]">
-              Ingresos por Ventas
-            </CardTitle>
-            <div className="p-1.5 rounded-xl bg-[#EFE5D8] text-[#A36F4C]">
-              <TrendingUp className="h-4 w-4 stroke-[2.5]" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
-            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono leading-tight tabular-nums">
-              {formatCurrency(kpis.ingresosVentas)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D]">
-              <span>Ticket Promedio:</span>
-              <span className="font-mono text-[#241C15] font-extrabold tabular-nums">
-                {formatCurrency(kpis.ticketPromedio)}
-              </span>
-            </div>
-            <p className="text-[10px] text-[#75695D] pt-1 border-t border-[#E2D9CC]/50 truncate">
-              Total facturado en modelos 3D y piezas
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* KPI 3: COSTO DE FABRICACIÓN */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-xs hover:border-[#75695D] transition-all relative overflow-hidden rounded-3xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#75695D]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4 sm:px-5">
-            <CardTitle className="text-[11px] font-black uppercase tracking-wider text-[#75695D]">
-              Costo de Fabricación
-            </CardTitle>
-            <div className="p-1.5 rounded-xl bg-[#F4EFEA] text-[#75695D]">
-              <Layers className="h-4 w-4 stroke-[2.5]" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
-            <div className="text-xl sm:text-2xl font-black text-[#75695D] font-mono leading-tight tabular-nums">
-              {formatCurrency(kpis.costoFabricacionTotal)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D]">
-              <span>% sobre precio:</span>
-              <span className="font-mono text-[#241C15] font-extrabold tabular-nums">
-                {kpis.ingresosVentas > 0 
-                  ? `${((kpis.costoFabricacionTotal / kpis.ingresosVentas) * 100).toFixed(1)}% del precio`
-                  : '0%'}
-              </span>
-            </div>
-            <p className="text-[10px] text-[#75695D] pt-1 border-t border-[#E2D9CC]/50 truncate">
-              Filamento, energía y amortización
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* KPI 4: COBRANZAS & SALDOS */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-xs hover:border-[#854D0E] transition-all relative overflow-hidden rounded-3xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#854D0E]" />
-          <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4 sm:px-5">
-            <CardTitle className="text-[11px] font-black uppercase tracking-wider text-[#854D0E]">
-              Cobranzas & Saldos
-            </CardTitle>
-            <div className="p-1.5 rounded-xl bg-[#FEF9C3] text-[#854D0E]">
-              <Clock className="h-4 w-4 stroke-[2.5]" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1 pb-4 px-4 sm:px-5">
-            <div className="text-xl sm:text-2xl font-black text-[#854D0E] font-mono leading-tight tabular-nums">
-              {formatCurrency(kpis.saldoPorCobrar)}
-            </div>
-            <div className="flex items-center justify-between text-xs text-[#75695D]">
-              <span>Cobrado en Caja:</span>
-              <span className="font-mono text-[#1E5E3A] font-extrabold tabular-nums">
-                {formatCurrency(kpis.totalCobradoVentas)}
-              </span>
-            </div>
-            <p className="text-[10px] text-[#75695D] pt-1 border-t border-[#E2D9CC]/50 truncate">
-              Saldos pendientes de liquidación a clientes
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 4. BLOQUE CENTRAL ANALÍTICO (GRID 3 COLUMNAS: 2 GRAFICO + 1 DONUT)         */}
+      {/* 3. BLOQUE CENTRAL ANALÍTICO (GRID: COMBO BAR/LINE + DONUT DE GASTOS)       */}
       {/* ========================================================================= */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
-        {/* Gráfico Principal: Evolución Financiera y Rentabilidad (lg:col-span-2) */}
-        <Card className="lg:col-span-2 bg-[#FFFFFF] border-[#E2D9CC] shadow-xs rounded-3xl overflow-hidden flex flex-col justify-between">
+        {/* Gráfico Principal: Rentabilidad y Facturación Diaria (lg:col-span-2) */}
+        <Card className="lg:col-span-2 bg-[#FFFFFF] border-[#E5DCD3] shadow-xs rounded-3xl overflow-hidden flex flex-col justify-between">
           <CardHeader className="p-4 sm:p-5 pb-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div>
-                <CardTitle className="text-[#241C15] text-sm sm:text-base font-black">
+                <CardTitle className="text-[#1F2937] text-sm sm:text-base font-black">
                   Evolución Financiera y Rentabilidad
                 </CardTitle>
-                <CardDescription className="text-xs text-[#75695D]">
-                  Barras apiladas de Costo y Ganancia Neta coronadas con Ingreso Bruto.
+                <CardDescription className="text-xs text-[#6B7280]">
+                  Resultado neto diario (barras) con curva de facturación bruta (línea).
                 </CardDescription>
               </div>
 
-              {/* Selector de Rango Temporal */}
-              <div className="flex items-center bg-[#FAF8F5] p-1 rounded-2xl border border-[#E2D9CC] self-start sm:self-auto">
+              {/* Selector de Rango Temporal (Armonizado con Sidebar) */}
+              <div className="flex items-center bg-[#F5EFEB] p-1 rounded-2xl border border-[#E5DCD3] self-start sm:self-auto">
                 {(['15D', '30D', 'MES', 'TODO'] as RangoTemporal[]).map((r) => (
                   <button
                     key={r}
                     onClick={() => setRangoTemporal(r)}
                     className={`px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer ${
                       rangoTemporal === r
-                        ? 'bg-[#A36F4C] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8]/50'
+                        ? 'bg-[#7C5835] text-white shadow-2xs'
+                        : 'text-[#6B7280] hover:text-[#7C5835] hover:bg-[#EFE8E1]'
                     }`}
                   >
                     {r === '15D' ? '15 Días' : r === '30D' ? '30 Días' : r === 'MES' ? 'Mes actual' : 'Todo'}
@@ -595,59 +602,57 @@ export function DashboardClient({
             <div className="h-[290px] sm:h-[340px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={graficoFiltrado} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.6} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.6} />
                   
                   <XAxis 
                     dataKey="fecha" 
-                    stroke="#75695D" 
+                    stroke="#6B7280" 
                     fontSize={11} 
                     tickLine={false} 
-                    axisLine={{ stroke: '#E2D9CC' }}
+                    axisLine={{ stroke: '#E5DCD3' }}
                     tickFormatter={(val) => formatFechaEvolucion(val, false)}
                     dy={4}
                   />
                   
                   <YAxis 
-                    stroke="#75695D" 
+                    stroke="#6B7280" 
                     fontSize={11} 
                     tickLine={false} 
                     axisLine={false} 
-                    tickFormatter={(val) => val < 0 ? `-S/${Math.abs(val)}` : `S/${val}`}
+                    tickFormatter={(val) => val === 0 ? 'S/ 0' : val < 0 ? `-S/${Math.abs(val)}` : `+S/${val}`}
                   />
                   
                   <Tooltip content={<CustomEvolucionTooltip />} />
                   
                   <Legend content={<CustomEvolutionLegend />} verticalAlign="top" />
 
-                  {/* Barras Apiladas: Costo de Fabricación (#75695D) */}
-                  <Bar 
-                    dataKey="costo" 
-                    name="Costo Fabricación" 
-                    stackId="a"
-                    fill="#75695D" 
-                    radius={[0, 0, 0, 0]} 
-                    maxBarSize={28}
-                  />
+                  {/* Línea de flotación S/ 0 */}
+                  <ReferenceLine y={0} stroke="#9CA3AF" strokeWidth={1.5} />
 
-                  {/* Barras Apiladas: Ganancia Neta (#1E5E3A) */}
+                  {/* Barras Divergentes de Resultado Neto */}
                   <Bar 
                     dataKey="ganancia" 
-                    name="Ganancia Neta" 
-                    stackId="a"
-                    fill="#1E5E3A" 
-                    radius={[4, 4, 0, 0]} 
-                    maxBarSize={28}
-                  />
+                    name="Resultado Neto" 
+                    radius={[4, 4, 4, 4]}
+                    maxBarSize={32}
+                  >
+                    {graficoFiltrado.map((entry, index) => (
+                      <Cell 
+                        key={`bar-cell-${index}`} 
+                        fill={entry.ganancia >= 0 ? '#059669' : '#DC2626'} 
+                      />
+                    ))}
+                  </Bar>
 
-                  {/* Línea Superior: Ingreso Bruto (#A36F4C) */}
+                  {/* Línea de Evolución de Facturación Bruta */}
                   <Line 
                     type="monotone" 
                     dataKey="ingresos" 
-                    stroke="#A36F4C" 
-                    strokeWidth={3} 
-                    dot={{ r: 3.5, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
-                    activeDot={{ r: 5.5, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
-                    name="ingresos" 
+                    name="Facturación Bruta"
+                    stroke="#7C5835" 
+                    strokeWidth={2.5} 
+                    dot={{ r: 3.5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+                    activeDot={{ r: 5.5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 2 }}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -656,12 +661,12 @@ export function DashboardClient({
         </Card>
 
         {/* Gráfico Donut: Distribución de Gastos (lg:col-span-1) */}
-        <Card className="lg:col-span-1 bg-[#FFFFFF] border-[#E2D9CC] shadow-xs rounded-3xl overflow-hidden flex flex-col justify-between">
+        <Card className="lg:col-span-1 bg-[#FFFFFF] border-[#E5DCD3] shadow-xs rounded-3xl overflow-hidden flex flex-col justify-between">
           <CardHeader className="p-4 sm:p-5 pb-2">
-            <CardTitle className="text-[#241C15] text-sm sm:text-base font-black">
+            <CardTitle className="text-[#1F2937] text-sm sm:text-base font-black">
               Distribución de Gastos
             </CardTitle>
-            <CardDescription className="text-xs text-[#75695D]">
+            <CardDescription className="text-xs text-[#6B7280]">
               Insumos, maquinaria y costos operativos.
             </CardDescription>
           </CardHeader>
@@ -683,41 +688,41 @@ export function DashboardClient({
                     strokeWidth={2}
                   >
                     {graficoInversion.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={NOVA_DONUT_COLORS[index % NOVA_DONUT_COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={WARM_DONUT_COLORS[index % WARM_DONUT_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E2D9CC', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5DCD3', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', fontSize: '12px' }}
                     formatter={(val: any) => [`S/ ${Number(val).toFixed(2)}`, 'Gasto']}
                   />
                 </PieChart>
               </ResponsiveContainer>
 
               <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                <span className="text-[10px] text-[#75695D] uppercase font-black tracking-wider">Total Gastos</span>
-                <span className="text-base sm:text-lg font-black text-[#241C15] font-mono tabular-nums">
+                <span className="text-[10px] text-[#6B7280] uppercase font-black tracking-wider">Total Gastos</span>
+                <span className="text-base sm:text-lg font-black text-[#1F2937] font-mono tabular-nums">
                   {formatCurrency(totalEgresosCalculado)}
                 </span>
               </div>
             </div>
 
-            {/* Leyenda Semántica con Montos y Porcentajes */}
-            <div className="space-y-2 pt-2 border-t border-[#E2D9CC]">
+            {/* Leyenda Semántica con Montos y Porcentajes Armonizados */}
+            <div className="space-y-2 pt-2 border-t border-[#E5DCD3]">
               {graficoInversion.map((item, idx) => {
                 const pct = totalEgresosCalculado > 0 ? ((item.value / totalEgresosCalculado) * 100).toFixed(1) : '0'
-                const color = NOVA_DONUT_COLORS[idx % NOVA_DONUT_COLORS.length]
+                const color = WARM_DONUT_COLORS[idx % WARM_DONUT_COLORS.length]
 
                 return (
                   <div key={item.name} className="flex items-center justify-between text-xs gap-2">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span className="font-bold text-[#241C15] truncate">{item.name}</span>
+                      <span className="font-bold text-[#1F2937] truncate">{item.name}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono font-black text-[#241C15] tabular-nums">
+                      <span className="font-mono font-black text-[#1F2937] tabular-nums">
                         {formatCurrency(item.value)}
                       </span>
-                      <Badge variant="outline" className="text-[10px] font-mono font-bold bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] px-1.5 py-0">
+                      <Badge variant="outline" className="text-[10px] font-mono font-bold bg-[#F5EFEB] border-[#E5DCD3] text-[#6B7280] px-1.5 py-0">
                         {pct}%
                       </Badge>
                     </div>
@@ -728,322 +733,7 @@ export function DashboardClient({
           </CardContent>
         </Card>
       </div>
-
-      {/* ========================================================================= */}
-      {/* 5. BLOQUE INFERIOR DE ACCIÓN INMEDIATA (GRID 2 COLUMNAS)                   */}
-      {/* ========================================================================= */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 items-start">
-        {/* Columna Izquierda: Cuentas Pendientes por Cobrar */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-xs rounded-3xl overflow-hidden flex flex-col">
-          <CardHeader className="p-4 sm:p-5 pb-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <CardTitle className="text-[#241C15] text-sm sm:text-base font-black flex items-center gap-2">
-                  <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-[#854D0E]" />
-                  <span>Cuentas Pendientes por Cobrar ({cuentasPorCobrar.length})</span>
-                </CardTitle>
-                <CardDescription className="text-xs text-[#75695D]">
-                  Pedidos pendientes con saldo a favor del taller.
-                </CardDescription>
-              </div>
-
-              {kpis.saldoPorCobrar > 0 && (
-                <Badge variant="outline" className="text-[#854D0E] border-[#FDE047] bg-[#FEF9C3] font-mono font-black text-xs px-2.5 py-1 shadow-2xs shrink-0">
-                  {formatCurrency(kpis.saldoPorCobrar)} por liquidar
-                </Badge>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-4 sm:p-5 pt-0">
-            <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
-              {cuentasPorCobrar.length === 0 ? (
-                <div className="p-8 text-center bg-[#FAF8F5] rounded-2xl border border-[#E2D9CC] space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-[#EBF7EE] text-[#1E5E3A] flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="h-6 w-6" />
-                  </div>
-                  <p className="text-sm font-black text-[#1E5E3A]">¡Al día! No hay cuentas pendientes 🎉</p>
-                  <p className="text-xs text-[#75695D]">Todos los pedidos registrados se encuentran 100% liquidados.</p>
-                </div>
-              ) : (
-                cuentasPorCobrar.map((cuenta) => (
-                  <div 
-                    key={cuenta.id} 
-                    className="p-3 sm:p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] hover:bg-[#F4EFEA] hover:border-[#D4BEA7] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-black text-[#241C15]">
-                          {cuenta.cliente}
-                        </span>
-                        {cuenta.canalVenta && (
-                          <span className="text-[10px] font-bold text-[#A36F4C] bg-[#EFE5D8] px-1.5 py-0.2 rounded-md">
-                            {cuenta.canalVenta}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-[#75695D] mt-0.5 truncate font-medium">
-                        {cuenta.nombreProductoSnapshot || cuenta.producto?.nombreModelo || 'Modelo 3D'} • <span className="font-mono">{formatDate(cuenta.fecha)}</span>
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0">
-                      <Badge variant="outline" className="text-[#854D0E] border-[#FDE047] bg-[#FEF9C3] font-mono text-xs font-black px-2.5 py-1">
-                        Debe: {formatCurrency(Number(cuenta.saldoPendiente))}
-                      </Badge>
-
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenCobroModal(cuenta)}
-                        className="h-8 px-3 rounded-xl bg-[#EBF7EE] hover:bg-[#D4EFE0] text-[#1E5E3A] border border-[#B4E3C0] font-black text-xs cursor-pointer flex items-center gap-1 shadow-2xs"
-                      >
-                        <CreditCard className="h-3.5 w-3.5" />
-                        <span>Liquidar Cobro</span>
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Columna Derecha: Monitor de Consumo & Filamentos */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-xs rounded-3xl overflow-hidden flex flex-col">
-          <CardHeader className="p-4 sm:p-5 pb-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <CardTitle className="text-[#241C15] text-sm sm:text-base font-black flex items-center gap-2">
-                  <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-[#A36F4C]" />
-                  <span>Monitor de Consumo & Filamentos</span>
-                </CardTitle>
-                <CardDescription className="text-xs text-[#75695D]">
-                  Filamentos con mayor frecuencia de uso y rotación en taller.
-                </CardDescription>
-              </div>
-
-              <Link 
-                href="/catalogo/inventario" 
-                className="text-xs font-black text-[#A36F4C] hover:text-[#633E20] flex items-center gap-1 shrink-0 bg-[#FAF8F5] hover:bg-[#F4EFEA] border border-[#D4BEA7] px-3 py-1.5 rounded-xl transition-all shadow-2xs"
-              >
-                <span>Inventario</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-4 sm:p-5 pt-0">
-            <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
-              {(!topColores || topColores.length === 0) ? (
-                <div className="p-8 text-center bg-[#FAF8F5] rounded-2xl border border-[#E2D9CC] space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-[#EFE5D8] text-[#A36F4C] flex items-center justify-center mx-auto">
-                    <Palette className="h-6 w-6" />
-                  </div>
-                  <p className="text-sm font-black text-[#633E20]">Aún no hay pedidos con colores asignados 🎨</p>
-                  <p className="text-xs text-[#75695D]">Asigna bobinas en los pedidos para visualizar el ranking de rotación.</p>
-                </div>
-              ) : (
-                topColores.map((color, index) => {
-                  const isFirst = index === 0
-                  const esCritico = color.alertaCritica || color.stockGramosActual < 300
-
-                  return (
-                    <div 
-                      key={color.id || color.nombreColor} 
-                      className={`p-3 sm:p-3.5 rounded-2xl border transition-all ${
-                        isFirst
-                          ? 'bg-[#FDFBF7] border-[#D4BEA7] shadow-2xs'
-                          : 'bg-[#FAF8F5] border-[#E2D9CC] hover:bg-[#FFFFFF]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          {/* Rank Badge */}
-                          <div className={`h-6 w-6 rounded-lg flex items-center justify-center text-xs font-black font-mono shrink-0 ${
-                            isFirst 
-                              ? 'bg-[#A36F4C] text-white shadow-2xs' 
-                              : index === 1 
-                                ? 'bg-[#EAE4DC] text-[#241C15]' 
-                                : 'bg-[#F4EFEA] text-[#75695D]'
-                          }`}>
-                            #{index + 1}
-                          </div>
-
-                          {/* Color Swatch */}
-                          <div 
-                            className="h-7 w-7 rounded-full border border-black/15 shadow-xs shrink-0"
-                            style={{ backgroundColor: color.codigoHex }}
-                            title={color.nombreColor}
-                          />
-
-                          {/* Info */}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-xs sm:text-sm font-black text-[#241C15] truncate">
-                                {color.nombreColor}
-                              </span>
-                              {isFirst && (
-                                <span className="text-[9px] font-black text-[#A36F4C] bg-[#EFE5D8] border border-[#D4BEA7] px-1.5 py-0.2 rounded uppercase shrink-0">
-                                  Top 1
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs text-[#75695D] mt-0.5 flex-wrap font-medium">
-                              <span><strong className="text-[#241C15] font-mono">{color.pedidosCount}</strong> ped.</span>
-                              <span>•</span>
-                              <span><strong className="text-[#241C15] font-mono">{color.unidadesCount}</strong> un.</span>
-                              <span>•</span>
-                              <span className="font-mono text-[#A36F4C] font-black">{color.gramosTotal}g</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Stock en Taller Badge */}
-                        <div className="flex flex-col items-end shrink-0">
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs font-mono font-black px-2 py-0.5 shadow-2xs ${
-                              esCritico
-                                ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047]'
-                                : 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
-                            }`}
-                          >
-                            {esCritico ? `⚠️ ${color.stockGramosActual}g (Consultar stock)` : `${color.stockGramosActual}g`}
-                          </Badge>
-                          <span className="text-[10px] font-mono text-[#75695D] mt-0.5 font-bold">
-                            {color.porcentajeUso}% uso
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Barra de Progreso */}
-                      <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden mt-2">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            esCritico ? 'bg-[#854D0E]' : 'bg-[#A36F4C]'
-                          }`}
-                          style={{ width: `${Math.max(6, color.porcentajeUso)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 6. MODAL: REGISTRAR COBRO / LIQUIDACIÓN RÁPIDA                            */}
-      {/* ========================================================================= */}
-      {modalCobroOpen && selectedCuentaCobro && (
-        <div className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-[#FFFFFF] border border-[#D4BEA7] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="bg-[#FAF8F5] border-b border-[#E2D9CC] p-4 sm:p-5 flex items-center justify-between">
-              <div>
-                <h3 className="text-base sm:text-lg font-black text-[#241C15] flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-[#1E5E3A]" />
-                  <span>Registrar Cobro / Liquidación</span>
-                </h3>
-                <p className="text-xs text-[#75695D] mt-0.5">
-                  Cliente: <strong className="text-[#241C15]">{selectedCuentaCobro.cliente}</strong>
-                </p>
-              </div>
-
-              <button
-                onClick={() => setModalCobroOpen(false)}
-                className="p-1.5 rounded-xl hover:bg-[#EAE4DC] text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Form */}
-            <form onSubmit={handleSubmitCobro} className="p-4 sm:p-6 space-y-4">
-              <div className="p-3 bg-[#FEF9C3] border border-[#FDE047] rounded-2xl flex items-center justify-between text-xs">
-                <span className="font-bold text-[#854D0E]">Saldo Pendiente Actual:</span>
-                <span className="font-mono font-black text-sm text-[#854D0E]">
-                  {formatCurrency(Number(selectedCuentaCobro.saldoPendiente))}
-                </span>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15]">Monto a Cobrar (S/) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={cobroMonto}
-                  onFocus={(e) => e.target.select()}
-                  onChange={(e) => setCobroMonto(e.target.value)}
-                  className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl font-mono font-bold"
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15]">Método de Pago</Label>
-                  <select
-                    value={cobroMetodo}
-                    onChange={(e) => setCobroMetodo(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-3 text-xs text-[#241C15] font-bold"
-                  >
-                    <option value="YAPE">Yape</option>
-                    <option value="PLIN">Plin</option>
-                    <option value="BCP">BCP Transferencia</option>
-                    <option value="EFECTIVO">Efectivo</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15]">Tipo de Cobro</Label>
-                  <select
-                    value={cobroTipo}
-                    onChange={(e) => setCobroTipo(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-3 text-xs text-[#241C15] font-bold"
-                  >
-                    <option value="PAGO_TOTAL">Liquidación Total</option>
-                    <option value="ANTICIPO">Anticipo / Adelanto</option>
-                    <option value="ABONO">Abono Parcial</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15]">Nota / Referencia (Opcional)</Label>
-                <Input
-                  value={cobroNotas}
-                  onChange={(e) => setCobroNotas(e.target.value)}
-                  placeholder="Ej: Yape de confirmación, N° operación..."
-                  className="bg-[#FAF8F5] border-[#E2D9CC] text-xs rounded-xl"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-[#E2D9CC] flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setModalCobroOpen(false)}
-                  className="h-9 px-4 rounded-xl border-[#E2D9CC] text-xs font-bold"
-                >
-                  Cancelar
-                </Button>
-
-                <Button
-                  type="submit"
-                  disabled={isSubmittingCobro}
-                  className="h-9 px-5 rounded-xl bg-[#1E5E3A] hover:bg-[#16482C] text-white font-black text-xs cursor-pointer shadow-sm"
-                >
-                  {isSubmittingCobro ? 'Guardando...' : 'Confirmar Cobro'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
+
