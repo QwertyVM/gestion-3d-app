@@ -160,16 +160,18 @@ export function CatalogoClient({
     }
 
     if (categoriaFilter !== 'TODAS') {
-      list = list.filter(p => p.lineaCategoria.toLowerCase() === categoriaFilter.toLowerCase())
+      list = list.filter(p => (p.lineaCategoria || '').toLowerCase() === categoriaFilter.toLowerCase())
     }
 
     if (search.trim()) {
-      const q = search.toLowerCase()
-      list = list.filter(p => 
-        p.nombreModelo.toLowerCase().includes(q) ||
-        p.lineaCategoria.toLowerCase().includes(q) ||
-        (p.pesoGramos && p.pesoGramos.toString().includes(q))
-      )
+      const q = search.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      list = list.filter(p => {
+        const nombre = (p.nombreModelo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        const cat = (p.lineaCategoria || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        const gramos = (p.pesoGramos || '').toString()
+
+        return nombre.includes(q) || cat.includes(q) || gramos.includes(q)
+      })
     }
 
     return list.sort((a, b) => {
@@ -385,9 +387,17 @@ export function CatalogoClient({
         {/* ========================================================================= */}
         {/* 2. FILA SUPERIOR DE KPIS (GRID 4 COLUMNAS)                                */}
         {/* ========================================================================= */}
+        {/* Fila de 4 KPIs Interactivos */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5 pt-1">
           {/* KPI 1: Total Modelos */}
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between shadow-2xs">
+          <div 
+            onClick={() => setEstadoFilter('TODOS')}
+            className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
+              estadoFilter === 'TODOS'
+                ? 'bg-[#FAF8F5] border-[#A36F4C] ring-2 ring-[#A36F4C]/25 shadow-xs'
+                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#A36F4C]/50 hover:bg-[#F4EFEA]'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
                 Total Modelos
@@ -409,7 +419,11 @@ export function CatalogoClient({
           {/* KPI 2: Activos en Venta (Verde #1E5E3A) */}
           <div 
             onClick={() => setEstadoFilter('ACTIVOS')}
-            className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] hover:border-[#1E5E3A]/50 flex flex-col justify-between shadow-2xs cursor-pointer transition-colors"
+            className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
+              estadoFilter === 'ACTIVOS'
+                ? 'bg-[#EBF7EE]/40 border-[#1E5E3A] ring-2 ring-[#1E5E3A]/25 shadow-xs'
+                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#1E5E3A]/50 hover:bg-[#F4EFEA]'
+            }`}
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
@@ -432,7 +446,11 @@ export function CatalogoClient({
           {/* KPI 3: Descontinuados */}
           <div 
             onClick={() => setEstadoFilter('DESCONTINUADOS')}
-            className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] hover:border-[#75695D]/50 flex flex-col justify-between shadow-2xs cursor-pointer transition-colors"
+            className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
+              estadoFilter === 'DESCONTINUADOS'
+                ? 'bg-[#FAF8F5] border-[#75695D] ring-2 ring-[#75695D]/25 shadow-xs'
+                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#75695D]/50 hover:bg-[#F4EFEA]'
+            }`}
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
@@ -561,6 +579,45 @@ export function CatalogoClient({
             </div>
           </div>
         </div>
+
+        {/* Barra de Filtros Activos & Reset si hay búsqueda o filtros aplicados */}
+        {(search || estadoFilter !== 'TODOS' || categoriaFilter !== 'TODAS') && (
+          <div className="flex items-center justify-between pt-2 border-t border-[#E2D9CC]/60 text-xs text-[#75695D]">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium">Mostrando:</span>
+              <span className="font-bold text-[#241C15] bg-[#FAF8F5] px-2 py-0.5 rounded-lg border border-[#E2D9CC]">
+                {filteredProductos.length} {filteredProductos.length === 1 ? 'modelo' : 'modelos'}
+              </span>
+              {search && (
+                <span className="text-[#75695D]">
+                  para &ldquo;<strong className="text-[#241C15]">{search}</strong>&rdquo;
+                </span>
+              )}
+              {categoriaFilter !== 'TODAS' && (
+                <span className="text-[#75695D]">
+                  en <strong>{categoriaFilter}</strong>
+                </span>
+              )}
+              {estadoFilter !== 'TODOS' && (
+                <span className="text-[#75695D]">
+                  estado <strong>{estadoFilter}</strong>
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('')
+                setEstadoFilter('TODOS')
+                setCategoriaFilter('TODAS')
+              }}
+              className="text-xs text-[#A36F4C] hover:text-[#8E5E3E] font-bold underline flex items-center gap-1 cursor-pointer"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>Limpiar filtros</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}

@@ -34,7 +34,8 @@ export interface ColorFilamentoItem {
   id: string
   nombreColor: string
   codigoHex: string
-  estado: 'DISPONIBLE' | 'RESTOCK'
+  estado: 'DISPONIBLE' | 'RESTOCK' | 'DESCATALOGADO'
+  activo?: boolean
   nota?: string | null
   stockGramos: number
   rollos: number // Cantidad de rollos (cada rollo equivale a 1,000g)
@@ -134,6 +135,7 @@ export async function ajustarStockBobina(colorFilamentoId: string, deltaGramos: 
 export async function getColoresInventario(forceReset = false): Promise<{
   disponibles: ColorFilamentoItem[]
   restock: ColorFilamentoItem[]
+  descatalogados: ColorFilamentoItem[]
 }> {
   const count = await prisma.inventarioFilamento.count()
 
@@ -180,7 +182,6 @@ export async function getColoresInventario(forceReset = false): Promise<{
   }
 
   const filamentos = await prisma.inventarioFilamento.findMany({
-    where: { activo: true },
     include: {
       ventas: {
         include: {
@@ -222,7 +223,8 @@ export async function getColoresInventario(forceReset = false): Promise<{
   }
 
   const mapped: ColorFilamentoItem[] = filamentos.map(f => {
-    const isDisponible = f.estadoStock === 'ABIERTO' || f.estadoStock === 'SELLADO' || f.estado === 'DISPONIBLE'
+    const isDescatalogado = f.activo === false || f.estadoStock === 'DESCATALOGADO' || f.estado === 'DESCATALOGADO'
+    const isDisponible = !isDescatalogado && (f.estadoStock === 'ABIERTO' || f.estadoStock === 'SELLADO' || f.estado === 'DISPONIBLE')
     const storedBobinas = f.stockBobinas != null && Number(f.stockBobinas) >= 1 ? Math.round(Number(f.stockBobinas)) : 1
     const storedPeso = f.pesoInicialGramos != null ? Number(f.pesoInicialGramos) : (storedBobinas * 1000)
     const rollos = Math.max(1, Math.round(storedPeso / 1000))
@@ -282,11 +284,16 @@ export async function getColoresInventario(forceReset = false): Promise<{
 
     const productosInvertidos = Object.values(mapProductos).sort((a, b) => b.totalUnidades - a.totalUnidades)
 
+    const estadoItem: 'DISPONIBLE' | 'RESTOCK' | 'DESCATALOGADO' = isDescatalogado 
+      ? 'DESCATALOGADO' 
+      : (isDisponible ? 'DISPONIBLE' : 'RESTOCK')
+
     return {
       id: f.id,
       nombreColor: f.nombreColor,
       codigoHex: f.codigoHex || '#18181B',
-      estado: isDisponible ? 'DISPONIBLE' : 'RESTOCK',
+      estado: estadoItem,
+      activo: f.activo ?? !isDescatalogado,
       nota: f.notaProduccion || (alertaCritica ? '⚠️ Menos de 300g' : null),
       stockGramos,
       rollos,
@@ -301,10 +308,19 @@ export async function getColoresInventario(forceReset = false): Promise<{
     }
   })
 
-  const disponibles = mapped.filter(c => c.estado === 'DISPONIBLE')
-  const restock = mapped.filter(c => c.estado === 'RESTOCK')
+  const disponibles = mapped
+    .filter(c => c.estado === 'DISPONIBLE')
+    .sort((a, b) => (b.stockGramos || 0) - (a.stockGramos || 0))
 
-  return { disponibles, restock }
+  const restock = mapped
+    .filter(c => c.estado === 'RESTOCK')
+    .sort((a, b) => a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' }))
+
+  const descatalogados = mapped
+    .filter(c => c.estado === 'DESCATALOGADO')
+    .sort((a, b) => a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' }))
+
+  return { disponibles, restock, descatalogados }
 }
 
 export async function moverEstadoColor(id: string, nuevoEstado: 'DISPONIBLE' | 'RESTOCK', nota?: string | null) {
@@ -407,13 +423,10 @@ export async function actualizarRollosColor(id: string, nuevosRollos: number) {
 }
 
 export async function actualizarGramosColor(id: string, stockGramos: number) {
-  const current = await prisma.inventarioFilamento.findUnique({ where: { id } })
-  const storedBobinas = current?.stockBobinas != null && Number(current.stockBobinas) >= 1 ? Math.round(Number(current.stockBobinas)) : 1
-  const storedPeso = current?.pesoInicialGramos != null ? Number(current.pesoInicialGramos) : (storedBobinas * 1000)
-  const rollos = Math.max(1, Math.round(storedPeso / 1000))
-  const pesoInicialGramos = rollos * 1000
+  const gramosNum = Math.max(0, Number(stockGramos))
+  const rollos = Math.max(1, Math.ceil(gramosNum / 1000))
+  const pesoInicialGramos = Math.max(1000, rollos * 1000)
 
-  const gramosNum = Math.max(0, Math.min(pesoInicialGramos, Number(stockGramos)))
   const alertaCritica = gramosNum < 300
   const estado = gramosNum === 0 ? 'AGOTADO' : (alertaCritica ? 'BAJO_STOCK' : 'DISPONIBLE')
   const estadoStock = gramosNum === 0 ? 'FALTANTE' : 'ABIERTO'
@@ -422,7 +435,7 @@ export async function actualizarGramosColor(id: string, stockGramos: number) {
     where: { id },
     data: {
       stockGramos: gramosNum,
-      stockBobinas: rollos,
+      stockBobinas: Number((gramosNum / 1000).toFixed(2)),
       pesoInicialGramos,
       alertaCritica,
       estado,
@@ -459,11 +472,11 @@ export async function agregarNuevoColor(data: {
   stockGramos?: number
   nota?: string | null
 }) {
-  const rollos = Math.max(1, Math.round(data.rollos || 1))
-  const totalGramos = rollos * 1000
   const gramos = data.stockGramos !== undefined 
-    ? Math.min(totalGramos, Math.max(0, Number(data.stockGramos))) 
-    : (data.estado === 'DISPONIBLE' ? totalGramos : 0)
+    ? Math.max(0, Number(data.stockGramos)) 
+    : (data.estado === 'DISPONIBLE' ? 1000 : 0)
+  const rollos = Math.max(1, Math.ceil(gramos / 1000))
+  const totalGramos = Math.max(1000, rollos * 1000)
   const alertaCritica = data.estado === 'DISPONIBLE' && gramos < 300
 
   const created = await prisma.inventarioFilamento.create({
@@ -472,7 +485,7 @@ export async function agregarNuevoColor(data: {
       codigoHex: data.codigoHex || '#18181B',
       estadoStock: data.estado === 'DISPONIBLE' ? 'ABIERTO' : 'FALTANTE',
       estado: data.estado === 'DISPONIBLE' ? (alertaCritica ? 'BAJO_STOCK' : 'DISPONIBLE') : 'AGOTADO',
-      stockBobinas: rollos,
+      stockBobinas: Number((gramos / 1000).toFixed(2)),
       stockGramos: gramos,
       pesoInicialGramos: totalGramos,
       notaProduccion: data.nota?.trim() || (alertaCritica ? '⚠️ Menos de 300g' : null),
@@ -552,6 +565,40 @@ export async function editarColorFilamento(id: string, data: {
   }
 }
 
+export async function descatalogarColor(id: string) {
+  const updated = await prisma.inventarioFilamento.update({
+    where: { id },
+    data: {
+      activo: false,
+      estadoStock: 'DESCATALOGADO',
+      estado: 'DESCATALOGADO',
+      notaProduccion: 'Descatalogado'
+    }
+  })
+
+  safeRevalidate()
+  return { success: true, id: updated.id }
+}
+
+export async function reactivarColor(id: string) {
+  const current = await prisma.inventarioFilamento.findUnique({ where: { id } })
+  const gramos = current?.stockGramos != null ? Number(current.stockGramos) : 0
+  const isDisp = gramos > 0
+
+  const updated = await prisma.inventarioFilamento.update({
+    where: { id },
+    data: {
+      activo: true,
+      estadoStock: isDisp ? 'ABIERTO' : 'FALTANTE',
+      estado: isDisp ? 'DISPONIBLE' : 'RESTOCK',
+      notaProduccion: null
+    }
+  })
+
+  safeRevalidate()
+  return { success: true, id: updated.id }
+}
+
 // Para selector de ventas con información de gramos y stock crítico
 export async function getFilamentosActivos() {
   const { disponibles } = await getColoresInventario()
@@ -564,7 +611,7 @@ export async function getFilamentosActivos() {
     marca: 'Taller',
     stockGramos: d.stockGramos,
     stockBobinas: Number((d.stockGramos / 1000).toFixed(2)),
-    porcentajeRestante: Math.min(100, Math.round((d.stockGramos / d.pesoInicialGramos) * 100)),
+    porcentajeRestante: Math.min(100, Math.round((d.stockGramos / (d.pesoInicialGramos || 1000)) * 100)),
     alertaCritica: d.alertaCritica,
     estado: d.estado
   }))

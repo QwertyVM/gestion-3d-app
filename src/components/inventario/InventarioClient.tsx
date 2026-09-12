@@ -25,28 +25,40 @@ import {
   CheckCircle2,
   ArrowRight,
   SlidersHorizontal,
-  Flame
+  Flame,
+  Archive,
+  RotateCcw
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { 
+  Table, 
+  TableHeader, 
+  TableBody, 
+  TableHead, 
+  TableRow, 
+  TableCell 
+} from '@/components/ui/table'
 import { toast } from 'sonner'
 import { 
   ColorFilamentoItem, 
   moverEstadoColor, 
   actualizarGramosColor,
-  actualizarRollosColor,
   agregarNuevoColor, 
   eliminarColor, 
   resetColoresTaller,
-  editarColorFilamento
+  editarColorFilamento,
+  descatalogarColor,
+  reactivarColor
 } from '@/actions/inventario'
 
 interface InventarioClientProps {
   disponibles: ColorFilamentoItem[]
   restock: ColorFilamentoItem[]
+  descatalogados?: ColorFilamentoItem[]
 }
 
 // Swatches agrupados por tonalidades
@@ -86,14 +98,25 @@ const ALL_SWATCHES = [
 
 const NEUTRAL_KEYWORDS = ['negro', 'blanco', 'gris', 'ceniza', 'hueso', 'marfil', 'arena', 'beige', 'plata', 'silver', 'carbón']
 
-type FilterTab = 'todos' | 'disponibles' | 'criticos' | 'restock'
+const normalizeSearchText = (text: string) =>
+  text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+const esColorCritico = (c: ColorFilamentoItem) => {
+  if (c.estado !== 'DISPONIBLE') return false
+  const gramos = c.stockGramos ?? 1000
+  return gramos < 300 || Boolean(c.alertaCritica)
+}
+
+type FilterTab = 'todos' | 'disponibles' | 'criticos' | 'restock' | 'descatalogados'
 
 export function InventarioClient({ 
   disponibles: initialDisponibles, 
-  restock: initialRestock 
+  restock: initialRestock,
+  descatalogados: initialDescatalogados = []
 }: InventarioClientProps) {
   const [disponibles, setDisponibles] = useState<ColorFilamentoItem[]>(initialDisponibles)
   const [restock, setRestock] = useState<ColorFilamentoItem[]>(initialRestock)
+  const [descatalogados, setDescatalogados] = useState<ColorFilamentoItem[]>(initialDescatalogados)
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<FilterTab>('todos')
   const [isPending, startTransition] = useTransition()
@@ -108,7 +131,6 @@ export function InventarioClient({
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoHex, setNuevoHex] = useState('#18181B')
   const [nuevoEstado, setNuevoEstado] = useState<'DISPONIBLE' | 'RESTOCK'>('DISPONIBLE')
-  const [nuevoRollos, setNuevoRollos] = useState('1')
   const [nuevoGramos, setNuevoGramos] = useState('1000')
   const [nuevaNota, setNuevaNota] = useState('')
 
@@ -158,6 +180,7 @@ export function InventarioClient({
 
       setDisponibles(updater)
       setRestock(updater)
+      setDescatalogados(updater)
       setOpenEditModal(false)
       toast.success(`Color "${editNombre.trim()}" actualizado`)
     } catch (err: any) {
@@ -175,12 +198,8 @@ export function InventarioClient({
     return disponibles.reduce((acc, c) => acc + (c.stockGramos || 0), 0)
   }, [disponibles])
 
-  const totalRollosActivos = useMemo(() => {
-    return disponibles.reduce((acc, c) => acc + (c.rollos || 1), 0)
-  }, [disponibles])
-
   const totalCriticos = useMemo(() => {
-    return disponibles.filter(c => (c.stockGramos || 0) < 300)
+    return disponibles.filter(esColorCritico)
   }, [disponibles])
 
   // Move from Disponible -> Restock
@@ -212,6 +231,53 @@ export function InventarioClient({
       toast.error('Error al mover color: ' + e.message)
       setDisponibles(prev => prev.filter(c => c.id !== item.id))
       setRestock(prev => [item, ...prev])
+    }
+  }
+
+  // Descatalogar color (ya no habrá este color)
+  const handleDescatalogarColor = async (item: ColorFilamentoItem) => {
+    if (!confirm(`¿Descatalogar "${item.nombreColor}"?\n\nEl color ya no aparecerá en el catálogo activo para clientes ni en compras de reposición.`)) return
+
+    if (item.estado === 'DISPONIBLE') {
+      setDisponibles(prev => prev.filter(c => c.id !== item.id))
+    } else {
+      setRestock(prev => prev.filter(c => c.id !== item.id))
+    }
+    setDescatalogados(prev => [{ ...item, estado: 'DESCATALOGADO', activo: false, nota: 'Descatalogado' }, ...prev])
+
+    try {
+      await descatalogarColor(item.id)
+      toast.info(`"${item.nombreColor}" ha sido descatalogado`)
+    } catch (e: any) {
+      toast.error('Error al descatalogar: ' + e.message)
+      setDescatalogados(prev => prev.filter(c => c.id !== item.id))
+      if (item.estado === 'DISPONIBLE') {
+        setDisponibles(prev => [item, ...prev])
+      } else {
+        setRestock(prev => [item, ...prev])
+      }
+    }
+  }
+
+  // Reactivar color descatalogado
+  const handleReactivarColor = async (item: ColorFilamentoItem) => {
+    const isDisp = (item.stockGramos || 0) > 0
+
+    setDescatalogados(prev => prev.filter(c => c.id !== item.id))
+    if (isDisp) {
+      setDisponibles(prev => [{ ...item, estado: 'DISPONIBLE', activo: true, nota: null }, ...prev])
+    } else {
+      setRestock(prev => [{ ...item, estado: 'RESTOCK', activo: true, nota: 'Por terminar / En reposición' }, ...prev])
+    }
+
+    try {
+      await reactivarColor(item.id)
+      toast.success(`"${item.nombreColor}" reincorporado al inventario`)
+    } catch (e: any) {
+      toast.error('Error al reactivar: ' + e.message)
+      setDisponibles(prev => prev.filter(c => c.id !== item.id))
+      setRestock(prev => prev.filter(c => c.id !== item.id))
+      setDescatalogados(prev => [item, ...prev])
     }
   }
 
@@ -261,12 +327,15 @@ export function InventarioClient({
 
   // Quick Grams Update (-50g / +50g)
   const handleAjustarGramos = async (item: ColorFilamentoItem, delta: number) => {
-    const maxGramos = (item.rollos || 1) * 1000
-    const nuevosGramos = Math.max(0, Math.min(maxGramos, (item.stockGramos || 0) + delta))
+    const nuevosGramos = Math.max(0, (item.stockGramos || 0) + delta)
+    const capacidad = Math.max(1000, Math.ceil(nuevosGramos / 1000) * 1000)
+    const rollos = Math.max(1, Math.ceil(nuevosGramos / 1000))
     
     setDisponibles(prev => prev.map(c => c.id === item.id ? { 
       ...c, 
       stockGramos: nuevosGramos,
+      pesoInicialGramos: capacidad,
+      rollos,
       alertaCritica: nuevosGramos < 300,
       nota: nuevosGramos < 300 ? `⚠️ Solo ${nuevosGramos}g restantes` : null
     } : c))
@@ -280,18 +349,22 @@ export function InventarioClient({
 
   // Quick Grams Direct Input
   const handleSetGramosPrompt = async (item: ColorFilamentoItem) => {
-    const maxGramos = (item.rollos || 1) * 1000
-    const input = prompt(`Ingresa los gramos restantes para "${item.nombreColor}" (0 - ${maxGramos}g):`, (item.stockGramos || maxGramos).toString())
+    const input = prompt(`Ingresa los gramos de filamento para "${item.nombreColor}" (ej. 500, 1000, 2500):`, (item.stockGramos ?? 1000).toString())
     if (input === null) return
     const num = parseInt(input, 10)
-    if (isNaN(num) || num < 0 || num > maxGramos) {
-      toast.error(`Ingresa un número válido entre 0 y ${maxGramos} gramos`)
+    if (isNaN(num) || num < 0) {
+      toast.error('Ingresa una cantidad válida de gramos (número positivo)')
       return
     }
+
+    const capacidad = Math.max(1000, Math.ceil(num / 1000) * 1000)
+    const rollos = Math.max(1, Math.ceil(num / 1000))
 
     setDisponibles(prev => prev.map(c => c.id === item.id ? { 
       ...c, 
       stockGramos: num,
+      pesoInicialGramos: capacidad,
+      rollos,
       alertaCritica: num < 300,
       nota: num < 300 ? `⚠️ Solo ${num}g restantes` : null
     } : c))
@@ -304,49 +377,16 @@ export function InventarioClient({
     }
   }
 
-  // Quick Rollos Adjust
-  const handleAjustarRollos = async (item: ColorFilamentoItem, delta: number) => {
-    const prevRollos = item.rollos || 1
-    const nuevosRollos = Math.max(1, Math.min(20, prevRollos + delta))
-    const nuevoTotal = nuevosRollos * 1000
-    const prevGramos = item.stockGramos || 1000
-
-    let nuevosGramos = prevGramos
-    if (nuevosRollos > prevRollos) {
-      nuevosGramos = prevGramos + ((nuevosRollos - prevRollos) * 1000)
-    } else if (nuevosRollos < prevRollos) {
-      nuevosGramos = Math.max(0, Math.min(nuevoTotal, prevGramos - ((prevRollos - nuevosRollos) * 1000)))
-    }
-
-    const isDisp = item.estado === 'DISPONIBLE'
-    const updater = (prev: ColorFilamentoItem[]) => prev.map(c => c.id === item.id ? { 
-      ...c, 
-      rollos: nuevosRollos,
-      pesoInicialGramos: nuevoTotal,
-      stockGramos: nuevosGramos,
-      alertaCritica: nuevosGramos < 300,
-      nota: nuevosGramos < 300 ? `⚠️ Solo ${nuevosGramos}g restantes` : null
-    } : c)
-
-    if (isDisp) setDisponibles(updater)
-    else setRestock(updater)
-
-    try {
-      await actualizarRollosColor(item.id, nuevosRollos)
-      toast.success(`"${item.nombreColor}" configurado en ${nuevosRollos} un. (${nuevoTotal.toLocaleString()}g)`)
-    } catch (e: any) {
-      toast.error('Error al actualizar bobinas: ' + e.message)
-    }
-  }
-
   // Delete color
   const handleEliminarColor = async (item: ColorFilamentoItem) => {
-    if (!confirm(`¿Estás seguro de archivar/eliminar "${item.nombreColor}" del inventario?`)) return
+    if (!confirm(`¿Estás seguro de eliminar permanentemente "${item.nombreColor}"?`)) return
 
     if (item.estado === 'DISPONIBLE') {
       setDisponibles(prev => prev.filter(c => c.id !== item.id))
-    } else {
+    } else if (item.estado === 'RESTOCK') {
       setRestock(prev => prev.filter(c => c.id !== item.id))
+    } else {
+      setDescatalogados(prev => prev.filter(c => c.id !== item.id))
     }
 
     try {
@@ -360,8 +400,10 @@ export function InventarioClient({
       toast.error('Error al eliminar: ' + e.message)
       if (item.estado === 'DISPONIBLE') {
         setDisponibles(prev => [item, ...prev])
-      } else {
+      } else if (item.estado === 'RESTOCK') {
         setRestock(prev => [item, ...prev])
+      } else {
+        setDescatalogados(prev => [item, ...prev])
       }
     }
   }
@@ -373,6 +415,7 @@ export function InventarioClient({
       const data = await resetColoresTaller()
       setDisponibles(data.disponibles)
       setRestock(data.restock)
+      setDescatalogados(data.descatalogados || [])
       toast.success('Lista de colores restablecida con éxito')
     } catch (e: any) {
       toast.error('Error: ' + e.message)
@@ -384,11 +427,10 @@ export function InventarioClient({
     e.preventDefault()
     if (!nuevoNombre.trim()) return
 
-    const rollosNum = Math.max(1, parseInt(nuevoRollos || '1', 10))
-    const totalGramosCapacidad = rollosNum * 1000
     const gNum = nuevoEstado === 'DISPONIBLE' 
-      ? Math.min(totalGramosCapacidad, Math.max(0, parseInt(nuevoGramos || `${totalGramosCapacidad}`, 10))) 
+      ? Math.max(0, parseInt(nuevoGramos || '1000', 10)) 
       : 0
+    const rollosNum = Math.max(1, Math.ceil(gNum / 1000))
 
     try {
       const created = await agregarNuevoColor({
@@ -409,7 +451,6 @@ export function InventarioClient({
       toast.success(`"${created.nombreColor}" registrado en el taller`)
       setNuevoNombre('')
       setNuevaNota('')
-      setNuevoRollos('1')
       setNuevoGramos('1000')
       setOpenAddModal(false)
     } catch (e: any) {
@@ -426,41 +467,55 @@ export function InventarioClient({
     } else if (activeTab === 'disponibles') {
       combined = [...disponibles]
     } else if (activeTab === 'criticos') {
-      combined = disponibles.filter(c => (c.stockGramos ?? 1000) < 300 || Boolean(c.alertaCritica))
+      combined = disponibles.filter(esColorCritico)
     } else if (activeTab === 'restock') {
       combined = [...restock]
+    } else if (activeTab === 'descatalogados') {
+      combined = [...descatalogados]
     }
 
     if (search.trim()) {
-      const q = search.toLowerCase()
-      combined = combined.filter(c => 
-        c.nombreColor.toLowerCase().includes(q) ||
-        (c.nota && c.nota.toLowerCase().includes(q)) ||
-        (c.stockGramos && c.stockGramos.toString().includes(q))
-      )
+      const q = normalizeSearchText(search.trim())
+      combined = combined.filter(c => {
+        const nombre = normalizeSearchText(c.nombreColor || '')
+        const nota = normalizeSearchText(c.nota || '')
+        const hex = (c.codigoHex || '').toLowerCase()
+        const gramos = (c.stockGramos ?? '').toString()
+        const estado = (c.estado || '').toLowerCase()
+
+        return (
+          nombre.includes(q) ||
+          nota.includes(q) ||
+          hex.includes(q) ||
+          gramos.includes(q) ||
+          estado.includes(q)
+        )
+      })
     }
 
-    // Ordenar: Críticos primero, luego disponibles por orden alfabético, luego restock
+    // Ordenar: Disponibles de MAYOR a MENOR stock (gramos), luego Restock/Descatalogados alfabético
     return combined.sort((a, b) => {
       const aIsDisp = a.estado === 'DISPONIBLE'
       const bIsDisp = b.estado === 'DISPONIBLE'
-      const aCrit = aIsDisp && ((a.stockGramos ?? 1000) < 300 || Boolean(a.alertaCritica))
-      const bCrit = bIsDisp && ((b.stockGramos ?? 1000) < 300 || Boolean(b.alertaCritica))
 
-      if (aCrit && !bCrit) return -1
-      if (!aCrit && bCrit) return 1
+      if (aIsDisp && bIsDisp) {
+        const diff = (b.stockGramos ?? 0) - (a.stockGramos ?? 0)
+        if (diff !== 0) return diff
+        return a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' })
+      }
+
       if (aIsDisp && !bIsDisp) return -1
       if (!aIsDisp && bIsDisp) return 1
 
       return a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' })
     })
-  }, [disponibles, restock, activeTab, search])
+  }, [disponibles, restock, descatalogados, activeTab, search])
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-200 px-1 sm:px-2 pb-16">
       
       {/* ========================================================================= */}
-      {/* 1. CABECERA Y RESUMEN EJECUTIVO (KPIS EN LIGHT MODE)                      */}
+      {/* 1. CABECERA Y RESUMEN EJECUTIVO (KPIS INTERACTIVOS EN LIGHT MODE)         */}
       {/* ========================================================================= */}
       <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
         
@@ -502,10 +557,18 @@ export function InventarioClient({
           </div>
         </div>
 
-        {/* Fila de 4 KPIs Compactos (2x2 Móvil, 4 Cols Desktop) */}
+        {/* Fila de 4 KPIs Interactivos (Click para filtrar) */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
-          {/* KPI 1: Kilos en Taller */}
-          <div className="p-3 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between shadow-2xs">
+          {/* KPI 1: Kilos en Taller -> Activa 'todos' */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('todos')}
+            className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer ${
+              activeTab === 'todos'
+                ? 'bg-[#FAF8F5] border-[#A36F4C] ring-2 ring-[#A36F4C]/25 shadow-xs'
+                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#A36F4C]/60 hover:bg-[#F4EFEA]'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
                 Total Kilos en Taller
@@ -522,34 +585,48 @@ export function InventarioClient({
                 {totalGramosActivos.toLocaleString()} g activos
               </span>
             </div>
-          </div>
+          </button>
 
-          {/* KPI 2: Bobinas Físicas */}
-          <div className="p-3 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between shadow-2xs">
+          {/* KPI 2: Colores Disponibles -> Activa 'disponibles' */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('disponibles')}
+            className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer ${
+              activeTab === 'disponibles'
+                ? 'bg-[#EBF7EE]/40 border-[#1E5E3A] ring-2 ring-[#1E5E3A]/25 shadow-xs'
+                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#1E5E3A]/60 hover:bg-[#F4EFEA]'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
-                Bobinas Físicas
+                Colores Disponibles
               </span>
               <div className="p-1.5 rounded-lg bg-[#F5EBE1] text-[#A36F4C] flex-shrink-0">
-                <Layers3 className="h-3.5 w-3.5" />
+                <Palette className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
               <div className="text-lg sm:text-2xl font-black text-[#241C15] font-mono tracking-tight">
-                {totalRollosActivos} un.
+                {disponibles.length} colores
               </div>
               <span className="text-[10px] sm:text-xs text-[#1E5E3A] font-bold mt-0.5 block truncate">
-                {disponibles.length} colores activos
+                Stock activo para producción
               </span>
             </div>
-          </div>
+          </button>
 
-          {/* KPI 3: Stock Crítico (<300g) */}
-          <div className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-colors ${
-            totalCriticos.length > 0 
-              ? 'bg-[#FEF9C3] border-[#FDE047] text-[#854D0E]' 
-              : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15]'
-          }`}>
+          {/* KPI 3: Stock Crítico (<300g) -> Activa 'criticos' */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('criticos')}
+            className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer ${
+              activeTab === 'criticos'
+                ? 'bg-[#FEF9C3] border-[#854D0E] ring-2 ring-[#854D0E]/25 shadow-xs'
+                : totalCriticos.length > 0 
+                ? 'bg-[#FEF9C3]/70 border-[#FDE047] hover:border-[#854D0E]/60 text-[#854D0E]' 
+                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#854D0E]/60 text-[#241C15]'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${
                 totalCriticos.length > 0 ? 'text-[#854D0E]' : 'text-[#75695D]'
@@ -574,10 +651,18 @@ export function InventarioClient({
                 {totalCriticos.length > 0 ? '⚠️ Reponer pronto' : 'Stock en nivel óptimo'}
               </span>
             </div>
-          </div>
+          </button>
 
-          {/* KPI 4: Para Restock */}
-          <div className="p-3 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between shadow-2xs">
+          {/* KPI 4: Para Restock -> Activa 'restock' */}
+          <button
+            type="button"
+            onClick={() => setActiveTab('restock')}
+            className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer ${
+              activeTab === 'restock'
+                ? 'bg-[#FEF9C3] border-[#A36F4C] ring-2 ring-[#A36F4C]/25 shadow-xs'
+                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#A36F4C]/60 hover:bg-[#F4EFEA]'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
                 Para Restock
@@ -594,107 +679,44 @@ export function InventarioClient({
                 🛒 Marcados para compra
               </span>
             </div>
-          </div>
+          </button>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. BARRA DE FILTROS INTELIGENTE (SINGLE-ROW BAR & ACTIONS)                 */}
+      {/* 2. BARRA DE HERRAMIENTAS Y FILTROS DISTRIBUIDA                            */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-3 sm:p-4 shadow-xs space-y-3">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
+        
+        {/* Fila 1: Buscador + Grupo de Acciones Principales */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           
-          {/* Buscador Interactivo */}
-          <div className="relative flex-1 min-w-[240px]">
+          {/* Buscador de Filamentos */}
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
             <Input 
-              placeholder="Buscar color, acabado o nota..."
+              placeholder="Buscar color, acabado, código HEX o nota..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-2xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
+              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-2xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all w-full"
             />
             {search && (
               <button 
                 onClick={() => setSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-1 rounded-md cursor-pointer"
+                title="Borrar búsqueda"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
-          {/* Segmented Control Compacto */}
-          <div className="bg-[#EAE4DC] p-1 rounded-2xl border border-[#D4BEA7] flex items-center gap-1 overflow-x-auto no-scrollbar shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setActiveTab('todos')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'todos'
-                  ? 'bg-[#FFFFFF] text-[#241C15] shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
-              }`}
-            >
-              <span>Todos</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#FAF8F5] rounded-md text-[#75695D]">
-                {disponibles.length + restock.length}
-              </span>
-            </button>
+          {/* Grupo de Acciones (Copiar Catálogo + Nuevo Color) */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('disponibles')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'disponibles'
-                  ? 'bg-[#FFFFFF] text-[#1E5E3A] shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
-              }`}
-            >
-              <span className="h-2 w-2 rounded-full bg-[#1E5E3A]" />
-              <span>Disponibles</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#EBF7EE] text-[#1E5E3A] rounded-md">
-                {disponibles.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('criticos')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'criticos'
-                  ? 'bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] shadow-xs'
-                  : 'text-[#75695D] hover:text-[#854D0E] hover:bg-[#FFFFFF]/40'
-              }`}
-            >
-              <AlertTriangle className="h-3 w-3 text-[#854D0E]" />
-              <span>Críticos</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#FEF08A] text-[#854D0E] rounded-md font-bold">
-                {totalCriticos.length}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('restock')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeTab === 'restock'
-                  ? 'bg-[#FFFFFF] text-[#A36F4C] shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
-              }`}
-            >
-              <ShoppingCart className="h-3 w-3 text-[#A36F4C]" />
-              <span>Para Restock</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 bg-[#F5EBE1] text-[#A36F4C] rounded-md">
-                {restock.length}
-              </span>
-            </button>
-          </div>
-
-          {/* Botones de Acción */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            
-            {/* BOTÓN COPIAR DISPONIBLES PARA CLIENTES */}
+            {/* Botón Copiar Catálogo para Clientes */}
             <div className="relative flex-1 sm:flex-initial" ref={dropdownRef}>
-              <div className="flex rounded-2xl shadow-xs border border-[#E2D9CC] overflow-hidden bg-[#FFFFFF] hover:bg-[#F4EFEA] transition-colors">
+              <div className="flex rounded-2xl shadow-xs border border-[#E2D9CC] overflow-hidden bg-[#FFFFFF] hover:bg-[#FAF8F5] transition-colors">
                 <button
                   type="button"
                   onClick={() => handleCopiarColoresClientes('todos_disponibles')}
@@ -704,12 +726,12 @@ export function InventarioClient({
                   {isCopied ? (
                     <>
                       <Check className="h-4 w-4 text-[#1E5E3A] stroke-[2.5] animate-in zoom-in-50 duration-150" />
-                      <span className="text-[#1E5E3A] font-extrabold truncate">¡Copiado al portapapeles!</span>
+                      <span className="text-[#1E5E3A] font-extrabold truncate">¡Copiado!</span>
                     </>
                   ) : (
                     <>
                       <Copy className="h-4 w-4 text-[#A36F4C] flex-shrink-0" />
-                      <span className="truncate">Copiar Disponibles para Clientes</span>
+                      <span className="truncate">Copiar Catálogo</span>
                     </>
                   )}
                 </button>
@@ -723,7 +745,7 @@ export function InventarioClient({
                 </button>
               </div>
 
-              {/* Dropdown de opciones de copiado */}
+              {/* Dropdown de opciones */}
               {showCopyDropdown && (
                 <div className="absolute right-0 mt-1.5 w-64 bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
                   <div className="px-3 py-1.5 text-[10px] font-bold text-[#75695D] uppercase tracking-wider border-b border-[#E2D9CC]/60">
@@ -755,260 +777,434 @@ export function InventarioClient({
               )}
             </div>
 
-            {/* BOTÓN NUEVO COLOR */}
+            {/* Botón Primario: Nuevo Color */}
             <Button
               type="button"
               onClick={() => setOpenAddModal(true)}
-              className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs h-10 px-4 rounded-2xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex-1 sm:flex-initial"
+              className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs h-10 px-4 rounded-2xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex items-center gap-1.5"
             >
-              <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
-              Nuevo Color
+              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <span>Nuevo Color</span>
             </Button>
+          </div>
+        </div>
+
+        {/* Fila 2: Pestañas de Filtro por Estado (Pills con Conteo) + Resumen */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2.5 border-t border-[#E2D9CC]/70">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <button
+              type="button"
+              onClick={() => setActiveTab('todos')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                activeTab === 'todos'
+                  ? 'bg-[#241C15] text-white border-[#241C15] shadow-xs'
+                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#241C15] hover:bg-[#FFFFFF]'
+              }`}
+            >
+              <span>Todos</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                activeTab === 'todos' ? 'bg-white/20 text-white' : 'bg-[#EAE4DC] text-[#75695D]'
+              }`}>
+                {disponibles.length + restock.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('disponibles')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                activeTab === 'disponibles'
+                  ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs'
+                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#1E5E3A] hover:bg-[#EBF7EE]/50'
+              }`}
+            >
+              <span className={`h-2 w-2 rounded-full ${activeTab === 'disponibles' ? 'bg-white' : 'bg-[#1E5E3A]'}`} />
+              <span>Disponibles</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                activeTab === 'disponibles' ? 'bg-white/20 text-white' : 'bg-[#EBF7EE] text-[#1E5E3A]'
+              }`}>
+                {disponibles.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('criticos')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                activeTab === 'criticos'
+                  ? 'bg-[#854D0E] text-white border-[#854D0E] shadow-xs'
+                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#854D0E] hover:bg-[#FEF9C3]/50'
+              }`}
+            >
+              <AlertTriangle className="h-3 w-3" />
+              <span>Críticos &lt;300g</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md font-bold ${
+                activeTab === 'criticos' ? 'bg-white/20 text-white' : 'bg-[#FEF08A] text-[#854D0E]'
+              }`}>
+                {totalCriticos.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('restock')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                activeTab === 'restock'
+                  ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-xs'
+                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#A36F4C] hover:bg-[#F5EBE1]/50'
+              }`}
+            >
+              <ShoppingCart className="h-3 w-3" />
+              <span>Para Restock</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                activeTab === 'restock' ? 'bg-white/20 text-white' : 'bg-[#F5EBE1] text-[#A36F4C]'
+              }`}>
+                {restock.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('descatalogados')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                activeTab === 'descatalogados'
+                  ? 'bg-[#52463C] text-white border-[#52463C] shadow-xs'
+                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#241C15] hover:bg-[#FAF8F5]'
+              }`}
+            >
+              <Archive className="h-3 w-3" />
+              <span>Descatalogados</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                activeTab === 'descatalogados' ? 'bg-white/20 text-white' : 'bg-[#EAE4DC] text-[#75695D]'
+              }`}>
+                {descatalogados.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Contador de resultados & Botón Reset */}
+          <div className="flex items-center justify-between sm:justify-end gap-2 text-xs flex-shrink-0">
+            <div className="flex items-center gap-1.5 text-[#75695D]">
+              <span className="font-medium">Total:</span>
+              <span className="font-bold text-[#241C15] font-mono bg-[#FAF8F5] px-2 py-0.5 rounded-lg border border-[#E2D9CC]">
+                {filteredGridItems.length}
+              </span>
+            </div>
+
+            {(search || activeTab !== 'todos') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('')
+                  setActiveTab('todos')
+                }}
+                className="text-xs text-[#A36F4C] hover:text-[#8E5E3E] font-bold underline flex items-center gap-1 cursor-pointer ml-1"
+                title="Restablecer filtros"
+              >
+                <X className="h-3.5 w-3.5" />
+                <span>Limpiar</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. MATRIZ VISUAL DE BOBINAS (CARD GRID LAYOUT 2x 3x 4x)                  */}
+      {/* 3. VISUALIZACIÓN DE INVENTARIO (TABLA O TARJETAS)                         */}
       {/* ========================================================================= */}
       <div className="space-y-3">
         {filteredGridItems.length === 0 ? (
-          <div className="p-12 text-center text-xs text-[#75695D] italic rounded-3xl border border-dashed border-[#E2D9CC] bg-[#FFFFFF] shadow-xs">
-            {search 
-              ? 'No se encontraron filamentos que coincidan con la búsqueda.' 
-              : 'No hay colores registrados en esta categoría.'}
+          <div className="p-10 text-center rounded-3xl border border-dashed border-[#E2D9CC] bg-[#FFFFFF] shadow-xs space-y-3">
+            <div className="h-10 w-10 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] flex items-center justify-center mx-auto text-[#75695D]">
+              <Search className="h-5 w-5 opacity-70" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-[#241C15]">
+                {search 
+                  ? `No se encontraron filamentos que coincidan con "${search}"` 
+                  : 'No hay colores registrados en esta categoría.'}
+              </p>
+              <p className="text-xs text-[#75695D] mt-0.5">
+                {activeTab !== 'todos' ? `Filtro activo: ${activeTab.toUpperCase()}` : 'Prueba ingresando otro término de búsqueda'}
+              </p>
+            </div>
+            {(search || activeTab !== 'todos') && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearch('')
+                  setActiveTab('todos')
+                }}
+                className="text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-[#FAF8F5] cursor-pointer"
+              >
+                <RefreshCw className="h-3 w-3 mr-1.5 text-[#A36F4C]" />
+                Mostrar todos los filamentos
+              </Button>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
-            {filteredGridItems.map((item) => {
-              const isDisp = item.estado === 'DISPONIBLE'
-              const rollos = item.rollos || 1
-              const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
-              const gramos = isDisp ? (item.stockGramos ?? pesoInicial) : 0
-              const pct = isDisp ? Math.min(100, Math.round((gramos / pesoInicial) * 100)) : 0
-              const esCritico = isDisp && (gramos < 300 || Boolean(item.alertaCritica))
+          /* ========================================================================= */
+          /* TABLA DE INVENTARIO                                                      */
+          /* ========================================================================= */
+          <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <Table className="w-full">
+                <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
+                  <TableRow className="hover:bg-transparent border-b border-[#E2D9CC] text-xs font-bold text-[#75695D]">
+                    <TableHead className="w-12 px-3 py-3 text-center text-[#75695D]">#</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-[#75695D]">Color / Filamento</TableHead>
+                    <TableHead className="w-32 px-3 py-3 text-center text-[#75695D]">Estado</TableHead>
+                    <TableHead className="w-56 px-4 py-3 text-left text-[#75695D]">Stock en Taller</TableHead>
+                    <TableHead className="w-36 px-3 py-3 text-center text-[#75695D]">Ajuste Rápido</TableHead>
+                    <TableHead className="w-44 px-3 py-3 text-left text-[#75695D]">Producción</TableHead>
+                    <TableHead className="w-44 px-4 py-3 text-right text-[#75695D]">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredGridItems.map((item, idx) => {
+                    const isDescatalogado = item.estado === 'DESCATALOGADO'
+                    const isDisp = item.estado === 'DISPONIBLE'
+                    const rollos = item.rollos || 1
+                    const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
+                    const gramos = isDisp ? (item.stockGramos ?? pesoInicial) : (item.stockGramos || 0)
+                    const pct = isDisp ? Math.min(100, Math.round((gramos / pesoInicial) * 100)) : 0
+                    const esCritico = isDisp && (gramos < 300 || Boolean(item.alertaCritica))
 
-              return (
-                <div
-                  key={item.id}
-                  className={`flex flex-col justify-between bg-[#FFFFFF] border rounded-2xl p-3 sm:p-3.5 transition-all duration-200 shadow-2xs hover:shadow-md ${
-                    esCritico
-                      ? 'border-[#FDE047] ring-1 ring-[#FEF08A]/70 bg-[#FFFDF7]'
-                      : !isDisp
-                      ? 'border-[#E2D9CC] opacity-90 bg-[#FAF8F5]'
-                      : 'border-[#E2D9CC] hover:border-[#A36F4C]/50'
-                  }`}
-                >
-                  {/* Encabezado de la Tarjeta */}
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-1.5">
-                      
-                      {/* Swatch Círculo & Textura de Bobina */}
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditColor(item)}
-                          className="relative h-6 w-6 sm:h-7 sm:w-7 rounded-full border border-black/15 shadow-2xs flex-shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-transform flex items-center justify-center group"
-                          style={{ backgroundColor: item.codigoHex }}
-                          title={`Editar "${item.nombreColor}"`}
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full bg-white/40 border border-black/10" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditColor(item)}
-                          className="font-bold text-xs sm:text-sm text-[#241C15] truncate hover:text-[#A36F4C] hover:underline cursor-pointer text-left"
-                          title={item.nombreColor}
-                        >
-                          {item.nombreColor}
-                        </button>
-                      </div>
+                    return (
+                      <TableRow 
+                        key={item.id}
+                        className={`border-b border-[#E2D9CC]/70 transition-colors text-xs ${
+                          isDescatalogado 
+                            ? 'bg-[#F8F6F2]/60 hover:bg-[#F8F6F2] opacity-80' 
+                            : esCritico
+                            ? 'bg-[#FEF9C3]/20 hover:bg-[#FEF9C3]/40'
+                            : 'hover:bg-[#FAF8F5]'
+                        }`}
+                      >
+                        {/* 1. Rank # */}
+                        <TableCell className="w-12 px-3 py-3 text-center font-mono font-bold text-[#75695D]">
+                          {idx + 1}
+                        </TableCell>
 
-                      {/* Badge de Estado */}
-                      <div className="flex-shrink-0">
-                        {esCritico ? (
-                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-0.5">
-                            <AlertTriangle className="h-2.5 w-2.5" />
-                            Crítico
-                          </span>
-                        ) : isDisp ? (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0] uppercase tracking-wider">
-                            Disponible
-                          </span>
-                        ) : (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider">
-                            Restock
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Nota o etiqueta contextual si existe */}
-                    {item.nota && (
-                      <div className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-2 py-0.5 rounded-lg border border-[#FDE047]/60 truncate">
-                        {item.nota}
-                      </div>
-                    )}
-
-                    {/* Cuerpo de la Tarjeta: Nivel de Filamento & Selector de Bobinas */}
-                    <div className="space-y-2 pt-1">
-                      {isDisp ? (
-                        <>
-                          {/* Barra de Progreso y Gramos */}
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-[11px] font-mono">
+                        {/* 2. Swatch & Color Name */}
+                        <TableCell className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditColor(item)}
+                              className="relative h-7 w-7 rounded-full border border-black/15 shadow-2xs flex-shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-transform flex items-center justify-center group"
+                              style={{ backgroundColor: item.codigoHex }}
+                              title={`Editar "${item.nombreColor}"`}
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-white/40 border border-black/10" />
+                            </button>
+                            <div className="min-w-0">
                               <button
                                 type="button"
-                                onClick={() => handleSetGramosPrompt(item)}
-                                className="font-extrabold text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer"
-                                title="Toca para ingresar gramos exactos"
+                                onClick={() => handleOpenEditColor(item)}
+                                className="font-bold text-xs sm:text-sm text-[#241C15] truncate hover:text-[#A36F4C] hover:underline cursor-pointer block text-left"
                               >
-                                {gramos.toLocaleString()}g
+                                {item.nombreColor}
                               </button>
-                              <span className="text-[#75695D] text-[10px]">
-                                / {pesoInicial.toLocaleString()}g ({pct}%)
+                              {item.nota && (
+                                <span className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-1.5 py-0.2 rounded border border-[#FDE047]/60 inline-block truncate max-w-[200px] mt-0.5">
+                                  {item.nota}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        {/* 3. Estado */}
+                        <TableCell className="w-32 px-3 py-3 text-center">
+                          {isDescatalogado ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC] uppercase tracking-wider inline-flex items-center gap-1">
+                              <Archive className="h-2.5 w-2.5 text-[#75695D]" />
+                              Descatalogado
+                            </span>
+                          ) : esCritico ? (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
+                              <AlertTriangle className="h-2.5 w-2.5" />
+                              Crítico
+                            </span>
+                          ) : isDisp ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0] uppercase tracking-wider inline-flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
+                              Disponible
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
+                              <ShoppingCart className="h-2.5 w-2.5" />
+                              Restock
+                            </span>
+                          )}
+                        </TableCell>
+
+                        {/* 4. Stock en Taller */}
+                        <TableCell className="w-56 px-4 py-3">
+                          {isDescatalogado ? (
+                            <span className="text-xs text-[#75695D] italic">0 g (Descatalogado)</span>
+                          ) : isDisp ? (
+                            <div className="space-y-1">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetGramosPrompt(item)}
+                                  className="font-mono font-black text-xs sm:text-sm text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer tracking-tight"
+                                  title="Toca para ingresar gramos exactos"
+                                >
+                                  {gramos.toLocaleString()} g
+                                </button>
+                                <span className="text-[#75695D] text-[10px] font-mono">
+                                  {gramos >= 1000 ? `(${(gramos / 1000).toFixed(2)} kg)` : `${pct}%`}
+                                </span>
+                              </div>
+                              <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    esCritico ? 'bg-[#854D0E]' : pct < 30 ? 'bg-[#A36F4C]' : 'bg-[#1E5E3A]'
+                                  }`}
+                                  style={{ width: `${Math.min(100, Math.max(5, (gramos / (item.pesoInicialGramos || 1000)) * 100))}%` }}
+                                />
+                              </div>
+                              {gramos >= 1000 && (
+                                <span className="text-[10px] text-[#1E5E3A] font-medium block">
+                                  ✨ Equivale a {(gramos / 1000).toFixed(1)} bobinas
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-[#854D0E] font-bold">0 g (En reposición)</span>
+                          )}
+                        </TableCell>
+
+                        {/* 5. Ajuste Rápido */}
+                        <TableCell className="w-36 px-3 py-3 text-center">
+                          {isDisp && !isDescatalogado ? (
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleAjustarGramos(item, -50)}
+                                className="px-2 py-1 text-[10px] font-bold rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer"
+                                title="Descontar 50g"
+                              >
+                                -50g
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAjustarGramos(item, 50)}
+                                className="px-2 py-1 text-[10px] font-bold rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer"
+                                title="Añadir 50g"
+                              >
+                                +50g
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[#75695D]">-</span>
+                          )}
+                        </TableCell>
+
+                        {/* 6. Producción */}
+                        <TableCell className="w-44 px-3 py-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <span className="font-bold text-xs text-[#241C15] block">
+                                {item.totalProductosImpresos || 0} piezas
+                              </span>
+                              <span className="text-[10px] text-[#75695D] block">
+                                {(item.totalGramosConsumidos || 0).toLocaleString()} g usados
                               </span>
                             </div>
-
-                            <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full rounded-full transition-all duration-300 ${
-                                  esCritico ? 'bg-[#854D0E]' : pct < 50 ? 'bg-[#A36F4C]' : 'bg-[#1E5E3A]'
-                                }`}
-                                style={{ width: `${pct}%` }}
-                              />
-                            </div>
-
-                            {/* Microtexto si está crítico */}
-                            {esCritico && (
-                              <div className="text-[10px] font-bold text-[#854D0E] flex items-center gap-1 animate-pulse">
-                                <span>⚠️ Solo {gramos}g restantes</span>
-                              </div>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenColorDetails(item)}
+                              title="Ver modelos fabricados con este color"
+                              className="h-6.5 w-6.5 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer border border-[#E2D9CC] bg-white flex-shrink-0"
+                            >
+                              <Info className="h-3 w-3" />
+                            </button>
                           </div>
-                        </>
-                      ) : (
-                        <div className="py-2 text-center text-[11px] text-[#854D0E] font-bold bg-[#FEF9C3]/70 rounded-xl border border-[#FDE047]/50">
-                          🛒 Marcado para Reposición
-                        </div>
-                      )}
+                        </TableCell>
 
-                      {/* Contador de Bobinas Físicas */}
-                      <div className="flex items-center justify-between bg-[#FAF8F5] border border-[#E2D9CC] rounded-xl px-2 py-1 text-xs">
-                        <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider">
-                          Bobinas
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleAjustarRollos(item, -1)}
-                            disabled={rollos <= 1}
-                            className="h-4.5 w-4.5 rounded flex items-center justify-center bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] disabled:opacity-30 cursor-pointer font-bold text-[11px] active:bg-[#FAF8F5]"
-                            title="Restar bobina"
-                          >
-                            -
-                          </button>
-                          <span className="text-xs font-black font-mono text-[#241C15] min-w-[28px] text-center">
-                            {rollos} un.
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleAjustarRollos(item, 1)}
-                            className="h-4.5 w-4.5 rounded flex items-center justify-center bg-white border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] cursor-pointer font-bold text-[11px] active:bg-[#FAF8F5]"
-                            title="Agregar bobina"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                        {/* 7. Acciones */}
+                        <TableCell className="w-44 px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isDescatalogado ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => handleReactivarColor(item)}
+                                className="h-7 text-[10px] font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white rounded-lg px-2 cursor-pointer shadow-2xs"
+                              >
+                                <RotateCcw className="h-3 w-3 mr-1" />
+                                Reactivar
+                              </Button>
+                            ) : isDisp ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMoverARestock(item)}
+                                className={`h-7 text-[10px] font-bold rounded-lg px-2 cursor-pointer transition-colors ${
+                                  esCritico 
+                                    ? 'bg-[#854D0E] text-white border-[#854D0E] hover:bg-[#713F12]' 
+                                    : 'bg-white text-[#A36F4C] border-[#E2D9CC] hover:bg-[#F5EBE1]'
+                                }`}
+                              >
+                                A Restock
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => handleMoverADisponible(item)}
+                                className="h-7 text-[10px] font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white rounded-lg px-2 cursor-pointer shadow-2xs"
+                              >
+                                Marcar Disp.
+                              </Button>
+                            )}
 
-                  {/* Pie de la Tarjeta: Acciones Rápidas */}
-                  <div className="pt-2.5 mt-2.5 border-t border-[#E2D9CC]/70 space-y-2">
-                    {/* Botones de Consumo Rápido (-50g / +50g) */}
-                    {isDisp && (
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleAjustarGramos(item, -50)}
-                          className="flex-1 py-1 text-[10px] font-bold rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer text-center"
-                          title="Descontar 50g"
-                        >
-                          -50g
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleAjustarGramos(item, 50)}
-                          className="flex-1 py-1 text-[10px] font-bold rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer text-center"
-                          title="Añadir 50g"
-                        >
-                          +50g
-                        </button>
-                      </div>
-                    )}
+                            {/* Icono Editar */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditColor(item)}
+                              title={`Editar "${item.nombreColor}"`}
+                              className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
 
-                    {/* Fila de Acciones: Toggle Estado + Menú de Opciones */}
-                    <div className="flex items-center justify-between gap-1.5">
-                      {isDisp ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleMoverARestock(item)}
-                          className={`h-6.5 flex-1 text-[10px] font-bold rounded-lg px-2 cursor-pointer transition-colors ${
-                            esCritico 
-                              ? 'bg-[#854D0E] text-white border-[#854D0E] hover:bg-[#713F12]' 
-                              : 'bg-white text-[#A36F4C] border-[#E2D9CC] hover:bg-[#F5EBE1]'
-                          }`}
-                        >
-                          A Restock
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleMoverADisponible(item)}
-                          className="h-6.5 flex-1 text-[10px] font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white rounded-lg px-2 cursor-pointer shadow-2xs"
-                        >
-                          Marcar Disponible
-                        </Button>
-                      )}
+                            {/* Icono Descatalogar (si no está descatalogado) */}
+                            {!isDescatalogado && (
+                              <button
+                                type="button"
+                                onClick={() => handleDescatalogarColor(item)}
+                                title={`Descatalogar "${item.nombreColor}" (ya no se comprará este color)`}
+                                className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#854D0E] hover:bg-[#FEF9C3]/70 transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
+                              >
+                                <Archive className="h-3 w-3" />
+                              </button>
+                            )}
 
-                      {/* Icono Info de Fabricación */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenColorDetails(item)}
-                        title="Ver modelos fabricados con esta bobina"
-                        className="h-6.5 w-6.5 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
-                      >
-                        <Info className="h-3 w-3" />
-                      </button>
-
-                      {/* Icono Editar */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditColor(item)}
-                        title={`Editar "${item.nombreColor}"`}
-                        className="h-6.5 w-6.5 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-
-                      {/* Icono Eliminar / Archivar */}
-                      <button
-                        type="button"
-                        onClick={() => handleEliminarColor(item)}
-                        title={`Eliminar "${item.nombreColor}"`}
-                        className="h-6.5 w-6.5 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+                            {/* Icono Eliminar */}
+                            <button
+                              type="button"
+                              onClick={() => handleEliminarColor(item)}
+                              title={`Eliminar "${item.nombreColor}"`}
+                              className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )}
       </div>
@@ -1145,40 +1341,7 @@ export function InventarioClient({
                 </div>
               </div>
 
-              {/* 3. Cantidad de Bobinas */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    Bobinas Iniciales (1 un. = 1,000g)
-                  </Label>
-                  <span className="text-xs text-[#A36F4C] font-bold">
-                    Capacidad: {(Math.max(1, parseInt(nuevoRollos || '1', 10)) * 1000).toLocaleString()} g
-                  </span>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 3, 4].map(r => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => {
-                        setNuevoRollos(r.toString())
-                        if (nuevoEstado === 'DISPONIBLE') {
-                          setNuevoGramos((r * 1000).toString())
-                        }
-                      }}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                        nuevoRollos === r.toString()
-                          ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-2xs'
-                          : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC] hover:bg-[#FFFFFF]'
-                      }`}
-                    >
-                      {r} un.
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 4. Estado Inicial */}
+              {/* 3. Estado Inicial */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                   Estado Inicial
@@ -1209,20 +1372,20 @@ export function InventarioClient({
                 </div>
               </div>
 
-              {/* 5. Gramos Iniciales con Presets (250g, 500g, 1000g) */}
+              {/* 4. Gramos Iniciales con Presets (250g, 500g, 1000g, 2000g) */}
               {nuevoEstado === 'DISPONIBLE' && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                      Gramos Iniciales
+                      Stock Inicial en Gramos
                     </Label>
                     <span className="text-xs font-mono font-bold text-[#1E5E3A]">
-                      {nuevoGramos} g
+                      {nuevoGramos} g {parseInt(nuevoGramos || '0', 10) >= 1000 ? `(~${(parseInt(nuevoGramos || '0', 10) / 1000).toFixed(1)} bobinas)` : ''}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {[250, 500, 750, 1000].map(g => (
+                    {[250, 500, 1000, 2000].map(g => (
                       <button
                         key={g}
                         type="button"
@@ -1233,7 +1396,7 @@ export function InventarioClient({
                             : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC] hover:bg-white'
                         }`}
                       >
-                        {g}g
+                        {g >= 1000 ? `${g}g (${g/1000}b)` : `${g}g`}
                       </button>
                     ))}
                   </div>
@@ -1241,7 +1404,6 @@ export function InventarioClient({
                   <Input 
                     type="number"
                     min="0"
-                    max={Math.max(1, parseInt(nuevoRollos || '1', 10)) * 1000}
                     value={nuevoGramos}
                     onChange={(e) => setNuevoGramos(e.target.value)}
                     placeholder="1000"

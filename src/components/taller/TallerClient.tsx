@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
+import { useState, useMemo, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
@@ -24,6 +24,7 @@ import {
   Boxes,
   ExternalLink,
   Flame,
+  Loader2,
   Table as TableIcon
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -172,29 +173,60 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
     setColoresExpandidos(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
+  // Estado optimista local y loader individual para feedback instantáneo (<50ms)
+  const [piezasOpt, setPiezasOpt] = useState<Record<string, 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'>>({})
+  const [loadingPieceId, setLoadingPieceId] = useState<string | null>(null)
+
+  // Reset de estado optimista al recibir nuevos datos del servidor
+  useEffect(() => {
+    setPiezasOpt({})
+  }, [data])
+
+  // Piezas con estado optimista integrado
+  const todasPiezas = useMemo(() => {
+    return data.piezas.map(p => {
+      const opt = piezasOpt[p.id]
+      return opt ? { ...p, estado: opt } : p
+    })
+  }, [data.piezas, piezasOpt])
+
+  // Métricas dinámicas calculadas en tiempo real
+  const metricasActivas = useMemo(() => {
+    const pendientes = todasPiezas.filter(p => p.estado === 'PENDIENTE').reduce((sum, p) => sum + p.cantidad, 0)
+    const enProduccion = todasPiezas.filter(p => p.estado === 'EN_PRODUCCION').reduce((sum, p) => sum + p.cantidad, 0)
+    const listos = todasPiezas.filter(p => p.estado === 'LISTO_ENTREGA').reduce((sum, p) => sum + p.cantidad, 0)
+    return {
+      ...data.metricas,
+      totalPiezasPendientes: pendientes,
+      totalPiezasEnProduccion: enProduccion,
+      totalPiezasListas: listos,
+      totalPiezasActivas: pendientes + enProduccion + listos
+    }
+  }, [todasPiezas, data.metricas])
+
   // Lista única de categorías y colores para los filtros
   const listaCategorias = useMemo(() => {
     const cats = new Set<string>()
-    data.piezas.forEach(p => {
+    todasPiezas.forEach(p => {
       if (p.lineaCategoria) cats.add(p.lineaCategoria)
     })
     return Array.from(cats).sort()
-  }, [data.piezas])
+  }, [todasPiezas])
 
   const listaColores = useMemo(() => {
     const cols = new Map<string, { nombreColor: string; codigoHex: string }>()
-    data.piezas.forEach(p => {
+    todasPiezas.forEach(p => {
       const key = p.nombreColor || 'Sin especificar'
       if (!cols.has(key)) {
         cols.set(key, { nombreColor: key, codigoHex: p.codigoHex || '#94A3B8' })
       }
     })
     return Array.from(cols.values()).sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
-  }, [data.piezas])
+  }, [todasPiezas])
 
   // Filtrado y Ordenamiento Dinámico de Piezas
   const piezasProcesadas = useMemo(() => {
-    let result = [...data.piezas]
+    let result = [...todasPiezas]
 
     // 1. Filtro de Búsqueda
     if (busqueda.trim()) {
@@ -367,13 +399,17 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
     return Array.from(map.values()).sort((a, b) => b.totalUnidades - a.totalUnidades)
   }, [piezasProcesadas, data.gruposPorColor])
 
-  // Acción para cambiar estado de la pieza individual
+  // Acción instantánea con optimistic update para cambiar estado de la pieza individual
   const handleCambiarEstado = async (
     tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
     piezaId: string,
     nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'
   ) => {
-    startTransition(async () => {
+    // 1. Respuesta instantánea optimista en el cliente
+    setPiezasOpt(prev => ({ ...prev, [piezaId]: nuevoEstado }))
+    setLoadingPieceId(piezaId)
+
+    try {
       const res = await updateEstadoPieza(tipoRegistro, piezaId, nuevoEstado)
       if (res.success) {
         if (nuevoEstado === 'EN_PRODUCCION') {
@@ -385,11 +421,28 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         } else {
           toast.success('⏳ Pieza reabierta a PENDIENTE')
         }
-        router.refresh()
+        startTransition(() => {
+          router.refresh()
+        })
       } else {
+        // Rollback
+        setPiezasOpt(prev => {
+          const next = { ...prev }
+          delete next[piezaId]
+          return next
+        })
         toast.error(res.error || 'Error al actualizar estado')
       }
-    })
+    } catch (err: any) {
+      setPiezasOpt(prev => {
+        const next = { ...prev }
+        delete next[piezaId]
+        return next
+      })
+      toast.error(err.message || 'Error de conexión')
+    } finally {
+      setLoadingPieceId(null)
+    }
   }
 
   const handleManualRefresh = () => {
@@ -601,41 +654,54 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                       </TableCell>
 
                       {/* 10. Acción Rápida */}
-                      <TableCell className="w-24 px-3 py-2 text-right pr-4">
+                      <TableCell className="w-28 px-3 py-2 text-right pr-4">
                         {pieza.estado === 'PENDIENTE' && (
                           <Button
                             size="sm"
-                            disabled={isPending}
+                            disabled={loadingPieceId === pieza.id}
                             onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_PRODUCCION')}
                             className="h-7 px-2.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
                           >
-                            <Play className="w-3 h-3 fill-current" />
-                            <span>Imprimir</span>
+                            {loadingPieceId === pieza.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Play className="w-3 h-3 fill-current" />
+                            )}
+                            <span>{loadingPieceId === pieza.id ? 'Guardando...' : 'Imprimir'}</span>
                           </Button>
                         )}
 
                         {pieza.estado === 'EN_PRODUCCION' && (
                           <Button
                             size="sm"
-                            disabled={isPending}
+                            disabled={loadingPieceId === pieza.id}
                             onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'LISTO_ENTREGA')}
                             className="h-7 px-2.5 rounded-xl bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold gap-1 cursor-pointer shadow-2xs whitespace-nowrap"
                           >
-                            <Check className="w-3 h-3" />
-                            <span>Listo</span>
+                            {loadingPieceId === pieza.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Check className="w-3 h-3" />
+                            )}
+                            <span>{loadingPieceId === pieza.id ? 'Guardando...' : 'Listo'}</span>
                           </Button>
                         )}
 
                         {pieza.estado === 'LISTO_ENTREGA' && (
                           <Button
                             size="sm"
-                            disabled={isPending}
+                            disabled={loadingPieceId === pieza.id}
                             onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'PENDIENTE')}
                             variant="outline"
                             className="h-7 px-2 rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] text-[11px] font-semibold cursor-pointer whitespace-nowrap"
                             title="Volver a poner pendiente"
                           >
-                            ↩️ Reabrir
+                            {loadingPieceId === pieza.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin text-[#A36F4C]" />
+                            ) : (
+                              <span>↩️</span>
+                            )}
+                            <span>{loadingPieceId === pieza.id ? 'Guardando...' : 'Reabrir'}</span>
                           </Button>
                         )}
                       </TableCell>
@@ -822,7 +888,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
                 filtroEstado === 'PENDIENTE' ? 'bg-white/20 text-white' : 'bg-[#EFE5D8] text-[#854D0E]'
               }`}>
-                {data.metricas.totalPiezasPendientes}
+                {metricasActivas.totalPiezasPendientes}
               </span>
             </button>
 
@@ -839,7 +905,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
                 filtroEstado === 'EN_PRODUCCION' ? 'bg-white/20 text-white' : 'bg-[#DBEAFE] text-[#1D4ED8]'
               }`}>
-                {data.metricas.totalPiezasEnProduccion}
+                {metricasActivas.totalPiezasEnProduccion}
               </span>
             </button>
 
@@ -856,7 +922,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
                 filtroEstado === 'LISTO_ENTREGA' ? 'bg-white/20 text-white' : 'bg-[#EBF7EE] text-[#1E5E3A]'
               }`}>
-                {data.metricas.totalPiezasListas}
+                {metricasActivas.totalPiezasListas}
               </span>
             </button>
 
@@ -873,7 +939,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
                 filtroEstado === 'TODOS' ? 'bg-white/20 text-white' : 'bg-[#E2D9CC]/60 text-[#75695D]'
               }`}>
-                {data.metricas.totalPiezasActivas}
+                {metricasActivas.totalPiezasActivas}
               </span>
             </button>
           </div>
