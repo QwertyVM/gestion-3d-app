@@ -366,7 +366,7 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
       {/* ========================================================================= */}
       {/* 1. HERO BANNER: CAPACIDAD REAL DE GASTO & CONTROL DE CAJA                 */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-5 sm:p-7 shadow-xs space-y-5">
+      <div className="space-y-4 sm:space-y-5">
         
         {/* Cabecera Principal */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">

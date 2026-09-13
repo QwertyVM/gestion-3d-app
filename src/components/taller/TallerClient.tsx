@@ -885,10 +885,10 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       {/* ========================================================================= */}
       {/* 1. ENCABEZADO PRINCIPAL Y REFRESH                                         */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#FFFFFF] p-5 sm:p-6 rounded-3xl border border-[#E2D9CC] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-2xl bg-[#A36F4C] text-white flex items-center justify-center shadow-sm shrink-0 border border-[#8E5E3E]/20">
-            <Hammer className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-2xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center shadow-sm shrink-0">
+            <Hammer className="w-5 h-5 stroke-[2.5]" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -932,7 +932,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       {/* ========================================================================= */}
       {/* 2. TARJETAS DE MÉTRICAS OPERATIVAS DEL TALLER                             */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Total Piezas por Fabricar */}
         <Card className="bg-[#FFFFFF] border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
           <CardContent className="p-4 sm:p-5">

@@ -855,7 +855,7 @@ export function HistoricoMensualClient({
       {/* ========================================================================= */}
       {/* 1. ENCABEZADO DEL MÓDULO                                                  */}
       {/* ========================================================================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#FDFBF7] p-5 rounded-3xl border border-[#E2D9CC] shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className="p-2.5 rounded-2xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#633E20] shadow-sm">

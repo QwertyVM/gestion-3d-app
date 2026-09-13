@@ -950,141 +950,140 @@ export function VentasClient({
       </div>
 
       {/* KPI Cards Light Mode */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Total Pedidos
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
+            <span>Total Pedidos</span>
+            <Package className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">{totalPedidos}</div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Historial comercial general</span>
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">{totalPedidos}</div>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Historial comercial general</span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Total Cobrado
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
+            <span>Total Cobrado</span>
+            <CheckCircle2 className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
             {formatCurrency(totalCobrado)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Ingreso efectivo a caja</span>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Ingreso efectivo a caja</span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Saldos por Cobrar
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center justify-between">
+            <span>Saldos por Cobrar</span>
+            <Clock className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
             {formatCurrency(totalSaldoPendiente)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Pendiente de liquidación</span>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Pendiente de liquidación</span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#633E20] flex items-center gap-2">
-            <Truck className="h-4 w-4" />
-            En Proceso / Entregados
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
+            <span>En Proceso / Entregados</span>
+            <Truck className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {enProduccionCount} <span className="text-sm font-normal text-[#75695D]">/ {entregadosCount} entregados</span>
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+            {enProduccionCount} <span className="text-xs font-normal text-[#75695D]">/ {entregadosCount} listos</span>
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Flujo de producción en taller</span>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Flujo de producción en taller</span>
         </div>
       </div>
 
-      {/* 1-Row Compact Filter Bar */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Lado Izquierdo: Campo de Búsqueda */}
-        <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
-          <Input 
-            placeholder="Buscar por cliente, modelo, canal..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
-          />
-          {search && (
-            <button 
-              onClick={() => { setSearch(''); setCurrentPage(1); }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Lado Derecho: Segmented Control Tabs & Dropdown de Pago */}
-        <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
-          {/* Segmented Control / Tabs */}
-          <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
-            <button
-              onClick={() => { setEstadoFilter('TODOS'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-                estadoFilter === 'TODOS'
-                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-              }`}
-            >
-              Todos ({items.length})
-            </button>
-            <button
-              onClick={() => { setEstadoFilter('PENDIENTE'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-                estadoFilter === 'PENDIENTE'
-                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-              }`}
-            >
-              Pendientes ({items.filter(v => v.estado === 'PENDIENTE').length})
-            </button>
-            <button
-              onClick={() => { setEstadoFilter('EN_PRODUCCION'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-                estadoFilter === 'EN_PRODUCCION'
-                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-              }`}
-            >
-              En Impresión ({items.filter(v => v.estado === 'EN_PRODUCCION').length})
-            </button>
-            <button
-              onClick={() => { setEstadoFilter('ENTREGADO'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-                estadoFilter === 'ENTREGADO'
-                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-              }`}
-            >
-              Entregados ({items.filter(v => v.estado === 'ENTREGADO').length})
-            </button>
-          </div>
-
-          {/* Combobox Interactivo para Estado de Pago */}
-          <div className="w-full sm:w-52 flex-shrink-0">
-            <SearchableCombobox
-              items={pagoFilterComboboxItems}
-              value={pagoFilter}
-              onChange={(val) => {
-                setPagoFilter(val as any || 'TODOS')
+      {/* Main Container: Single Unified Master Card (Toolbar + Table) */}
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-xs rounded-2xl">
+        {/* Unified Integrated Toolbar */}
+        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col md:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
+          {/* Lado Izquierdo: Campo de Búsqueda */}
+          <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+            <Input 
+              placeholder="Buscar por cliente, modelo, canal..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
                 setCurrentPage(1)
               }}
-              size="sm"
-              icon={DollarSign}
-              placeholder="Estado de Pago..."
-              clearable={false}
-              className="w-full"
+              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
             />
+            {search && (
+              <button 
+                onClick={() => { setSearch(''); setCurrentPage(1); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Lado Derecho: Segmented Control Tabs & Dropdown de Pago */}
+          <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
+            {/* Segmented Control / Tabs */}
+            <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
+              <button
+                onClick={() => { setEstadoFilter('TODOS'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  estadoFilter === 'TODOS'
+                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                }`}
+              >
+                Todos ({items.length})
+              </button>
+              <button
+                onClick={() => { setEstadoFilter('PENDIENTE'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  estadoFilter === 'PENDIENTE'
+                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                }`}
+              >
+                Pendientes ({items.filter(v => v.estado === 'PENDIENTE').length})
+              </button>
+              <button
+                onClick={() => { setEstadoFilter('EN_PRODUCCION'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  estadoFilter === 'EN_PRODUCCION'
+                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                }`}
+              >
+                En Impresión ({items.filter(v => v.estado === 'EN_PRODUCCION').length})
+              </button>
+              <button
+                onClick={() => { setEstadoFilter('ENTREGADO'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  estadoFilter === 'ENTREGADO'
+                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                }`}
+              >
+                Entregados ({items.filter(v => v.estado === 'ENTREGADO').length})
+              </button>
+            </div>
+
+            {/* Combobox Interactivo para Estado de Pago */}
+            <div className="w-full sm:w-52 flex-shrink-0">
+              <SearchableCombobox
+                items={pagoFilterComboboxItems}
+                value={pagoFilter}
+                onChange={(val) => {
+                  setPagoFilter(val as any || 'TODOS')
+                  setCurrentPage(1)
+                }}
+                size="sm"
+                icon={DollarSign}
+                placeholder="Estado de Pago..."
+                clearable={false}
+                className="w-full"
+              />
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Main Orders: Responsive Card View on Mobile + Table on Desktop */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
         {/* Mobile View: Cards */}
         <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
           {paginatedVentas.length === 0 ? (

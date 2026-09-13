@@ -200,51 +200,51 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" />
-            Cierres Registrados
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
+            <span>Cierres Registrados</span>
+            <Calendar className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {cierres.length} <span className="text-sm font-normal text-[#75695D]">períodos</span>
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+            {cierres.length} <span className="text-xs font-normal text-[#75695D]">meses</span>
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Historial de auditorías</span>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Historial oficial</span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4" />
-            Estado de Agosto
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
+            <span>Estado de Agosto</span>
+            <CheckCircle2 className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
             {cierres.length > 0 ? 'Cerrado' : 'Pendiente'}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
             {cierres.length > 0 ? `Último: ${cierres[0].nombrePeriodo}` : 'Listo para ejecutar'}
           </span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#633E20] flex items-center gap-1.5">
-            <Wallet className="h-4 w-4" />
-            Saldo Caja Actual
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
+            <span>Saldo Caja Actual</span>
+            <Wallet className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
             {formatCurrency(datosPreCierre.saldoSistemaCaja)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Saldo en sistema en vivo</span>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Saldo en sistema</span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center gap-1.5">
-            <DollarSign className="h-4 w-4" />
-            Cuentas por Cobrar
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center justify-between">
+            <span>Cuentas por Cobrar</span>
+            <DollarSign className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
             {formatCurrency(datosPreCierre.cuentasPorCobrar)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">Traspaso al nuevo mes</span>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Traspaso al nuevo mes</span>
         </div>
       </div>
 

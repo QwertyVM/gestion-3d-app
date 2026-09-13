@@ -517,8 +517,7 @@ export function InventarioClient({
       {/* ========================================================================= */}
       {/* 1. CABECERA Y RESUMEN EJECUTIVO (KPIS INTERACTIVOS EN LIGHT MODE)         */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
-        
+      <div className="space-y-4">
         {/* Fila Título + Sync Badge */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1">
           <div>
@@ -558,7 +557,7 @@ export function InventarioClient({
         </div>
 
         {/* Fila de 4 KPIs Interactivos (Click para filtrar) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
           {/* KPI 1: Kilos en Taller -> Activa 'todos' */}
           <button
             type="button"

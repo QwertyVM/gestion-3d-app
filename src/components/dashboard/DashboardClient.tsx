@@ -285,7 +285,7 @@ export function DashboardClient({
       {/* ========================================================================= */}
       {/* 1. HEADER EJECUTIVO                                                       */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FFFFFF] p-4 sm:p-5 rounded-3xl border border-[#E5DCD3] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 rounded-2xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835] shadow-2xs flex-shrink-0">

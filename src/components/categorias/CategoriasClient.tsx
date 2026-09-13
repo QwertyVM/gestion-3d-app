@@ -177,8 +177,7 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
       {/* ========================================================================= */}
       {/* 1. CABECERA Y BARRA DE ACCIONES                                           */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
-        
+      <div className="space-y-4">
         {/* Breadcrumb Contextual */}
         <div className="flex items-center gap-1.5 text-xs text-[#75695D] font-medium">
           <Link href="/catalogo" className="hover:text-[#A36F4C] transition-colors flex items-center gap-1">
@@ -226,7 +225,7 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
         {/* ========================================================================= */}
         {/* 2. FILA SUPERIOR DE KPIS (GRID 3 COLUMNAS)                                */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
           {/* Tarjeta 1: Categorías Registradas */}
           <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between shadow-2xs">
             <div className="flex items-center justify-between">

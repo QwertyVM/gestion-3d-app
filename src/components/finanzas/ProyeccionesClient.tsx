@@ -279,7 +279,7 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
       {/* ========================================================================= */}
       {/* 2. FILA PRINCIPAL DE KPIS (SEGREGACIÓN DE FONDOS)                        */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* TARJETA 1: Saldo Total en Caja */}
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
           <div>

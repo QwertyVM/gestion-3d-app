@@ -28,7 +28,8 @@ import {
   Sparkles,
   Check,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Receipt
 } from 'lucide-react'
 import { createInversion, updateInversion, deleteInversion, swapInversionOrder } from '@/actions/inversiones'
 import { TagInsumoItem } from '@/actions/tagsInsumos'
@@ -503,166 +504,159 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
         </div>
       </div>
 
-      {/* KPI Cards Light Mode (Dinámicos según filtros aplicados) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <ArrowDownRight className="h-4 w-4" />
-              {isFiltered ? 'Total Filtrado' : 'Total Egresos'}
-            </span>
-            {isFiltered && (
-              <span className="text-[10px] font-mono font-bold text-[#A36F4C] bg-[#F4EFEA] border border-[#E2D9CC] px-1.5 py-0.2 rounded">
-                Filtrado
-              </span>
-            )}
+      {/* KPI Overview Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
+            <span>Total Egresos</span>
+            <Receipt className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#A36F4C] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#A36F4C] font-mono mt-1">
             {formatCurrency(totalEgresosTotales)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">
-            {isFiltered ? `${filteredEgresos.length} de ${items.length} registros` : `${items.length} registros contabilizados`}
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
+            {isFiltered ? `${filteredEgresos.length} de ${items.length} registros` : `${items.length} registros`}
           </span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#944917] flex items-center gap-2">
-            <Wrench className="h-4 w-4" />
-            Maquinaria & Equipos
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#944917] flex items-center justify-between">
+            <span>Maquinaria & Equipos</span>
+            <Wrench className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
             {formatCurrency(totalMaquinaria)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
             {isFiltered 
-              ? `${filteredEgresos.filter(e => e.categoria === 'ACTIVO_FIJO').length} registros de maquinaria` 
-              : 'Impresora 3D, Secador, etc.'}
+              ? `${filteredEgresos.filter(e => e.categoria === 'ACTIVO_FIJO').length} registros` 
+              : 'Impresora 3D, Secador'}
           </span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#633E20] flex items-center gap-2">
-            <ShoppingBag className="h-4 w-4" />
-            Insumos & Materiales
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
+            <span>Insumos & Materiales</span>
+            <ShoppingBag className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
             {formatCurrency(totalInsumos)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
             {isFiltered 
-              ? `${filteredEgresos.filter(e => e.categoria === 'INSUMO').length} registros de insumos` 
-              : 'Filamentos, Resinas, Packaging'}
+              ? `${filteredEgresos.filter(e => e.categoria === 'INSUMO').length} registros` 
+              : 'Filamentos, Packaging'}
           </span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-2">
-            <Truck className="h-4 w-4" />
-            Servicios & Operativos
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
+            <span>Servicios & Op.</span>
+            <Truck className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
             {formatCurrency(totalServicios)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
             {isFiltered 
-              ? `${filteredEgresos.filter(e => e.categoria === 'SERVICIO').length} registros de servicios` 
-              : 'Fletes, Publicidad, Cuotas'}
+              ? `${filteredEgresos.filter(e => e.categoria === 'SERVICIO').length} registros` 
+              : 'Fletes, Publicidad'}
           </span>
         </div>
       </div>
 
-      {/* 1-Row Compact Filter Bar */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Lado Izquierdo: Campo de Búsqueda */}
-        <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
-          <Input 
-            placeholder="Buscar egreso o insumo..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
-          />
-          {search && (
-            <button 
-              onClick={() => { setSearch(''); setCurrentPage(1); }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Lado Derecho: Segmented Control Tabs & Dropdown de Tags */}
-        <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
-          {/* Segmented Control / Tabs */}
-          <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
-            <button
-              onClick={() => { setCategoriaFilter('TODOS'); setTagFilter('TODOS'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-                categoriaFilter === 'TODOS'
-                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-              }`}
-            >
-              Todos ({items.length})
-            </button>
-            <button
-              onClick={() => { setCategoriaFilter('INSUMO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-                categoriaFilter === 'INSUMO'
-                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-              }`}
-            >
-              Insumos
-            </button>
-            <button
-              onClick={() => { setCategoriaFilter('ACTIVO_FIJO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-                categoriaFilter === 'ACTIVO_FIJO'
-                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-              }`}
-            >
-              Activos Fijos
-            </button>
-            <button
-              onClick={() => { setCategoriaFilter('SERVICIO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-                categoriaFilter === 'SERVICIO'
-                  ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-              }`}
-            >
-              Servicios & Op.
-            </button>
-          </div>
-
-          {/* Combobox interactivo dinámico para 'Filtrar por Tag' basado en la categoría */}
-          <div className="w-full sm:w-56 flex-shrink-0">
-            <SearchableCombobox
-              items={tagsComboboxItems}
-              value={tagFilter}
-              onChange={(val) => {
-                setTagFilter(val || 'TODOS')
+      {/* Main Container: Single Unified Master Card (Toolbar + Table) */}
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-xs rounded-2xl">
+        {/* Unified Integrated Toolbar */}
+        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col md:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
+          {/* Lado Izquierdo: Campo de Búsqueda */}
+          <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+            <Input 
+              placeholder="Buscar egreso o insumo..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
                 setCurrentPage(1)
               }}
-              size="sm"
-              icon={Tag}
-              placeholder="Filtrar por Tag..."
-              searchPlaceholder="Buscar etiqueta..."
-              clearable={false}
-              className="w-full"
+              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
             />
+            {search && (
+              <button 
+                onClick={() => { setSearch(''); setCurrentPage(1); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Lado Derecho: Segmented Control Tabs & Dropdown de Tags */}
+          <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
+            {/* Segmented Control / Tabs */}
+            <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
+              <button
+                onClick={() => { setCategoriaFilter('TODOS'); setTagFilter('TODOS'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  categoriaFilter === 'TODOS'
+                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                }`}
+              >
+                Todos ({items.length})
+              </button>
+              <button
+                onClick={() => { setCategoriaFilter('INSUMO'); setTagFilter('TODOS'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  categoriaFilter === 'INSUMO'
+                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                }`}
+              >
+                Insumos
+              </button>
+              <button
+                onClick={() => { setCategoriaFilter('ACTIVO_FIJO'); setTagFilter('TODOS'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  categoriaFilter === 'ACTIVO_FIJO'
+                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                }`}
+              >
+                Activos Fijos
+              </button>
+              <button
+                onClick={() => { setCategoriaFilter('SERVICIO'); setTagFilter('TODOS'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  categoriaFilter === 'SERVICIO'
+                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                }`}
+              >
+                Servicios & Op.
+              </button>
+            </div>
+
+            {/* Combobox interactivo dinámico para 'Filtrar por Tag' basado en la categoría */}
+            <div className="w-full sm:w-56 flex-shrink-0">
+              <SearchableCombobox
+                items={tagsComboboxItems}
+                value={tagFilter}
+                onChange={(val) => {
+                  setTagFilter(val || 'TODOS')
+                  setCurrentPage(1)
+                }}
+                size="sm"
+                icon={Tag}
+                placeholder="Filtrar por Tag..."
+                searchPlaceholder="Buscar etiqueta..."
+                clearable={false}
+                className="w-full"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Table / Mobile Cards Light Mode */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
         {/* Mobile View (< md): Cards */}
         <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
           {filteredEgresos.length === 0 ? (

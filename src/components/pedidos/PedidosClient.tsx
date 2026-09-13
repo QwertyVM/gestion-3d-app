@@ -726,213 +726,169 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   }, [pedidos])
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
       {/* ========================================================================= */}
-      {/* 1. HEADER PRINCIPAL Y BOTÓN DE ACCIÓN                                     */}
+      {/* 1. HEADER SIMPLE Y ELEGANTE (SIN CAJA PESADA)                             */}
       {/* ========================================================================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#FFFFFF] p-5 sm:p-6 rounded-3xl border border-[#E2D9CC] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-2xl bg-gradient-to-br from-[#A36F4C] to-[#C48C68] text-white shadow-sm">
-              <Boxes className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-[#241C15] tracking-tight">
-                Gestión de Pedidos Multiproducto
-              </h1>
-              <p className="text-xs sm:text-sm text-[#75695D]">
-                Registra 1 o más productos por cliente, asigna colores de filamento, controla anticipos y despacha.
-              </p>
-            </div>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#241C15] tracking-tight flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-2xs">
+                <Boxes className="h-5 w-5 stroke-[2.5]" />
+              </div>
+              <span>Gestión de Pedidos</span>
+            </h1>
+            <Badge className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] font-bold text-xs">
+              {kpis.totalPedidos} pedidos
+            </Badge>
           </div>
+          <p className="text-xs sm:text-sm text-[#75695D] mt-1">
+            Registro, control de producción, anticipos de pago y despacho por cliente.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <Button
-            onClick={() => {
-              resetForm()
-              setIsNewOrderModalOpen(true)
-            }}
-            className="h-10 px-4 rounded-xl bg-[#1E5E3A] hover:bg-[#16482C] text-white font-extrabold shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            <span>+ Nuevo Pedido Multiproducto</span>
-          </Button>
-        </div>
+        <Button
+          onClick={() => {
+            resetForm()
+            setIsNewOrderModalOpen(true)
+          }}
+          className="h-10 px-4 rounded-xl bg-[#1E5E3A] hover:bg-[#16482C] text-white font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto active:scale-[0.98]"
+        >
+          <Plus className="h-4 w-4 stroke-[2.5]" />
+          <span>Nuevo Pedido</span>
+        </Button>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. KPIS EJECUTIVOS DE PEDIDOS                                             */}
+      {/* 2. KPIS EJECUTIVOS DE PEDIDOS (STREAMLINED)                               */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
         {/* KPI 1: Total Pedidos */}
-        <Card className="rounded-2xl border-[#E2D9CC] bg-[#FFFFFF] shadow-xs hover:border-[#D4BEA7] transition-all">
-          <CardContent className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-[#75695D] mb-1">
-              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Total Pedidos</span>
-              <Boxes className="h-4 w-4 text-[#A36F4C]" />
-            </div>
-            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-              <span className="font-mono text-xl sm:text-2xl font-black text-[#241C15]">{kpis.totalPedidos}</span>
-              <span className="text-[11px] sm:text-xs text-[#75695D]">({kpis.totalPiezas} piezas)</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-[#E2D9CC] bg-[#FFFFFF] p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between text-[#75695D] mb-1">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Total Pedidos</span>
+            <Boxes className="h-3.5 w-3.5 text-[#A36F4C]" />
+          </div>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span className="font-mono text-xl font-black text-[#241C15]">{kpis.totalPedidos}</span>
+            <span className="text-[11px] text-[#75695D]">({kpis.totalPiezas} piezas)</span>
+          </div>
+        </div>
 
         {/* KPI 2: En Producción */}
-        <Card className="rounded-2xl border-[#BEE3F8] bg-[#EBF3FB]/70 shadow-xs">
-          <CardContent className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-[#2B6CB0] mb-1">
-              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">En Impresión</span>
-              <Layers className="h-4 w-4" />
-            </div>
-            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-              <span className="font-mono text-xl sm:text-2xl font-black text-[#2B6CB0]">{kpis.enProduccion}</span>
-              <span className="text-[11px] sm:text-xs text-[#2B6CB0]/80">en taller</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-[#BEE3F8] bg-[#EBF3FB]/70 p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between text-[#2B6CB0] mb-1">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">En Impresión</span>
+            <Layers className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span className="font-mono text-xl font-black text-[#2B6CB0]">{kpis.enProduccion}</span>
+            <span className="text-[11px] text-[#2B6CB0]/80">en taller</span>
+          </div>
+        </div>
 
         {/* KPI 3: Por Entregar / Listos */}
-        <Card className="rounded-2xl border-[#E9D8FD] bg-[#FAF0F8]/70 shadow-xs">
-          <CardContent className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-[#805AD5] mb-1">
-              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Por Entregar</span>
-              <Package className="h-4 w-4" />
-            </div>
-            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-              <span className="font-mono text-xl sm:text-2xl font-black text-[#805AD5]">{kpis.listos}</span>
-              <span className="text-[11px] sm:text-xs text-[#805AD5]/80">listos</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-[#E9D8FD] bg-[#FAF0F8]/70 p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between text-[#805AD5] mb-1">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Por Entregar</span>
+            <Package className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex items-baseline gap-1.5 flex-wrap">
+            <span className="font-mono text-xl font-black text-[#805AD5]">{kpis.listos}</span>
+            <span className="text-[11px] text-[#805AD5]/80">listos</span>
+          </div>
+        </div>
 
-        {/* KPI 4: Saldo por Cobrar (Cartera) */}
-        <Card className="rounded-2xl border-[#E8D49B] bg-[#FDF6E2]/70 shadow-xs">
-          <CardContent className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-[#8C6D1F] mb-1">
-              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Por Cobrar</span>
-              <DollarSign className="h-4 w-4" />
-            </div>
-            <div className="flex items-baseline gap-1.5 sm:gap-2">
-              <span className="font-mono text-lg sm:text-xl font-black text-[#8C6D1F] truncate">
-                {formatCurrency(kpis.saldoPorCobrar)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* KPI 4: Saldo por Cobrar */}
+        <div className="rounded-2xl border border-[#E8D49B] bg-[#FDF6E2]/70 p-3.5 shadow-2xs">
+          <div className="flex items-center justify-between text-[#8C6D1F] mb-1">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Por Cobrar</span>
+            <DollarSign className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono text-lg font-black text-[#8C6D1F] truncate">
+              {formatCurrency(kpis.saldoPorCobrar)}
+            </span>
+          </div>
+        </div>
 
-        {/* KPI 5: Total Recaudado / Facturado */}
-        <Card className="rounded-2xl border-[#B4E3C0] bg-[#EBF7EE]/70 shadow-xs col-span-2 sm:col-span-2 lg:col-span-1">
-          <CardContent className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-[#1E5E3A] mb-1">
-              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Cobrado en Caja</span>
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-            <div className="flex items-baseline gap-1.5 sm:gap-2">
-              <span className="font-mono text-lg sm:text-xl font-black text-[#1E5E3A] truncate">
-                {formatCurrency(kpis.totalCobrado)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* KPI 5: Cobrado en Caja */}
+        <div className="rounded-2xl border border-[#B4E3C0] bg-[#EBF7EE]/70 p-3.5 shadow-2xs col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between text-[#1E5E3A] mb-1">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Cobrado en Caja</span>
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono text-lg font-black text-[#1E5E3A] truncate">
+              {formatCurrency(kpis.totalCobrado)}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. FILTROS Y BARRA DE BÚSQUEDA                                            */}
+      {/* 3. PANEL MAESTRO: FILTROS + TABLA / TARJETAS EN UN SOLO CONTENEDOR        */}
       {/* ========================================================================= */}
-      <Card className="rounded-3xl border-[#E2D9CC] bg-[#FFFFFF] shadow-xs p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Buscador */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
-            <Input
-              placeholder="Buscar por cliente, código (#PED-001), producto, destino o teléfono..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-10 bg-[#FAF8F5] border-[#E2D9CC] text-sm text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-            />
-          </div>
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl shadow-xs overflow-hidden">
+        {/* Toolbar Integrada */}
+        <div className="p-3.5 sm:p-4 bg-[#FFFFFF] space-y-3">
+          {/* Fila 1: Buscador + Filtros de Pago + Paginación + Vista */}
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+            {/* Buscador */}
+            <div className="relative flex-1 min-w-[240px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+              <Input
+                placeholder="Buscar por cliente, código (#PED-001), producto o teléfono..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setCurrentPage(1)
+                }}
+                className="pl-9 pr-8 h-9 bg-[#FAF8F5] border-[#E2D9CC] text-xs sm:text-sm text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('')
+                    setCurrentPage(1)
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 cursor-pointer"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
 
-          {/* Filtros de Pago */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-bold text-[#75695D] mr-1">Pago:</span>
-            {[
-              { id: 'TODOS', label: 'Todos' },
-              { id: 'PAGADO', label: '100% Pagado' },
-              { id: 'PENDIENTE', label: 'Con Saldo' }
-            ].map(p => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPagoFilter(p.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  selectedPagoFilter === p.id
-                    ? 'bg-[#241C15] text-white shadow-xs'
-                    : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] hover:text-[#241C15] border border-[#E2D9CC]'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* Controles de Pago, Límite y Vista */}
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between lg:justify-end">
+              {/* Filtros de Pago */}
+              <div className="flex items-center gap-1 bg-[#FAF8F5] p-0.5 rounded-xl border border-[#E2D9CC]">
+                {[
+                  { id: 'TODOS', label: 'Todos' },
+                  { id: 'PAGADO', label: '100% Pagado' },
+                  { id: 'PENDIENTE', label: 'Con Saldo' }
+                ].map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPagoFilter(p.id)
+                      setCurrentPage(1)
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      selectedPagoFilter === p.id
+                        ? 'bg-[#241C15] text-white shadow-2xs'
+                        : 'text-[#75695D] hover:text-[#241C15]'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
 
-        {/* Filtros de Estado */}
-        <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#E2D9CC]/60 overflow-x-auto pb-1">
-          <span className="text-xs font-bold text-[#75695D] mr-1">Estado:</span>
-          <button
-            onClick={() => setSelectedEstadoFilter('TODOS')}
-            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              selectedEstadoFilter === 'TODOS'
-                ? 'bg-[#A36F4C] text-white shadow-xs'
-                : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] border border-[#E2D9CC]'
-            }`}
-          >
-            Todos ({pedidos.length})
-          </button>
-          {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => {
-            const count = pedidos.filter(p => p.estado === stKey).length
-            return (
-              <button
-                key={stKey}
-                onClick={() => setSelectedEstadoFilter(stKey)}
-                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  selectedEstadoFilter === stKey
-                    ? `${conf.colorBg} ${conf.colorText} ${conf.colorBorder} border shadow-xs font-black`
-                    : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] border border-[#E2D9CC]'
-                }`}
-              >
-                <conf.icon className="h-3 w-3" />
-                <span>{conf.label}</span>
-                <span className="font-mono text-[10px]">({count})</span>
-              </button>
-            )
-          })}
-        </div>
-      </Card>
-
-      {/* ========================================================================= */}
-      {/* 4. LISTADO INTERACTIVO DE PEDIDOS (TABLA / TARJETAS)                      */}
-      {/* ========================================================================= */}
-      <div className="space-y-3.5">
-        {/* Barra Superior del Listado: Selector de Vista, Contador y Paginación */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#FFFFFF] p-3.5 sm:p-4 rounded-2xl border border-[#E2D9CC] shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
-              <Boxes className="h-4 w-4 text-[#A36F4C]" />
-              Pedidos Registrados ({filteredPedidos.length})
-            </span>
-            {filteredPedidos.length > 0 && (
-              <Badge variant="outline" className="text-[10px] font-mono bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC]">
-                {sortedPedidos.reduce((acc, p) => acc + p.totalItemsCount, 0)} piezas totales
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
-            {/* Selector de Filas por Página */}
-            <div className="flex items-center gap-1.5 text-xs text-[#75695D]">
-              <span className="text-[11px] font-bold hidden sm:inline">Mostrar:</span>
+              {/* Selector de Filas */}
               <select
                 value={itemsPerPage}
                 onChange={(e) => {
@@ -946,54 +902,93 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                 <option value={50}>50 pedidos</option>
                 <option value={9999}>Todos ({filteredPedidos.length})</option>
               </select>
-            </div>
 
-            {/* Selector de Modo de Vista */}
-            <div className="flex items-center bg-[#FAF8F5] p-1 rounded-xl border border-[#E2D9CC]">
-              <button
-                type="button"
-                onClick={() => setViewMode('TABLA')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === 'TABLA'
-                    ? 'bg-[#241C15] text-white shadow-xs'
-                    : 'text-[#75695D] hover:text-[#241C15]'
-                }`}
-              >
-                <List className="h-3.5 w-3.5" />
-                <span>Tabla</span>
-              </button>
+              {/* Selector de Modo de Vista */}
+              <div className="flex items-center bg-[#FAF8F5] p-0.5 rounded-xl border border-[#E2D9CC]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('TABLA')}
+                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                    viewMode === 'TABLA'
+                      ? 'bg-[#241C15] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                  title="Vista Tabla"
+                >
+                  <List className="h-3.5 w-3.5" />
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setViewMode('CARDS')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === 'CARDS'
-                    ? 'bg-[#241C15] text-white shadow-xs'
-                    : 'text-[#75695D] hover:text-[#241C15]'
-                }`}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                <span>Tarjetas</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('CARDS')}
+                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                    viewMode === 'CARDS'
+                      ? 'bg-[#241C15] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                  title="Vista Tarjetas"
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* Fila 2: Filtros de Estado */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar pt-1 border-t border-[#E2D9CC]/50">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedEstadoFilter('TODOS')
+                setCurrentPage(1)
+              }}
+              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                selectedEstadoFilter === 'TODOS'
+                  ? 'bg-[#A36F4C] text-white shadow-2xs'
+                  : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] border border-[#E2D9CC]'
+              }`}
+            >
+              Todos ({pedidos.length})
+            </button>
+            {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => {
+              const count = pedidos.filter(p => p.estado === stKey).length
+              return (
+                <button
+                  key={stKey}
+                  type="button"
+                  onClick={() => {
+                    setSelectedEstadoFilter(stKey)
+                    setCurrentPage(1)
+                  }}
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                    selectedEstadoFilter === stKey
+                      ? `${conf.colorBg} ${conf.colorText} ${conf.colorBorder} border shadow-2xs font-black`
+                      : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] border border-[#E2D9CC]'
+                  }`}
+                >
+                  <conf.icon className="h-3 w-3" />
+                  <span>{conf.label}</span>
+                  <span className="font-mono text-[10px]">({count})</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
+        {/* Contenido Principal (Tabla o Tarjetas) */}
         {filteredPedidos.length === 0 ? (
-          <Card className="rounded-3xl border-[#E2D9CC] bg-[#FFFFFF] p-12 text-center shadow-xs">
+          <div className="p-12 text-center border-t border-[#E2D9CC]">
             <div className="mx-auto w-12 h-12 rounded-2xl bg-[#FAF8F5] flex items-center justify-center text-[#75695D] mb-3">
               <Boxes className="h-6 w-6" />
             </div>
             <h3 className="text-base font-extrabold text-[#241C15]">No se encontraron pedidos</h3>
             <p className="text-xs text-[#75695D] mt-1 max-w-sm mx-auto">
-              No hay pedidos que coincidan con los filtros seleccionados. Crea tu primer pedido multiproducto con el botón superior.
+              No hay pedidos que coincidan con los filtros seleccionados.
             </p>
-          </Card>
+          </div>
         ) : viewMode === 'TABLA' ? (
-          /* ========================================================================= */
-          /* VISTA 1: TABLA INTERACTIVA DE PEDIDOS                                     */
-          /* ========================================================================= */
-          <Card className="rounded-3xl border-[#E2D9CC] bg-[#FFFFFF] shadow-xs overflow-hidden">
+          /* VISTA 1: TABLA INTERACTIVA DE PEDIDOS */
+          <div className="border-t border-[#E2D9CC]">
             <div className="w-full overflow-x-auto">
               <Table className="w-full">
                 <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
@@ -1028,14 +1023,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       </button>
                     </TableHead>
 
-                    <TableHead className="px-3 py-3.5">
+                    <TableHead className="px-3.5 py-3.5">
                       <button
                         onClick={() => handleSort('cantidad')}
                         className="flex items-center gap-1 text-xs font-extrabold text-[#241C15] hover:text-[#A36F4C] transition-colors cursor-pointer"
                         title="Ordenar por cantidad de piezas"
                       >
                         <Boxes className="h-3.5 w-3.5 text-[#A36F4C]" />
-                        <span>Cantidad</span>
+                        <span>Productos</span>
                         {sortField === 'cantidad' ? (
                           sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-[#A36F4C]" /> : <ArrowDown className="h-3 w-3 text-[#A36F4C]" />
                         ) : (
@@ -1044,7 +1039,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       </button>
                     </TableHead>
 
-                    <TableHead className="px-3 py-3.5">
+                    <TableHead className="px-3.5 py-3.5">
                       <button
                         onClick={() => handleSort('estado')}
                         className="flex items-center gap-1 text-xs font-extrabold text-[#241C15] hover:text-[#A36F4C] transition-colors cursor-pointer"
@@ -1100,57 +1095,52 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                                 {p.canalVenta || 'WhatsApp'}
                               </Badge>
                             </div>
-                            <div className="text-[11px] font-mono font-bold text-[#241C15] flex items-center gap-1">
-                              <Calendar className="h-3 w-3 text-[#A36F4C] flex-shrink-0" />
-                              <span>{formatDate(p.fecha)}</span>
-                            </div>
+                            <span className="text-[11px] text-[#75695D] font-mono flex items-center gap-1">
+                              <Calendar className="h-3 w-3 text-[#A36F4C]" />
+                              {formatDate(p.fecha)}
+                            </span>
                           </div>
                         </TableCell>
 
                         {/* Celda 2: Cliente & Teléfono */}
                         <TableCell className="px-3.5 py-3.5 align-middle">
-                          <div className="space-y-1">
-                            <span className="font-extrabold text-sm text-[#241C15] block group-hover:text-[#A36F4C] transition-colors truncate">
+                          <div className="space-y-0.5">
+                            <span className="font-extrabold text-sm text-[#241C15] group-hover:text-[#A36F4C] transition-colors block truncate max-w-[180px]">
                               {p.cliente}
                             </span>
-                            <div>
-                              {p.telefono ? (
-                                <a
-                                  href={`https://wa.me/51${p.telefono.replace(/\D/g, '')}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1 text-[11px] text-[#1E5E3A] hover:underline font-semibold bg-[#EBF7EE] px-1.5 py-0.5 rounded-md border border-[#B4E3C0]"
-                                >
-                                  <Phone className="h-2.5 w-2.5" />
-                                  <span>{p.telefono}</span>
-                                </a>
-                              ) : (
-                                <span className="text-[11px] text-[#75695D] italic">Sin teléfono</span>
-                              )}
+                            {p.telefono && (
+                              <span className="text-[11px] text-[#75695D] font-mono flex items-center gap-1">
+                                <Phone className="h-3 w-3 text-[#1E5E3A]" />
+                                {p.telefono}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        {/* Celda 3: Cantidad y resumen de productos */}
+                        <TableCell className="px-3.5 py-3.5 align-middle">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-black text-sm text-[#241C15]">
+                                {p.totalItemsCount} {p.totalItemsCount === 1 ? 'pieza' : 'piezas'}
+                              </span>
+                              <Badge variant="outline" className="text-[9px] font-bold text-[#75695D] bg-[#FAF8F5] border-[#E2D9CC]">
+                                {p.items.length} {p.items.length === 1 ? 'modelo' : 'modelos'}
+                              </Badge>
+                            </div>
+                            <div className="text-[11px] text-[#75695D] truncate max-w-[200px]">
+                              {p.items.map(it => `${it.nombreProductoSnapshot} (x${it.cantidad})`).join(', ')}
                             </div>
                           </div>
                         </TableCell>
 
-                        {/* Celda 3: Cantidad de Productos */}
-                        <TableCell className="px-3 py-3.5 align-middle">
-                          <div className="space-y-0.5">
-                            <span className="font-mono font-black text-xs text-[#241C15] block">
-                              {p.totalItemsCount} {p.totalItemsCount === 1 ? 'pieza' : 'piezas'}
-                            </span>
-                            <span className="text-[11px] font-bold text-[#75695D] block">
-                              {p.items.length} {p.items.length === 1 ? 'modelo' : 'modelos'}
-                            </span>
-                          </div>
-                        </TableCell>
-
-                        {/* Celda 4: Selector Interactivo de Estado */}
-                        <TableCell className="px-3 py-3.5 align-middle" onClick={(e) => e.stopPropagation()}>
-                          <div className="space-y-1 max-w-[130px]">
+                        {/* Celda 4: Estado con Selector Rápido */}
+                        <TableCell className="px-3.5 py-3.5 align-middle" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-1">
                             <select
                               value={p.estado}
                               onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
-                              className={`w-full text-xs font-black rounded-xl px-2 py-1 border cursor-pointer transition-all shadow-2xs ${stConf.colorBg} ${stConf.colorText} ${stConf.colorBorder}`}
+                              className={`text-[11px] font-extrabold rounded-xl px-2.5 py-1 border cursor-pointer ${stConf.colorBg} ${stConf.colorText} ${stConf.colorBorder}`}
                             >
                               {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
                                 <option key={stKey} value={stKey}>
@@ -1158,45 +1148,35 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                                 </option>
                               ))}
                             </select>
-                            <span className="text-[10px] text-[#75695D] block text-center truncate">
-                              {p.estado === 'PENDIENTE' && 'Por iniciar'}
-                              {p.estado === 'EN_PRODUCCION' && 'Imprimiendo'}
-                              {p.estado === 'LISTO_ENTREGA' && 'Listo en taller'}
-                              {p.estado === 'ENTREGADO' && 'Cerrado'}
-                              {p.estado === 'CANCELADO' && 'Anulado'}
-                            </span>
                           </div>
                         </TableCell>
 
-                        {/* Celda 5: Entrega & Destino */}
-                        <TableCell className="w-[110px] max-w-[120px] px-3 py-3.5 align-middle text-xs">
-                          <div className="space-y-0.5">
+                        {/* Celda 5: Fecha Entrega y Destino */}
+                        <TableCell className="w-[110px] max-w-[120px] px-3 py-3.5 align-middle">
+                          <div className="space-y-0.5 text-xs">
                             {p.diaEntregaPrometida ? (
-                              <span className="flex items-center gap-1 font-bold text-[#241C15] text-[11px]">
-                                <Calendar className="h-3 w-3 text-[#A36F4C] flex-shrink-0" />
-                                <span className="truncate" title={p.diaEntregaPrometida}>{p.diaEntregaPrometida}</span>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-[#FAF8F5] text-[#241C15] border border-[#E2D9CC] truncate">
+                                📅 {p.diaEntregaPrometida}
                               </span>
                             ) : (
-                              <span className="text-[11px] text-[#75695D] italic">—</span>
+                              <span className="text-[10px] text-[#75695D] italic">Sin fecha</span>
                             )}
-
                             {p.destinoEnvio && (
-                              <span className="flex items-center gap-1 text-[10px] text-[#75695D]">
-                                <Truck className="h-3 w-3 text-[#75695D] flex-shrink-0" />
-                                <span className="truncate" title={p.destinoEnvio}>{p.destinoEnvio}</span>
+                              <span className="text-[10px] text-[#75695D] flex items-center gap-1 truncate block">
+                                <Truck className="h-3 w-3 text-[#A36F4C] shrink-0" />
+                                <span className="truncate">{p.destinoEnvio}</span>
                               </span>
                             )}
                           </div>
                         </TableCell>
 
                         {/* Celda 6: Total & Liquidación */}
-                        <TableCell className="px-4 py-3.5 align-middle text-right">
-                          <div className="space-y-1 font-mono">
-                            <strong className="text-sm font-black text-[#241C15] block">
+                        <TableCell className="px-4 py-3.5 text-right align-middle">
+                          <div className="space-y-0.5">
+                            <div className="font-mono font-black text-sm text-[#241C15]">
                               {formatCurrency(p.total)}
-                            </strong>
-
-                            <span className="text-xs font-bold text-[#1E5E3A] block">
+                            </div>
+                            <span className="font-mono text-[11px] text-[#1E5E3A] font-bold block">
                               +{formatCurrency(p.montoPagado)}
                             </span>
 
@@ -1223,255 +1203,251 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                 </TableBody>
               </Table>
             </div>
-
-            {/* Paginación de la Tabla */}
-            {itemsPerPage !== 9999 && totalPages > 1 && (
-              <div className="p-4 bg-[#FAF8F5] border-t border-[#E2D9CC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                <span className="text-[#75695D] font-medium">
-                  Mostrando{' '}
-                  <strong className="text-[#241C15]">{(currentPage - 1) * itemsPerPage + 1}</strong> a{' '}
-                  <strong className="text-[#241C15]">
-                    {Math.min(currentPage * itemsPerPage, sortedPedidos.length)}
-                  </strong>{' '}
-                  de <strong className="text-[#241C15]">{sortedPedidos.length}</strong> pedidos
-                </span>
-
-                <div className="flex items-center gap-1.5">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    className="h-8 px-2.5 rounded-xl border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] font-bold text-xs disabled:opacity-40 cursor-pointer flex items-center gap-1"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                    <span>Anterior</span>
-                  </Button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`w-8 h-8 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer ${
-                        currentPage === page
-                          ? 'bg-[#241C15] text-white shadow-xs'
-                          : 'bg-[#FFFFFF] text-[#75695D] hover:bg-[#EAE4DC] border border-[#E2D9CC]'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    className="h-8 px-2.5 rounded-xl border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] font-bold text-xs disabled:opacity-40 cursor-pointer flex items-center gap-1"
-                  >
-                    <span>Siguiente</span>
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </Card>
+          </div>
         ) : (
-          /* ========================================================================= */
-          /* VISTA 2: TARJETAS DE PEDIDOS                                              */
-          /* ========================================================================= */
-          <div className="space-y-3.5">
+          /* VISTA 2: TARJETAS DE PEDIDOS */
+          <div className="p-4 border-t border-[#E2D9CC] space-y-3 bg-[#FAF8F5]/30">
             {paginatedPedidos.map(p => {
               const stConf = ESTADOS_CONFIG[p.estado] || ESTADOS_CONFIG.PENDIENTE
               const isFullyPaid = p.saldoPendiente <= 0
 
               return (
-                <Card
+                <div
                   key={p.id}
-                  className="rounded-3xl border-[#E2D9CC] bg-[#FFFFFF] shadow-xs hover:shadow-md hover:border-[#D4BEA7] transition-all overflow-hidden"
+                  className="rounded-2xl border border-[#E2D9CC] bg-[#FFFFFF] shadow-2xs hover:border-[#D4BEA7] transition-all p-4 space-y-3"
                 >
-                  <div className="p-4 sm:p-5 space-y-3">
-                    {/* Fila Superior: Código, Cliente, Estado y Acciones Rápidas */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-[#E2D9CC]/70">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <Badge className="bg-[#241C15] text-white font-mono font-black text-xs px-2.5 py-0.5 rounded-lg">
-                          {p.codigo}
-                        </Badge>
-                        <span className="font-black text-base text-[#241C15]">{p.cliente}</span>
-                        <span className="flex items-center gap-1 text-xs text-[#75695D] font-mono bg-[#FAF8F5] px-2 py-0.5 rounded-md border border-[#E2D9CC]">
-                          <Calendar className="h-3 w-3 text-[#A36F4C]" />
-                          {formatDate(p.fecha)}
-                        </span>
-                        {p.telefono && (
-                          <a
-                            href={`https://wa.me/51${p.telefono.replace(/\D/g, '')}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-1 text-xs text-[#1E5E3A] hover:underline font-semibold bg-[#EBF7EE] px-2 py-0.5 rounded-md border border-[#B4E3C0]"
-                          >
-                            <Phone className="h-3 w-3" />
-                            <span>{p.telefono}</span>
-                          </a>
-                        )}
-                        <Badge variant="outline" className="text-[10px] text-[#75695D] bg-[#FAF8F5] border-[#E2D9CC]">
-                          {p.canalVenta || 'WhatsApp'}
-                        </Badge>
-                      </div>
-
-                      {/* Selector Rápido de Estado */}
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={p.estado}
-                          onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
-                          className={`text-xs font-extrabold rounded-xl px-2.5 py-1 border cursor-pointer ${stConf.colorBg} ${stConf.colorText} ${stConf.colorBorder}`}
+                  {/* Fila Superior: Código, Cliente, Estado y Acciones Rápidas */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-[#E2D9CC]/70">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="bg-[#241C15] text-white font-mono font-black text-xs px-2.5 py-0.5 rounded-lg">
+                        {p.codigo}
+                      </Badge>
+                      <span className="font-black text-base text-[#241C15]">{p.cliente}</span>
+                      <span className="flex items-center gap-1 text-xs text-[#75695D] font-mono bg-[#FAF8F5] px-2 py-0.5 rounded-md border border-[#E2D9CC]">
+                        <Calendar className="h-3 w-3 text-[#A36F4C]" />
+                        {formatDate(p.fecha)}
+                      </span>
+                      {p.telefono && (
+                        <a
+                          href={`https://wa.me/51${p.telefono.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-xs text-[#1E5E3A] hover:underline font-semibold bg-[#EBF7EE] px-2 py-0.5 rounded-md border border-[#B4E3C0]"
                         >
-                          {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
-                            <option key={stKey} value={stKey}>
-                              {conf.label}
-                            </option>
-                          ))}
-                        </select>
-
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenEditModal(p)}
-                          className="h-8 px-2.5 rounded-xl border-[#D4BEA7] bg-[#FDF6E2] hover:bg-[#F9ECC4] text-[#8C6D1F] font-extrabold text-xs cursor-pointer flex items-center gap-1"
-                          title="Editar pedido y mantenimiento"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          <span>Editar</span>
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedPedidoDetail(p)}
-                          className="h-8 px-3 rounded-xl border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#EAE4DC] text-[#241C15] font-bold text-xs cursor-pointer flex items-center gap-1"
-                        >
-                          <FileText className="h-3.5 w-3.5 text-[#A36F4C]" />
-                          <span>Detalle / Ticket</span>
-                        </Button>
-                      </div>
+                          <Phone className="h-3 w-3" />
+                          <span>{p.telefono}</span>
+                        </a>
+                      )}
+                      <Badge variant="outline" className="text-[10px] text-[#75695D] bg-[#FAF8F5] border-[#E2D9CC]">
+                        {p.canalVenta || 'WhatsApp'}
+                      </Badge>
                     </div>
 
-                    {/* Fila Media: Desglose de Productos Multiproducto Asignados */}
-                    <div className="bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2D9CC]/70 space-y-2">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-[#75695D]">
-                        <span className="flex items-center gap-1.5">
-                          <ShoppingBag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                          {p.items.length} {p.items.length === 1 ? 'Producto' : 'Productos'} asignados ({p.totalItemsCount} piezas en total):
-                        </span>
-                        {p.diaEntregaPrometida && (
-                          <span className="flex items-center gap-1 text-[#241C15]">
-                            <Calendar className="h-3 w-3 text-[#A36F4C]" />
-                            Entrega: <strong>{p.diaEntregaPrometida}</strong>
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {p.items.map((it) => (
-                          <div
-                            key={it.id}
-                            className="p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex items-start justify-between gap-2"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-extrabold text-xs text-[#241C15] truncate">
-                                  {it.nombreProductoSnapshot}
-                                </span>
-                                <Badge className="text-[10px] font-black bg-[#FAF8F5] text-[#241C15] border-[#E2D9CC] px-1 py-0">
-                                  x{it.cantidad}
-                                </Badge>
-                              </div>
-
-                              <div className="flex items-center gap-2 mt-1 text-[11px] text-[#75695D] flex-wrap">
-                                {it.colorFilamento && (
-                                  <span className="flex items-center gap-1">
-                                    <span
-                                      className="w-2.5 h-2.5 rounded-full border border-black/20"
-                                      style={{ backgroundColor: it.colorFilamento.codigoHex || '#1E1E1E' }}
-                                    />
-                                    <span className="font-medium text-[10px]">{it.colorFilamento.nombreColor}</span>
-                                  </span>
-                                )}
-                                {it.personalizacion && (
-                                  <span className="text-[10px] text-[#A36F4C] italic truncate">
-                                    "{it.personalizacion}"
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <span className="font-mono font-extrabold text-xs text-[#241C15] flex-shrink-0">
-                              {formatCurrency(it.subtotal)}
-                            </span>
-                          </div>
+                    {/* Selector Rápido de Estado */}
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={p.estado}
+                        onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
+                        className={`text-xs font-extrabold rounded-xl px-2.5 py-1 border cursor-pointer ${stConf.colorBg} ${stConf.colorText} ${stConf.colorBorder}`}
+                      >
+                        {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
+                          <option key={stKey} value={stKey}>
+                            {conf.label}
+                          </option>
                         ))}
-                      </div>
-                    </div>
+                      </select>
 
-                    {/* Fila Inferior: Liquidación Financiera y Acciones */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 text-xs">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <div>
-                          <span className="text-[10px] text-[#75695D] block">Total Pedido:</span>
-                          <strong className="font-mono text-sm text-[#241C15]">{formatCurrency(p.total)}</strong>
-                        </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenEditModal(p)}
+                        className="h-8 px-2.5 rounded-xl border-[#D4BEA7] bg-[#FDF6E2] hover:bg-[#F9ECC4] text-[#8C6D1F] font-extrabold text-xs cursor-pointer flex items-center gap-1"
+                        title="Editar pedido y mantenimiento"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        <span>Editar</span>
+                      </Button>
 
-                        <div className="border-l border-[#E2D9CC] pl-3">
-                          <span className="text-[10px] text-[#1E5E3A] block">Abonado:</span>
-                          <strong className="font-mono text-sm text-[#1E5E3A]">+{formatCurrency(p.montoPagado)}</strong>
-                        </div>
-
-                        <div className="border-l border-[#E2D9CC] pl-3">
-                          <span className="text-[10px] text-[#8C6D1F] block">Saldo Pendiente:</span>
-                          <strong className={`font-mono text-sm ${isFullyPaid ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'}`}>
-                            {isFullyPaid ? 'S/ 0.00' : `S/ ${p.saldoPendiente.toFixed(2)}`}
-                          </strong>
-                        </div>
-
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] font-extrabold ml-1 ${
-                            isFullyPaid
-                              ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
-                              : p.montoPagado > 0
-                              ? 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
-                              : 'bg-red-50 text-[#A34335] border-red-200'
-                          }`}
-                        >
-                          {isFullyPaid ? '100% Pagado' : p.montoPagado > 0 ? 'Con Anticipo' : 'Sin Pago'}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => copyWhatsAppTicket(p)}
-                          className="h-7 px-2 text-[11px] text-[#1E5E3A] hover:bg-[#EBF7EE] font-bold rounded-lg cursor-pointer flex items-center gap-1"
-                        >
-                          <Share2 className="h-3 w-3" />
-                          <span>WhatsApp</span>
-                        </Button>
-
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEliminarPedido(p.id, p.codigo)}
-                          className="h-7 w-7 p-0 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer"
-                          title="Eliminar pedido"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedPedidoDetail(p)}
+                        className="h-8 px-3 rounded-xl border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#EAE4DC] text-[#241C15] font-bold text-xs cursor-pointer flex items-center gap-1"
+                      >
+                        <FileText className="h-3.5 w-3.5 text-[#A36F4C]" />
+                        <span>Detalle / Ticket</span>
+                      </Button>
                     </div>
                   </div>
-                </Card>
+
+                  {/* Fila Media: Desglose de Productos Multiproducto Asignados */}
+                  <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E2D9CC]/70 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-[#75695D]">
+                      <span className="flex items-center gap-1.5">
+                        <ShoppingBag className="h-3.5 w-3.5 text-[#A36F4C]" />
+                        {p.items.length} {p.items.length === 1 ? 'Producto' : 'Productos'} asignados ({p.totalItemsCount} piezas en total):
+                      </span>
+                      {p.diaEntregaPrometida && (
+                        <span className="flex items-center gap-1 text-[#241C15]">
+                          <Calendar className="h-3 w-3 text-[#A36F4C]" />
+                          Entrega: <strong>{p.diaEntregaPrometida}</strong>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {p.items.map((it) => (
+                        <div
+                          key={it.id}
+                          className="p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex items-start justify-between gap-2"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-extrabold text-xs text-[#241C15] truncate">
+                                {it.nombreProductoSnapshot}
+                              </span>
+                              <Badge className="text-[10px] font-black bg-[#FAF8F5] text-[#241C15] border-[#E2D9CC] px-1 py-0">
+                                x{it.cantidad}
+                              </Badge>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1 text-[11px] text-[#75695D] flex-wrap">
+                              {it.colorFilamento && (
+                                <span className="flex items-center gap-1">
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full border border-black/20"
+                                    style={{ backgroundColor: it.colorFilamento.codigoHex || '#1E1E1E' }}
+                                  />
+                                  <span className="font-medium text-[10px]">{it.colorFilamento.nombreColor}</span>
+                                </span>
+                              )}
+                              {it.personalizacion && (
+                                <span className="text-[10px] text-[#A36F4C] italic truncate">
+                                  "{it.personalizacion}"
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <span className="font-mono font-extrabold text-xs text-[#241C15] flex-shrink-0">
+                            {formatCurrency(it.subtotal)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Fila Inferior: Liquidación Financiera y Acciones */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 text-xs">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div>
+                        <span className="text-[10px] text-[#75695D] block">Total Pedido:</span>
+                        <strong className="font-mono text-sm text-[#241C15]">{formatCurrency(p.total)}</strong>
+                      </div>
+
+                      <div className="border-l border-[#E2D9CC] pl-3">
+                        <span className="text-[10px] text-[#1E5E3A] block">Abonado:</span>
+                        <strong className="font-mono text-sm text-[#1E5E3A]">+{formatCurrency(p.montoPagado)}</strong>
+                      </div>
+
+                      <div className="border-l border-[#E2D9CC] pl-3">
+                        <span className="text-[10px] text-[#8C6D1F] block">Saldo Pendiente:</span>
+                        <strong className={`font-mono text-sm ${isFullyPaid ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'}`}>
+                          {isFullyPaid ? 'S/ 0.00' : `S/ ${p.saldoPendiente.toFixed(2)}`}
+                        </strong>
+                      </div>
+
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] font-extrabold ml-1 ${
+                          isFullyPaid
+                            ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
+                            : p.montoPagado > 0
+                            ? 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
+                            : 'bg-red-50 text-[#A34335] border-red-200'
+                        }`}
+                      >
+                        {isFullyPaid ? '100% Pagado' : p.montoPagado > 0 ? 'Con Anticipo' : 'Sin Pago'}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => copyWhatsAppTicket(p)}
+                        className="h-7 px-2 text-[11px] text-[#1E5E3A] hover:bg-[#EBF7EE] font-bold rounded-lg cursor-pointer flex items-center gap-1"
+                      >
+                        <Share2 className="h-3 w-3" />
+                        <span>WhatsApp</span>
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEliminarPedido(p.id, p.codigo)}
+                        className="h-7 w-7 p-0 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer"
+                        title="Eliminar pedido"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Paginación Unificada en el Footer del Master Card */}
+        {itemsPerPage !== 9999 && totalPages > 1 && (
+          <div className="p-3.5 sm:p-4 bg-[#FAF8F5] border-t border-[#E2D9CC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <span className="text-[#75695D] font-medium">
+              Mostrando{' '}
+              <strong className="text-[#241C15]">{(currentPage - 1) * itemsPerPage + 1}</strong> a{' '}
+              <strong className="text-[#241C15]">
+                {Math.min(currentPage * itemsPerPage, sortedPedidos.length)}
+              </strong>{' '}
+              de <strong className="text-[#241C15]">{sortedPedidos.length}</strong> pedidos
+            </span>
+
+            <div className="flex items-center gap-1.5">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="h-8 px-2.5 rounded-xl border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] font-bold text-xs disabled:opacity-40 cursor-pointer flex items-center gap-1"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                <span>Anterior</span>
+              </Button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 rounded-xl text-xs font-bold font-mono transition-all cursor-pointer ${
+                    currentPage === page
+                      ? 'bg-[#241C15] text-white shadow-xs'
+                      : 'bg-[#FFFFFF] text-[#75695D] hover:bg-[#EAE4DC] border border-[#E2D9CC]'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                className="h-8 px-2.5 rounded-xl border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] font-bold text-xs disabled:opacity-40 cursor-pointer flex items-center gap-1"
+              >
+                <span>Siguiente</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         )}
       </div>

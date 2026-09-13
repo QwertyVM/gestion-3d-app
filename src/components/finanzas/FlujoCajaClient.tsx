@@ -511,81 +511,66 @@ export function FlujoCajaClient({
       </div>
 
       {/* KPI Financial Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {/* Saldo Neto en Caja */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xs relative overflow-hidden rounded-2xl p-3.5">
           <div className={`absolute top-0 left-0 right-0 h-1 ${saldoNetoCaja >= 0 ? 'bg-[#1E5E3A]' : 'bg-[#A34335]'}`} />
-          <CardHeader className="pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#75695D]">
-              Saldo Neto en Caja
-            </span>
-            <div className={`text-2xl font-extrabold font-mono mt-1 ${saldoNetoCaja >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
-              {formatCurrency(saldoNetoCaja)}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <span className="text-xs text-[#75695D]">
-              Ingresos Cobrados - Egresos Totales
-            </span>
-          </CardContent>
-        </Card>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#75695D] flex items-center justify-between">
+            <span>Saldo Neto en Caja</span>
+            <Wallet className="h-3.5 w-3.5 text-[#A36F4C]" />
+          </span>
+          <div className={`text-xl sm:text-2xl font-extrabold font-mono mt-1 ${saldoNetoCaja >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
+            {formatCurrency(saldoNetoCaja)}
+          </div>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
+            Cobrado - Egresos
+          </span>
+        </div>
 
         {/* Ingresos Cobrados */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xs relative overflow-hidden rounded-2xl p-3.5">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <CardHeader className="pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-1.5">
-              <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
-              Total Ingresos
-            </span>
-            <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-              {formatCurrency(totalIngresosTotales)}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <span className="text-xs text-[#75695D]">
-              Ventas: {formatCurrency(totalIngresosVentas)} • Servicios: {formatCurrency(totalIngresosDirectos)}
-            </span>
-          </CardContent>
-        </Card>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
+            <span>Total Ingresos</span>
+            <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
+          </span>
+          <div className="text-xl sm:text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
+            {formatCurrency(totalIngresosTotales)}
+          </div>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
+            Ventas + Directos
+          </span>
+        </div>
 
         {/* Egresos Totales */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xs relative overflow-hidden rounded-2xl p-3.5">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#A36F4C]" />
-          <CardHeader className="pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-              <ArrowDownRight className="h-3.5 w-3.5 stroke-[2.5]" />
-              Total Egresos / Gastos
-            </span>
-            <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-              {formatCurrency(totalEgresosTotales)}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <span className="text-xs text-[#75695D]">
-              Maquinaria: {formatCurrency(totalEgresosMaquinaria)} • Insumos: {formatCurrency(totalEgresosInsumos)}
-            </span>
-          </CardContent>
-        </Card>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
+            <span>Total Egresos / Gastos</span>
+            <ArrowDownRight className="h-3.5 w-3.5 stroke-[2.5]" />
+          </span>
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+            {formatCurrency(totalEgresosTotales)}
+          </div>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
+            Maquinaria + Insumos
+          </span>
+        </div>
 
         {/* Cuentas por Cobrar */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xs relative overflow-hidden rounded-2xl p-3.5">
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#8C6D1F]" />
-          <CardHeader className="pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5 stroke-[2.5]" />
-              Cuentas por Cobrar
-            </span>
-            <div className="text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
-              {formatCurrency(totalSaldosPorCobrar)}
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <span className="text-xs text-[#75695D]">
-              Saldos pendientes de clientes
-            </span>
-          </CardContent>
-        </Card>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center justify-between">
+            <span>Cuentas por Cobrar</span>
+            <Clock className="h-3.5 w-3.5 stroke-[2.5]" />
+          </span>
+          <div className="text-xl sm:text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
+            {formatCurrency(totalSaldosPorCobrar)}
+          </div>
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
+            Saldos pendientes
+          </span>
+        </div>
       </div>
 
       {/* ========================================================================= */}

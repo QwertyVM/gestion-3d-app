@@ -236,118 +236,118 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
       </div>
 
       {/* KPI Cards Light Mode (Dinámicos según filtro) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
-            <Tag className="h-4 w-4" />
-            {categoriaFilter === 'TODOS' && !search ? 'Tags Creados' : 'Tags Filtrados'}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
+            <span>{categoriaFilter === 'TODOS' && !search ? 'Tags Creados' : 'Tags Filtrados'}</span>
+            <Tag className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {totalTagsFiltrados} <span className="text-sm font-normal text-[#75695D]">{totalTagsFiltrados === 1 ? 'etiqueta' : 'etiquetas'}</span>
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+            {totalTagsFiltrados} <span className="text-xs font-normal text-[#75695D]">{totalTagsFiltrados === 1 ? 'etiqueta' : 'etiquetas'}</span>
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">
-            {categoriaFilter === 'TODOS' && !search ? 'Clasificación activa del taller' : 'Según filtros aplicados'}
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
+            {categoriaFilter === 'TODOS' && !search ? 'Clasificación activa' : 'Según filtros'}
           </span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#633E20] flex items-center gap-2">
-            <ShoppingBag className="h-4 w-4" />
-            Insumos Asignados
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
+            <span>Insumos Asignados</span>
+            <ShoppingBag className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {totalItemsFiltrados} <span className="text-sm font-normal text-[#75695D]">{totalItemsFiltrados === 1 ? 'compra' : 'compras'}</span>
+          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
+            {totalItemsFiltrados} <span className="text-xs font-normal text-[#75695D]">{totalItemsFiltrados === 1 ? 'compra' : 'compras'}</span>
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
             {categoriaFilter === 'TODOS' && !search ? 'Compras etiquetadas' : 'En tags seleccionados'}
           </span>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            Gasto Total Etiquetado
+        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
+            <span>Gasto Total Etiquetado</span>
+            <DollarSign className="h-3.5 w-3.5" />
           </span>
-          <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
             {formatCurrency(totalGastoFiltrado)}
           </div>
-          <span className="text-xs text-[#75695D] mt-0.5 block">
+          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
             {categoriaFilter === 'TODOS' && !search ? 'Acumulado en compras' : 'Total en filtro activo'}
           </span>
         </div>
       </div>
 
-      {/* 1-Row Compact Filter Bar */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Lado Izquierdo: Campo de Búsqueda */}
-        <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
-          <Input 
-            placeholder="Buscar tag o descripción..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
-          />
-          {search && (
-            <button 
-              onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
+      {/* Main Container: Single Unified Master Card (Toolbar + Table) */}
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-xs rounded-2xl">
+        {/* Unified Integrated Toolbar */}
+        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col md:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
+          {/* Lado Izquierdo: Campo de Búsqueda */}
+          <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+            <Input 
+              placeholder="Buscar tag o descripción..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
+            />
+            {search && (
+              <button 
+                onClick={() => setSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Lado Derecho: Segmented Control Tabs */}
+          <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
+            <button
+              onClick={() => { setCategoriaFilter('TODOS'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                categoriaFilter === 'TODOS'
+                  ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+              }`}
             >
-              <X className="h-3.5 w-3.5" />
+              Todos ({items.length})
             </button>
-          )}
+            <button
+              onClick={() => { setCategoriaFilter('INSUMO'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                categoriaFilter === 'INSUMO'
+                  ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+              }`}
+            >
+              <ShoppingBag className="h-3 w-3" />
+              Insumos
+            </button>
+            <button
+              onClick={() => { setCategoriaFilter('ACTIVO_FIJO'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                categoriaFilter === 'ACTIVO_FIJO'
+                  ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+              }`}
+            >
+              <Wrench className="h-3 w-3" />
+              Activos Fijos
+            </button>
+            <button
+              onClick={() => { setCategoriaFilter('SERVICIO'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                categoriaFilter === 'SERVICIO'
+                  ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
+                  : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+              }`}
+            >
+              <Truck className="h-3 w-3" />
+              Servicios & Op.
+            </button>
+          </div>
         </div>
 
-        {/* Lado Derecho: Segmented Control Tabs */}
-        <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
-          <button
-            onClick={() => setCategoriaFilter('TODOS')}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
-              categoriaFilter === 'TODOS'
-                ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-            }`}
-          >
-            Todos ({items.length})
-          </button>
-          <button
-            onClick={() => setCategoriaFilter('INSUMO')}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              categoriaFilter === 'INSUMO'
-                ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-            }`}
-          >
-            <ShoppingBag className="h-3 w-3" />
-            Insumos
-          </button>
-          <button
-            onClick={() => setCategoriaFilter('ACTIVO_FIJO')}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              categoriaFilter === 'ACTIVO_FIJO'
-                ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-            }`}
-          >
-            <Wrench className="h-3 w-3" />
-            Maquinaria
-          </button>
-          <button
-            onClick={() => setCategoriaFilter('SERVICIO')}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              categoriaFilter === 'SERVICIO'
-                ? 'bg-[#A36F4C] text-white font-medium shadow-sm'
-                : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
-            }`}
-          >
-            <Truck className="h-3 w-3" />
-            Servicios & Op.
-          </button>
-        </div>
-      </div>
-
-      {/* Tags Table & Mobile Cards */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
         {/* Mobile View: Cards */}
         <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
           {paginatedTags.length === 0 ? (
