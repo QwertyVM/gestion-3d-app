@@ -269,57 +269,110 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table className="w-full">
-            <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
-              <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-                <TableHead className="text-[#241C15] font-bold px-4 py-3">Concepto</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3">Persona</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3">Categoría</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Cant.</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">C. Unitario</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Total</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedInversiones.map((inv) => (
-                <TableRow key={inv.id} className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors">
-                  <TableCell className="font-bold text-[#241C15] px-4 py-3">
-                    {inv.itemConcepto}
-                    {inv.especificacionColor && <span className="block text-xs text-[#75695D] font-normal">{inv.especificacionColor}</span>}
-                    {inv.presentacion && <span className="block text-xs text-[#75695D] font-normal">{inv.presentacion}</span>}
-                    {inv.numeroCuotas && <span className="block text-xs text-[#A36F4C] font-bold">{inv.numeroCuotas} Cuotas de {formatCurrency(Number(inv.montoCuota))}</span>}
-                  </TableCell>
-                  <TableCell className="px-3 py-3 text-[#241C15]">
-                    <span className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-full bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[10px] font-bold text-[#633E20] uppercase">
+          {/* Mobile Cards View (< md) */}
+          <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+            {paginatedInversiones.length === 0 ? (
+              <div className="p-8 text-center text-xs text-[#75695D]">
+                No hay inversiones registradas.
+              </div>
+            ) : (
+              paginatedInversiones.map((inv) => (
+                <div key={inv.id} className="p-4 space-y-2.5 hover:bg-[#FDFBF7] transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <span className="font-bold text-sm text-[#241C15] block truncate">{inv.itemConcepto}</span>
+                      {inv.especificacionColor && <span className="block text-xs text-[#75695D]">{inv.especificacionColor}</span>}
+                      {inv.presentacion && <span className="block text-xs text-[#75695D]">{inv.presentacion}</span>}
+                      {inv.numeroCuotas && <span className="block text-xs text-[#A36F4C] font-bold">{inv.numeroCuotas} Cuotas de {formatCurrency(Number(inv.montoCuota))}</span>}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Badge variant="outline" className={
+                        inv.categoria === 'ACTIVO_FIJO' ? 'text-[#8C6D1F] border-[#E8D49B] bg-[#FDF6E2] font-bold text-[10px]' :
+                        inv.categoria === 'INSUMO' ? 'text-[#1E5E3A] border-[#B4E3C0] bg-[#EBF7EE] font-bold text-[10px]' :
+                        inv.categoria === 'APORTE_CAPITAL' ? 'text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] font-bold text-[10px]' :
+                        'text-[#75695D] border-[#E2D9CC] bg-[#F4EFEA] font-medium text-[10px]'
+                      }>
+                        {inv.categoria.replace('_', ' ')}
+                      </Badge>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(inv.id)} className="h-7 w-7 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/50 text-xs">
+                    <span className="flex items-center gap-1.5 text-[#75695D]">
+                      <div className="w-5 h-5 rounded-full bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[9px] font-bold text-[#633E20] uppercase">
                         {inv.persona?.charAt(0) || '?'}
                       </div>
                       {inv.persona || '-'}
                     </span>
-                  </TableCell>
-                  <TableCell className="px-3 py-3">
-                    <Badge variant="outline" className={
-                      inv.categoria === 'ACTIVO_FIJO' ? 'text-[#8C6D1F] border-[#E8D49B] bg-[#FDF6E2] font-bold' :
-                      inv.categoria === 'INSUMO' ? 'text-[#1E5E3A] border-[#B4E3C0] bg-[#EBF7EE] font-bold' :
-                      inv.categoria === 'APORTE_CAPITAL' ? 'text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] font-bold' :
-                      'text-[#75695D] border-[#E2D9CC] bg-[#F4EFEA] font-medium'
-                    }>
-                      {inv.categoria.replace('_', ' ')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-[#241C15] font-mono px-3 py-3">{inv.cantidad}</TableCell>
-                  <TableCell className="text-right text-[#75695D] font-mono px-3 py-3">{formatCurrency(Number(inv.costoUnitario))}</TableCell>
-                  <TableCell className="text-right font-mono font-extrabold text-[#1E5E3A] px-3 py-3">{formatCurrency(Number(inv.costoTotal))}</TableCell>
-                  <TableCell className="text-center px-3 py-3">
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(inv.id)} className="h-8 w-8 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-xl cursor-pointer">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+
+                    <div className="text-right">
+                      <span className="font-mono text-[#75695D] mr-2">x{inv.cantidad}</span>
+                      <span className="font-mono font-extrabold text-sm text-[#1E5E3A]">{formatCurrency(Number(inv.costoTotal))}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table View (>= md) */}
+          <div className="hidden md:block overflow-x-auto">
+            <Table className="w-full">
+              <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+                <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+                  <TableHead className="text-[#241C15] font-bold px-4 py-3">Concepto</TableHead>
+                  <TableHead className="text-[#241C15] font-bold px-3 py-3">Persona</TableHead>
+                  <TableHead className="text-[#241C15] font-bold px-3 py-3">Categoría</TableHead>
+                  <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Cant.</TableHead>
+                  <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">C. Unitario</TableHead>
+                  <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Total</TableHead>
+                  <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Acciones</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paginatedInversiones.map((inv) => (
+                  <TableRow key={inv.id} className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors">
+                    <TableCell className="font-bold text-[#241C15] px-4 py-3">
+                      {inv.itemConcepto}
+                      {inv.especificacionColor && <span className="block text-xs text-[#75695D] font-normal">{inv.especificacionColor}</span>}
+                      {inv.presentacion && <span className="block text-xs text-[#75695D] font-normal">{inv.presentacion}</span>}
+                      {inv.numeroCuotas && <span className="block text-xs text-[#A36F4C] font-bold">{inv.numeroCuotas} Cuotas de {formatCurrency(Number(inv.montoCuota))}</span>}
+                    </TableCell>
+                    <TableCell className="px-3 py-3 text-[#241C15]">
+                      <span className="flex items-center gap-1.5">
+                        <div className="w-6 h-6 rounded-full bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[10px] font-bold text-[#633E20] uppercase">
+                          {inv.persona?.charAt(0) || '?'}
+                        </div>
+                        {inv.persona || '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="px-3 py-3">
+                      <Badge variant="outline" className={
+                        inv.categoria === 'ACTIVO_FIJO' ? 'text-[#8C6D1F] border-[#E8D49B] bg-[#FDF6E2] font-bold' :
+                        inv.categoria === 'INSUMO' ? 'text-[#1E5E3A] border-[#B4E3C0] bg-[#EBF7EE] font-bold' :
+                        inv.categoria === 'APORTE_CAPITAL' ? 'text-[#633E20] border-[#D4BEA7] bg-[#EFE5D8] font-bold' :
+                        'text-[#75695D] border-[#E2D9CC] bg-[#F4EFEA] font-medium'
+                      }>
+                        {inv.categoria.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right text-[#241C15] font-mono px-3 py-3">{inv.cantidad}</TableCell>
+                    <TableCell className="text-right text-[#75695D] font-mono px-3 py-3">{formatCurrency(Number(inv.costoUnitario))}</TableCell>
+                    <TableCell className="text-right font-mono font-extrabold text-[#1E5E3A] px-3 py-3">{formatCurrency(Number(inv.costoTotal))}</TableCell>
+                    <TableCell className="text-center px-3 py-3">
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(inv.id)} className="h-8 w-8 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-xl cursor-pointer">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Paginación */}
           {totalPages > 1 && (

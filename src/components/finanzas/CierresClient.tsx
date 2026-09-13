@@ -165,36 +165,36 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
-                <FileCheck className="h-6 w-6 stroke-[2.5]" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-2.5 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm shrink-0">
+                <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
               </div>
-              Cierres Mensuales & Arqueo de Caja
+              <span>Cierres Mensuales & Arqueo</span>
             </h1>
             <Badge variant="outline" className="bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] font-bold text-xs">
               PRUEBA
             </Badge>
           </div>
-          <p className="text-sm text-[#75695D] mt-1">
+          <p className="text-xs sm:text-sm text-[#75695D] mt-1">
             Auditoría mensual de caja, conciliación bancaria y congelación oficial de resultados por período.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href="/finanzas/proyecciones">
-            <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+          <Link href="/finanzas/proyecciones" className="flex-1 sm:flex-initial">
+            <Button variant="outline" className="w-full sm:w-auto border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
               <Landmark className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
-              Tesorería & Asignación
+              Tesorería
             </Button>
           </Link>
 
           <Button 
             onClick={handleOpenWizard}
-            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
+            className="flex-1 sm:flex-initial bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
-            Nuevo Cierre de Mes (Prueba)
+            Nuevo Cierre
           </Button>
         </div>
       </div>

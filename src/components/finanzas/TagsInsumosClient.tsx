@@ -194,32 +194,32 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Top Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-1">
+        <div>
           <div className="flex items-center gap-2">
             <Link 
               href="/finanzas/egresos" 
-              className="p-1.5 rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF] transition-colors border border-transparent hover:border-[#E2D9CC] shadow-sm"
+              className="p-1.5 rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF] transition-colors border border-transparent hover:border-[#E2D9CC] shadow-sm shrink-0"
               title="Volver a Egresos"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C]">
-                <Tag className="h-6 w-6 stroke-[2.5]" />
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-2 sm:gap-3">
+              <div className="p-2 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shrink-0">
+                <Tag className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
               </div>
-              Gestión de Tags & Subcategorías
+              <span>Gestión de Tags & Subcategorías</span>
             </h1>
           </div>
-          <p className="text-sm text-[#75695D]">
+          <p className="text-xs sm:text-sm text-[#75695D] mt-1">
             Asocia cada tag a una categoría principal para filtrarlos automáticamente al registrar egresos.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href="/finanzas/egresos">
-            <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <Link href="/finanzas/egresos" className="flex-1 sm:flex-initial">
+            <Button variant="outline" className="w-full border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
               <ShoppingBag className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
               Ver Egresos
             </Button>
@@ -227,7 +227,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
           <Button 
             onClick={handleOpenCreate}
-            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
+            className="flex-1 sm:flex-initial bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
           >
             <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
             Nuevo Tag
@@ -236,7 +236,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
       </div>
 
       {/* KPI Cards Light Mode (Dinámicos según filtro) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm">
           <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-2">
             <Tag className="h-4 w-4" />

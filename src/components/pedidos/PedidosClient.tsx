@@ -764,58 +764,58 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       {/* ========================================================================= */}
       {/* 2. KPIS EJECUTIVOS DE PEDIDOS                                             */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
         {/* KPI 1: Total Pedidos */}
         <Card className="rounded-2xl border-[#E2D9CC] bg-[#FFFFFF] shadow-xs hover:border-[#D4BEA7] transition-all">
-          <CardContent className="p-4">
+          <CardContent className="p-3.5 sm:p-4">
             <div className="flex items-center justify-between text-[#75695D] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Total Pedidos</span>
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Total Pedidos</span>
               <Boxes className="h-4 w-4 text-[#A36F4C]" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-mono text-2xl font-black text-[#241C15]">{kpis.totalPedidos}</span>
-              <span className="text-xs text-[#75695D]">({kpis.totalPiezas} piezas 3D)</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+              <span className="font-mono text-xl sm:text-2xl font-black text-[#241C15]">{kpis.totalPedidos}</span>
+              <span className="text-[11px] sm:text-xs text-[#75695D]">({kpis.totalPiezas} piezas)</span>
             </div>
           </CardContent>
         </Card>
 
         {/* KPI 2: En Producción */}
         <Card className="rounded-2xl border-[#BEE3F8] bg-[#EBF3FB]/70 shadow-xs">
-          <CardContent className="p-4">
+          <CardContent className="p-3.5 sm:p-4">
             <div className="flex items-center justify-between text-[#2B6CB0] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">En Producción</span>
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">En Impresión</span>
               <Layers className="h-4 w-4" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-mono text-2xl font-black text-[#2B6CB0]">{kpis.enProduccion}</span>
-              <span className="text-xs text-[#2B6CB0]/80">en impresora</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+              <span className="font-mono text-xl sm:text-2xl font-black text-[#2B6CB0]">{kpis.enProduccion}</span>
+              <span className="text-[11px] sm:text-xs text-[#2B6CB0]/80">en taller</span>
             </div>
           </CardContent>
         </Card>
 
         {/* KPI 3: Por Entregar / Listos */}
         <Card className="rounded-2xl border-[#E9D8FD] bg-[#FAF0F8]/70 shadow-xs">
-          <CardContent className="p-4">
+          <CardContent className="p-3.5 sm:p-4">
             <div className="flex items-center justify-between text-[#805AD5] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Por Entregar</span>
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Por Entregar</span>
               <Package className="h-4 w-4" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-mono text-2xl font-black text-[#805AD5]">{kpis.listos}</span>
-              <span className="text-xs text-[#805AD5]/80">listos en taller</span>
+            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
+              <span className="font-mono text-xl sm:text-2xl font-black text-[#805AD5]">{kpis.listos}</span>
+              <span className="text-[11px] sm:text-xs text-[#805AD5]/80">listos</span>
             </div>
           </CardContent>
         </Card>
 
         {/* KPI 4: Saldo por Cobrar (Cartera) */}
         <Card className="rounded-2xl border-[#E8D49B] bg-[#FDF6E2]/70 shadow-xs">
-          <CardContent className="p-4">
+          <CardContent className="p-3.5 sm:p-4">
             <div className="flex items-center justify-between text-[#8C6D1F] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Por Cobrar</span>
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Por Cobrar</span>
               <DollarSign className="h-4 w-4" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-mono text-xl font-black text-[#8C6D1F]">
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="font-mono text-lg sm:text-xl font-black text-[#8C6D1F] truncate">
                 {formatCurrency(kpis.saldoPorCobrar)}
               </span>
             </div>
@@ -823,14 +823,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         </Card>
 
         {/* KPI 5: Total Recaudado / Facturado */}
-        <Card className="rounded-2xl border-[#B4E3C0] bg-[#EBF7EE]/70 shadow-xs col-span-2 lg:col-span-1">
-          <CardContent className="p-4">
+        <Card className="rounded-2xl border-[#B4E3C0] bg-[#EBF7EE]/70 shadow-xs col-span-2 sm:col-span-2 lg:col-span-1">
+          <CardContent className="p-3.5 sm:p-4">
             <div className="flex items-center justify-between text-[#1E5E3A] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider">Cobrado en Caja</span>
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Cobrado en Caja</span>
               <CheckCircle2 className="h-4 w-4" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="font-mono text-xl font-black text-[#1E5E3A]">
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="font-mono text-lg sm:text-xl font-black text-[#1E5E3A] truncate">
                 {formatCurrency(kpis.totalCobrado)}
               </span>
             </div>

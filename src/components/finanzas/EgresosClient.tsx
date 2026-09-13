@@ -661,9 +661,131 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
         </div>
       </div>
 
-      {/* Main Table Light Mode */}
+      {/* Main Table / Mobile Cards Light Mode */}
       <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-        <div className="overflow-x-auto scrollbar-thin">
+        {/* Mobile View (< md): Cards */}
+        <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+          {filteredEgresos.length === 0 ? (
+            <div className="p-8 text-center text-[#75695D] text-xs">
+              No se encontraron egresos o insumos con los filtros actuales.
+            </div>
+          ) : (
+            paginatedEgresos.map((eg) => {
+              const globalIndex = filteredEgresos.findIndex(item => item.id === eg.id)
+              const prevNeighbor = globalIndex > 0 ? filteredEgresos[globalIndex - 1] : null
+              const nextNeighbor = globalIndex < filteredEgresos.length - 1 ? filteredEgresos[globalIndex + 1] : null
+
+              const egDay = eg.createdAt.split('T')[0]
+              const canMoveUp = !!prevNeighbor && prevNeighbor.createdAt.split('T')[0] === egDay
+              const canMoveDown = !!nextNeighbor && nextNeighbor.createdAt.split('T')[0] === egDay
+
+              return (
+                <div 
+                  key={eg.id} 
+                  onClick={() => handleOpenEdit(eg)}
+                  className="p-3.5 space-y-2.5 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors cursor-pointer"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-bold text-sm text-[#241C15] block truncate">{eg.itemConcepto}</span>
+                      <span className="text-[11px] text-[#75695D] font-mono block mt-0.5">
+                        {formatDate(eg.createdAt)} • {eg.persona}
+                      </span>
+                    </div>
+
+                    <span className="text-sm font-mono font-extrabold text-[#A34335] flex-shrink-0">
+                      -{formatCurrency(eg.costoTotal)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {eg.categoria === 'ACTIVO_FIJO' ? (
+                        <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-semibold">
+                          Maquinaria
+                        </Badge>
+                      ) : eg.categoria === 'INSUMO' ? (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-semibold">
+                          Insumo
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-[10px] font-semibold">
+                          Servicio
+                        </Badge>
+                      )}
+
+                      {eg.subcategoria && renderTagBadge(eg.subcategoria)}
+                    </div>
+
+                    <div className="text-right text-[11px] text-[#75695D] font-mono">
+                      {eg.cantidad > 1 && <span>{eg.cantidad}x </span>}
+                      <span>{formatCurrency(eg.costoUnitario)}</span>
+                      {eg.costoEnvio && eg.costoEnvio > 0 ? (
+                        <span className="text-[10px] text-[#75695D]"> (+{formatCurrency(eg.costoEnvio)} flete)</span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* Acciones Móviles */}
+                  <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/40 text-xs" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={!canMoveUp}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (prevNeighbor) handleMoveEgreso(eg.id, prevNeighbor.id, 'up')
+                        }}
+                        className="h-6 w-6 text-[#75695D] hover:text-[#241C15] disabled:opacity-20 cursor-pointer"
+                        title="Subir posición"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={!canMoveDown}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (nextNeighbor) handleMoveEgreso(eg.id, nextNeighbor.id, 'down')
+                        }}
+                        className="h-6 w-6 text-[#75695D] hover:text-[#241C15] disabled:opacity-20 cursor-pointer"
+                        title="Bajar posición"
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => handleOpenEdit(eg, e)}
+                        className="h-7 px-2 text-[11px] text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
+                        className="h-7 px-2 text-[11px] text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* Desktop View (>= md): Table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <Table className="w-full min-w-[700px]">
             <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent">

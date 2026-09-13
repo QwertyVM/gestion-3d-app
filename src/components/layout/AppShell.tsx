@@ -21,6 +21,7 @@ export function AppShell({ children }: AppShellProps) {
   // Get current page name for mobile topbar
   const getPageTitle = () => {
     if (pathname === '/') return 'Dashboard General'
+    if (pathname.startsWith('/taller')) return 'Taller de Producción'
     if (pathname.startsWith('/pedidos')) return 'Gestión de Pedidos'
     if (pathname.startsWith('/historico-mensual')) return 'Histórico Mensual'
     if (pathname.startsWith('/ventas')) return 'Ventas y Pedidos'
@@ -68,12 +69,12 @@ export function AppShell({ children }: AppShellProps) {
       {/* ========================================================================= */}
       <div className="flex-1 flex flex-col h-full min-h-0 min-w-0 overflow-hidden">
         {/* Mobile / Tablet Topbar (< lg) */}
-        <header className="flex lg:hidden h-14 items-center justify-between px-4 border-b border-[#E2D9CC] bg-[#FFFFFF] shadow-2xs flex-shrink-0 z-20">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <header className="flex lg:hidden h-14 items-center justify-between px-3.5 sm:px-4 border-b border-[#E2D9CC] bg-[#FFFFFF] shadow-2xs flex-shrink-0 z-20">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="p-2 -ml-1 rounded-xl text-[#241C15] hover:bg-[#F4EFEA] border border-[#E2D9CC] transition-colors cursor-pointer flex items-center justify-center shadow-2xs"
+              className="p-2 -ml-1 rounded-xl text-[#241C15] hover:bg-[#F4EFEA] border border-[#E2D9CC] transition-colors cursor-pointer flex items-center justify-center shadow-2xs shrink-0"
               aria-label="Abrir Menú Lateral"
             >
               <Menu className="h-5 w-5 text-[#241C15]" />
@@ -83,7 +84,7 @@ export function AppShell({ children }: AppShellProps) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <div className="h-8 w-8 rounded-xl bg-[#A36F4C] text-[#FFECD4] flex items-center justify-center font-bold text-xs shadow-2xs">
               N
             </div>
@@ -91,7 +92,7 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         {/* Scrollable Main Content (Strictly Mobile-First & Overflow protected) */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F8F6F2] p-4 sm:p-6 lg:p-8 pb-24 sm:pb-20 md:pb-16 text-[#241C15] overscroll-y-contain">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F8F6F2] p-3 sm:p-5 lg:p-8 pb-20 sm:pb-16 text-[#241C15] overscroll-y-contain">
           <div className="mx-auto max-w-7xl w-full">
             {children}
           </div>

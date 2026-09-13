@@ -490,7 +490,171 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         )}
 
         <CardContent className="p-0">
-          <div className="w-full overflow-x-auto">
+          {/* Mobile View (< md): Touch-optimized Cards */}
+          <div className="block md:hidden divide-y divide-[#E2D9CC]/60">
+            {piezasLista.map((pieza, idx) => {
+              const tiempoTxt = getTiempoTranscurrido(pieza.fechaSolicitud)
+              const esHoy = tiempoTxt === 'Hoy'
+              const esUrgente = pieza.diaEntregaPrometida && (() => {
+                try {
+                  const d = new Date(pieza.diaEntregaPrometida)
+                  const hoy = new Date()
+                  return !isNaN(d.getTime()) && (d.getTime() - hoy.getTime()) < 2 * 24 * 60 * 60 * 1000
+                } catch { return false }
+              })()
+
+              return (
+                <div 
+                  key={pieza.id}
+                  className={`p-3.5 sm:p-4 space-y-3 transition-colors ${
+                    pieza.estado === 'EN_PRODUCCION'
+                      ? 'bg-[#DBEAFE]/15'
+                      : pieza.estado === 'LISTO_ENTREGA'
+                      ? 'bg-[#EBF7EE]/15'
+                      : esUrgente
+                      ? 'bg-[#FEF2F2]/30'
+                      : 'hover:bg-[#FAF8F5]/60'
+                  }`}
+                >
+                  {/* Top: Posición, Modelo, Cantidad y Estado */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs font-mono font-bold shrink-0 ${
+                        idx < 3 && orden === 'FIFO_ANTIGUOS'
+                          ? 'bg-[#A36F4C] text-white'
+                          : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D]'
+                      }`}>
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <span className="font-black text-sm text-[#241C15] block truncate">
+                          {pieza.nombreModelo}
+                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <Badge variant="outline" className="text-[10px] font-bold border-[#E2D9CC] text-[#75695D] bg-[#FAF8F5] py-0">
+                            {pieza.lineaCategoria}
+                          </Badge>
+                          {pieza.personalizacion && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-[#854D0E] bg-[#FEF9C3]/70 px-1.5 py-0.2 rounded border border-[#FDE047] font-semibold truncate">
+                              <Sparkles className="w-2.5 h-2.5 text-[#D97706] shrink-0" />
+                              {pieza.personalizacion}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] font-mono font-black text-sm text-[#241C15]">
+                        x{pieza.cantidad}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Middle: Color, Material, Peso, Cliente, Pedido */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70 space-y-1">
+                      <span className="text-[10px] text-[#75695D] block uppercase font-bold">Material & Color</span>
+                      <div className="flex items-center gap-1.5">
+                        <span 
+                          className="w-3 h-3 rounded-full border border-black/20 shrink-0 shadow-2xs" 
+                          style={{ backgroundColor: pieza.codigoHex }} 
+                        />
+                        <span className="font-bold text-[#241C15] truncate">{pieza.nombreColor}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#75695D] block">
+                        {pieza.pesoGramosTotal}g total ({pieza.tipoMaterial || 'PLA'})
+                      </span>
+                    </div>
+
+                    <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70 space-y-1">
+                      <span className="text-[10px] text-[#75695D] block uppercase font-bold">Cliente & Entrega</span>
+                      <span className="font-bold text-[#241C15] block truncate">{pieza.cliente}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono text-[10px] font-bold text-[#A36F4C]">{pieza.codigoRef}</span>
+                        {getEntregaBadge(pieza.diaEntregaPrometida)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom: Estado Badge + Botón de Acción Táctil */}
+                  <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/50">
+                    <div>
+                      {pieza.estado === 'PENDIENTE' && (
+                        <Badge className="bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] font-bold text-xs px-2 py-0.5">
+                          ⏳ Pendiente
+                        </Badge>
+                      )}
+                      {pieza.estado === 'EN_PRODUCCION' && (
+                        <Badge className="bg-[#DBEAFE] text-[#1D4ED8] border-[#93C5FD] font-bold text-xs px-2 py-0.5 animate-pulse">
+                          🖨️ En Impresión
+                        </Badge>
+                      )}
+                      {pieza.estado === 'LISTO_ENTREGA' && (
+                        <Badge className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] font-bold text-xs px-2 py-0.5">
+                          ✅ Listo
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div>
+                      {pieza.estado === 'PENDIENTE' && (
+                        <Button
+                          size="sm"
+                          disabled={loadingPieceId === pieza.id}
+                          onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_PRODUCCION')}
+                          className="h-8 px-3.5 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold gap-1.5 cursor-pointer shadow-xs active:scale-[0.98]"
+                        >
+                          {loadingPieceId === pieza.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                          )}
+                          <span>{loadingPieceId === pieza.id ? 'Guardando...' : 'Iniciar Impresión'}</span>
+                        </Button>
+                      )}
+
+                      {pieza.estado === 'EN_PRODUCCION' && (
+                        <Button
+                          size="sm"
+                          disabled={loadingPieceId === pieza.id}
+                          onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'LISTO_ENTREGA')}
+                          className="h-8 px-3.5 rounded-xl bg-[#1E5E3A] hover:bg-[#16472C] text-white text-xs font-bold gap-1.5 cursor-pointer shadow-xs active:scale-[0.98]"
+                        >
+                          {loadingPieceId === pieza.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>{loadingPieceId === pieza.id ? 'Guardando...' : 'Marcar Listo'}</span>
+                        </Button>
+                      )}
+
+                      {pieza.estado === 'LISTO_ENTREGA' && (
+                        <Button
+                          size="sm"
+                          disabled={loadingPieceId === pieza.id}
+                          onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'PENDIENTE')}
+                          variant="outline"
+                          className="h-8 px-3 rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] text-xs font-semibold cursor-pointer active:scale-[0.98]"
+                        >
+                          {loadingPieceId === pieza.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#A36F4C]" />
+                          ) : (
+                            <span>↩️</span>
+                          )}
+                          <span>{loadingPieceId === pieza.id ? 'Guardando...' : 'Reabrir'}</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop Table View (>= md) */}
+          <div className="hidden md:block w-full overflow-x-auto">
             <Table className="w-full">
               <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
                 <TableRow className="hover:bg-transparent border-b border-[#E2D9CC]">

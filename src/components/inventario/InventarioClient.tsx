@@ -949,7 +949,218 @@ export function InventarioClient({
           /* TABLA DE INVENTARIO                                                      */
           /* ========================================================================= */
           <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
+            {/* Mobile View (< md): Filament Cards */}
+            <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+              {filteredGridItems.map((item, idx) => {
+                const isDescatalogado = item.estado === 'DESCATALOGADO'
+                const isDisp = item.estado === 'DISPONIBLE'
+                const rollos = item.rollos || 1
+                const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
+                const gramos = isDisp ? (item.stockGramos ?? pesoInicial) : (item.stockGramos || 0)
+                const pct = isDisp ? Math.min(100, Math.round((gramos / pesoInicial) * 100)) : 0
+                const esCritico = isDisp && (gramos < 300 || Boolean(item.alertaCritica))
+
+                return (
+                  <div 
+                    key={item.id}
+                    className={`p-4 space-y-3 transition-colors ${
+                      isDescatalogado 
+                        ? 'bg-[#F8F6F2]/60 opacity-80' 
+                        : esCritico
+                        ? 'bg-[#FEF9C3]/20'
+                        : 'hover:bg-[#FAF8F5]/60'
+                    }`}
+                  >
+                    {/* Top: Swatch, Name, Notes & Status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditColor(item)}
+                          className="relative h-8 w-8 rounded-full border border-black/15 shadow-2xs shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform flex items-center justify-center"
+                          style={{ backgroundColor: item.codigoHex }}
+                          title={`Editar "${item.nombreColor}"`}
+                        >
+                          <span className="h-2 w-2 rounded-full bg-white/40 border border-black/10" />
+                        </button>
+
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditColor(item)}
+                            className="font-black text-sm text-[#241C15] truncate hover:text-[#A36F4C] hover:underline cursor-pointer block text-left"
+                          >
+                            {item.nombreColor}
+                          </button>
+                          {item.nota && (
+                            <span className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-1.5 py-0.2 rounded border border-[#FDE047]/60 inline-block truncate max-w-[220px] mt-0.5">
+                              {item.nota}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0">
+                        {isDescatalogado ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC] uppercase tracking-wider inline-flex items-center gap-1">
+                            <Archive className="h-2.5 w-2.5 text-[#75695D]" />
+                            Descatalogado
+                          </span>
+                        ) : esCritico ? (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            Crítico
+                          </span>
+                        ) : isDisp ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0] uppercase tracking-wider inline-flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
+                            Disponible
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
+                            <ShoppingCart className="h-2.5 w-2.5" />
+                            Restock
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stock Grams & Progress */}
+                    {isDisp && (
+                      <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC]/70 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-[#241C15] font-mono">
+                            {gramos}g <span className="text-[11px] font-normal text-[#75695D]">({pct}% de {pesoInicial}g)</span>
+                          </span>
+                          <span className="text-[10px] text-[#75695D]">
+                            {rollos > 1 ? `${rollos} bobinas` : '1 bobina'}
+                          </span>
+                        </div>
+
+                        <div className="h-2 w-full rounded-full bg-[#E2D9CC]/60 overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              esCritico ? 'bg-[#DC2626]' : pct < 50 ? 'bg-[#D97706]' : 'bg-[#1E5E3A]'
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+
+                        {/* Quick adjust buttons */}
+                        <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/50 text-xs">
+                          <span className="text-[10px] text-[#75695D] font-medium">Ajuste rápido:</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleAjustarGramos(item, -50)}
+                              className="px-2.5 py-1 text-[11px] font-mono font-bold bg-white border border-[#E2D9CC] rounded-lg text-[#DC2626] hover:bg-red-50 cursor-pointer active:scale-95"
+                            >
+                              -50g
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleAjustarGramos(item, 50)}
+                              className="px-2.5 py-1 text-[11px] font-mono font-bold bg-white border border-[#E2D9CC] rounded-lg text-[#1E5E3A] hover:bg-emerald-50 cursor-pointer active:scale-95"
+                            >
+                              +50g
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Production info + Actions */}
+                    <div className="flex items-center justify-between pt-1 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-[#241C15]">
+                          {item.totalProductosImpresos || 0} piezas
+                        </span>
+                        <span className="text-[10px] text-[#75695D]">
+                          ({(item.totalGramosConsumidos || 0).toLocaleString()}g)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenColorDetails(item)}
+                          title="Ver modelos fabricados con este color"
+                          className="h-6 w-6 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
+                        >
+                          <Info className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {isDescatalogado ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleReactivarColor(item)}
+                            className="h-7 text-[10px] font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white rounded-lg px-2.5 cursor-pointer shadow-2xs"
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" />
+                            Reactivar
+                          </Button>
+                        ) : isDisp ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleMoverARestock(item)}
+                            className={`h-7 text-[10px] font-bold rounded-lg px-2.5 cursor-pointer transition-colors ${
+                              esCritico 
+                                ? 'bg-[#854D0E] text-white border-[#854D0E] hover:bg-[#713F12]' 
+                                : 'bg-white text-[#A36F4C] border-[#E2D9CC] hover:bg-[#F5EBE1]'
+                            }`}
+                          >
+                            A Restock
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleMoverADisponible(item)}
+                            className="h-7 text-[10px] font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white rounded-lg px-2.5 cursor-pointer shadow-2xs"
+                          >
+                            Marcar Disp.
+                          </Button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditColor(item)}
+                          title={`Editar "${item.nombreColor}"`}
+                          className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+
+                        {!isDescatalogado && (
+                          <button
+                            type="button"
+                            onClick={() => handleDescatalogarColor(item)}
+                            title="Descatalogar color"
+                            className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#854D0E] hover:bg-[#FEF9C3]/70 transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
+                          >
+                            <Archive className="h-3 w-3" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleEliminarColor(item)}
+                          title="Eliminar color"
+                          className="h-7 w-7 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer border border-[#E2D9CC] bg-white"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop View (>= md): Full Table */}
+            <div className="hidden md:block overflow-x-auto">
               <Table className="w-full">
                 <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
                   <TableRow className="hover:bg-transparent border-b border-[#E2D9CC] text-xs font-bold text-[#75695D]">

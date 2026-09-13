@@ -477,11 +477,11 @@ export function DashboardClient({
           <div className="p-4 sm:p-5 space-y-4 flex-1 flex flex-col justify-around">
             {/* 1. Margen sobre Ventas */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1 sm:gap-2">
                 <span className="font-extrabold text-[#1F2937]">
                   Rentabilidad sobre Ventas
                 </span>
-                <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs flex-wrap">
                   <span className="text-[#6B7280]">
                     Costo: <strong className="font-mono text-[#1F2937]">{formatCurrency(kpis.costoFabricacionTotal)}</strong> <span className="text-[10px] text-[#8C7A6B]">({costoPct.toFixed(1)}%)</span>
                   </span>
@@ -519,11 +519,11 @@ export function DashboardClient({
 
             {/* 2. Flujo de Cobranza */}
             <div className="space-y-2 pt-3 border-t border-[#E5DCD3]">
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-1 sm:gap-2">
                 <span className="font-extrabold text-[#1F2937]">
                   Efectividad de Cobranza
                 </span>
-                <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs flex-wrap">
                   <span className="text-[#059669] font-bold">
                     Cobrado: <strong className="font-mono">{formatCurrency(kpis.totalCobradoVentas)}</strong> <span className="text-[10px]">({cobradoPct.toFixed(1)}%)</span>
                   </span>

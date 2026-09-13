@@ -532,9 +532,151 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table / Mobile Cards */}
       <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-md rounded-2xl">
-        <div className="overflow-x-auto scrollbar-thin">
+        {/* Mobile View (< md): Cards */}
+        <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+          {paginatedIngresos.length === 0 ? (
+            <div className="p-8 text-center text-[#75695D] text-xs">
+              No se encontraron ingresos registrados en este periodo.
+            </div>
+          ) : (
+            paginatedIngresos.map((ing) => {
+              const isDirect = ing.origen === 'INGRESO_DIRECTO' && ing.rawItem
+              const globalDirectIndex = isDirect ? directos.findIndex(d => d.id === ing.rawId) : -1
+              const prevNeighbor = globalDirectIndex > 0 ? directos[globalDirectIndex - 1] : null
+              const nextNeighbor = globalDirectIndex >= 0 && globalDirectIndex < directos.length - 1 ? directos[globalDirectIndex + 1] : null
+
+              const ingDay = ing.fecha ? ing.fecha.split('T')[0] : ''
+              const canMoveUp = isDirect && !!prevNeighbor && prevNeighbor.fecha.split('T')[0] === ingDay
+              const canMoveDown = isDirect && !!nextNeighbor && nextNeighbor.fecha.split('T')[0] === ingDay
+
+              return (
+                <div 
+                  key={ing.id} 
+                  onClick={() => {
+                    if (isDirect && ing.rawItem) handleOpenEdit(ing.rawItem)
+                  }}
+                  className={`p-3.5 space-y-2.5 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors ${isDirect ? 'cursor-pointer' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-bold text-sm text-[#241C15] block truncate">{ing.concepto}</span>
+                      <span className="text-[11px] text-[#75695D] font-mono block mt-0.5">
+                        {formatDate(ing.fecha)} • {ing.cliente}
+                      </span>
+                    </div>
+
+                    <span className="text-sm font-mono font-extrabold text-[#1E5E3A] flex-shrink-0">
+                      +{formatCurrency(ing.montoCobrado)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {ing.origen === 'VENTA_CATALOGO' ? (
+                        (ing as any).tipoLabel === 'Pago Total' ? (
+                          <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold">
+                            Pago Total (100%)
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold">
+                            {(ing as any).tipoLabel || 'Abono'}
+                          </Badge>
+                        )
+                      ) : (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold">
+                          Servicio Directo
+                        </Badge>
+                      )}
+
+                      <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] text-[10px] font-medium">
+                        {ing.metodoPago || 'Yape'}
+                      </Badge>
+                    </div>
+
+                    {ing.saldoPendiente && ing.saldoPendiente > 0 ? (
+                      <span className="text-[10px] text-[#8C6D1F] font-bold">
+                        Saldo: {formatCurrency(ing.saldoPendiente)}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* Acciones Móviles */}
+                  <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/40 text-xs" onClick={(e) => e.stopPropagation()}>
+                    {isDirect && ing.rawItem ? (
+                      <>
+                        <div className="flex items-center gap-1 bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={!canMoveUp}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (prevNeighbor) handleMoveIngreso(ing.rawId, prevNeighbor.id, 'up')
+                            }}
+                            className="h-6 w-6 text-[#75695D] hover:text-[#241C15] disabled:opacity-20 cursor-pointer"
+                            title="Subir posición"
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={!canMoveDown}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (nextNeighbor) handleMoveIngreso(ing.rawId, nextNeighbor.id, 'down')
+                            }}
+                            className="h-6 w-6 text-[#75695D] hover:text-[#241C15] disabled:opacity-20 cursor-pointer"
+                            title="Bajar posición"
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => handleOpenEdit(ing.rawItem!, e)}
+                            className="h-7 px-2 text-[11px] text-[#75695D] hover:text-[#1E5E3A] hover:bg-emerald-50 rounded-lg cursor-pointer"
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => handleDeleteDirect(ing.rawId, ing.concepto, e)}
+                            className="h-7 px-2 text-[11px] text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Eliminar
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <Link href="/pedidos" className="ml-auto">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-[11px] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] rounded-lg cursor-pointer font-medium gap-1"
+                        >
+                          <span>Ver Pedido</span>
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* Desktop View (>= md): Table */}
+        <div className="hidden md:block overflow-x-auto scrollbar-thin">
           <Table className="w-full min-w-[650px]">
             <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
             <TableRow className="border-[#E2D9CC] hover:bg-transparent">
@@ -676,7 +818,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
                             size="icon"
                             variant="ghost"
                             onClick={(e) => handleDeleteDirect(ing.rawId, ing.concepto, e)}
-                            className="h-8 w-8 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer"
+                            className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-red-50 rounded-lg cursor-pointer"
                             title="Eliminar ingreso directo"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

@@ -242,36 +242,36 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
         </div>
 
         {/* Switch de horizonte temporal (Mensual / Trimestral / Semestral) */}
-        <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] shadow-sm">
+        <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] shadow-sm w-full sm:w-auto">
           <button
             onClick={() => setHorizonte('MENSUAL')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-2 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
               horizonte === 'MENSUAL'
                 ? 'bg-[#A36F4C] text-white shadow-sm'
                 : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
             }`}
           >
-            Mensual (1 Mes)
+            1 Mes
           </button>
           <button
             onClick={() => setHorizonte('TRIMESTRAL')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-2 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
               horizonte === 'TRIMESTRAL'
                 ? 'bg-[#A36F4C] text-white shadow-sm'
                 : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
             }`}
           >
-            Trimestral (3 Meses)
+            3 Meses
           </button>
           <button
             onClick={() => setHorizonte('SEMESTRAL')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-2 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
               horizonte === 'SEMESTRAL'
                 ? 'bg-[#A36F4C] text-white shadow-sm'
                 : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
             }`}
           >
-            Semestral (6 Meses)
+            6 Meses
           </button>
         </div>
       </div>
@@ -853,7 +853,73 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
             </div>
           </CardHeader>
 
-          <div className="overflow-x-auto max-h-[350px] overflow-y-auto scrollbar-thin">
+          {/* Mobile View (< md): Monthly Projection Cards */}
+          <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+            {proyeccionMeses.map((m) => {
+              const isHealthy = m.saldoFinalCaja >= totalFondosApartados
+              const isWarning = m.saldoFinalCaja > 0 && m.saldoFinalCaja < totalFondosApartados
+
+              return (
+                <div key={m.mesNumero} className="p-4 space-y-3 hover:bg-[#FDFBF7] transition-colors">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <span className="font-extrabold text-sm text-[#241C15] block">{m.nombreMes}</span>
+                      <span className="text-[11px] text-[#75695D] font-mono">{m.pedidosEstimados} pedidos estimados</span>
+                    </div>
+
+                    <div>
+                      {isHealthy ? (
+                        <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold">
+                          Óptimo
+                        </Badge>
+                      ) : isWarning ? (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold">
+                          Alerta
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-[#FDF2F0] text-[#A34335] border-[#F0BCB4] text-[10px] font-bold">
+                          Déficit
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {m.ingresosExtras > 0 && (
+                    <div className="p-2 rounded-xl bg-[#EBF7EE]/60 border border-[#B4E3C0] text-[11px] text-[#1E5E3A] font-medium">
+                      📥 Cobro Saldos Pendientes (+{formatCurrency(m.ingresosExtras)})
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
+                      <span className="text-[10px] text-[#75695D] block uppercase font-bold">Ingresos (+)</span>
+                      <span className="font-mono font-bold text-[#1E5E3A]">+{formatCurrency(m.totalIngresos)}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
+                      <span className="text-[10px] text-[#75695D] block uppercase font-bold">Materiales (-)</span>
+                      <span className="font-mono font-bold text-[#944917]">-{formatCurrency(m.costoMateriales)}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-[10px] text-[#75695D] block">Saldo en Caja</span>
+                      <span className="font-mono font-extrabold text-sm text-[#241C15]">{formatCurrency(m.saldoFinalCaja)}</span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-[#1E5E3A] font-bold block">Liquidez Libre</span>
+                      <span className="font-mono font-extrabold text-sm text-[#1E5E3A]">{formatCurrency(m.liquidezLibreProyectada)}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop Table View (>= md) */}
+          <div className="hidden md:block overflow-x-auto max-h-[350px] overflow-y-auto scrollbar-thin">
             <Table className="w-full min-w-[700px]">
               <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent text-xs">
