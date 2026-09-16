@@ -28,7 +28,17 @@ import {
   ShieldCheck,
   Lock,
   Wallet,
-  RefreshCw
+  RefreshCw,
+  Trophy,
+  Flame,
+  Users,
+  ShoppingBag,
+  Tag,
+  Award,
+  Package,
+  CheckCircle2,
+  Clock,
+  ArrowUpRight
 } from 'lucide-react'
 
 // Jerarquía de colores cálidos + verde para la distribución de gastos (Donut Chart)
@@ -49,6 +59,14 @@ function formatFechaEvolucion(rawDate: string, conAnio = false) {
     return conAnio ? `${day} ${month} ${d.getFullYear()}` : `${day} ${month}`
   }
   return rawDate
+}
+
+// Obtener iniciales de un nombre de cliente
+function getInitials(name: string) {
+  if (!name) return 'CL'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
+  return (parts[0][0] + parts[1][0]).toUpperCase()
 }
 
 // Custom Tooltip ejecutivo con estado de resultados (P&L diario)
@@ -173,6 +191,30 @@ export interface TopColorItem {
   porcentajeUso: number
 }
 
+export interface TopClienteItem {
+  cliente: string
+  totalComprado: number
+  totalPagado: number
+  saldoPendiente: number
+  pedidosCount: number
+  piezasCount: number
+  porcentajeDelTotal: number
+  canalPreferido: string | null
+  ultimoPedidoFecha: string
+}
+
+export interface TopArticuloItem {
+  id: string
+  nombreModelo: string
+  lineaCategoria: string
+  unidadesVendidas: number
+  totalFacturado: number
+  pedidosCount: number
+  precioPromedio: number
+  porcentajeUnidades: number
+  porcentajeFacturacion: number
+}
+
 export interface CapacidadGastoData {
   saldoActualCaja: number
   totalBlindadoMes: number
@@ -202,6 +244,8 @@ interface DashboardClientProps {
   graficoInversion: { name: string; value: number }[]
   cuentasPorCobrar?: any[]
   topColores?: TopColorItem[]
+  topClientes?: TopClienteItem[]
+  topArticulos?: TopArticuloItem[]
 }
 
 type RangoTemporal = '15D' | '30D' | 'MES' | 'TODO'
@@ -210,7 +254,9 @@ export function DashboardClient({
   kpis, 
   capacidadGasto,
   graficoEvolucion, 
-  graficoInversion
+  graficoInversion,
+  topClientes = [],
+  topArticulos = []
 }: DashboardClientProps) {
   const router = useRouter()
   const [rangoTemporal, setRangoTemporal] = useState<RangoTemporal>('30D')
@@ -563,7 +609,268 @@ export function DashboardClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. BLOQUE CENTRAL ANALÍTICO (GRID: COMBO BAR/LINE + DONUT DE GASTOS)       */}
+      {/* 3. RANKINGS COMERCIALES: TOP 5 CLIENTES EN VALOR & TOP 5 ARTÍCULOS       */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+        
+        {/* TOP 5 CLIENTES EN VALOR */}
+        <Card className="bg-[#FFFFFF] border-[#E5DCD3] shadow-xs rounded-3xl overflow-hidden flex flex-col justify-between">
+          <CardHeader className="p-4 sm:p-5 pb-3 bg-[#FAF7F4] border-b border-[#E5DCD3]">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-2xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835] shadow-2xs">
+                  <Trophy className="h-4 w-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm sm:text-base font-black text-[#1F2937]">
+                    Top 5 Clientes en Valor
+                  </CardTitle>
+                  <CardDescription className="text-xs text-[#6B7280]">
+                    Mayor facturación monetaria acumulada
+                  </CardDescription>
+                </div>
+              </div>
+              <Link
+                href="/pedidos"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7C5835] hover:text-[#5E4328] hover:underline"
+              >
+                <span>Ver pedidos</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+            {topClientes.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#6B7280] space-y-2">
+                <Users className="h-8 w-8 text-[#B8A99A] mx-auto opacity-60" />
+                <p>Aún no hay compras registradas para clasificar clientes.</p>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                {topClientes.map((c, index) => {
+                  const rank = index + 1
+                  const isGold = rank === 1
+                  const isSilver = rank === 2
+                  const isBronze = rank === 3
+
+                  return (
+                    <div 
+                      key={`${c.cliente}-${index}`}
+                      className="p-3 rounded-2xl bg-[#FAF7F4]/60 hover:bg-[#FAF7F4] border border-[#E5DCD3]/70 transition-all space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Rank + Avatar + Nombre */}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span 
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
+                              isGold
+                                ? 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A] shadow-2xs'
+                                : isSilver
+                                ? 'bg-[#F1F5F9] text-[#334155] border-[#CBD5E1]'
+                                : isBronze
+                                ? 'bg-[#FAF0E6] text-[#7C5835] border-[#E5DCD3]'
+                                : 'bg-[#F5EFEB] text-[#6B7280] border-[#E5DCD3]'
+                            }`}
+                          >
+                            {rank}
+                          </span>
+
+                          <div className="w-8 h-8 rounded-xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835] font-black text-xs flex items-center justify-center shrink-0">
+                            {getInitials(c.cliente)}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <h4 
+                              className="text-xs font-black text-[#1F2937] truncate" 
+                              title={c.cliente}
+                            >
+                              {c.cliente}
+                            </h4>
+                            <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280] flex-wrap">
+                              <span>{c.pedidosCount} {c.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
+                              <span>•</span>
+                              <span>{c.piezasCount} {c.piezasCount === 1 ? 'pieza' : 'piezas'}</span>
+                              {c.canalPreferido && (
+                                <>
+                                  <span>•</span>
+                                  <Badge variant="outline" className="text-[9px] font-medium bg-[#F5EFEB] text-[#7C5835] border-[#E5DCD3] px-1 py-0">
+                                    {c.canalPreferido}
+                                  </Badge>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Montos y Estado de Cobro */}
+                        <div className="text-right shrink-0">
+                          <div className="text-sm sm:text-base font-mono font-black text-[#1F2937] tabular-nums">
+                            {formatCurrency(c.totalComprado)}
+                          </div>
+                          <div className="mt-0.5">
+                            {c.saldoPendiente > 0 ? (
+                              <Badge variant="outline" className="text-[9px] font-mono font-bold bg-[#FEF3C7] text-[#92400E] border-[#FDE68A] px-1.5 py-0">
+                                Debe: {formatCurrency(c.saldoPendiente)}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[9px] font-bold bg-[#ECFDF5] text-[#059669] border-[#A7F3D0] px-1.5 py-0">
+                                ✓ Al día
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Barra de progreso de participación en ventas */}
+                      <div className="space-y-1 pt-1 border-t border-[#E5DCD3]/50">
+                        <div className="flex items-center justify-between text-[10px] text-[#6B7280]">
+                          <span>Participación sobre total ventas:</span>
+                          <span className="font-mono font-bold text-[#7C5835]">
+                            {c.porcentajeDelTotal.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-[#F5EFEB] rounded-full overflow-hidden border border-[#E5DCD3]/60">
+                          <div 
+                            className="bg-[#7C5835] h-full rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(4, c.porcentajeDelTotal))}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* TOP 5 ARTÍCULOS MÁS VENDIDOS */}
+        <Card className="bg-[#FFFFFF] border-[#E5DCD3] shadow-xs rounded-3xl overflow-hidden flex flex-col justify-between">
+          <CardHeader className="p-4 sm:p-5 pb-3 bg-[#FAF7F4] border-b border-[#E5DCD3]">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-2xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835] shadow-2xs">
+                  <Flame className="h-4 w-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm sm:text-base font-black text-[#1F2937]">
+                    Top 5 Artículos Más Vendidos
+                  </CardTitle>
+                  <CardDescription className="text-xs text-[#6B7280]">
+                    Mayor rotación de unidades y recaudación
+                  </CardDescription>
+                </div>
+              </div>
+              <Link
+                href="/productos"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7C5835] hover:text-[#5E4328] hover:underline"
+              >
+                <span>Ver catálogo</span>
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+            {topArticulos.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#6B7280] space-y-2">
+                <Package className="h-8 w-8 text-[#B8A99A] mx-auto opacity-60" />
+                <p>Aún no hay despachos de artículos registrados.</p>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                {topArticulos.map((art, index) => {
+                  const rank = index + 1
+                  const isGold = rank === 1
+                  const isSilver = rank === 2
+                  const isBronze = rank === 3
+
+                  return (
+                    <div 
+                      key={`${art.id}-${index}`}
+                      className="p-3 rounded-2xl bg-[#FAF7F4]/60 hover:bg-[#FAF7F4] border border-[#E5DCD3]/70 transition-all space-y-2"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        {/* Rank + Icono + Nombre + Categoría */}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <span 
+                            className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
+                              isGold
+                                ? 'bg-[#FEF3C7] text-[#92400E] border-[#FDE68A] shadow-2xs'
+                                : isSilver
+                                ? 'bg-[#F1F5F9] text-[#334155] border-[#CBD5E1]'
+                                : isBronze
+                                ? 'bg-[#FAF0E6] text-[#7C5835] border-[#E5DCD3]'
+                                : 'bg-[#F5EFEB] text-[#6B7280] border-[#E5DCD3]'
+                            }`}
+                          >
+                            {rank}
+                          </span>
+
+                          <div className="w-8 h-8 rounded-xl bg-[#F5EFEB] border border-[#E5DCD3] text-[#7C5835] flex items-center justify-center shrink-0">
+                            <Package className="h-4 w-4" />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <h4 
+                              className="text-xs font-black text-[#1F2937] truncate" 
+                              title={art.nombreModelo}
+                            >
+                              {art.nombreModelo}
+                            </h4>
+                            <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280] flex-wrap">
+                              <Badge variant="outline" className="text-[9px] font-semibold bg-[#F5EFEB] text-[#7C5835] border-[#E5DCD3] px-1.5 py-0">
+                                {art.lineaCategoria || 'General'}
+                              </Badge>
+                              <span>•</span>
+                              <span>en {art.pedidosCount} {art.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Unidades y Facturación */}
+                        <div className="text-right shrink-0">
+                          <div className="text-sm sm:text-base font-mono font-black text-[#1F2937] tabular-nums flex items-baseline justify-end gap-1">
+                            <span>{art.unidadesVendidas}</span>
+                            <span className="text-[11px] font-sans font-bold text-[#6B7280]">unds.</span>
+                          </div>
+                          <div className="text-xs font-mono font-bold text-[#059669] tabular-nums">
+                            {formatCurrency(art.totalFacturado)}
+                            <span className="text-[10px] text-[#6B7280] font-sans font-medium ml-1">
+                              (prom. {formatCurrency(art.precioPromedio)})
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Barra de progreso de volumen de unidades */}
+                      <div className="space-y-1 pt-1 border-t border-[#E5DCD3]/50">
+                        <div className="flex items-center justify-between text-[10px] text-[#6B7280]">
+                          <span>Cuota de volumen despachado:</span>
+                          <span className="font-mono font-bold text-[#059669]">
+                            {art.porcentajeUnidades.toFixed(1)}% ({art.porcentajeFacturacion.toFixed(1)}% facturación)
+                          </span>
+                        </div>
+                        <div className="h-1.5 w-full bg-[#F5EFEB] rounded-full overflow-hidden border border-[#E5DCD3]/60">
+                          <div 
+                            className="bg-[#059669] h-full rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(100, Math.max(4, art.porcentajeUnidades))}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4. BLOQUE CENTRAL ANALÍTICO (GRID: COMBO BAR/LINE + DONUT DE GASTOS)       */}
       {/* ========================================================================= */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
         {/* Gráfico Principal: Rentabilidad y Facturación Diaria (lg:col-span-2) */}

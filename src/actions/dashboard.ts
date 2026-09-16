@@ -239,7 +239,153 @@ export async function getDashboardData() {
       porcentajeUso: totalGramosGeneral > 0 ? Math.min(100, Math.round((c.gramosTotal / totalGramosGeneral) * 100)) : 0
     }))
 
-  // 12. Indicador de Capacidad de Gasto del Mes Actual (Lo que tengo vs Lo Blindado vs Lo Proyectado)
+  // 12. Top 5 Clientes que más han comprado en valor (Monetario Total)
+  const clientesMap: Record<string, {
+    cliente: string
+    totalComprado: number
+    totalPagado: number
+    saldoPendiente: number
+    pedidosCount: number
+    piezasCount: number
+    canales: Record<string, number>
+    ultimoPedidoFecha: string
+  }> = {}
+
+  // 13. Top 5 Artículos Más Vendidos (Por Unidades Despachadas y Facturación)
+  const articulosMap: Record<string, {
+    id: string
+    nombreModelo: string
+    lineaCategoria: string
+    unidadesVendidas: number
+    totalFacturado: number
+    pedidosCount: number
+  }> = {}
+
+  let totalUnidadesVendidas = 0
+
+  // Procesar pedidos de la base de datos
+  const rawPedidos = await prisma.pedido.findMany({
+    include: {
+      items: {
+        include: {
+          producto: true,
+          colorFilamento: true
+        }
+      },
+      pagos: true
+    },
+    orderBy: { fecha: 'desc' }
+  })
+
+  rawPedidos.forEach((p) => {
+    const rawCliente = (p.cliente || 'Cliente sin nombre').trim()
+    const cKey = rawCliente.toLowerCase()
+
+    if (!clientesMap[cKey]) {
+      clientesMap[cKey] = {
+        cliente: rawCliente,
+        totalComprado: 0,
+        totalPagado: 0,
+        saldoPendiente: 0,
+        pedidosCount: 0,
+        piezasCount: 0,
+        canales: {},
+        ultimoPedidoFecha: p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha)
+      }
+    }
+
+    const c = clientesMap[cKey]
+    c.totalComprado += Number(p.total || 0)
+    c.totalPagado += Number(p.montoPagado || 0)
+    c.saldoPendiente += Number(p.saldoPendiente || 0)
+    c.pedidosCount += 1
+
+    const piezasPedido = Array.isArray(p.items) && p.items.length > 0
+      ? p.items.reduce((acc, it) => acc + Number(it.cantidad || 1), 0)
+      : 1
+    c.piezasCount += piezasPedido
+
+    if (p.canalVenta) {
+      c.canales[p.canalVenta] = (c.canales[p.canalVenta] || 0) + 1
+    }
+
+    const pFecha = p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha)
+    if (new Date(pFecha).getTime() > new Date(c.ultimoPedidoFecha).getTime()) {
+      c.ultimoPedidoFecha = pFecha
+    }
+
+    // Artículos del pedido
+    if (Array.isArray(p.items)) {
+      p.items.forEach((it) => {
+        const nombre = it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Artículo 3D'
+        const artKey = (it.productoId || nombre).trim().toLowerCase()
+        const categoria = it.producto?.lineaCategoria || 'General'
+        const cant = Number(it.cantidad || 1)
+        const sub = Number(it.subtotal != null ? it.subtotal : (Number(it.precioUnitario || 0) * cant))
+
+        if (!articulosMap[artKey]) {
+          articulosMap[artKey] = {
+            id: it.productoId || artKey,
+            nombreModelo: nombre,
+            lineaCategoria: categoria,
+            unidadesVendidas: 0,
+            totalFacturado: 0,
+            pedidosCount: 0
+          }
+        }
+
+        articulosMap[artKey].unidadesVendidas += cant
+        articulosMap[artKey].totalFacturado += sub
+        articulosMap[artKey].pedidosCount += 1
+        totalUnidadesVendidas += cant
+      })
+    }
+  })
+
+  // Generar ranking Top 5 Clientes en Valor
+  const topClientes = Object.values(clientesMap)
+    .sort((a, b) => b.totalComprado - a.totalComprado || b.pedidosCount - a.pedidosCount)
+    .slice(0, 5)
+    .map((c) => {
+      let canalPreferido: string | null = null
+      let maxCount = 0
+      Object.entries(c.canales).forEach(([canal, count]) => {
+        if (count > maxCount) {
+          maxCount = count
+          canalPreferido = canal
+        }
+      })
+
+      return {
+        cliente: c.cliente,
+        totalComprado: Number(c.totalComprado.toFixed(2)),
+        totalPagado: Number(c.totalPagado.toFixed(2)),
+        saldoPendiente: Number(c.saldoPendiente.toFixed(2)),
+        pedidosCount: c.pedidosCount,
+        piezasCount: c.piezasCount,
+        porcentajeDelTotal: ingresosVentas > 0 ? Number(((c.totalComprado / ingresosVentas) * 100).toFixed(1)) : 0,
+        canalPreferido,
+        ultimoPedidoFecha: c.ultimoPedidoFecha
+      }
+    })
+
+  // Generar ranking Top 5 Artículos Más Vendidos
+  const topArticulos = Object.values(articulosMap)
+    .sort((a, b) => b.unidadesVendidas - a.unidadesVendidas || b.totalFacturado - a.totalFacturado)
+    .slice(0, 5)
+    .map((art) => ({
+      id: art.id,
+      nombreModelo: art.nombreModelo,
+      lineaCategoria: art.lineaCategoria,
+      unidadesVendidas: art.unidadesVendidas,
+      totalFacturado: Number(art.totalFacturado.toFixed(2)),
+      pedidosCount: art.pedidosCount,
+      precioPromedio: art.unidadesVendidas > 0 ? Number((art.totalFacturado / art.unidadesVendidas).toFixed(2)) : 0,
+      porcentajeUnidades: totalUnidadesVendidas > 0 ? Number(((art.unidadesVendidas / totalUnidadesVendidas) * 100).toFixed(1)) : 0,
+      porcentajeFacturacion: ingresosVentas > 0 ? Number(((art.totalFacturado / ingresosVentas) * 100).toFixed(1)) : 0
+    }))
+
+  // 14. Indicador de Capacidad de Gasto del Mes Actual (Lo que tengo vs Lo Blindado vs Lo Proyectado)
   const saldoActualCaja = Math.max(0, (totalCobradoVentas + totalIngresosDirectos) - egresosTotales)
   const cuotaPrestamoMensual = 368.88
   const reservaCapexMensual = 878.00
@@ -277,7 +423,9 @@ export async function getDashboardData() {
     graficoEvolucion,
     graficoInversion,
     cuentasPorCobrar,
-    topColores
+    topColores,
+    topClientes,
+    topArticulos
   }
 }
 
