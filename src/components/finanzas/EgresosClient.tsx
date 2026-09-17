@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -20,16 +20,16 @@ import {
   ShoppingBag, 
   Truck, 
   ChevronLeft, 
-  ChevronRight,
-  ChevronUp,
-  ChevronDown,
-  Pencil,
-  Tag,
-  Sparkles,
-  Check,
-  Loader2,
-  ExternalLink,
-  Receipt
+  ChevronRight, 
+  ChevronUp, 
+  ChevronDown, 
+  Pencil, 
+  Tag, 
+  Sparkles, 
+  Check, 
+  Loader2, 
+  ExternalLink, 
+  Receipt 
 } from 'lucide-react'
 import { createInversion, updateInversion, deleteInversion, swapInversionOrder } from '@/actions/inversiones'
 import { TagInsumoItem } from '@/actions/tagsInsumos'
@@ -45,7 +45,7 @@ interface EgresosClientProps {
   tags?: TagInsumoItem[]
 }
 
-const ITEMS_PER_PAGE = 5
+const ITEMS_PER_PAGE = 10
 
 // Categorías principales de gasto con metadatos visuales
 const CATEGORIAS_CONFIG = [
@@ -145,7 +145,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     return tags.filter(t => t.categoria === formCategoria)
   }, [tags, formCategoria])
 
-  // Lista única de todos los nombres de tags para filtros generales (incluye todos los tags registrados y tags en egresos)
+  // Lista única de todos los nombres de tags para filtros generales
   const availableTags = useMemo(() => {
     const set = new Set<string>()
 
@@ -165,7 +165,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [items, tags])
 
-  // Tags para el dropdown de la barra de filtros, filtrados según la categoría activa
+  // Tags para el dropdown de la barra de filtros
   const dropdownTags = useMemo(() => {
     if (categoriaFilter === 'TODOS') {
       return availableTags
@@ -194,7 +194,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
   const tagsComboboxItems: ComboboxItem[] = useMemo(() => {
     const allOption: ComboboxItem = {
       id: 'TODOS',
-      label: categoriaFilter === 'TODOS' ? 'Todos los Tags' : `Tags de Categoría (${dropdownTags.length})`,
+      label: categoriaFilter === 'TODOS' ? 'Todos los Tags' : `Tags (${dropdownTags.length})`,
       badge: `${dropdownTags.length}`
     }
     const tagOptions: ComboboxItem[] = dropdownTags.map(tag => {
@@ -443,7 +443,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
             <Badge 
               key={`${tag}-${idx}`} 
               variant="outline" 
-              className={`text-[10px] font-semibold py-0.5 px-2 gap-1 ${colorStyle.badge}`}
+              className={`text-[10px] font-semibold py-0 px-1.5 gap-1 ${colorStyle.badge}`}
             >
               <Tag className="h-2.5 w-2.5" />
               {tag}
@@ -473,104 +473,124 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
               <ArrowDownRight className="h-6 w-6 stroke-[2.5]" />
             </div>
-            Registro de Egresos & Insumos
+            <span>Registro de Egresos & Insumos</span>
           </h1>
           <p className="text-sm text-[#75695D] mt-1">
-            Control clasificado por tags de insumos, maquinaria, fletes y servicios del taller.
+            Control de compras de insumos, maquinaria, fletes y servicios del taller.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <Link href="/finanzas/tags">
-            <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
-              <Tag className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
-              Gestionar Tags
+            <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-9 shadow-2xs font-medium px-3">
+              <Tag className="h-3.5 w-3.5 mr-1.5 text-[#A36F4C]" />
+              Tags
             </Button>
           </Link>
 
           <Button 
             onClick={handleOpenCreate}
-            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
+            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-xs transition-all cursor-pointer rounded-xl px-3.5 h-9 text-xs active:scale-[0.98]"
           >
             <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
-            Registrar Nuevo Egreso
+            Registrar Egreso
           </Button>
         </div>
       </div>
 
-      {/* KPI Overview Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
-            <span>Total Egresos</span>
-            <Receipt className="h-3.5 w-3.5" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#A36F4C] font-mono mt-1">
-            {formatCurrency(totalEgresosTotales)}
+      {/* KPI Overview Cards Minimalistas */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Total Egresos */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Total Egresos</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+              <Receipt className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
-            {isFiltered ? `${filteredEgresos.length} de ${items.length} registros` : `${items.length} registros`}
-          </span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#A36F4C] font-mono tabular-nums">
+              {formatCurrency(totalEgresosTotales)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              {isFiltered ? `${filteredEgresos.length} de ${items.length} registros` : `${items.length} registros`}
+            </span>
+          </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#944917] flex items-center justify-between">
-            <span>Maquinaria & Equipos</span>
-            <Wrench className="h-3.5 w-3.5" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {formatCurrency(totalMaquinaria)}
+        {/* Maquinaria */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Maquinaria & Equipos</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#944917]">
+              <Wrench className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
-            {isFiltered 
-              ? `${filteredEgresos.filter(e => e.categoria === 'ACTIVO_FIJO').length} registros` 
-              : 'Impresora 3D, Secador'}
-          </span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {formatCurrency(totalMaquinaria)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              {isFiltered 
+                ? `${filteredEgresos.filter(e => e.categoria === 'ACTIVO_FIJO').length} registros` 
+                : 'Impresoras 3D, Herramientas'}
+            </span>
+          </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
-            <span>Insumos & Materiales</span>
-            <ShoppingBag className="h-3.5 w-3.5" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {formatCurrency(totalInsumos)}
+        {/* Insumos */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Insumos & Materiales</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#633E20]">
+              <ShoppingBag className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
-            {isFiltered 
-              ? `${filteredEgresos.filter(e => e.categoria === 'INSUMO').length} registros` 
-              : 'Filamentos, Packaging'}
-          </span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {formatCurrency(totalInsumos)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              {isFiltered 
+                ? `${filteredEgresos.filter(e => e.categoria === 'INSUMO').length} registros` 
+                : 'Filamentos, Packaging'}
+            </span>
+          </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
-            <span>Servicios & Op.</span>
-            <Truck className="h-3.5 w-3.5" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {formatCurrency(totalServicios)}
+        {/* Servicios */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Servicios & Op.</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+              <Truck className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
-            {isFiltered 
-              ? `${filteredEgresos.filter(e => e.categoria === 'SERVICIO').length} registros` 
-              : 'Fletes, Publicidad'}
-          </span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {formatCurrency(totalServicios)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              {isFiltered 
+                ? `${filteredEgresos.filter(e => e.categoria === 'SERVICIO').length} registros` 
+                : 'Fletes, Servicios'}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Main Container: Single Unified Master Card (Toolbar + Table) */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-xs rounded-2xl">
+      {/* Main Container: Master Card (Toolbar + Zero-Scroll Table) */}
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-2xs rounded-2xl">
         {/* Unified Integrated Toolbar */}
-        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col md:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
+        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col lg:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
           {/* Lado Izquierdo: Campo de Búsqueda */}
-          <div className="relative w-full md:w-72 lg:w-80 flex-shrink-0">
+          <div className="relative w-full lg:w-72 flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
             <Input 
               placeholder="Buscar egreso o insumo..."
@@ -579,7 +599,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 setSearch(e.target.value)
                 setCurrentPage(1)
               }}
-              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
+              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
             />
             {search && (
               <button 
@@ -592,53 +612,53 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
           </div>
 
           {/* Lado Derecho: Segmented Control Tabs & Dropdown de Tags */}
-          <div className="flex flex-wrap md:flex-nowrap items-center justify-end gap-2.5 w-full md:w-auto">
+          <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-2 w-full lg:w-auto">
             {/* Segmented Control / Tabs */}
             <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
               <button
                 onClick={() => { setCategoriaFilter('TODOS'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   categoriaFilter === 'TODOS'
-                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
-                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                    ? 'bg-[#241C15] text-white shadow-2xs'
+                    : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
                 }`}
               >
                 Todos ({items.length})
               </button>
               <button
                 onClick={() => { setCategoriaFilter('INSUMO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   categoriaFilter === 'INSUMO'
-                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
-                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                    ? 'bg-[#8C6D1F] text-white shadow-2xs'
+                    : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
                 }`}
               >
                 Insumos
               </button>
               <button
                 onClick={() => { setCategoriaFilter('ACTIVO_FIJO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   categoriaFilter === 'ACTIVO_FIJO'
-                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
-                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                    ? 'bg-[#633E20] text-white shadow-2xs'
+                    : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
                 }`}
               >
                 Activos Fijos
               </button>
               <button
                 onClick={() => { setCategoriaFilter('SERVICIO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   categoriaFilter === 'SERVICIO'
-                    ? 'bg-[#A36F4C] text-white font-bold shadow-sm'
-                    : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
+                    ? 'bg-[#1E5E3A] text-white shadow-2xs'
+                    : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
                 }`}
               >
-                Servicios & Op.
+                Servicios
               </button>
             </div>
 
-            {/* Combobox interactivo dinámico para 'Filtrar por Tag' basado en la categoría */}
-            <div className="w-full sm:w-56 flex-shrink-0">
+            {/* Combobox interactivo dinámico para 'Filtrar por Tag' */}
+            <div className="w-full sm:w-48 flex-shrink-0">
               <SearchableCombobox
                 items={tagsComboboxItems}
                 value={tagFilter}
@@ -657,11 +677,11 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
           </div>
         </div>
 
-        {/* Mobile View (< md): Cards */}
+        {/* Mobile View: Cards */}
         <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
           {filteredEgresos.length === 0 ? (
             <div className="p-8 text-center text-[#75695D] text-xs">
-              No se encontraron egresos o insumos con los filtros actuales.
+              No se encontraron egresos con los filtros aplicados.
             </div>
           ) : (
             paginatedEgresos.map((eg) => {
@@ -677,17 +697,17 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 <div 
                   key={eg.id} 
                   onClick={() => handleOpenEdit(eg)}
-                  className="p-3.5 space-y-2.5 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors cursor-pointer"
+                  className="p-3.5 space-y-2 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <span className="font-bold text-sm text-[#241C15] block truncate">{eg.itemConcepto}</span>
+                      <span className="font-bold text-xs text-[#241C15] block truncate">{eg.itemConcepto}</span>
                       <span className="text-[11px] text-[#75695D] font-mono block mt-0.5">
                         {formatDate(eg.createdAt)} • {eg.persona}
                       </span>
                     </div>
 
-                    <span className="text-sm font-mono font-extrabold text-[#A34335] flex-shrink-0">
+                    <span className="text-sm font-mono font-bold text-[#A34335] flex-shrink-0 tabular-nums">
                       -{formatCurrency(eg.costoTotal)}
                     </span>
                   </div>
@@ -778,162 +798,181 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
           )}
         </div>
 
-        {/* Desktop View (>= md): Table */}
-        <div className="hidden md:block overflow-x-auto scrollbar-thin">
-          <Table className="w-full min-w-[700px]">
-            <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
+        {/* Desktop View: Clean Zero-Scroll Table (5 Columns / table-fixed) */}
+        <div className="hidden md:block">
+          <Table className="w-full table-fixed">
+            <TableHeader className="bg-[#FAF8F5]/80 border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Fecha</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Categoría</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Tag / Subcategoría</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Concepto / Insumo</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-right">Costo Unit.</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Total Egreso</TableHead>
-                <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Acciones</TableHead>
+                <TableHead className="w-[130px] px-4 py-3 text-xs font-bold text-[#75695D] text-left">
+                  Fecha & Categoría
+                </TableHead>
+                <TableHead className="px-3 py-3 text-xs font-bold text-[#75695D] text-left">
+                  Concepto & Tags
+                </TableHead>
+                <TableHead className="w-[115px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
+                  Costo Unit. & Cant.
+                </TableHead>
+                <TableHead className="w-[115px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
+                  Total Egreso
+                </TableHead>
+                <TableHead className="w-[120px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
+                  Acción
+                </TableHead>
               </TableRow>
             </TableHeader>
-          <TableBody>
-            {filteredEgresos.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-40 text-center text-[#75695D]">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <ShoppingBag className="h-8 w-8 text-[#A89B8D]" />
-                    <span>No se encontraron egresos o insumos con los filtros actuales</span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedEgresos.map((eg) => {
-                const globalIndex = filteredEgresos.findIndex(item => item.id === eg.id)
-                const prevNeighbor = globalIndex > 0 ? filteredEgresos[globalIndex - 1] : null
-                const nextNeighbor = globalIndex < filteredEgresos.length - 1 ? filteredEgresos[globalIndex + 1] : null
+            <TableBody>
+              {filteredEgresos.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-12 text-[#75695D] text-xs">
+                    No se encontraron egresos con los filtros aplicados.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedEgresos.map((eg) => {
+                  const globalIndex = filteredEgresos.findIndex(item => item.id === eg.id)
+                  const prevNeighbor = globalIndex > 0 ? filteredEgresos[globalIndex - 1] : null
+                  const nextNeighbor = globalIndex < filteredEgresos.length - 1 ? filteredEgresos[globalIndex + 1] : null
 
-                const egDay = eg.createdAt.split('T')[0]
-                const canMoveUp = !!prevNeighbor && prevNeighbor.createdAt.split('T')[0] === egDay
-                const canMoveDown = !!nextNeighbor && nextNeighbor.createdAt.split('T')[0] === egDay
+                  const egDay = eg.createdAt.split('T')[0]
+                  const canMoveUp = !!prevNeighbor && prevNeighbor.createdAt.split('T')[0] === egDay
+                  const canMoveDown = !!nextNeighbor && nextNeighbor.createdAt.split('T')[0] === egDay
 
-                return (
-                  <TableRow 
-                    key={eg.id} 
-                    onClick={() => handleOpenEdit(eg)}
-                    className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors cursor-pointer group"
-                  >
-                    {/* Fecha */}
-                    <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
-                      {formatDate(eg.createdAt)}
-                    </TableCell>
+                  return (
+                    <TableRow 
+                      key={eg.id} 
+                      onClick={() => handleOpenEdit(eg)}
+                      className="border-b border-[#E2D9CC]/60 hover:bg-[#FAF8F5]/60 transition-colors cursor-pointer group"
+                    >
+                      {/* 1. Fecha & Categoría */}
+                      <TableCell className="px-4 py-3 align-top">
+                        <div className="space-y-1">
+                          <span className="text-xs text-[#75695D] font-mono block">
+                            {formatDate(eg.createdAt)}
+                          </span>
+                          <div>
+                            {eg.categoria === 'ACTIVO_FIJO' ? (
+                              <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold px-1.5 py-0">
+                                Maquinaria
+                              </Badge>
+                            ) : eg.categoria === 'INSUMO' ? (
+                              <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold px-1.5 py-0">
+                                Insumo
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-[10px] font-bold px-1.5 py-0">
+                                Servicio
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
 
-                    {/* Categoría Principal */}
-                    <TableCell className="px-3 py-3 whitespace-nowrap">
-                      {eg.categoria === 'ACTIVO_FIJO' ? (
-                        <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-semibold">
-                          Maquinaria
-                        </Badge>
-                      ) : eg.categoria === 'INSUMO' ? (
-                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-semibold">
-                          Insumo
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-xs font-semibold">
-                          Servicio
-                        </Badge>
-                      )}
-                    </TableCell>
+                      {/* 2. Concepto & Tags */}
+                      <TableCell className="px-3 py-3 align-top min-w-0">
+                        <div className="min-w-0">
+                          <span 
+                            title={eg.itemConcepto}
+                            className="text-xs font-semibold text-[#241C15] block truncate group-hover:text-[#A36F4C] transition-colors"
+                          >
+                            {eg.itemConcepto}
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#75695D] flex-wrap">
+                            {eg.subcategoria && renderTagBadge(eg.subcategoria)}
+                            {eg.persona && (
+                              <span className="text-[11px] text-[#75695D]">
+                                • {eg.persona}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
 
-                    {/* Tag / Subcategoría */}
-                    <TableCell className="px-3 py-3 whitespace-nowrap">
-                      {eg.subcategoria ? (
-                        renderTagBadge(eg.subcategoria)
-                      ) : (
-                        <span className="text-xs text-[#75695D] italic">—</span>
-                      )}
-                    </TableCell>
+                      {/* 3. Costo Unitario & Cantidad */}
+                      <TableCell className="px-3 py-3 align-top text-right whitespace-nowrap">
+                        <span className="font-mono text-xs font-semibold text-[#241C15] block">
+                          {eg.cantidad > 1 && <span className="text-xs text-[#75695D] font-normal mr-1">{eg.cantidad}x</span>}
+                          {formatCurrency(eg.costoUnitario)}
+                        </span>
+                        {eg.costoEnvio && eg.costoEnvio > 0 ? (
+                          <span className="text-[10px] text-[#75695D] block font-normal">
+                            +{formatCurrency(eg.costoEnvio)} flete
+                          </span>
+                        ) : null}
+                      </TableCell>
 
-                    {/* Concepto / Nombre */}
-                    <TableCell className="px-4 py-3 font-medium text-[#241C15]">
-                      <span className="text-sm font-bold group-hover:text-[#A36F4C] transition-colors">{eg.itemConcepto}</span>
-                    </TableCell>
+                      {/* 4. Total Egreso */}
+                      <TableCell className="px-4 py-3 align-top text-right whitespace-nowrap">
+                        <span className="font-mono font-bold tabular-nums text-xs sm:text-sm text-[#A34335] block">
+                          -{formatCurrency(eg.costoTotal)}
+                        </span>
+                      </TableCell>
 
-                    {/* Costo Unitario */}
-                    <TableCell className="px-3 py-3 text-right font-mono text-[#241C15] font-semibold whitespace-nowrap">
-                      {eg.cantidad > 1 && <span className="text-xs text-[#75695D] font-normal mr-1">{eg.cantidad}x</span>}
-                      {formatCurrency(eg.costoUnitario)}
-                      {eg.costoEnvio && eg.costoEnvio > 0 ? (
-                        <span className="block text-[10px] text-[#75695D] font-normal">+ {formatCurrency(eg.costoEnvio)} flete</span>
-                      ) : null}
-                    </TableCell>
+                      {/* 5. Acciones */}
+                      <TableCell className="px-3 py-3 align-top text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Reorder Micro Buttons con espacio reservado invisible para alineación perfecta */}
+                          <div className={`flex items-center bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5 ${canMoveUp || canMoveDown ? '' : 'invisible'}`}>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              disabled={!canMoveUp}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (prevNeighbor) handleMoveEgreso(eg.id, prevNeighbor.id, 'up')
+                              }}
+                              className="h-5 w-5 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 cursor-pointer rounded p-0"
+                              title="Subir posición"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              disabled={!canMoveDown}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (nextNeighbor) handleMoveEgreso(eg.id, nextNeighbor.id, 'down')
+                              }}
+                              className="h-5 w-5 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 cursor-pointer rounded p-0"
+                              title="Bajar posición"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </div>
 
-                    {/* Total Egreso */}
-                    <TableCell className="px-4 py-3 text-right font-mono font-bold text-[#A34335] whitespace-nowrap">
-                      -{formatCurrency(eg.costoTotal)}
-                    </TableCell>
-
-                    {/* Acciones */}
-                    <TableCell className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1.5">
-                        {/* Botones para subir/bajar posición en el día */}
-                        <div className="flex items-center bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5 shadow-xs">
                           <Button
                             size="icon"
                             variant="ghost"
-                            disabled={!canMoveUp}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (prevNeighbor) handleMoveEgreso(eg.id, prevNeighbor.id, 'up')
-                            }}
-                            className="h-7 w-7 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer rounded transition-colors"
-                            title={canMoveUp ? "Subir posición en este día" : "Límite superior del día"}
+                            onClick={(e) => handleOpenEdit(eg, e)}
+                            className="h-7 w-7 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
+                            title="Editar egreso"
                           >
-                            <ChevronUp className="h-4 w-4" />
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             size="icon"
                             variant="ghost"
-                            disabled={!canMoveDown}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (nextNeighbor) handleMoveEgreso(eg.id, nextNeighbor.id, 'down')
-                            }}
-                            className="h-7 w-7 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer rounded transition-colors"
-                            title={canMoveDown ? "Bajar posición en este día" : "Límite inferior del día"}
+                            onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
+                            className="h-7 w-7 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                            title="Eliminar egreso"
                           >
-                            <ChevronDown className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
-
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => handleOpenEdit(eg, e)}
-                          className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
-                          title="Editar egreso"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
-                          className="h-8 w-8 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                          title="Eliminar egreso"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
         </div>
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#F4EFEA] text-xs text-[#75695D]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#FAF8F5]/80 text-xs text-[#75695D]">
             <div>
-              Mostrando página <span className="text-[#241C15] font-bold">{currentPage}</span> de <span className="text-[#241C15] font-bold">{totalPages}</span> ({filteredEgresos.length} egresos)
+              Mostrando <span className="text-[#241C15] font-bold">{paginatedEgresos.length}</span> de <span className="text-[#241C15] font-bold">{filteredEgresos.length}</span> egresos (Página {currentPage} de {totalPages})
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -942,7 +981,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-2xs"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Anterior
@@ -950,17 +989,19 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
 
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
+                  <Button
                     key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      currentPage === page
-                        ? 'bg-[#A36F4C] text-[#FFFFFF] shadow-sm'
-                        : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                    className={`h-8 w-8 p-0 cursor-pointer shadow-2xs ${
+                      currentPage === page 
+                        ? "bg-[#241C15] text-white hover:bg-[#3D332A] font-bold" 
+                        : "border-[#E2D9CC] bg-[#FFFFFF] text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15]"
                     }`}
                   >
                     {page}
-                  </button>
+                  </Button>
                 ))}
               </div>
 
@@ -969,7 +1010,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-2xs"
               >
                 Siguiente
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -979,27 +1020,21 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
         )}
       </Card>
 
-      {/* ========================================================================= */}
-      {/* MODAL: REGISTRAR NUEVO EGRESO / INSUMO (LIGHT MODE NOVA)                  */}
-      {/* ========================================================================= */}
-      {/* ========================================================================= */}
-      {/* MODAL: REGISTRAR NUEVO EGRESO / INSUMO (LIGHT MODE NOVA)                  */}
-      {/* ========================================================================= */}
+      {/* Modal: Registrar Nuevo Egreso */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[580px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+        <DialogContent className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
           <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            {/* Header Fijo */}
-            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="p-5 sm:p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                  <ShoppingBag className="h-5 w-5" />
+                <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C]">
+                  <Plus className="h-5 w-5 stroke-[2.5]" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
-                    Registrar Nuevo Egreso / Insumo
+                  <DialogTitle className="text-base sm:text-lg font-extrabold text-[#241C15]">
+                    Registrar Nuevo Egreso
                   </DialogTitle>
                   <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                    Registra compras de filamentos, packaging, máquinas o servicios operativos.
+                    Añade compras de insumos, fletes o activos para el taller.
                   </DialogDescription>
                 </div>
               </div>
@@ -1012,13 +1047,11 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
               </button>
             </div>
 
-            {/* Formulario Scrolleable */}
-            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4 touch-pan-y">
-              {/* 1. Selector Visual de Categoría Principal */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              {/* Selector de Categoría */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
-                  <span>Categoría Principal <span className="text-[#A36F4C]">*</span></span>
-                  <span className="text-[11px] text-[#75695D] font-normal">Destino de gasto</span>
+                <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
+                  Categoría Principal *
                 </Label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {CATEGORIAS_CONFIG.map(cat => {
@@ -1031,8 +1064,8 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                         onClick={() => handleSelectCategoria(cat.id as any)}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                           isSelected
-                            ? 'bg-[#FDFBF7] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-sm'
-                            : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
+                            ? 'bg-[#FFFFFF] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-xs'
+                            : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1049,41 +1082,49 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 </div>
               </div>
 
-              {/* 2. Fecha del Registro / Compra */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
-                  <span>Fecha del Egreso <span className="text-[#A36F4C]">*</span></span>
-                  <span className="text-[11px] text-[#75695D] font-normal">Modificable</span>
-                </Label>
-                <Input 
-                  type="date"
-                  value={formFecha}
-                  onChange={(e) => setFormFecha(e.target.value)}
-                  required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
+              {/* Fecha y Persona */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Egreso *</Label>
+                  <Input 
+                    type="date"
+                    value={formFecha}
+                    onChange={(e) => setFormFecha(e.target.value)}
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Responsable / Persona *</Label>
+                  <Input 
+                    value={formPersona}
+                    onChange={(e) => setFormPersona(e.target.value)}
+                    placeholder="Víctor"
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
               </div>
 
-              {/* 3. Concepto / Nombre del Insumo */}
+              {/* Concepto */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15]">
-                  Concepto / Nombre del Insumo <span className="text-[#A36F4C]">*</span>
-                </Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto / Nombre del Insumo *</Label>
                 <Input 
                   value={formConcepto}
                   onChange={(e) => setFormConcepto(e.target.value)}
-                  placeholder="Ej: Filamento PLA Matte Negro, Cajas de Envío 15x15x15..."
+                  placeholder="Ej: Filamento PLA Hyper Creality Negro 1kg..."
                   required
                   className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>
 
-              {/* 3. Subcategoría Dinámica con Multi-Tags */}
+              {/* Multi-Tags */}
               <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
                     <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                    Tags / Etiquetas del Egreso (Múltiples)
+                    Tags / Etiquetas
                   </span>
                   <Link 
                     href="/finanzas/tags" 
@@ -1097,16 +1138,15 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                   value={formSubcategoria}
                   onChange={(newTags) => setFormSubcategoria(newTags.join(', '))}
                   suggestions={activeCategoryTags.map(t => t.nombre)}
-                  placeholder="Escribe un tag y presiona Enter o elige abajo..."
+                  placeholder="Escribe un tag y presiona Enter..."
                 />
               </div>
 
-              {/* 4. Costos y Cantidades */}
-              <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
+              {/* Costos y Cantidades */}
+              <div className="p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Cantidad con Stepper +/- */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">Cantidad <span className="text-[#A36F4C]">*</span></Label>
+                    <Label className="text-xs text-[#241C15] font-bold">Cantidad *</Label>
                     <div className="flex items-center">
                       <button
                         type="button"
@@ -1133,9 +1173,8 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                     </div>
                   </div>
 
-                  {/* Costo Unitario */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">Costo Unit. (S/) <span className="text-[#A36F4C]">*</span></Label>
+                    <Label className="text-xs text-[#241C15] font-bold">Costo Unit. (S/) *</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
                       <Input 
@@ -1151,7 +1190,6 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                     </div>
                   </div>
 
-                  {/* Flete / Envío */}
                   <div className="space-y-1.5">
                     <Label className="text-xs text-[#241C15] font-bold">Flete / Envío (S/)</Label>
                     <div className="relative">
@@ -1170,51 +1208,24 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 </div>
               </div>
 
-              {/* 5. Live Metrics Preview Card Light Mode */}
-              <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] shadow-sm relative overflow-hidden space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Cálculo & Métricas en Vivo
+              {/* Live Preview */}
+              <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-[#75695D] uppercase font-bold block">Total a Registrar</span>
+                  <span className="text-xl font-extrabold text-[#A34335] font-mono">
+                    {formatCurrency(liveCostMetrics.totalCalculado)}
                   </span>
                 </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-                  {/* Costo Total */}
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Total Calculado</span>
-                    <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono">
-                      {formatCurrency(liveCostMetrics.totalCalculado)}
-                    </div>
-                    <span className="text-[10px] text-[#75695D] block">Subtotal + Flete</span>
-                  </div>
-
-                  {/* Costo Real Unitario */}
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Costo Real Unit.</span>
-                    <div className="text-base font-semibold text-[#944917] font-mono">
-                      {formatCurrency(liveCostMetrics.costoRealUnitario)}
-                    </div>
-                    <span className="text-[10px] text-[#75695D] block">Incluye flete prorrateado</span>
-                  </div>
-
-                  {/* Desglose Flete */}
-                  <div className="space-y-0.5 col-span-2 sm:col-span-1">
-                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Desglose Flete</span>
-                    <div className="text-sm font-semibold text-[#4A3E35] font-mono">
-                      {formatCurrency(parseFloat(formCostoEnvio) || 0)}
-                    </div>
-                    <span className="text-[10px] text-[#75695D] block">Costo logístico</span>
-                  </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-[#75695D] uppercase font-bold block">Costo Real / Unidad</span>
+                  <span className="text-sm font-bold text-[#241C15] font-mono">
+                    {formatCurrency(liveCostMetrics.costoRealUnitario)}
+                  </span>
                 </div>
               </div>
-
-              {/* Bottom spacer */}
-              <div className="h-2" />
             </div>
 
-            {/* Footer Fijo con Botones Funcionales */}
-            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-end gap-3 flex-shrink-0">
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
@@ -1224,9 +1235,9 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 Cancelar
               </Button>
               <Button 
-                type="submit"
+                type="submit" 
                 disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
@@ -1242,24 +1253,21 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
         </DialogContent>
       </Dialog>
 
-      {/* ========================================================================= */}
-      {/* MODAL: EDITAR EGRESO / INSUMO (LIGHT MODE NOVA)                          */}
-      {/* ========================================================================= */}
+      {/* Modal: Editar Egreso */}
       <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[580px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+        <DialogContent showCloseButton={false} className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
           <form onSubmit={handleEditSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            {/* Header Fijo */}
-            <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="p-5 sm:p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
+                <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C]">
                   <Pencil className="h-5 w-5" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base font-bold text-[#241C15] tracking-tight">
+                  <DialogTitle className="text-base sm:text-lg font-extrabold text-[#241C15]">
                     Editar Egreso & Insumo
                   </DialogTitle>
                   <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                    Modifica los detalles, tag de clasificación, costos o cantidades adquiridas.
+                    Modifica los detalles, tags, costos o cantidades adquiridas.
                   </DialogDescription>
                 </div>
               </div>
@@ -1272,13 +1280,11 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
               </button>
             </div>
 
-            {/* Formulario Scrolleable */}
-            <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4 touch-pan-y">
-              {/* 1. Selector Visual de Categoría Principal */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+              {/* Selector de Categoría */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
-                  <span>Categoría Principal <span className="text-[#A36F4C]">*</span></span>
-                  <span className="text-[11px] text-[#75695D] font-normal">Destino de gasto</span>
+                <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
+                  Categoría Principal *
                 </Label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {CATEGORIAS_CONFIG.map(cat => {
@@ -1291,8 +1297,8 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                         onClick={() => handleSelectCategoria(cat.id as any)}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                           isSelected
-                            ? 'bg-[#FDFBF7] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-sm'
-                            : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
+                            ? 'bg-[#FFFFFF] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-xs'
+                            : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1309,41 +1315,49 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 </div>
               </div>
 
-              {/* 2. Fecha del Registro / Compra */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15] flex items-center justify-between">
-                  <span>Fecha del Egreso <span className="text-[#A36F4C]">*</span></span>
-                  <span className="text-[11px] text-[#75695D] font-normal">Modificable</span>
-                </Label>
-                <Input 
-                  type="date"
-                  value={formFecha}
-                  onChange={(e) => setFormFecha(e.target.value)}
-                  required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
-                />
+              {/* Fecha y Persona */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Egreso *</Label>
+                  <Input 
+                    type="date"
+                    value={formFecha}
+                    onChange={(e) => setFormFecha(e.target.value)}
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Responsable / Persona *</Label>
+                  <Input 
+                    value={formPersona}
+                    onChange={(e) => setFormPersona(e.target.value)}
+                    placeholder="Víctor"
+                    required
+                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  />
+                </div>
               </div>
 
-              {/* 3. Concepto / Nombre del Insumo (ARRIBA DEL TAG) */}
+              {/* Concepto */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15]">
-                  Concepto / Nombre del Insumo <span className="text-[#A36F4C]">*</span>
-                </Label>
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Concepto / Nombre del Insumo *</Label>
                 <Input 
                   value={formConcepto}
                   onChange={(e) => setFormConcepto(e.target.value)}
-                  placeholder="Ej: Filamento PLA Matte Negro, Cajas de Envío 15x15x15..."
+                  placeholder="Ej: Filamento PLA Hyper Creality Negro 1kg..."
                   required
                   className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
                 />
               </div>
 
-              {/* 3. Subcategoría Dinámica con Multi-Tags */}
+              {/* Multi-Tags */}
               <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
                     <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                    Tags / Etiquetas del Egreso (Múltiples)
+                    Tags / Etiquetas
                   </span>
                   <Link 
                     href="/finanzas/tags" 
@@ -1357,16 +1371,15 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                   value={formSubcategoria}
                   onChange={(newTags) => setFormSubcategoria(newTags.join(', '))}
                   suggestions={activeCategoryTags.map(t => t.nombre)}
-                  placeholder="Escribe un tag y presiona Enter o elige abajo..."
+                  placeholder="Escribe un tag y presiona Enter..."
                 />
               </div>
 
-              {/* 4. Costos y Cantidades */}
-              <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
+              {/* Costos y Cantidades */}
+              <div className="p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Cantidad con Stepper +/- */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">Cantidad <span className="text-[#A36F4C]">*</span></Label>
+                    <Label className="text-xs text-[#241C15] font-bold">Cantidad *</Label>
                     <div className="flex items-center">
                       <button
                         type="button"
@@ -1393,9 +1406,8 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                     </div>
                   </div>
 
-                  {/* Costo Unitario */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">Costo Unit. (S/) <span className="text-[#A36F4C]">*</span></Label>
+                    <Label className="text-xs text-[#241C15] font-bold">Costo Unit. (S/) *</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
                       <Input 
@@ -1411,7 +1423,6 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                     </div>
                   </div>
 
-                  {/* Flete / Envío */}
                   <div className="space-y-1.5">
                     <Label className="text-xs text-[#241C15] font-bold">Flete / Envío (S/)</Label>
                     <div className="relative">
@@ -1430,51 +1441,24 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 </div>
               </div>
 
-              {/* 5. Live Metrics Preview Card Light Mode */}
-              <div className="p-4 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] shadow-sm relative overflow-hidden space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Cálculo & Métricas en Vivo
+              {/* Live Preview */}
+              <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-[#75695D] uppercase font-bold block">Total a Registrar</span>
+                  <span className="text-xl font-extrabold text-[#A34335] font-mono">
+                    {formatCurrency(liveCostMetrics.totalCalculado)}
                   </span>
                 </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-                  {/* Costo Total */}
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Total Calculado</span>
-                    <div className="text-2xl font-extrabold text-[#1E5E3A] font-mono">
-                      {formatCurrency(liveCostMetrics.totalCalculado)}
-                    </div>
-                    <span className="text-[10px] text-[#75695D] block">Subtotal + Flete</span>
-                  </div>
-
-                  {/* Costo Real Unitario */}
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Costo Real Unit.</span>
-                    <div className="text-base font-semibold text-[#944917] font-mono">
-                      {formatCurrency(liveCostMetrics.costoRealUnitario)}
-                    </div>
-                    <span className="text-[10px] text-[#75695D] block">Incluye flete prorrateado</span>
-                  </div>
-
-                  {/* Desglose Flete */}
-                  <div className="space-y-0.5 col-span-2 sm:col-span-1">
-                    <span className="text-[10px] text-[#75695D] uppercase font-bold">Desglose Flete</span>
-                    <div className="text-sm font-semibold text-[#4A3E35] font-mono">
-                      {formatCurrency(parseFloat(formCostoEnvio) || 0)}
-                    </div>
-                    <span className="text-[10px] text-[#75695D] block">Costo logístico</span>
-                  </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-[#75695D] uppercase font-bold block">Costo Real / Unidad</span>
+                  <span className="text-sm font-bold text-[#241C15] font-mono">
+                    {formatCurrency(liveCostMetrics.costoRealUnitario)}
+                  </span>
                 </div>
               </div>
-
-              {/* Bottom spacer */}
-              <div className="h-2" />
             </div>
 
-            {/* Footer Fijo con Botones Funcionales */}
-            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
               {editingItem && (
                 <Button 
                   type="button" 
@@ -1499,12 +1483,12 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
                 <Button 
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#A36F4C]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                      Guardando...
+                      Actualizando...
                     </>
                   ) : (
                     'Guardar Cambios'

@@ -13,12 +13,10 @@ export default async function PedidosPage() {
   ])
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
-      <PedidosClient
-        pedidosIniciales={pedidos as any}
-        productos={productos as any}
-        filamentos={filamentos as any}
-      />
-    </div>
+    <PedidosClient
+      pedidosIniciales={pedidos as any}
+      productos={productos as any}
+      filamentos={filamentos as any}
+    />
   )
 }

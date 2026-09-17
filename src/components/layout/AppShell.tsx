@@ -92,7 +92,7 @@ export function AppShell({ children }: AppShellProps) {
         </header>
 
         {/* Scrollable Main Content (Strictly Mobile-First & Overflow protected) */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F8F6F2] p-3 sm:p-5 lg:p-8 pb-20 sm:pb-16 text-[#241C15] overscroll-y-contain">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F8F6F2] p-3 sm:p-4 lg:p-5 pb-12 sm:pb-8 text-[#241C15] overscroll-y-contain">
           <div className="mx-auto max-w-7xl w-full">
             {children}
           </div>

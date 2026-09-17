@@ -277,102 +277,80 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. FILA PRINCIPAL DE KPIS (SEGREGACIÓN DE FONDOS)                        */}
+      {/* 2. FILA PRINCIPAL DE KPIS (SEGREGACIÓN DE FONDOS MINIMALISTA)             */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* TARJETA 1: Saldo Total en Caja */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#241C15] flex items-center gap-1.5">
-                <Wallet className="h-4 w-4 text-[#A36F4C]" />
-                Saldo Total en Caja
-              </span>
-              <span className="text-[11px] text-[#75695D] font-mono">100% fondos</span>
-            </div>
-            <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1.5">
-              {formatCurrency(saldoTotalCaja)}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Saldo Total en Caja</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+              <Wallet className="h-3.5 w-3.5" />
             </div>
           </div>
-          
-          <div className="pt-3 mt-3 border-t border-[#E2D9CC]/70 flex items-center justify-between text-xs">
-            <span className="text-[#75695D]">Desglose:</span>
-            <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-[10px] font-mono px-2 py-0.5">
-                BCP: {formatCurrency(saldoBCP)}
-              </Badge>
-              <Badge variant="outline" className="bg-[#F4EFEA] border-[#DCD3C6] text-[#633E20] text-[10px] font-mono px-2 py-0.5">
-                Yape: {formatCurrency(saldoYape)}
-              </Badge>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {formatCurrency(saldoTotalCaja)}
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#75695D]">
+              <span>BCP: {formatCurrency(saldoBCP)}</span>
+              <span>•</span>
+              <span>Yape: {formatCurrency(saldoYape)}</span>
             </div>
           </div>
         </div>
 
         {/* TARJETA 2: Fondos Comprometidos / Blindados */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between hover:border-[#944917] transition-colors">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#944917]" />
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#944917] flex items-center gap-1.5">
-                <Lock className="h-4 w-4 stroke-[2.5]" />
-                Fondos Blindados
-              </span>
-              <Badge variant="outline" className="bg-[#FDF0EE] text-[#A34335] border-[#F2C0B8] text-[10px] font-bold">
-                Intocables
-              </Badge>
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Fondos Blindados</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#944917]">
+              <Lock className="h-3.5 w-3.5" />
             </div>
-            <div className="text-2xl font-extrabold text-[#944917] font-mono mt-1.5">
+          </div>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#944917] font-mono tabular-nums">
               {formatCurrency(totalFondosApartados)}
             </div>
-          </div>
-
-          <div className="pt-3 mt-3 border-t border-[#E2D9CC]/70 text-[11px] text-[#75695D]">
-            <span>Cuota ({formatCurrency(montoCuotaApartada)}) + Reserva & Colchón ({formatCurrency(fondoReservaApartado + fondoColchonEmergencia)})</span>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              Cuota ({formatCurrency(montoCuotaApartada)}) + Reserva
+            </span>
           </div>
         </div>
 
-        {/* TARJETA 3: Liquidez Libre Disponible (DESTACADA EN VERDE ESMERALDA) */}
-        <div className="bg-[#FFFFFF] border-2 border-[#1E5E3A] rounded-2xl p-4 shadow-md relative overflow-hidden flex flex-col justify-between bg-gradient-to-b from-[#FFFFFF] to-[#F4FAF5]">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#1E5E3A] flex items-center gap-1.5">
-                <Unlock className="h-4 w-4 stroke-[2.5]" />
-                Liquidez Libre Disponible
-              </span>
-              <span className="text-xs font-extrabold text-[#1E5E3A] font-mono bg-[#EBF7EE] border border-[#B4E3C0] px-2 py-0.5 rounded-full">
-                {saldoTotalCaja > 0 ? `${((liquidezLibre / saldoTotalCaja) * 100).toFixed(0)}% libre` : '0%'}
-              </span>
+        {/* TARJETA 3: Liquidez Libre Disponible */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Gasto Libre Disponible</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+              <Unlock className="h-3.5 w-3.5" />
             </div>
-            <div className="text-3xl font-extrabold text-[#1E5E3A] font-mono mt-1.5">
+          </div>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
               {formatCurrency(liquidezLibre)}
             </div>
-          </div>
-
-          <div className="pt-3 mt-3 border-t border-[#B4E3C0] text-[11px] text-[#1E5E3A] font-medium">
-            Capital neto para nuevos filamentos, pauta o libre disposición.
+            <span className="text-xs text-[#1E5E3A] font-medium mt-0.5 block truncate">
+              {saldoTotalCaja > 0 ? `${((liquidezLibre / saldoTotalCaja) * 100).toFixed(0)}% libre para disposición` : '0%'}
+            </span>
           </div>
         </div>
 
-        {/* TARJETA 4: Runway Operativo (Métrica de Riesgo) */}
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#A36F4C] flex items-center gap-1.5">
-                <Clock className="h-4 w-4 stroke-[2.5]" />
-                Runway Operativo
-              </span>
-              <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold">
-                Cobertura
-              </Badge>
-            </div>
-            <div className="text-2xl font-extrabold text-[#241C15] font-mono mt-1.5">
-              {runwayMeses} <span className="text-sm font-normal text-[#75695D]">meses</span>
+        {/* TARJETA 4: Runway Operativo */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Runway Operativo</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+              <Clock className="h-3.5 w-3.5" />
             </div>
           </div>
-
-          <div className="pt-3 mt-3 border-t border-[#E2D9CC]/70 text-[11px] text-[#75695D]">
-            Cubre gastos fijos ({formatCurrency(gastosFijosTotalesMensuales)}/mes) sin requerir nuevas ventas.
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {runwayMeses} <span className="text-xs font-normal font-sans text-[#75695D]">meses</span>
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              Gastos fijos: {formatCurrency(gastosFijosTotalesMensuales)}/mes
+            </span>
           </div>
         </div>
       </div>

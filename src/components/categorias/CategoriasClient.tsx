@@ -223,83 +223,79 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. FILA SUPERIOR DE KPIS (GRID 3 COLUMNAS)                                */}
+        {/* 2. FILA SUPERIOR DE KPIS (GRID 3 COLUMNAS MINIMALISTA)                    */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
           {/* Tarjeta 1: Categorías Registradas */}
-          <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] flex flex-col justify-between shadow-2xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider">
+          <div className="p-4 rounded-2xl bg-white border border-[#E2D9CC] flex flex-col justify-between shadow-xs">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">
                 Categorías Registradas
               </span>
-              <div className="p-1.5 rounded-xl bg-[#F5EBE1] text-[#A36F4C]">
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
                 <Folder className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tracking-tight">
-                {totalRegistradas} familias
+              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+                {totalRegistradas} <span className="text-xs font-normal font-sans text-[#75695D]">familias</span>
               </div>
-              <span className="text-xs text-[#75695D] font-medium mt-0.5 block">
+              <span className="text-xs text-[#75695D] mt-0.5 block">
                 {totalModelosSum} modelos 3D distribuidos
               </span>
             </div>
           </div>
 
-          {/* Tarjeta 2: Con Productos Asignados (Verde #1E5E3A) */}
+          {/* Tarjeta 2: Con Productos Asignados */}
           <div 
             onClick={() => setActiveTab('con_modelos')}
-            className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] hover:border-[#1E5E3A]/50 flex flex-col justify-between shadow-2xs cursor-pointer transition-colors"
+            className={`p-4 rounded-2xl border flex flex-col justify-between shadow-xs cursor-pointer transition-all ${
+              activeTab === 'con_modelos'
+                ? 'bg-white border-[#1E5E3A] ring-1 ring-[#1E5E3A]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
+            }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">
                 Con Productos Asignados
               </span>
-              <div className="p-1.5 rounded-xl bg-[#EBF7EE] text-[#1E5E3A]">
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
                 <PackageCheck className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tracking-tight">
-                {conModelosCount} categorías
+              <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
+                {conModelosCount} <span className="text-xs font-normal font-sans text-[#75695D]">categorías</span>
               </div>
-              <span className="text-xs text-[#1E5E3A] font-bold mt-0.5 block">
+              <span className="text-xs text-[#1E5E3A] font-medium mt-0.5 block">
                 Catálogo activo y con modelos
               </span>
             </div>
           </div>
 
-          {/* Tarjeta 3: Categorías Vacías (Alerta sutil #854D0E / bg-[#FEF9C3]) */}
+          {/* Tarjeta 3: Categorías Vacías */}
           <div 
             onClick={() => setActiveTab('vacias')}
-            className={`p-4 rounded-2xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-colors ${
-              vaciasCount > 0
-                ? 'bg-[#FEF9C3] border-[#FDE047] text-[#854D0E]'
-                : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15]'
+            className={`p-4 rounded-2xl border flex flex-col justify-between shadow-xs cursor-pointer transition-all ${
+              activeTab === 'vacias'
+                ? 'bg-white border-[#854D0E] ring-1 ring-[#854D0E]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className={`text-[11px] font-bold uppercase tracking-wider ${
-                vaciasCount > 0 ? 'text-[#854D0E]' : 'text-[#75695D]'
-              }`}>
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">
                 Categorías Vacías
               </span>
-              <div className={`p-1.5 rounded-xl ${
-                vaciasCount > 0 ? 'bg-[#FEF08A] text-[#854D0E]' : 'bg-[#FAF8F5] text-[#75695D]'
-              }`}>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#854D0E]">
                 <AlertTriangle className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-2">
-              <div className={`text-xl sm:text-2xl font-black font-mono tracking-tight ${
-                vaciasCount > 0 ? 'text-[#854D0E]' : 'text-[#241C15]'
-              }`}>
-                {vaciasCount} {vaciasCount === 1 ? 'categoría' : 'categorías'}
+              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+                {vaciasCount} <span className="text-xs font-normal font-sans text-[#75695D]">sin modelos</span>
               </div>
-              <span className={`text-xs font-bold mt-0.5 block ${
-                vaciasCount > 0 ? 'text-[#854D0E]' : 'text-[#75695D]'
-              }`}>
-                {vaciasCount > 0 ? '⚠️ Clic para filtrar y limpiar' : 'Todas tienen modelos asignados'}
+              <span className="text-xs text-[#75695D] mt-0.5 block">
+                {vaciasCount > 0 ? 'Sin productos asignados' : 'Todas tienen productos'}
               </span>
             </div>
           </div>

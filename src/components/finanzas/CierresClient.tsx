@@ -172,9 +172,6 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
               </div>
               <span>Cierres Mensuales & Arqueo</span>
             </h1>
-            <Badge variant="outline" className="bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] font-bold text-xs">
-              PRUEBA
-            </Badge>
           </div>
           <p className="text-xs sm:text-sm text-[#75695D] mt-1">
             Auditoría mensual de caja, conciliación bancaria y congelación oficial de resultados por período.
@@ -199,52 +196,68 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
-            <span>Cierres Registrados</span>
-            <Calendar className="h-3.5 w-3.5" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {cierres.length} <span className="text-xs font-normal text-[#75695D]">meses</span>
+      {/* KPI Cards Minimalistas */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Cierres Registrados</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+              <Calendar className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Historial oficial</span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {cierres.length} <span className="text-xs font-normal font-sans text-[#75695D]">meses</span>
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">Historial oficial</span>
+          </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
-            <span>Estado de Agosto</span>
-            <CheckCircle2 className="h-3.5 w-3.5" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
-            {cierres.length > 0 ? 'Cerrado' : 'Pendiente'}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Estado de Cierres</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
-            {cierres.length > 0 ? `Último: ${cierres[0].nombrePeriodo}` : 'Listo para ejecutar'}
-          </span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
+              {cierres.length > 0 ? 'Al día' : 'Pendiente'}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              {cierres.length > 0 ? `Último: ${cierres[0].nombrePeriodo}` : 'Sin cierres previos'}
+            </span>
+          </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
-            <span>Saldo Caja Actual</span>
-            <Wallet className="h-3.5 w-3.5" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {formatCurrency(datosPreCierre.saldoSistemaCaja)}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Saldo Caja Actual</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#633E20]">
+              <Wallet className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Saldo en sistema</span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {formatCurrency(datosPreCierre.saldoSistemaCaja)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">Saldo en sistema</span>
+          </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center justify-between">
-            <span>Cuentas por Cobrar</span>
-            <DollarSign className="h-3.5 w-3.5" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
-            {formatCurrency(datosPreCierre.cuentasPorCobrar)}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Cuentas por Cobrar</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#8C6D1F]">
+              <DollarSign className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">Traspaso al nuevo mes</span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#8C6D1F] font-mono tabular-nums">
+              {formatCurrency(datosPreCierre.cuentasPorCobrar)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">Traspaso al nuevo mes</span>
+          </div>
         </div>
       </div>
 

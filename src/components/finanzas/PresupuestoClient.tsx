@@ -567,192 +567,339 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
           </Button>
         </div>
 
-        {/* TABLA PRINCIPAL DE PARTIDAS */}
-        <div className="rounded-2xl border border-[#E2D9CC] overflow-hidden shadow-2xs bg-[#FFFFFF]">
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-xs text-left border-collapse min-w-[880px]">
-              <thead className="bg-[#F8F6F2] border-b border-[#E2D9CC] text-[#75695D]">
-                <tr>
-                  <th className="py-3.5 px-4 font-bold text-[#241C15]">Concepto / Categoría</th>
-                  <th className="py-3.5 px-3 font-bold text-center text-[#241C15]">Tipo</th>
-                  <th className="py-3.5 px-4 font-bold text-right text-[#241C15]">
-                    Gastado en Agosto <span className="text-[10px] font-normal text-[#75695D] block sm:inline">(Real Cerrado)</span>
-                  </th>
-                  <th className="py-3.5 px-4 font-bold text-right text-[#1E5E3A]">
-                    Gastado Septiembre <span className="text-[10px] font-normal text-[#1E5E3A] block sm:inline">(Hoy)</span>
-                  </th>
-                  <th className="py-3.5 px-4 font-bold text-right text-[#A36F4C]">
-                    Presupuesto Septiembre <span className="text-[10px] font-normal text-[#A36F4C] block sm:inline">(Editable)</span>
-                  </th>
-                  <th className="py-3.5 px-4 font-bold text-center text-[#241C15]">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2D9CC]">
-                {itemsFiltrados.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-10 text-center text-xs text-[#75695D]">
-                      No hay gastos que coincidan con el filtro seleccionado.
-                    </td>
-                  </tr>
-                ) : (
-                  itemsFiltrados.map((item) => {
-                    const config = CATEGORIA_CONFIG[item.categoria] || CATEGORIA_CONFIG.OTROS
-                    const porcentajePartida = item.monto > 0 
-                      ? Math.min(100, Math.round((item.montoSeptiembreReal / item.monto) * 100))
-                      : 0
+        {/* VISTA MÓVIL Y TABLET (< md): Tarjetas de Partidas Táctiles */}
+        <div className="block md:hidden space-y-3">
+          {itemsFiltrados.length === 0 ? (
+            <div className="p-8 text-center bg-[#FFFFFF] rounded-2xl border border-dashed border-[#E2D9CC] text-xs text-[#75695D]">
+              No hay gastos que coincidan con el filtro seleccionado.
+            </div>
+          ) : (
+            itemsFiltrados.map((item) => {
+              const config = CATEGORIA_CONFIG[item.categoria] || CATEGORIA_CONFIG.OTROS
+              const porcentajePartida = item.monto > 0 
+                ? Math.min(100, Math.round((item.montoSeptiembreReal / item.monto) * 100))
+                : 0
 
-                    return (
-                      <tr 
-                        key={item.id} 
-                        className={`transition-colors ${
-                          item.pagado ? 'bg-[#FAF8F5]/80 opacity-75' : 'hover:bg-[#FDFBF7]'
+              return (
+                <div 
+                  key={item.id}
+                  className={`bg-[#FFFFFF] border rounded-2xl p-4 shadow-2xs space-y-3 transition-colors ${
+                    item.pagado ? 'bg-[#FAF8F5]/90 border-[#E2D9CC] opacity-80' : 'border-[#E2D9CC]'
+                  }`}
+                >
+                  {/* Header de la tarjeta */}
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePagado(item.id)}
+                        className={`h-5 w-5 rounded-lg border flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-all ${
+                          item.pagado
+                            ? 'bg-[#1E5E3A] border-[#1E5E3A] text-white shadow-2xs'
+                            : 'bg-[#FFFFFF] border-[#D4BEA7] text-transparent hover:border-[#1E5E3A]'
                         }`}
+                        title={item.pagado ? 'Gasto marcado como pagado' : 'Marcar como pagado'}
                       >
-                        {/* Concepto & Detalle */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-start gap-3">
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePagado(item.id)}
-                              className={`h-5 w-5 rounded-lg border flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-all ${
-                                item.pagado
-                                  ? 'bg-[#1E5E3A] border-[#1E5E3A] text-white shadow-2xs'
-                                  : 'bg-[#FFFFFF] border-[#D4BEA7] text-transparent hover:border-[#1E5E3A]'
-                              }`}
-                              title={item.pagado ? 'Gasto marcado como pagado' : 'Marcar como pagado'}
-                            >
-                              <Check className="h-3.5 w-3.5 stroke-[3]" />
-                            </button>
+                        <Check className="h-3.5 w-3.5 stroke-[3]" />
+                      </button>
 
-                            <div className="space-y-0.5 min-w-0 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${config.badgeColor}`}>
-                                  {config.label}
-                                </span>
-                                <span className={`font-bold text-xs ${item.pagado ? 'line-through text-[#75695D]' : 'text-[#241C15]'}`}>
-                                  {item.concepto}
-                                </span>
-                                {item.pagado && (
-                                  <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
-                                    Pagado
-                                  </span>
-                                )}
-                              </div>
-                              {item.subconcepto && (
-                                <span className="text-[11px] text-[#75695D] block truncate">
-                                  {item.subconcepto}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${config.badgeColor}`}>
+                            {config.label}
+                          </span>
+                          <span className={`font-bold text-xs ${item.pagado ? 'line-through text-[#75695D]' : 'text-[#241C15]'}`}>
+                            {item.concepto}
+                          </span>
+                          {item.pagado && (
+                            <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
+                              Pagado
+                            </span>
+                          )}
+                        </div>
+                        {item.subconcepto && (
+                          <span className="text-[11px] text-[#75695D] block truncate mt-0.5">
+                            {item.subconcepto}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleToggleBlindado(item.id)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 shrink-0 ${
+                        item.esBlindado
+                          ? 'bg-[#F4EFEA] text-[#A36F4C] border border-[#D4BEA7]'
+                          : 'bg-[#E8F5E9] text-[#1E5E3A] border border-[#B4E3C0]'
+                      }`}
+                    >
+                      {item.esBlindado ? <Lock className="h-2.5 w-2.5" /> : <Unlock className="h-2.5 w-2.5" />}
+                      <span>{item.esBlindado ? 'Blindado' : 'Flexible'}</span>
+                    </button>
+                  </div>
+
+                  {/* Grid de Montos */}
+                  <div className="grid grid-cols-3 gap-1.5 text-center font-mono text-xs bg-[#FAF8F5] p-2.5 rounded-xl border border-[#E2D9CC]/70">
+                    <div>
+                      <span className="text-[9px] text-[#75695D] block font-sans">Agosto (Real)</span>
+                      <span className="font-bold text-[#241C15] text-[11px]">
+                        {item.montoAgostoReal > 0 ? formatCurrency(item.montoAgostoReal) : '—'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[9px] text-[#1E5E3A] block font-sans">Hoy (Sept)</span>
+                      <span className="font-bold text-[#1E5E3A] text-[11px]">
+                        {formatCurrency(item.montoSeptiembreReal)}
+                      </span>
+                      {item.monto > 0 && item.montoSeptiembreReal > 0 && (
+                        <span className="text-[9px] font-sans text-[#75695D] block">
+                          {porcentajePartida}%
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Presupuesto</span>
+                      <span className="font-black text-[#A36F4C] text-[11px]">
+                        {formatCurrency(item.monto)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Acciones de la tarjeta */}
+                  <div className="pt-2 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2">
+                    <div className="relative inline-flex items-center flex-1 max-w-[160px]">
+                      <span className="absolute left-2.5 text-[11px] font-mono font-bold text-[#A36F4C]">S/</span>
+                      <input
+                        type="number"
+                        step="any"
+                        value={item.monto === 0 ? '' : item.monto}
+                        placeholder="0.00"
+                        onChange={(e) => handleUpdateMontoInline(item.id, e.target.value)}
+                        className="w-full bg-[#FAF8F5] border border-[#D4BEA7] rounded-xl pl-6 pr-2 py-1 text-xs font-mono font-bold text-right text-[#633E20] focus:bg-[#FFFFFF] focus:border-[#A36F4C]"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenEditar(item)}
+                        className="h-7 px-2.5 rounded-xl border-[#E2D9CC] text-xs text-[#75695D] hover:text-[#241C15]"
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEliminarItem(item.id, item.concepto)}
+                        className="h-7 w-7 p-0 rounded-xl text-[#75695D] hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* TABLA PRINCIPAL DE PARTIDAS (VISTA DESKTOP >= md) */}
+        <div className="hidden md:block rounded-2xl border border-[#E2D9CC] overflow-hidden shadow-xs bg-[#FFFFFF]">
+          <table className="w-full text-xs text-left border-collapse table-fixed">
+            <colgroup>
+              <col className="w-[32%]" />
+              <col className="w-[12%]" />
+              <col className="w-[14%]" />
+              <col className="w-[14%]" />
+              <col className="w-[18%]" />
+              <col className="w-[10%]" />
+            </colgroup>
+            <thead className="bg-[#FAF8F5] border-b border-[#E2D9CC] text-[#75695D]">
+              <tr>
+                <th className="py-3 px-4 font-bold text-[#241C15]">Concepto / Categoría</th>
+                <th className="py-3 px-2 font-bold text-center text-[#241C15]">Tipo</th>
+                <th className="py-3 px-3 font-bold text-right text-[#241C15]">
+                  Gastado Agosto <span className="text-[10px] font-normal text-[#75695D] block">(Real)</span>
+                </th>
+                <th className="py-3 px-3 font-bold text-right text-[#1E5E3A]">
+                  Gastado Sept. <span className="text-[10px] font-normal text-[#1E5E3A] block">(Hoy)</span>
+                </th>
+                <th className="py-3 px-3 font-bold text-right text-[#A36F4C]">
+                  Presupuesto <span className="text-[10px] font-normal text-[#A36F4C] block">(Editable)</span>
+                </th>
+                <th className="py-3 px-3 font-bold text-center text-[#241C15]">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2D9CC]">
+              {itemsFiltrados.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-10 text-center text-xs text-[#75695D]">
+                    No hay gastos que coincidan con el filtro seleccionado.
+                  </td>
+                </tr>
+              ) : (
+                itemsFiltrados.map((item) => {
+                  const config = CATEGORIA_CONFIG[item.categoria] || CATEGORIA_CONFIG.OTROS
+                  const porcentajePartida = item.monto > 0 
+                    ? Math.min(100, Math.round((item.montoSeptiembreReal / item.monto) * 100))
+                    : 0
+
+                  return (
+                    <tr 
+                      key={item.id} 
+                      className={`transition-colors ${
+                        item.pagado ? 'bg-[#FAF8F5]/80 opacity-75' : 'hover:bg-[#FAF8F5]/60'
+                      }`}
+                    >
+                      {/* Concepto & Detalle */}
+                      <td className="py-3 px-4 min-w-0">
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePagado(item.id)}
+                            className={`h-4.5 w-4.5 rounded-lg border flex items-center justify-center flex-shrink-0 mt-0.5 cursor-pointer transition-all ${
+                              item.pagado
+                                ? 'bg-[#1E5E3A] border-[#1E5E3A] text-white shadow-2xs'
+                                : 'bg-[#FFFFFF] border-[#D4BEA7] text-transparent hover:border-[#1E5E3A]'
+                            }`}
+                            title={item.pagado ? 'Gasto marcado como pagado' : 'Marcar como pagado'}
+                          >
+                            <Check className="h-3 w-3 stroke-[3]" />
+                          </button>
+
+                          <div className="space-y-0.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${config.badgeColor}`}>
+                                {config.label}
+                              </span>
+                              <span className={`font-bold text-xs truncate ${item.pagado ? 'line-through text-[#75695D]' : 'text-[#241C15]'}`}>
+                                {item.concepto}
+                              </span>
+                              {item.pagado && (
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
+                                  Pagado
                                 </span>
                               )}
                             </div>
-                          </div>
-                        </td>
-
-                        {/* Tipo: Blindado vs Flexible */}
-                        <td className="py-3.5 px-3 text-center whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleBlindado(item.id)}
-                            className={`px-2.5 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer ${
-                              item.esBlindado
-                                ? 'bg-[#F4EFEA] text-[#A36F4C] border border-[#D4BEA7] shadow-2xs'
-                                : 'bg-[#E8F5E9] text-[#1E5E3A] border border-[#B4E3C0]'
-                            }`}
-                            title={item.esBlindado ? 'Gasto Blindado (Intocable)' : 'Gasto Flexible'}
-                          >
-                            {item.esBlindado ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                            <span>{item.esBlindado ? 'Blindado' : 'Flexible'}</span>
-                          </button>
-                        </td>
-
-                        {/* Columna: Gastado en Agosto (Real Cerrado - NO EDITABLE) */}
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono">
-                          {item.montoAgostoReal > 0 ? (
-                            <span className="font-bold text-xs text-[#241C15] tabular-nums">
-                              {formatCurrency(item.montoAgostoReal)}
-                            </span>
-                          ) : (
-                            <span className="text-[#75695D] font-normal text-xs">-</span>
-                          )}
-                        </td>
-
-                        {/* Columna: Gastado en Septiembre (Hoy - NO EDITABLE / Real Ejecutado) */}
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="flex flex-col items-end font-mono">
-                            <span className="font-bold text-xs text-[#1E5E3A] tabular-nums">
-                              {formatCurrency(item.montoSeptiembreReal)}
-                            </span>
-                            {item.monto > 0 && item.montoSeptiembreReal > 0 && (
-                              <span className="text-[10px] font-sans text-[#75695D] mt-0.5">
-                                ({porcentajePartida}% del plan)
+                            {item.subconcepto && (
+                              <span className="text-[11px] text-[#75695D] block truncate" title={item.subconcepto}>
+                                {item.subconcepto}
                               </span>
                             )}
                           </div>
-                        </td>
+                        </div>
+                      </td>
 
-                        {/* Columna: Presupuesto Septiembre (Editable Inline) */}
-                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                          <div className="relative inline-flex items-center justify-end">
-                            <span className="absolute left-2.5 text-xs font-mono font-bold text-[#A36F4C]">S/</span>
-                            <input
-                              type="number"
-                              step="any"
-                              value={item.monto === 0 ? '' : item.monto}
-                              placeholder="0.00"
-                              onChange={(e) => handleUpdateMontoInline(item.id, e.target.value)}
-                              className="w-28 bg-[#FAF8F5] border border-[#D4BEA7] rounded-xl pl-7 pr-2.5 py-1.5 text-xs font-mono font-black text-right text-[#633E20] focus:bg-[#FFFFFF] focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] transition-all"
-                            />
-                          </div>
-                        </td>
+                      {/* Tipo: Blindado vs Flexible */}
+                      <td className="py-3 px-2 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleBlindado(item.id)}
+                          className={`px-2 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-1 transition-all cursor-pointer ${
+                            item.esBlindado
+                              ? 'bg-[#F4EFEA] text-[#A36F4C] border border-[#D4BEA7] shadow-2xs'
+                              : 'bg-[#E8F5E9] text-[#1E5E3A] border border-[#B4E3C0]'
+                          }`}
+                          title={item.esBlindado ? 'Gasto Blindado (Intocable)' : 'Gasto Flexible'}
+                        >
+                          {item.esBlindado ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                          <span>{item.esBlindado ? 'Blindado' : 'Flexible'}</span>
+                        </button>
+                      </td>
 
-                        {/* Acciones */}
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEditar(item)}
-                              className="p-2 text-[#75695D] hover:text-[#241C15] hover:bg-[#FAF8F5] rounded-xl cursor-pointer transition-colors"
-                              title="Editar gasto en modal completo"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleEliminarItem(item.id, item.concepto)}
-                              className="p-2 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-xl cursor-pointer transition-colors"
-                              title="Eliminar gasto del plan"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-              {/* Fila de Totales de la Tabla */}
-              <tfoot className="bg-[#F8F6F2] border-t-2 border-[#E2D9CC] font-bold text-xs">
-                <tr>
-                  <td className="py-3.5 px-4 text-[#241C15] font-black uppercase">
-                    Total Consolidado
-                  </td>
-                  <td className="py-3.5 px-3 text-center text-[10px] text-[#75695D]">
-                    {itemsPlan.length} partidas
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-black text-[#241C15] tabular-nums">
-                    {formatCurrency(totalGastadoAgosto)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-black text-[#1E5E3A] tabular-nums">
-                    {formatCurrency(totalGastadoSeptiembre)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-black text-[#A36F4C] tabular-nums">
-                    {formatCurrency(totalPlanificado)}
-                  </td>
-                  <td className="py-3.5 px-4"></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                      {/* Columna: Gastado en Agosto (Real Cerrado - NO EDITABLE) */}
+                      <td className="py-3 px-3 text-right whitespace-nowrap font-mono">
+                        {item.montoAgostoReal > 0 ? (
+                          <span className="font-bold text-xs text-[#241C15] tabular-nums">
+                            {formatCurrency(item.montoAgostoReal)}
+                          </span>
+                        ) : (
+                          <span className="text-[#75695D] font-normal text-xs">-</span>
+                        )}
+                      </td>
+
+                      {/* Columna: Gastado en Septiembre (Hoy - NO EDITABLE / Real Ejecutado) */}
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
+                        <div className="flex flex-col items-end font-mono">
+                          <span className="font-bold text-xs text-[#1E5E3A] tabular-nums">
+                            {formatCurrency(item.montoSeptiembreReal)}
+                          </span>
+                          {item.monto > 0 && item.montoSeptiembreReal > 0 && (
+                            <span className="text-[10px] font-sans text-[#75695D]">
+                              ({porcentajePartida}%)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Columna: Presupuesto Septiembre (Editable Inline) */}
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
+                        <div className="relative inline-flex items-center justify-end">
+                          <span className="absolute left-2 text-xs font-mono font-bold text-[#A36F4C]">S/</span>
+                          <input
+                            type="number"
+                            step="any"
+                            value={item.monto === 0 ? '' : item.monto}
+                            placeholder="0.00"
+                            onChange={(e) => handleUpdateMontoInline(item.id, e.target.value)}
+                            className="w-24 bg-[#FAF8F5] border border-[#D4BEA7] rounded-xl pl-6 pr-2 py-1 text-xs font-mono font-black text-right text-[#633E20] focus:bg-[#FFFFFF] focus:border-[#A36F4C] focus:ring-1 focus:ring-[#A36F4C] transition-all"
+                          />
+                        </div>
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="py-3 px-3 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditar(item)}
+                            className="p-1.5 text-[#75695D] hover:text-[#241C15] hover:bg-[#FAF8F5] rounded-lg cursor-pointer transition-colors"
+                            title="Editar gasto"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEliminarItem(item.id, item.concepto)}
+                            className="p-1.5 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                            title="Eliminar gasto"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+            {/* Fila de Totales de la Tabla */}
+            <tfoot className="bg-[#FAF8F5] border-t-2 border-[#E2D9CC] font-bold text-xs">
+              <tr>
+                <td className="py-3 px-4 text-[#241C15] font-black uppercase">
+                  Total Consolidado
+                </td>
+                <td className="py-3 px-2 text-center text-[10px] text-[#75695D]">
+                  {itemsPlan.length} partidas
+                </td>
+                <td className="py-3 px-3 text-right font-mono font-black text-[#241C15] tabular-nums">
+                  {formatCurrency(totalGastadoAgosto)}
+                </td>
+                <td className="py-3 px-3 text-right font-mono font-black text-[#1E5E3A] tabular-nums">
+                  {formatCurrency(totalGastadoSeptiembre)}
+                </td>
+                <td className="py-3 px-3 text-right font-mono font-black text-[#A36F4C] tabular-nums">
+                  {formatCurrency(totalPlanificado)}
+                </td>
+                <td className="py-3 px-3"></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
 
         {/* ========================================================================= */}

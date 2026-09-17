@@ -556,31 +556,29 @@ export function InventarioClient({
           </div>
         </div>
 
-        {/* Fila de 4 KPIs Interactivos (Click para filtrar) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        {/* Fila de 4 KPIs Interactivos (Click para filtrar) Minimalistas */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {/* KPI 1: Kilos en Taller -> Activa 'todos' */}
           <button
             type="button"
             onClick={() => setActiveTab('todos')}
-            className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer ${
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer ${
               activeTab === 'todos'
-                ? 'bg-[#FAF8F5] border-[#A36F4C] ring-2 ring-[#A36F4C]/25 shadow-xs'
-                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#A36F4C]/60 hover:bg-[#F4EFEA]'
+                ? 'bg-white border-[#A36F4C] ring-1 ring-[#A36F4C]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
-                Total Kilos en Taller
-              </span>
-              <div className="p-1.5 rounded-lg bg-[#EBF7EE] text-[#1E5E3A] flex-shrink-0">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">Total en Taller</span>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
                 <Weight className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-lg sm:text-2xl font-black text-[#1E5E3A] font-mono tracking-tight">
-                {(totalGramosActivos / 1000).toFixed(2)} kg
+              <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
+                {(totalGramosActivos / 1000).toFixed(2)} <span className="text-xs font-normal font-sans text-[#75695D]">kg</span>
               </div>
-              <span className="text-[10px] sm:text-xs text-[#75695D] font-medium mt-0.5 block truncate">
+              <span className="text-xs text-[#75695D] mt-0.5 block truncate">
                 {totalGramosActivos.toLocaleString()} g activos
               </span>
             </div>
@@ -590,25 +588,23 @@ export function InventarioClient({
           <button
             type="button"
             onClick={() => setActiveTab('disponibles')}
-            className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer ${
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer ${
               activeTab === 'disponibles'
-                ? 'bg-[#EBF7EE]/40 border-[#1E5E3A] ring-2 ring-[#1E5E3A]/25 shadow-xs'
-                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#1E5E3A]/60 hover:bg-[#F4EFEA]'
+                ? 'bg-white border-[#1E5E3A] ring-1 ring-[#1E5E3A]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
-                Colores Disponibles
-              </span>
-              <div className="p-1.5 rounded-lg bg-[#F5EBE1] text-[#A36F4C] flex-shrink-0">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">Colores Disponibles</span>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
                 <Palette className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-lg sm:text-2xl font-black text-[#241C15] font-mono tracking-tight">
-                {disponibles.length} colores
+              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+                {disponibles.length} <span className="text-xs font-normal font-sans text-[#75695D]">colores</span>
               </div>
-              <span className="text-[10px] sm:text-xs text-[#1E5E3A] font-bold mt-0.5 block truncate">
+              <span className="text-xs text-[#1E5E3A] font-medium mt-0.5 block truncate">
                 Stock activo para producción
               </span>
             </div>
@@ -618,36 +614,24 @@ export function InventarioClient({
           <button
             type="button"
             onClick={() => setActiveTab('criticos')}
-            className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer ${
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer ${
               activeTab === 'criticos'
-                ? 'bg-[#FEF9C3] border-[#854D0E] ring-2 ring-[#854D0E]/25 shadow-xs'
-                : totalCriticos.length > 0 
-                ? 'bg-[#FEF9C3]/70 border-[#FDE047] hover:border-[#854D0E]/60 text-[#854D0E]' 
-                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#854D0E]/60 text-[#241C15]'
+                ? 'bg-white border-[#854D0E] ring-1 ring-[#854D0E]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wider truncate ${
-                totalCriticos.length > 0 ? 'text-[#854D0E]' : 'text-[#75695D]'
-              }`}>
-                Stock Crítico (&lt;300g)
-              </span>
-              <div className={`p-1.5 rounded-lg flex-shrink-0 ${
-                totalCriticos.length > 0 ? 'bg-[#FEF08A] text-[#854D0E]' : 'bg-[#EBF7EE] text-[#1E5E3A]'
-              }`}>
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">Stock Crítico (&lt;300g)</span>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#854D0E]">
                 <AlertTriangle className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className={`text-lg sm:text-2xl font-black font-mono tracking-tight ${
-                totalCriticos.length > 0 ? 'text-[#854D0E]' : 'text-[#1E5E3A]'
-              }`}>
-                {totalCriticos.length} {totalCriticos.length === 1 ? 'color' : 'colores'}
+              <div className="text-xl sm:text-2xl font-black text-[#854D0E] font-mono tabular-nums">
+                {totalCriticos.length} <span className="text-xs font-normal font-sans text-[#75695D]">{totalCriticos.length === 1 ? 'color' : 'colores'}</span>
               </div>
-              <span className={`text-[10px] sm:text-xs font-bold mt-0.5 block truncate ${
-                totalCriticos.length > 0 ? 'text-[#854D0E]' : 'text-[#75695D]'
-              }`}>
-                {totalCriticos.length > 0 ? '⚠️ Reponer pronto' : 'Stock en nivel óptimo'}
+              <span className="text-xs text-[#854D0E] font-medium mt-0.5 block truncate">
+                {totalCriticos.length > 0 ? 'Reponer pronto' : 'Nivel óptimo'}
               </span>
             </div>
           </button>
@@ -656,26 +640,24 @@ export function InventarioClient({
           <button
             type="button"
             onClick={() => setActiveTab('restock')}
-            className={`p-3 sm:p-4 rounded-2xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer ${
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer ${
               activeTab === 'restock'
-                ? 'bg-[#FEF9C3] border-[#A36F4C] ring-2 ring-[#A36F4C]/25 shadow-xs'
-                : 'bg-[#FAF8F5] border-[#E2D9CC] hover:border-[#A36F4C]/60 hover:bg-[#F4EFEA]'
+                ? 'bg-white border-[#A36F4C] ring-1 ring-[#A36F4C]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
-                Para Restock
-              </span>
-              <div className="p-1.5 rounded-lg bg-[#FEF9C3] text-[#854D0E] flex-shrink-0">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">Para Restock</span>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#7C5835]">
                 <ShoppingCart className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-lg sm:text-2xl font-black text-[#A36F4C] font-mono tracking-tight">
-                {restock.length} colores
+              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+                {restock.length} <span className="text-xs font-normal font-sans text-[#75695D]">colores</span>
               </div>
-              <span className="text-[10px] sm:text-xs text-[#854D0E] font-bold mt-0.5 block truncate">
-                🛒 Marcados para compra
+              <span className="text-xs text-[#75695D] font-medium mt-0.5 block truncate">
+                Marcados para compra
               </span>
             </div>
           </button>
@@ -948,8 +930,8 @@ export function InventarioClient({
           /* TABLA DE INVENTARIO                                                      */
           /* ========================================================================= */
           <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl overflow-hidden shadow-xs">
-            {/* Mobile View (< md): Filament Cards */}
-            <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+            {/* Mobile / Tablet View (< lg): Filament Cards */}
+            <div className="block lg:hidden divide-y divide-[#E2D9CC]/70">
               {filteredGridItems.map((item, idx) => {
                 const isDescatalogado = item.estado === 'DESCATALOGADO'
                 const isDisp = item.estado === 'DISPONIBLE'
@@ -1158,18 +1140,18 @@ export function InventarioClient({
               })}
             </div>
 
-            {/* Desktop View (>= md): Full Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <Table className="w-full">
+            {/* Desktop View (>= lg): Full Table table-fixed */}
+            <div className="hidden lg:block w-full">
+              <Table className="w-full table-fixed">
                 <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
                   <TableRow className="hover:bg-transparent border-b border-[#E2D9CC] text-xs font-bold text-[#75695D]">
-                    <TableHead className="w-12 px-3 py-3 text-center text-[#75695D]">#</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-[#75695D]">Color / Filamento</TableHead>
-                    <TableHead className="w-32 px-3 py-3 text-center text-[#75695D]">Estado</TableHead>
-                    <TableHead className="w-56 px-4 py-3 text-left text-[#75695D]">Stock en Taller</TableHead>
-                    <TableHead className="w-36 px-3 py-3 text-center text-[#75695D]">Ajuste Rápido</TableHead>
-                    <TableHead className="w-44 px-3 py-3 text-left text-[#75695D]">Producción</TableHead>
-                    <TableHead className="w-44 px-4 py-3 text-right text-[#75695D]">Acciones</TableHead>
+                    <TableHead className="w-10 px-2 py-3 text-center text-[#75695D]">#</TableHead>
+                    <TableHead className="px-3 py-3 text-left text-[#75695D]">Color / Filamento</TableHead>
+                    <TableHead className="w-28 px-2 py-3 text-center text-[#75695D]">Estado</TableHead>
+                    <TableHead className="w-48 px-3 py-3 text-left text-[#75695D]">Stock en Taller</TableHead>
+                    <TableHead className="w-28 px-2 py-3 text-center text-[#75695D]">Ajuste Rápido</TableHead>
+                    <TableHead className="w-36 px-2 py-3 text-left text-[#75695D]">Producción</TableHead>
+                    <TableHead className="w-36 px-3 py-3 text-right pr-4 text-[#75695D]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1194,32 +1176,32 @@ export function InventarioClient({
                         }`}
                       >
                         {/* 1. Rank # */}
-                        <TableCell className="w-12 px-3 py-3 text-center font-mono font-bold text-[#75695D]">
+                        <TableCell className="px-2 py-3 text-center font-mono font-bold text-[#75695D]">
                           {idx + 1}
                         </TableCell>
 
                         {/* 2. Swatch & Color Name */}
-                        <TableCell className="px-4 py-3">
-                          <div className="flex items-center gap-3">
+                        <TableCell className="px-3 py-3 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <button
                               type="button"
                               onClick={() => handleOpenEditColor(item)}
-                              className="relative h-7 w-7 rounded-full border border-black/15 shadow-2xs flex-shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-transform flex items-center justify-center group"
+                              className="relative h-6.5 w-6.5 rounded-full border border-black/15 shadow-2xs flex-shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-transform flex items-center justify-center group"
                               style={{ backgroundColor: item.codigoHex }}
                               title={`Editar "${item.nombreColor}"`}
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-white/40 border border-black/10" />
                             </button>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <button
                                 type="button"
                                 onClick={() => handleOpenEditColor(item)}
-                                className="font-bold text-xs sm:text-sm text-[#241C15] truncate hover:text-[#A36F4C] hover:underline cursor-pointer block text-left"
+                                className="font-bold text-xs text-[#241C15] truncate hover:text-[#A36F4C] hover:underline cursor-pointer block text-left"
                               >
                                 {item.nombreColor}
                               </button>
                               {item.nota && (
-                                <span className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-1.5 py-0.2 rounded border border-[#FDE047]/60 inline-block truncate max-w-[200px] mt-0.5">
+                                <span className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-1.5 py-0.2 rounded border border-[#FDE047]/60 inline-block truncate max-w-full mt-0.5">
                                   {item.nota}
                                 </span>
                               )}
@@ -1228,7 +1210,7 @@ export function InventarioClient({
                         </TableCell>
 
                         {/* 3. Estado */}
-                        <TableCell className="w-32 px-3 py-3 text-center">
+                        <TableCell className="px-2 py-3 text-center">
                           {isDescatalogado ? (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC] uppercase tracking-wider inline-flex items-center gap-1">
                               <Archive className="h-2.5 w-2.5 text-[#75695D]" />
@@ -1253,7 +1235,7 @@ export function InventarioClient({
                         </TableCell>
 
                         {/* 4. Stock en Taller */}
-                        <TableCell className="w-56 px-4 py-3">
+                        <TableCell className="px-3 py-3 min-w-0">
                           {isDescatalogado ? (
                             <span className="text-xs text-[#75695D] italic">0 g (Descatalogado)</span>
                           ) : isDisp ? (
@@ -1262,7 +1244,7 @@ export function InventarioClient({
                                 <button
                                   type="button"
                                   onClick={() => handleSetGramosPrompt(item)}
-                                  className="font-mono font-black text-xs sm:text-sm text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer tracking-tight"
+                                  className="font-mono font-black text-xs text-[#241C15] hover:text-[#A36F4C] hover:underline cursor-pointer tracking-tight"
                                   title="Toca para ingresar gramos exactos"
                                 >
                                   {gramos.toLocaleString()} g
@@ -1279,11 +1261,6 @@ export function InventarioClient({
                                   style={{ width: `${Math.min(100, Math.max(5, (gramos / (item.pesoInicialGramos || 1000)) * 100))}%` }}
                                 />
                               </div>
-                              {gramos >= 1000 && (
-                                <span className="text-[10px] text-[#1E5E3A] font-medium block">
-                                  ✨ Equivale a {(gramos / 1000).toFixed(1)} bobinas
-                                </span>
-                              )}
                             </div>
                           ) : (
                             <span className="text-xs text-[#854D0E] font-bold">0 g (En reposición)</span>
@@ -1291,13 +1268,13 @@ export function InventarioClient({
                         </TableCell>
 
                         {/* 5. Ajuste Rápido */}
-                        <TableCell className="w-36 px-3 py-3 text-center">
+                        <TableCell className="px-2 py-3 text-center">
                           {isDisp && !isDescatalogado ? (
                             <div className="inline-flex items-center gap-1">
                               <button
                                 type="button"
                                 onClick={() => handleAjustarGramos(item, -50)}
-                                className="px-2 py-1 text-[10px] font-bold rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer"
+                                className="px-1.5 py-1 text-[10px] font-bold rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer"
                                 title="Descontar 50g"
                               >
                                 -50g
@@ -1305,7 +1282,7 @@ export function InventarioClient({
                               <button
                                 type="button"
                                 onClick={() => handleAjustarGramos(item, 50)}
-                                className="px-2 py-1 text-[10px] font-bold rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer"
+                                className="px-1.5 py-1 text-[10px] font-bold rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-transform cursor-pointer"
                                 title="Añadir 50g"
                               >
                                 +50g
@@ -1317,21 +1294,21 @@ export function InventarioClient({
                         </TableCell>
 
                         {/* 6. Producción */}
-                        <TableCell className="w-44 px-3 py-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <div>
-                              <span className="font-bold text-xs text-[#241C15] block">
-                                {item.totalProductosImpresos || 0} piezas
+                        <TableCell className="px-2 py-3 min-w-0">
+                          <div className="flex items-center justify-between gap-1.5">
+                            <div className="min-w-0">
+                              <span className="font-bold text-xs text-[#241C15] block truncate">
+                                {item.totalProductosImpresos || 0} pzas
                               </span>
-                              <span className="text-[10px] text-[#75695D] block">
-                                {(item.totalGramosConsumidos || 0).toLocaleString()} g usados
+                              <span className="text-[10px] text-[#75695D] block truncate">
+                                {(item.totalGramosConsumidos || 0).toLocaleString()}g
                               </span>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleOpenColorDetails(item)}
                               title="Ver modelos fabricados con este color"
-                              className="h-6.5 w-6.5 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer border border-[#E2D9CC] bg-white flex-shrink-0"
+                              className="h-6 w-6 flex items-center justify-center rounded-lg text-[#75695D] hover:text-[#A36F4C] hover:bg-[#F4EFEA] transition-colors cursor-pointer border border-[#E2D9CC] bg-white flex-shrink-0"
                             >
                               <Info className="h-3 w-3" />
                             </button>
@@ -1339,7 +1316,7 @@ export function InventarioClient({
                         </TableCell>
 
                         {/* 7. Acciones */}
-                        <TableCell className="w-44 px-4 py-3 text-right">
+                        <TableCell className="px-3 py-3 text-right pr-4">
                           <div className="flex items-center justify-end gap-1.5">
                             {isDescatalogado ? (
                               <Button

@@ -41,8 +41,6 @@ import {
   Boxes,
   ExternalLink,
   Pencil,
-  LayoutGrid,
-  List,
   ArrowUpDown,
   ArrowUp,
   ArrowDown
@@ -233,7 +231,6 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   const [editEstado, setEditEstado] = useState<EstadoPedido>('PENDIENTE')
 
   // Estado para Vista de Tabla Interactiva y Paginación
-  const [viewMode, setViewMode] = useState<'TABLA' | 'CARDS'>('TABLA')
   const [sortField, setSortField] = useState<'fecha' | 'codigo' | 'cliente' | 'cantidad' | 'total' | 'saldoPendiente' | 'estado'>('fecha')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
@@ -728,22 +725,19 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   return (
     <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
       {/* ========================================================================= */}
-      {/* 1. HEADER SIMPLE Y ELEGANTE (SIN CAJA PESADA)                             */}
+      {/* 1. HEADER SIMPLE Y ELEGANTE                                               */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#241C15] tracking-tight flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-2xs">
-                <Boxes className="h-5 w-5 stroke-[2.5]" />
-              </div>
-              <span>Gestión de Pedidos</span>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black text-[#241C15] tracking-tight">
+              Gestión de Pedidos
             </h1>
-            <Badge className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] font-bold text-xs">
-              {kpis.totalPedidos} pedidos
-            </Badge>
+            <span className="text-xs font-bold text-[#75695D] font-mono">
+              ({kpis.totalPedidos})
+            </span>
           </div>
-          <p className="text-xs sm:text-sm text-[#75695D] mt-1">
+          <p className="text-xs text-[#75695D] mt-0.5">
             Registro, control de producción, anticipos de pago y despacho por cliente.
           </p>
         </div>
@@ -753,7 +747,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
             resetForm()
             setIsNewOrderModalOpen(true)
           }}
-          className="h-10 px-4 rounded-xl bg-[#1E5E3A] hover:bg-[#16482C] text-white font-bold shadow-sm transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto active:scale-[0.98]"
+          className="h-9 px-3.5 rounded-xl bg-[#1E5E3A] hover:bg-[#16482C] text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto active:scale-[0.98]"
         >
           <Plus className="h-4 w-4 stroke-[2.5]" />
           <span>Nuevo Pedido</span>
@@ -761,66 +755,76 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. KPIS EJECUTIVOS DE PEDIDOS (STREAMLINED)                               */}
+      {/* 2. KPIS EJECUTIVOS DE PEDIDOS (MINIMALISTAS)                              */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {/* KPI 1: Total Pedidos */}
-        <div className="rounded-2xl border border-[#E2D9CC] bg-[#FFFFFF] p-3.5 shadow-2xs">
+        <div className="rounded-2xl border border-[#E2D9CC] bg-white p-3.5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#75695D] mb-1">
-            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Total Pedidos</span>
-            <Boxes className="h-3.5 w-3.5 text-[#A36F4C]" />
+            <span className="text-xs font-semibold text-[#6B7280]">Total Pedidos</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#7C5835]">
+              <Boxes className="h-3.5 w-3.5" />
+            </div>
           </div>
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="font-mono text-xl font-black text-[#241C15]">{kpis.totalPedidos}</span>
-            <span className="text-[11px] text-[#75695D]">({kpis.totalPiezas} piezas)</span>
+            <span className="font-mono text-xl font-black text-[#1F2937] tabular-nums">{kpis.totalPedidos}</span>
+            <span className="text-xs text-[#75695D]">({kpis.totalPiezas} piezas)</span>
           </div>
         </div>
 
         {/* KPI 2: En Producción */}
-        <div className="rounded-2xl border border-[#BEE3F8] bg-[#EBF3FB]/70 p-3.5 shadow-2xs">
-          <div className="flex items-center justify-between text-[#2B6CB0] mb-1">
-            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">En Impresión</span>
-            <Layers className="h-3.5 w-3.5" />
+        <div className="rounded-2xl border border-[#E2D9CC] bg-white p-3.5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#75695D] mb-1">
+            <span className="text-xs font-semibold text-[#6B7280]">En Impresión</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#2B6CB0]">
+              <Layers className="h-3.5 w-3.5" />
+            </div>
           </div>
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="font-mono text-xl font-black text-[#2B6CB0]">{kpis.enProduccion}</span>
-            <span className="text-[11px] text-[#2B6CB0]/80">en taller</span>
+            <span className="font-mono text-xl font-black text-[#2B6CB0] tabular-nums">{kpis.enProduccion}</span>
+            <span className="text-xs text-[#75695D]">en taller</span>
           </div>
         </div>
 
         {/* KPI 3: Por Entregar / Listos */}
-        <div className="rounded-2xl border border-[#E9D8FD] bg-[#FAF0F8]/70 p-3.5 shadow-2xs">
-          <div className="flex items-center justify-between text-[#805AD5] mb-1">
-            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Por Entregar</span>
-            <Package className="h-3.5 w-3.5" />
+        <div className="rounded-2xl border border-[#E2D9CC] bg-white p-3.5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#75695D] mb-1">
+            <span className="text-xs font-semibold text-[#6B7280]">Por Entregar</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#805AD5]">
+              <Package className="h-3.5 w-3.5" />
+            </div>
           </div>
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="font-mono text-xl font-black text-[#805AD5]">{kpis.listos}</span>
-            <span className="text-[11px] text-[#805AD5]/80">listos</span>
+            <span className="font-mono text-xl font-black text-[#805AD5] tabular-nums">{kpis.listos}</span>
+            <span className="text-xs text-[#75695D]">listos</span>
           </div>
         </div>
 
         {/* KPI 4: Saldo por Cobrar */}
-        <div className="rounded-2xl border border-[#E8D49B] bg-[#FDF6E2]/70 p-3.5 shadow-2xs">
-          <div className="flex items-center justify-between text-[#8C6D1F] mb-1">
-            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Por Cobrar</span>
-            <DollarSign className="h-3.5 w-3.5" />
+        <div className="rounded-2xl border border-[#E2D9CC] bg-white p-3.5 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#75695D] mb-1">
+            <span className="text-xs font-semibold text-[#6B7280]">Por Cobrar</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#92400E]">
+              <DollarSign className="h-3.5 w-3.5" />
+            </div>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="font-mono text-lg font-black text-[#8C6D1F] truncate">
+            <span className="font-mono text-lg font-black text-[#92400E] truncate tabular-nums">
               {formatCurrency(kpis.saldoPorCobrar)}
             </span>
           </div>
         </div>
 
         {/* KPI 5: Cobrado en Caja */}
-        <div className="rounded-2xl border border-[#B4E3C0] bg-[#EBF7EE]/70 p-3.5 shadow-2xs col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between text-[#1E5E3A] mb-1">
-            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">Cobrado en Caja</span>
-            <CheckCircle2 className="h-3.5 w-3.5" />
+        <div className="rounded-2xl border border-[#E2D9CC] bg-white p-3.5 shadow-xs flex flex-col justify-between col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between text-[#75695D] mb-1">
+            <span className="text-xs font-semibold text-[#6B7280]">Cobrado</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#059669]">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            </div>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="font-mono text-lg font-black text-[#1E5E3A] truncate">
+            <span className="font-mono text-lg font-black text-[#059669] truncate tabular-nums">
               {formatCurrency(kpis.totalCobrado)}
             </span>
           </div>
@@ -831,151 +835,88 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       {/* 3. PANEL MAESTRO: FILTROS + TABLA / TARJETAS EN UN SOLO CONTENEDOR        */}
       {/* ========================================================================= */}
       <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl shadow-xs overflow-hidden">
-        {/* Toolbar Integrada */}
-        <div className="p-3.5 sm:p-4 bg-[#FFFFFF] space-y-3">
-          {/* Fila 1: Buscador + Filtros de Pago + Paginación + Vista */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
-            {/* Buscador */}
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
-              <Input
-                placeholder="Buscar por cliente, código (#PED-001), producto o teléfono..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setCurrentPage(1)
-                }}
-                className="pl-9 pr-8 h-9 bg-[#FAF8F5] border-[#E2D9CC] text-xs sm:text-sm text-[#241C15] placeholder:text-[#75695D] rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch('')
-                    setCurrentPage(1)
-                  }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 cursor-pointer"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Controles de Pago, Límite y Vista */}
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between lg:justify-end">
-              {/* Filtros de Pago */}
-              <div className="flex items-center gap-1 bg-[#FAF8F5] p-0.5 rounded-xl border border-[#E2D9CC]">
-                {[
-                  { id: 'TODOS', label: 'Todos' },
-                  { id: 'PAGADO', label: '100% Pagado' },
-                  { id: 'PENDIENTE', label: 'Con Saldo' }
-                ].map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPagoFilter(p.id)
-                      setCurrentPage(1)
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      selectedPagoFilter === p.id
-                        ? 'bg-[#241C15] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:text-[#241C15]'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Selector de Filas */}
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value))
-                  setCurrentPage(1)
-                }}
-                className="h-8 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2 text-xs font-bold text-[#241C15] cursor-pointer"
-              >
-                <option value={10}>10 pedidos</option>
-                <option value={20}>20 pedidos</option>
-                <option value={50}>50 pedidos</option>
-                <option value={9999}>Todos ({filteredPedidos.length})</option>
-              </select>
-
-              {/* Selector de Modo de Vista */}
-              <div className="flex items-center bg-[#FAF8F5] p-0.5 rounded-xl border border-[#E2D9CC]">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('TABLA')}
-                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                    viewMode === 'TABLA'
-                      ? 'bg-[#241C15] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:text-[#241C15]'
-                  }`}
-                  title="Vista Tabla"
-                >
-                  <List className="h-3.5 w-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode('CARDS')}
-                  className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                    viewMode === 'CARDS'
-                      ? 'bg-[#241C15] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:text-[#241C15]'
-                  }`}
-                  title="Vista Tarjetas"
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Fila 2: Filtros de Estado */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar pt-1 border-t border-[#E2D9CC]/50">
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedEstadoFilter('TODOS')
+        {/* Toolbar Integrada en 1 Fila (Opción 1: Buscador Principal + Selectores Dropdown) */}
+        <div className="p-2.5 sm:p-3 bg-[#FFFFFF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          {/* Buscador Amplio */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#75695D]" />
+            <Input
+              placeholder="Buscar por cliente, código (#PED-001), producto o teléfono..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
                 setCurrentPage(1)
               }}
-              className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                selectedEstadoFilter === 'TODOS'
-                  ? 'bg-[#A36F4C] text-white shadow-2xs'
-                  : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] border border-[#E2D9CC]'
-              }`}
+              className="pl-8.5 pr-7 h-8.5 bg-[#FAF8F5] border-[#E2D9CC] text-xs sm:text-sm text-[#241C15] placeholder:text-[#A89F91] rounded-xl focus:bg-white"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('')
+                  setCurrentPage(1)
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 cursor-pointer"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Grupo de Filtros Compactos a la Derecha */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between sm:justify-end shrink-0">
+            {/* Filtro de Estado (Dropdown) */}
+            <select
+              value={selectedEstadoFilter}
+              onChange={(e) => {
+                setSelectedEstadoFilter(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="h-8.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2.5 text-xs font-semibold text-[#241C15] cursor-pointer focus:outline-none"
             >
-              Todos ({pedidos.length})
-            </button>
-            {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => {
-              const count = pedidos.filter(p => p.estado === stKey).length
-              return (
-                <button
-                  key={stKey}
-                  type="button"
-                  onClick={() => {
-                    setSelectedEstadoFilter(stKey)
-                    setCurrentPage(1)
-                  }}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                    selectedEstadoFilter === stKey
-                      ? `${conf.colorBg} ${conf.colorText} ${conf.colorBorder} border shadow-2xs font-black`
-                      : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] border border-[#E2D9CC]'
-                  }`}
-                >
-                  <conf.icon className="h-3 w-3" />
-                  <span>{conf.label}</span>
-                  <span className="font-mono text-[10px]">({count})</span>
-                </button>
-              )
-            })}
+              <option value="TODOS">Todos los estados ({pedidos.length})</option>
+              {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => {
+                const count = pedidos.filter(p => p.estado === stKey).length
+                return (
+                  <option key={stKey} value={stKey}>
+                    {conf.label} ({count})
+                  </option>
+                )
+              })}
+            </select>
+
+            {/* Filtro de Pago (Dropdown) */}
+            <select
+              value={selectedPagoFilter}
+              onChange={(e) => {
+                setSelectedPagoFilter(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="h-8.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2.5 text-xs font-semibold text-[#241C15] cursor-pointer focus:outline-none"
+            >
+              <option value="TODOS">Todos los pagos</option>
+              <option value="PAGADO">100% Pagado</option>
+              <option value="PENDIENTE">Con Saldo</option>
+            </select>
+
+            {/* Selector de Filas */}
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value))
+                setCurrentPage(1)
+              }}
+              className="h-8.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2.5 text-xs font-semibold text-[#241C15] cursor-pointer focus:outline-none"
+            >
+              <option value={10}>10 pedidos</option>
+              <option value={20}>20 pedidos</option>
+              <option value={50}>50 pedidos</option>
+              <option value={9999}>Todos ({filteredPedidos.length})</option>
+            </select>
           </div>
         </div>
 
-        {/* Contenido Principal (Tabla o Tarjetas) */}
+        {/* Contenido Principal: Tabla Interactiva de Pedidos (Zero-Scroll) */}
         {filteredPedidos.length === 0 ? (
           <div className="p-12 text-center border-t border-[#E2D9CC]">
             <div className="mx-auto w-12 h-12 rounded-2xl bg-[#FAF8F5] flex items-center justify-center text-[#75695D] mb-3">
@@ -986,87 +927,68 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
               No hay pedidos que coincidan con los filtros seleccionados.
             </p>
           </div>
-        ) : viewMode === 'TABLA' ? (
-          /* VISTA 1: TABLA INTERACTIVA DE PEDIDOS */
+        ) : (
           <div className="border-t border-[#E2D9CC]">
-            <div className="w-full overflow-x-auto">
+            <div className="w-full">
               <Table className="w-full">
-                <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
-                  <TableRow className="border-[#E2D9CC] hover:bg-[#FAF8F5]">
-                    <TableHead className="px-3.5 py-3.5">
+                <TableHeader className="bg-[#FAF8F5]/80 border-b border-[#E2D9CC]">
+                  <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+                    <TableHead className="px-4 py-3 text-xs font-bold text-[#75695D]">
                       <button
                         onClick={() => handleSort('fecha')}
-                        className="flex items-center gap-1.5 text-xs font-extrabold text-[#241C15] hover:text-[#A36F4C] transition-colors cursor-pointer"
-                        title="Ordenar por fecha o código"
+                        className="flex items-center gap-1.5 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer"
                       >
-                        <Calendar className="h-3.5 w-3.5 text-[#A36F4C]" />
-                        <span>Pedido / Fecha</span>
-                        {sortField === 'fecha' || sortField === 'codigo' ? (
+                        <span>Pedido & Cliente</span>
+                        {sortField === 'fecha' || sortField === 'codigo' || sortField === 'cliente' ? (
                           sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-[#A36F4C]" /> : <ArrowDown className="h-3 w-3 text-[#A36F4C]" />
                         ) : (
-                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/60" />
+                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/40" />
                         )}
                       </button>
                     </TableHead>
 
-                    <TableHead className="px-3.5 py-3.5">
-                      <button
-                        onClick={() => handleSort('cliente')}
-                        className="flex items-center gap-1 text-xs font-extrabold text-[#241C15] hover:text-[#A36F4C] transition-colors cursor-pointer"
-                      >
-                        <span>Cliente & Contacto</span>
-                        {sortField === 'cliente' ? (
-                          sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-[#A36F4C]" /> : <ArrowDown className="h-3 w-3 text-[#A36F4C]" />
-                        ) : (
-                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/60" />
-                        )}
-                      </button>
-                    </TableHead>
-
-                    <TableHead className="px-3.5 py-3.5">
+                    <TableHead className="px-3 py-3 text-xs font-bold text-[#75695D]">
                       <button
                         onClick={() => handleSort('cantidad')}
-                        className="flex items-center gap-1 text-xs font-extrabold text-[#241C15] hover:text-[#A36F4C] transition-colors cursor-pointer"
-                        title="Ordenar por cantidad de piezas"
+                        className="flex items-center gap-1 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer"
                       >
-                        <Boxes className="h-3.5 w-3.5 text-[#A36F4C]" />
                         <span>Productos</span>
                         {sortField === 'cantidad' ? (
                           sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-[#A36F4C]" /> : <ArrowDown className="h-3 w-3 text-[#A36F4C]" />
                         ) : (
-                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/60" />
+                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/40" />
                         )}
                       </button>
                     </TableHead>
 
-                    <TableHead className="px-3.5 py-3.5">
+                    <TableHead className="w-40 px-3 py-3 text-xs font-bold text-[#75695D]">
+                      Entrega & Destino
+                    </TableHead>
+
+                    <TableHead className="w-36 px-3 py-3 text-center text-xs font-bold text-[#75695D]">
                       <button
                         onClick={() => handleSort('estado')}
-                        className="flex items-center gap-1 text-xs font-extrabold text-[#241C15] hover:text-[#A36F4C] transition-colors cursor-pointer"
+                        className="flex items-center justify-center gap-1 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer mx-auto"
                       >
                         <span>Estado</span>
                         {sortField === 'estado' ? (
                           sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-[#A36F4C]" /> : <ArrowDown className="h-3 w-3 text-[#A36F4C]" />
                         ) : (
-                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/60" />
+                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/40" />
                         )}
                       </button>
                     </TableHead>
 
-                    <TableHead className="w-[110px] max-w-[120px] px-3 py-3.5 text-xs font-extrabold text-[#241C15]">
-                      Entrega & Destino
-                    </TableHead>
-
-                    <TableHead className="px-4 py-3.5 text-right">
+                    <TableHead className="w-40 px-4 py-3 text-right">
                       <button
                         onClick={() => handleSort('total')}
-                        className="flex items-center gap-1 text-xs font-extrabold text-[#241C15] hover:text-[#A36F4C] transition-colors cursor-pointer ml-auto"
+                        className="flex items-center gap-1 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer ml-auto"
                       >
                         <span>Total & Saldo</span>
                         {sortField === 'total' || sortField === 'saldoPendiente' ? (
                           sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-[#A36F4C]" /> : <ArrowDown className="h-3 w-3 text-[#A36F4C]" />
                         ) : (
-                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/60" />
+                          <ArrowUpDown className="h-3 w-3 text-[#75695D]/40" />
                         )}
                       </button>
                     </TableHead>
@@ -1075,124 +997,126 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
 
                 <TableBody>
                   {paginatedPedidos.map((p) => {
-                    const stConf = ESTADOS_CONFIG[p.estado] || ESTADOS_CONFIG.PENDIENTE
                     const isFullyPaid = p.saldoPendiente <= 0
 
                     return (
                       <TableRow
                         key={p.id}
                         onClick={() => setSelectedPedidoDetail(p)}
-                        className="border-b border-[#E2D9CC]/70 hover:bg-[#FAF8F5]/80 transition-colors cursor-pointer group"
+                        className="border-b border-[#E2D9CC]/50 hover:bg-[#FAF8F5]/80 transition-colors cursor-pointer group"
                       >
-                        {/* Celda 1: Código, Canal y Fecha */}
-                        <TableCell className="px-4 py-3.5 align-middle">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <Badge className="bg-[#241C15] text-white font-mono font-black text-xs px-2 py-0.5 rounded-lg group-hover:bg-[#A36F4C] transition-colors">
-                                {p.codigo}
-                              </Badge>
-                              <Badge variant="outline" className="text-[9px] font-bold bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] px-1.5 py-0">
-                                {p.canalVenta || 'WhatsApp'}
-                              </Badge>
-                            </div>
-                            <span className="text-[11px] text-[#75695D] font-mono flex items-center gap-1">
-                              <Calendar className="h-3 w-3 text-[#A36F4C]" />
-                              {formatDate(p.fecha)}
-                            </span>
-                          </div>
-                        </TableCell>
-
-                        {/* Celda 2: Cliente & Teléfono */}
-                        <TableCell className="px-3.5 py-3.5 align-middle">
+                        {/* 1. Pedido & Cliente */}
+                        <TableCell className="px-4 py-3 align-middle">
                           <div className="space-y-0.5">
-                            <span className="font-extrabold text-sm text-[#241C15] group-hover:text-[#A36F4C] transition-colors block truncate max-w-[180px]">
-                              {p.cliente}
-                            </span>
-                            {p.telefono && (
-                              <span className="text-[11px] text-[#75695D] font-mono flex items-center gap-1">
-                                <Phone className="h-3 w-3 text-[#1E5E3A]" />
-                                {p.telefono}
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-[#241C15] group-hover:text-[#A36F4C] transition-colors truncate">
+                                {p.cliente}
                               </span>
-                            )}
+                              <span className="font-mono font-bold text-xs text-[#A36F4C]">
+                                {p.codigo}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-[#75695D]">
+                              <span>{formatDate(p.fecha)}</span>
+                              {p.canalVenta && (
+                                <>
+                                  <span className="text-[#D4BEA7]">•</span>
+                                  <span>{p.canalVenta}</span>
+                                </>
+                              )}
+                              {p.telefono && (
+                                <>
+                                  <span className="text-[#D4BEA7]">•</span>
+                                  <span className="font-mono">{p.telefono}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
 
-                        {/* Celda 3: Cantidad y resumen de productos */}
-                        <TableCell className="px-3.5 py-3.5 align-middle">
-                          <div className="space-y-1">
+                        {/* 2. Productos */}
+                        <TableCell className="px-3 py-3 align-middle">
+                          <div className="space-y-0.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-mono font-black text-sm text-[#241C15]">
+                              <span className="font-bold text-xs text-[#241C15]">
                                 {p.totalItemsCount} {p.totalItemsCount === 1 ? 'pieza' : 'piezas'}
                               </span>
-                              <Badge variant="outline" className="text-[9px] font-bold text-[#75695D] bg-[#FAF8F5] border-[#E2D9CC]">
-                                {p.items.length} {p.items.length === 1 ? 'modelo' : 'modelos'}
-                              </Badge>
+                              {p.items.length > 1 && (
+                                <span className="text-xs text-[#75695D]">
+                                  ({p.items.length} modelos)
+                                </span>
+                              )}
                             </div>
-                            <div className="text-[11px] text-[#75695D] truncate max-w-[200px]">
+                            <div className="text-xs text-[#75695D] truncate max-w-[240px]">
                               {p.items.map(it => `${it.nombreProductoSnapshot} (x${it.cantidad})`).join(', ')}
                             </div>
                           </div>
                         </TableCell>
 
-                        {/* Celda 4: Estado con Selector Rápido */}
-                        <TableCell className="px-3.5 py-3.5 align-middle" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-1">
-                            <select
-                              value={p.estado}
-                              onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
-                              className={`text-[11px] font-extrabold rounded-xl px-2.5 py-1 border cursor-pointer ${stConf.colorBg} ${stConf.colorText} ${stConf.colorBorder}`}
-                            >
-                              {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
-                                <option key={stKey} value={stKey}>
-                                  {conf.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </TableCell>
-
-                        {/* Celda 5: Fecha Entrega y Destino */}
-                        <TableCell className="w-[110px] max-w-[120px] px-3 py-3.5 align-middle">
+                        {/* 3. Entrega & Destino */}
+                        <TableCell className="w-40 px-3 py-3 align-middle">
                           <div className="space-y-0.5 text-xs">
                             {p.diaEntregaPrometida ? (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-[#FAF8F5] text-[#241C15] border border-[#E2D9CC] truncate">
-                                📅 {p.diaEntregaPrometida}
-                              </span>
+                              <div className="font-medium text-[#241C15] truncate">
+                                {p.diaEntregaPrometida}
+                              </div>
                             ) : (
-                              <span className="text-[10px] text-[#75695D] italic">Sin fecha</span>
+                              <div className="text-[#A89F91]">Sin fecha</div>
                             )}
                             {p.destinoEnvio && (
-                              <span className="text-[10px] text-[#75695D] flex items-center gap-1 truncate block">
-                                <Truck className="h-3 w-3 text-[#A36F4C] shrink-0" />
-                                <span className="truncate">{p.destinoEnvio}</span>
-                              </span>
+                              <div className="text-[11px] text-[#75695D] truncate">
+                                {p.destinoEnvio}
+                              </div>
                             )}
                           </div>
                         </TableCell>
 
-                        {/* Celda 6: Total & Liquidación */}
-                        <TableCell className="px-4 py-3.5 text-right align-middle">
+                        {/* 4. Estado con Selector Rápido */}
+                        <TableCell className="w-36 px-3 py-3 align-middle text-center" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={p.estado}
+                            onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
+                            className={`text-xs font-bold rounded-xl px-2.5 py-1 border cursor-pointer focus:outline-none transition-all ${
+                              p.estado === 'PENDIENTE'
+                                ? 'bg-[#FEF9C3]/70 text-[#854D0E] border-[#FDE047]'
+                                : p.estado === 'EN_PRODUCCION'
+                                ? 'bg-[#DBEAFE]/70 text-[#1D4ED8] border-[#93C5FD]'
+                                : p.estado === 'LISTO_ENTREGA'
+                                ? 'bg-[#F3E8FF] text-[#7E22CE] border-[#D8B4FE]'
+                                : p.estado === 'ENTREGADO'
+                                ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
+                                : 'bg-[#F3F4F6] text-[#6B7280] border-[#E5E7EB]'
+                            }`}
+                          >
+                            {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
+                              <option key={stKey} value={stKey}>
+                                {conf.label}
+                              </option>
+                            ))}
+                          </select>
+                        </TableCell>
+
+                        {/* 5. Total & Liquidación */}
+                        <TableCell className="w-40 px-4 py-3 text-right align-middle">
                           <div className="space-y-0.5">
-                            <div className="font-mono font-black text-sm text-[#241C15]">
+                            <div className="font-mono font-bold text-sm text-[#241C15]">
                               {formatCurrency(p.total)}
                             </div>
-                            <span className="font-mono text-[11px] text-[#1E5E3A] font-bold block">
-                              +{formatCurrency(p.montoPagado)}
-                            </span>
-
-                            <div className="pt-0.5">
+                            <div className="flex items-center justify-end gap-1.5 text-[11px]">
                               {isFullyPaid ? (
-                                <Badge className="text-[9px] font-black bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] px-1.5 py-0">
+                                <span className="font-semibold text-[#1E5E3A]">
                                   100% Pagado
-                                </Badge>
+                                </span>
                               ) : p.montoPagado > 0 ? (
-                                <Badge className="text-[9px] font-black bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] px-1.5 py-0">
-                                  Resta: S/ {p.saldoPendiente.toFixed(2)}
-                                </Badge>
+                                <>
+                                  <span className="font-mono text-[#1E5E3A]">+{formatCurrency(p.montoPagado)}</span>
+                                  <span className="text-[#D4BEA7]">•</span>
+                                  <span className="font-mono text-[#854D0E]">Resta {formatCurrency(p.saldoPendiente)}</span>
+                                </>
                               ) : (
-                                <Badge className="text-[9px] font-black bg-red-50 text-[#A34335] border-red-200 px-1.5 py-0">
-                                  Sin Anticipo
-                                </Badge>
+                                <span className="text-[#DC2626] font-medium">
+                                  Sin anticipo
+                                </span>
                               )}
                             </div>
                           </div>
@@ -1203,199 +1127,6 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                 </TableBody>
               </Table>
             </div>
-          </div>
-        ) : (
-          /* VISTA 2: TARJETAS DE PEDIDOS */
-          <div className="p-4 border-t border-[#E2D9CC] space-y-3 bg-[#FAF8F5]/30">
-            {paginatedPedidos.map(p => {
-              const stConf = ESTADOS_CONFIG[p.estado] || ESTADOS_CONFIG.PENDIENTE
-              const isFullyPaid = p.saldoPendiente <= 0
-
-              return (
-                <div
-                  key={p.id}
-                  className="rounded-2xl border border-[#E2D9CC] bg-[#FFFFFF] shadow-2xs hover:border-[#D4BEA7] transition-all p-4 space-y-3"
-                >
-                  {/* Fila Superior: Código, Cliente, Estado y Acciones Rápidas */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-[#E2D9CC]/70">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge className="bg-[#241C15] text-white font-mono font-black text-xs px-2.5 py-0.5 rounded-lg">
-                        {p.codigo}
-                      </Badge>
-                      <span className="font-black text-base text-[#241C15]">{p.cliente}</span>
-                      <span className="flex items-center gap-1 text-xs text-[#75695D] font-mono bg-[#FAF8F5] px-2 py-0.5 rounded-md border border-[#E2D9CC]">
-                        <Calendar className="h-3 w-3 text-[#A36F4C]" />
-                        {formatDate(p.fecha)}
-                      </span>
-                      {p.telefono && (
-                        <a
-                          href={`https://wa.me/51${p.telefono.replace(/\D/g, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-1 text-xs text-[#1E5E3A] hover:underline font-semibold bg-[#EBF7EE] px-2 py-0.5 rounded-md border border-[#B4E3C0]"
-                        >
-                          <Phone className="h-3 w-3" />
-                          <span>{p.telefono}</span>
-                        </a>
-                      )}
-                      <Badge variant="outline" className="text-[10px] text-[#75695D] bg-[#FAF8F5] border-[#E2D9CC]">
-                        {p.canalVenta || 'WhatsApp'}
-                      </Badge>
-                    </div>
-
-                    {/* Selector Rápido de Estado */}
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={p.estado}
-                        onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
-                        className={`text-xs font-extrabold rounded-xl px-2.5 py-1 border cursor-pointer ${stConf.colorBg} ${stConf.colorText} ${stConf.colorBorder}`}
-                      >
-                        {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
-                          <option key={stKey} value={stKey}>
-                            {conf.label}
-                          </option>
-                        ))}
-                      </select>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenEditModal(p)}
-                        className="h-8 px-2.5 rounded-xl border-[#D4BEA7] bg-[#FDF6E2] hover:bg-[#F9ECC4] text-[#8C6D1F] font-extrabold text-xs cursor-pointer flex items-center gap-1"
-                        title="Editar pedido y mantenimiento"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        <span>Editar</span>
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedPedidoDetail(p)}
-                        className="h-8 px-3 rounded-xl border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#EAE4DC] text-[#241C15] font-bold text-xs cursor-pointer flex items-center gap-1"
-                      >
-                        <FileText className="h-3.5 w-3.5 text-[#A36F4C]" />
-                        <span>Detalle / Ticket</span>
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Fila Media: Desglose de Productos Multiproducto Asignados */}
-                  <div className="bg-[#FAF8F5] p-3 rounded-xl border border-[#E2D9CC]/70 space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-[#75695D]">
-                      <span className="flex items-center gap-1.5">
-                        <ShoppingBag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                        {p.items.length} {p.items.length === 1 ? 'Producto' : 'Productos'} asignados ({p.totalItemsCount} piezas en total):
-                      </span>
-                      {p.diaEntregaPrometida && (
-                        <span className="flex items-center gap-1 text-[#241C15]">
-                          <Calendar className="h-3 w-3 text-[#A36F4C]" />
-                          Entrega: <strong>{p.diaEntregaPrometida}</strong>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {p.items.map((it) => (
-                        <div
-                          key={it.id}
-                          className="p-2.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex items-start justify-between gap-2"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-extrabold text-xs text-[#241C15] truncate">
-                                {it.nombreProductoSnapshot}
-                              </span>
-                              <Badge className="text-[10px] font-black bg-[#FAF8F5] text-[#241C15] border-[#E2D9CC] px-1 py-0">
-                                x{it.cantidad}
-                              </Badge>
-                            </div>
-
-                            <div className="flex items-center gap-2 mt-1 text-[11px] text-[#75695D] flex-wrap">
-                              {it.colorFilamento && (
-                                <span className="flex items-center gap-1">
-                                  <span
-                                    className="w-2.5 h-2.5 rounded-full border border-black/20"
-                                    style={{ backgroundColor: it.colorFilamento.codigoHex || '#1E1E1E' }}
-                                  />
-                                  <span className="font-medium text-[10px]">{it.colorFilamento.nombreColor}</span>
-                                </span>
-                              )}
-                              {it.personalizacion && (
-                                <span className="text-[10px] text-[#A36F4C] italic truncate">
-                                  "{it.personalizacion}"
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <span className="font-mono font-extrabold text-xs text-[#241C15] flex-shrink-0">
-                            {formatCurrency(it.subtotal)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Fila Inferior: Liquidación Financiera y Acciones */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 text-xs">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <div>
-                        <span className="text-[10px] text-[#75695D] block">Total Pedido:</span>
-                        <strong className="font-mono text-sm text-[#241C15]">{formatCurrency(p.total)}</strong>
-                      </div>
-
-                      <div className="border-l border-[#E2D9CC] pl-3">
-                        <span className="text-[10px] text-[#1E5E3A] block">Abonado:</span>
-                        <strong className="font-mono text-sm text-[#1E5E3A]">+{formatCurrency(p.montoPagado)}</strong>
-                      </div>
-
-                      <div className="border-l border-[#E2D9CC] pl-3">
-                        <span className="text-[10px] text-[#8C6D1F] block">Saldo Pendiente:</span>
-                        <strong className={`font-mono text-sm ${isFullyPaid ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'}`}>
-                          {isFullyPaid ? 'S/ 0.00' : `S/ ${p.saldoPendiente.toFixed(2)}`}
-                        </strong>
-                      </div>
-
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] font-extrabold ml-1 ${
-                          isFullyPaid
-                            ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
-                            : p.montoPagado > 0
-                            ? 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
-                            : 'bg-red-50 text-[#A34335] border-red-200'
-                        }`}
-                      >
-                        {isFullyPaid ? '100% Pagado' : p.montoPagado > 0 ? 'Con Anticipo' : 'Sin Pago'}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => copyWhatsAppTicket(p)}
-                        className="h-7 px-2 text-[11px] text-[#1E5E3A] hover:bg-[#EBF7EE] font-bold rounded-lg cursor-pointer flex items-center gap-1"
-                      >
-                        <Share2 className="h-3 w-3" />
-                        <span>WhatsApp</span>
-                      </Button>
-
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEliminarPedido(p.id, p.codigo)}
-                        className="h-7 w-7 p-0 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer"
-                        title="Eliminar pedido"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
           </div>
         )}
 

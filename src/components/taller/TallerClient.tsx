@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Flame,
   Loader2,
+  RotateCcw,
   Table as TableIcon
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -102,7 +103,7 @@ const getEntregaBadge = (diaPromesa: string | null) => {
   if (!diaPromesa) return <span className="text-[11px] text-[#A89F91]">Sin fecha</span>
   try {
     const dateParts = extractCalendarDate(diaPromesa)
-    if (!dateParts) return <span className="text-[11px] text-[#75695D]">📅 {diaPromesa}</span>
+    if (!dateParts) return <span className="text-[11px] text-[#75695D]">{diaPromesa}</span>
 
     const hoy = new Date()
     const hoyMidnight = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime()
@@ -112,39 +113,39 @@ const getEntregaBadge = (diaPromesa: string | null) => {
 
     if (diffDias < 0) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEE2E2] text-[#991B1B] border border-[#FCA5A5] whitespace-nowrap">
-          <Flame className="w-3 h-3 text-[#DC2626]" /> Vencido ({Math.abs(diffDias)}d)
+        <span className="inline-flex items-center gap-1 text-xs font-bold text-[#DC2626]">
+          <Flame className="w-3.5 h-3.5 text-[#DC2626]" /> Vencido ({Math.abs(diffDias)}d)
         </span>
       )
     }
     if (diffDias === 0) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D] animate-pulse whitespace-nowrap">
-          <Flame className="w-3 h-3 text-[#D97706]" /> Entrega Hoy
+        <span className="inline-flex items-center gap-1 text-xs font-bold text-[#D97706]">
+          <Clock className="w-3.5 h-3.5 text-[#D97706]" /> Entrega Hoy
         </span>
       )
     }
     if (diffDias === 1) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D] whitespace-nowrap">
+        <span className="text-xs font-semibold text-[#D97706]">
           Mañana
         </span>
       )
     }
     if (diffDias <= 3) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] whitespace-nowrap">
+        <span className="text-xs font-medium text-[#854D0E]">
           En {diffDias} días
         </span>
       )
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F1ECE4] text-[#75695D] border border-[#E2D9CC] whitespace-nowrap">
+      <span className="text-xs font-medium text-[#241C15]">
         {formatDate(diaPromesa)}
       </span>
     )
   } catch {
-    return <span className="text-[11px] text-[#75695D]">📅 {diaPromesa}</span>
+    return <span className="text-[11px] text-[#75695D]">{diaPromesa}</span>
   }
 }
 
@@ -413,13 +414,13 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       const res = await updateEstadoPieza(tipoRegistro, piezaId, nuevoEstado)
       if (res.success) {
         if (nuevoEstado === 'EN_PRODUCCION') {
-          toast.success('🖨️ Pieza pasada a EN IMPRESIÓN')
+          toast.success('Pieza pasada a En Impresión')
         } else if (nuevoEstado === 'LISTO_ENTREGA') {
-          toast.success('✅ Pieza marcada como LISTA PARA ENTREGA')
+          toast.success('Pieza marcada como Lista para Entrega')
         } else if (nuevoEstado === 'ENTREGADO') {
-          toast.success('🎉 Pedido marcado como ENTREGADO')
+          toast.success('Pedido marcado como Entregado')
         } else {
-          toast.success('⏳ Pieza reabierta a PENDIENTE')
+          toast.success('Pieza reabierta a Pendiente')
         }
         startTransition(() => {
           router.refresh()
@@ -581,18 +582,18 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                   <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/50">
                     <div>
                       {pieza.estado === 'PENDIENTE' && (
-                        <Badge className="bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] font-bold text-xs px-2 py-0.5">
-                          ⏳ Pendiente
+                        <Badge className="bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] font-semibold text-xs px-2 py-0.5">
+                          Pendiente
                         </Badge>
                       )}
                       {pieza.estado === 'EN_PRODUCCION' && (
-                        <Badge className="bg-[#DBEAFE] text-[#1D4ED8] border-[#93C5FD] font-bold text-xs px-2 py-0.5 animate-pulse">
-                          🖨️ En Impresión
+                        <Badge className="bg-[#DBEAFE] text-[#1D4ED8] border-[#93C5FD] font-semibold text-xs px-2 py-0.5 animate-pulse">
+                          En Impresión
                         </Badge>
                       )}
                       {pieza.estado === 'LISTO_ENTREGA' && (
-                        <Badge className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] font-bold text-xs px-2 py-0.5">
-                          ✅ Listo
+                        <Badge className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] font-semibold text-xs px-2 py-0.5">
+                          Listo
                         </Badge>
                       )}
                     </div>
@@ -636,12 +637,12 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                           disabled={loadingPieceId === pieza.id}
                           onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'PENDIENTE')}
                           variant="outline"
-                          className="h-8 px-3 rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] text-xs font-semibold cursor-pointer active:scale-[0.98]"
+                          className="h-8 px-3 rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] text-xs font-semibold cursor-pointer active:scale-[0.98] gap-1.5"
                         >
                           {loadingPieceId === pieza.id ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-[#A36F4C]" />
                           ) : (
-                            <span>↩️</span>
+                            <RotateCcw className="w-3.5 h-3.5 text-[#75695D]" />
                           )}
                           <span>{loadingPieceId === pieza.id ? 'Guardando...' : 'Reabrir'}</span>
                         </Button>
@@ -654,26 +655,20 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
           </div>
 
           {/* Desktop Table View (>= md) */}
-          <div className="hidden md:block w-full overflow-x-auto">
-            <Table className="w-full">
-              <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
+          <div className="hidden md:block w-full">
+            <Table className="w-full table-fixed">
+              <TableHeader className="bg-[#FAF8F5]/80 border-b border-[#E2D9CC]">
                 <TableRow className="hover:bg-transparent border-b border-[#E2D9CC]">
-                  <TableHead className="w-10 px-2 py-2.5 text-center text-xs font-bold text-[#75695D]">#</TableHead>
-                  <TableHead className="px-3 py-2.5 text-xs font-bold text-[#75695D]">Pieza / Modelo</TableHead>
-                  <TableHead className="px-3 py-2.5 text-xs font-bold text-[#75695D]">Color / Material</TableHead>
-                  <TableHead className="w-14 px-2 py-2.5 text-center text-xs font-bold text-[#75695D]">Cant.</TableHead>
-                  <TableHead className="w-20 px-2 py-2.5 text-right text-xs font-bold text-[#75695D]">Gramos</TableHead>
-                  <TableHead className="px-3 py-2.5 text-xs font-bold text-[#75695D]">Cliente & Pedido</TableHead>
-                  <TableHead className="w-24 px-2 py-2.5 text-center text-xs font-bold text-[#75695D]">Solicitado</TableHead>
-                  <TableHead className="w-28 px-2 py-2.5 text-center text-xs font-bold text-[#75695D]">Entrega</TableHead>
-                  <TableHead className="w-28 px-2 py-2.5 text-center text-xs font-bold text-[#75695D]">Estado</TableHead>
-                  <TableHead className="w-24 px-3 py-2.5 text-right text-xs font-bold text-[#75695D] pr-4">Acción</TableHead>
+                  <TableHead className="px-4 py-3 text-xs font-bold text-[#75695D] text-left">Pieza & Especificación</TableHead>
+                  <TableHead className="w-40 px-3 py-3 text-xs font-bold text-[#75695D] text-left">Cliente & Ref</TableHead>
+                  <TableHead className="w-36 px-3 py-3 text-xs font-bold text-[#75695D] text-left">Entrega</TableHead>
+                  <TableHead className="w-28 px-2 py-3 text-center text-xs font-bold text-[#75695D]">Estado</TableHead>
+                  <TableHead className="w-32 px-3 py-3 text-right text-xs font-bold text-[#75695D] pr-4">Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {piezasLista.map((pieza, idx) => {
+                {piezasLista.map((pieza) => {
                   const tiempoTxt = getTiempoTranscurrido(pieza.fechaSolicitud)
-                  const esHoy = tiempoTxt === 'Hoy'
                   const esUrgente = pieza.diaEntregaPrometida && (() => {
                     try {
                       const d = new Date(pieza.diaEntregaPrometida)
@@ -695,130 +690,91 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                           : ''
                       }`}
                     >
-                      {/* 1. Posición */}
-                      <TableCell className="w-10 px-2 py-2 text-center font-mono font-bold text-xs text-[#75695D]">
-                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs ${
-                          idx < 3 && orden === 'FIFO_ANTIGUOS'
-                            ? 'bg-[#A36F4C] text-white font-black shadow-2xs'
-                            : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D]'
-                        }`}>
-                          {idx + 1}
-                        </span>
-                      </TableCell>
-
-                      {/* 2. Pieza / Modelo */}
-                      <TableCell className="px-3 py-2">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-black text-sm text-[#241C15]">
+                      {/* 1. Pieza & Especificación (Consolidado Ultra-Limpio) */}
+                      <TableCell className="px-4 py-3">
+                        <div className="space-y-1">
+                          {/* Línea 1: Nombre del Modelo + Cantidad */}
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-[#241C15] truncate" title={pieza.nombreModelo}>
                               {pieza.nombreModelo}
                             </span>
-                            <Badge variant="outline" className="text-[10px] font-bold border-[#E2D9CC] text-[#75695D] bg-[#FAF8F5]">
-                              {pieza.lineaCategoria}
-                            </Badge>
-                          </div>
-                          {pieza.personalizacion && (
-                            <div className="inline-flex items-center gap-1 text-[11px] text-[#854D0E] bg-[#FEF9C3]/70 px-2 py-0.2 rounded-lg border border-[#FDE047] font-semibold">
-                              <Sparkles className="w-3 h-3 text-[#D97706] shrink-0" />
-                              <span>{pieza.personalizacion}</span>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* 3. Color & Material */}
-                      <TableCell className="px-3 py-2">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-xs font-bold text-[#241C15]">
-                          <span 
-                            className="w-3 h-3 rounded-full border border-black/20 shrink-0 shadow-2xs" 
-                            style={{ backgroundColor: pieza.codigoHex }} 
-                          />
-                          <span>{pieza.nombreColor}</span>
-                          <span className="text-[10px] text-[#75695D] font-mono font-normal">
-                            ({pieza.tipoMaterial || 'PLA'})
-                          </span>
-                        </div>
-                      </TableCell>
-
-                      {/* 4. Cantidad */}
-                      <TableCell className="w-14 px-2 py-2 text-center font-mono font-black text-sm text-[#241C15]">
-                        <span className="px-2 py-0.5 rounded-lg bg-[#FAF8F5] border border-[#E2D9CC]">
-                          {pieza.cantidad}
-                        </span>
-                      </TableCell>
-
-                      {/* 5. Gramos */}
-                      <TableCell className="w-20 px-2 py-2 text-right font-mono text-xs text-[#241C15]">
-                        <div><strong>{pieza.pesoGramosTotal}g</strong></div>
-                        <div className="text-[10px] text-[#75695D] font-normal">({pieza.pesoGramosUnitario}g c/u)</div>
-                      </TableCell>
-
-                      {/* 6. Cliente & Pedido */}
-                      <TableCell className="px-3 py-2">
-                        <div className="space-y-0.5">
-                          <div className="font-bold text-xs text-[#241C15] flex items-center gap-1">
-                            <User className="w-3 h-3 text-[#75695D]" />
-                            <span>{pieza.cliente}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[11px]">
-                            <span className="font-mono font-bold text-[#A36F4C]">
-                              {pieza.codigoRef}
+                            <span className="font-mono font-bold text-xs text-[#A36F4C]">
+                              ×{pieza.cantidad}
                             </span>
-                            {pieza.canalVenta && (
-                              <span className="text-[10px] text-[#75695D] bg-[#FAF8F5] px-1.5 py-0.2 rounded border border-[#E2D9CC]/60">
-                                {pieza.canalVenta}
-                              </span>
+                          </div>
+
+                          {/* Línea 2: Dot Color + Color (Material) · Gramos · Personalización */}
+                          <div className="flex items-center gap-1.5 text-xs text-[#75695D] flex-wrap">
+                            <span 
+                              className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0 inline-block" 
+                              style={{ backgroundColor: pieza.codigoHex }} 
+                            />
+                            <span className="font-medium text-[#241C15]">{pieza.nombreColor}</span>
+                            <span className="text-[#A89F91]">({pieza.tipoMaterial || 'PLA'})</span>
+                            <span className="text-[#D4BEA7]">•</span>
+                            <span className="font-mono text-[#241C15]">{pieza.pesoGramosTotal}g</span>
+                            {pieza.personalizacion && (
+                              <>
+                                <span className="text-[#D4BEA7]">•</span>
+                                <span className="text-[#854D0E] font-medium italic truncate max-w-[200px]" title={pieza.personalizacion}>
+                                  "{pieza.personalizacion}"
+                                </span>
+                              </>
                             )}
                           </div>
                         </div>
                       </TableCell>
 
-                      {/* 7. Fecha Solicitud con Fix de Calendario */}
-                      <TableCell className="w-24 px-2 py-2 text-center">
-                        <div className="space-y-0.5 text-xs text-[#75695D]">
-                          <div className="font-semibold text-[#241C15]">
-                            {formatDate(pieza.fechaSolicitud)}
+                      {/* 2. Cliente & Ref */}
+                      <TableCell className="w-44 px-3 py-3">
+                        <div className="space-y-0.5">
+                          <div className="font-semibold text-xs text-[#241C15] truncate" title={pieza.cliente}>
+                            {pieza.cliente}
                           </div>
-                          <div>
-                            <span className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                              esHoy 
-                                ? 'bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]' 
-                                : tiempoTxt === 'Ayer'
-                                ? 'bg-[#FEF3C7] text-[#92400E] border border-[#FCD34D]'
-                                : 'bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC]'
-                            }`}>
-                              {tiempoTxt}
-                            </span>
+                          <div className="font-mono text-[11px] text-[#75695D]">
+                            {pieza.codigoRef}
                           </div>
                         </div>
                       </TableCell>
 
-                      {/* 8. Fecha Entrega */}
-                      <TableCell className="w-28 px-2 py-2 text-center">
-                        {getEntregaBadge(pieza.diaEntregaPrometida)}
+                      {/* 3. Entrega */}
+                      <TableCell className="w-40 px-3 py-3">
+                        <div className="space-y-0.5 text-xs">
+                          <div>
+                            {getEntregaBadge(pieza.diaEntregaPrometida)}
+                          </div>
+                          {tiempoTxt && (
+                            <div className="text-[11px] text-[#A89F91]">
+                              {tiempoTxt}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
 
-                      {/* 9. Estado Badge */}
-                      <TableCell className="w-28 px-2 py-2 text-center">
+                      {/* 4. Estado */}
+                      <TableCell className="w-28 px-2 py-3 text-center">
                         {pieza.estado === 'PENDIENTE' && (
-                          <Badge className="bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] font-bold text-xs px-2 py-0.5 whitespace-nowrap">
-                            ⏳ Pendiente
-                          </Badge>
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#854D0E]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B]" />
+                            Pendiente
+                          </span>
                         )}
                         {pieza.estado === 'EN_PRODUCCION' && (
-                          <Badge className="bg-[#DBEAFE] text-[#1D4ED8] border-[#93C5FD] font-bold text-xs px-2 py-0.5 whitespace-nowrap animate-pulse">
-                            🖨️ En Impresión
-                          </Badge>
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1D4ED8]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB] animate-pulse" />
+                            En Impresión
+                          </span>
                         )}
                         {pieza.estado === 'LISTO_ENTREGA' && (
-                          <Badge className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] font-bold text-xs px-2 py-0.5 whitespace-nowrap">
-                            ✅ Listo
-                          </Badge>
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1E5E3A]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
+                            Listo
+                          </span>
                         )}
                       </TableCell>
 
-                      {/* 10. Acción Rápida */}
-                      <TableCell className="w-28 px-3 py-2 text-right pr-4">
+                      {/* 5. Acción Rápida */}
+                      <TableCell className="w-28 px-3 py-3 text-right pr-4">
                         {pieza.estado === 'PENDIENTE' && (
                           <Button
                             size="sm"
@@ -857,13 +813,13 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                             disabled={loadingPieceId === pieza.id}
                             onClick={() => handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'PENDIENTE')}
                             variant="outline"
-                            className="h-7 px-2 rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] text-[11px] font-semibold cursor-pointer whitespace-nowrap"
+                            className="h-7 px-2 rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] text-[11px] font-semibold cursor-pointer whitespace-nowrap gap-1"
                             title="Volver a poner pendiente"
                           >
                             {loadingPieceId === pieza.id ? (
                               <Loader2 className="w-3 h-3 animate-spin text-[#A36F4C]" />
                             ) : (
-                              <span>↩️</span>
+                              <RotateCcw className="w-3 h-3 text-[#75695D]" />
                             )}
                             <span>{loadingPieceId === pieza.id ? 'Guardando...' : 'Reabrir'}</span>
                           </Button>
@@ -883,363 +839,246 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
   return (
     <div className="space-y-6 pb-12">
       {/* ========================================================================= */}
-      {/* 1. ENCABEZADO PRINCIPAL Y REFRESH                                         */}
+      {/* 1. ENCABEZADO PRINCIPAL                                                   */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center shadow-sm shrink-0">
-            <Hammer className="w-5 h-5 stroke-[2.5]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-[#241C15] tracking-tight">
-                Taller de Producción 3D
-              </h1>
-              <Badge className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] font-mono text-xs px-2 py-0.5 font-bold">
-                {data.metricas.totalPiezasActivas} piezas activas
-              </Badge>
-            </div>
-            <p className="text-xs sm:text-sm text-[#75695D] mt-0.5">
-              Cola de producción por tablas, piezas por modelo, consumo de filamento y priorización por pedido.
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-[#241C15] tracking-tight">
+            Taller de Producción 3D
+          </h1>
+          <p className="text-xs text-[#75695D] mt-0.5">
+            Cola de fabricación por tablas, piezas por modelo y priorización por entrega.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={handleManualRefresh}
             disabled={isRefreshing || isPending}
-            className="rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#FAF8F5] cursor-pointer h-9 px-3 text-xs font-bold gap-1.5 shadow-2xs"
+            className="rounded-xl border-[#E2D9CC] bg-white text-[#75695D] hover:text-[#241C15] hover:bg-[#FAF8F5] cursor-pointer h-9 px-3 text-xs font-bold gap-1.5 shadow-xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || isPending ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || isPending ? 'animate-spin text-[#A36F4C]' : ''}`} />
             <span>Actualizar</span>
           </Button>
 
           <Link href="/pedidos">
             <Button
               size="sm"
-              className="rounded-xl bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold h-9 px-3.5 text-xs shadow-sm gap-1.5 cursor-pointer"
+              className="rounded-xl bg-white hover:bg-[#FAF8F5] text-[#241C15] border border-[#E2D9CC] font-bold h-9 px-3.5 text-xs shadow-xs gap-1.5 cursor-pointer"
             >
               <span>Ver Pedidos</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <ExternalLink className="w-3.5 h-3.5 text-[#A36F4C]" />
             </Button>
           </Link>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. TARJETAS DE MÉTRICAS OPERATIVAS DEL TALLER                             */}
+      {/* 2. TARJETAS DE MÉTRICAS COMPACTAS (KPIS MINIMALISTAS)                     */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Total Piezas por Fabricar */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-xs font-bold text-[#75695D] uppercase tracking-wider">
-                Total por Fabricar
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-[#EFE5D8] flex items-center justify-center text-[#A36F4C]">
-                <Boxes className="w-4 h-4" />
-              </div>
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-1 text-[#6B7280]">
+            <span className="text-xs font-semibold">Total por Fabricar</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+              <Boxes className="w-3.5 h-3.5" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black text-[#241C15] font-mono tabular-nums">
-                {data.metricas.totalPiezasActivas}
-              </span>
-              <span className="text-xs text-[#75695D] font-bold">uds</span>
+          </div>
+          <div>
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {data.metricas.totalPiezasActivas} <span className="text-xs text-[#75695D] font-normal font-sans">uds</span>
             </div>
-            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#E2D9CC]/50 text-[11px] font-semibold text-[#75695D]">
-              <span className="text-[#854D0E] font-bold">{data.metricas.totalPiezasPendientes} pendientes</span>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-[#75695D]">
+              <span className="text-[#854D0E] font-medium">{data.metricas.totalPiezasPendientes} pend.</span>
               <span>•</span>
-              <span className="text-[#1D4ED8] font-bold">{data.metricas.totalPiezasEnProduccion} en cama</span>
+              <span className="text-[#1D4ED8] font-medium">{data.metricas.totalPiezasEnProduccion} en cama</span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Modelos Únicos en Cola */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-xs font-bold text-[#75695D] uppercase tracking-wider">
-                Modelos Distintos
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-[#EBF7EE] flex items-center justify-center text-[#1E5E3A]">
-                <Layers className="w-4 h-4" />
-              </div>
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-1 text-[#6B7280]">
+            <span className="text-xs font-semibold">Modelos Distintos</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+              <Layers className="w-3.5 h-3.5" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black text-[#1E5E3A] font-mono tabular-nums">
-                {data.metricas.totalModelosUnicos}
-              </span>
-              <span className="text-xs text-[#75695D] font-bold">diseños</span>
+          </div>
+          <div>
+            <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
+              {data.metricas.totalModelosUnicos} <span className="text-xs text-[#75695D] font-normal font-sans">diseños</span>
             </div>
-            <p className="text-[11px] text-[#75695D] mt-2 pt-2 border-t border-[#E2D9CC]/50 truncate">
-              Agrupados para tandas eficientes
+            <p className="text-xs text-[#75695D] mt-0.5 truncate">
+              Agrupados por tandas
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Filamento Requerido Total */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-xs font-bold text-[#75695D] uppercase tracking-wider">
-                Material Requerido
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-[#FEF9C3] flex items-center justify-center text-[#854D0E]">
-                <Palette className="w-4 h-4" />
-              </div>
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-1 text-[#6B7280]">
+            <span className="text-xs font-semibold">Material Requerido</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#854D0E]">
+              <Palette className="w-3.5 h-3.5" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black text-[#241C15] font-mono tabular-nums">
-                {data.metricas.totalGramosRequeridos}
-              </span>
-              <span className="text-xs text-[#75695D] font-bold">g ({data.metricas.totalColoresRequeridos} colores)</span>
+          </div>
+          <div>
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {data.metricas.totalGramosRequeridos} <span className="text-xs text-[#75695D] font-normal font-sans">g</span>
             </div>
-            <p className="text-[11px] text-[#75695D] mt-2 pt-2 border-t border-[#E2D9CC]/50 truncate">
-              Consumo estimado de filamento
+            <p className="text-xs text-[#75695D] mt-0.5 truncate">
+              En {data.metricas.totalColoresRequeridos} colores de bobina
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Entregas Próximas o Urgentes */}
-        <Card className={`bg-[#FFFFFF] border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden ${data.metricas.entregasUrgentes > 0 ? 'ring-1 ring-[#FCA5A5]' : ''}`}>
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between pb-2">
-              <span className="text-xs font-bold text-[#75695D] uppercase tracking-wider">
-                Entregas Críticas
-              </span>
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${data.metricas.entregasUrgentes > 0 ? 'bg-[#FEE2E2] text-[#DC2626]' : 'bg-[#FAF8F5] text-[#75695D]'}`}>
-                <Clock className="w-4 h-4" />
-              </div>
+        {/* Entregas Críticas */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-3.5 sm:p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between pb-1 text-[#6B7280]">
+            <span className="text-xs font-semibold">Entregas Críticas</span>
+            <div className={`p-1 rounded-md bg-[#FAF7F4] ${data.metricas.entregasUrgentes > 0 ? 'text-[#DC2626]' : 'text-[#75695D]'}`}>
+              <Clock className="w-3.5 h-3.5" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className={`text-2xl sm:text-3xl font-black font-mono tabular-nums ${data.metricas.entregasUrgentes > 0 ? 'text-[#DC2626]' : 'text-[#241C15]'}`}>
-                {data.metricas.entregasUrgentes}
-              </span>
-              <span className="text-xs text-[#75695D] font-bold">urgentes</span>
+          </div>
+          <div>
+            <div className={`text-xl sm:text-2xl font-black font-mono tabular-nums ${data.metricas.entregasUrgentes > 0 ? 'text-[#DC2626]' : 'text-[#241C15]'}`}>
+              {data.metricas.entregasUrgentes} <span className="text-xs text-[#75695D] font-normal font-sans">urgentes</span>
             </div>
-            <p className="text-[11px] text-[#75695D] mt-2 pt-2 border-t border-[#E2D9CC]/50 truncate">
-              {data.metricas.entregasUrgentes > 0 ? '⚠️ Priorizar en impresora hoy' : 'Sin pedidos vencidos'}
+            <p className="text-xs text-[#75695D] mt-0.5 truncate">
+              {data.metricas.entregasUrgentes > 0 ? 'Priorizar hoy' : 'Sin pedidos vencidos'}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. BARRA DE CONTROLES: VISTAS, ORDEN DE PRIORIDAD Y FILTROS                */}
+      {/* 3. BARRA DE HERRAMIENTAS UNIFICADA EN 1 FILA                              */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] p-4 sm:p-5 rounded-3xl border border-[#E2D9CC] shadow-xs space-y-4">
-        {/* Fila 1: Filtro de Estado Principal (Pills grandes y visibles) */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E2D9CC]/60">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 max-w-full">
-            <span className="text-xs font-bold text-[#75695D] mr-1 hidden md:inline-flex items-center gap-1">
-              <Filter className="w-3.5 h-3.5 text-[#A36F4C]" /> Estado:
-            </span>
-
+      <div className="bg-white p-2.5 sm:p-3 rounded-2xl border border-[#E2D9CC] shadow-xs flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5">
+        
+        {/* Lado Izquierdo: Segmented Control de Estados (Limpio y sin emojis) */}
+        <div className="flex items-center bg-[#FAF8F5] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
+          {[
+            { id: 'PENDIENTE', label: 'Pendientes', count: metricasActivas.totalPiezasPendientes },
+            { id: 'EN_PRODUCCION', label: 'En Impresión', count: metricasActivas.totalPiezasEnProduccion },
+            { id: 'LISTO_ENTREGA', label: 'Listos', count: metricasActivas.totalPiezasListas },
+            { id: 'TODOS', label: 'Todos', count: metricasActivas.totalPiezasActivas }
+          ].map((st) => (
             <button
+              key={st.id}
               type="button"
-              onClick={() => setFiltroEstado('PENDIENTE')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                filtroEstado === 'PENDIENTE'
-                  ? 'bg-[#A36F4C] text-white shadow-xs'
-                  : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8]/40'
+              onClick={() => setFiltroEstado(st.id as FiltroEstado)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                filtroEstado === st.id
+                  ? 'bg-white text-[#241C15] shadow-xs'
+                  : 'text-[#75695D] hover:text-[#241C15]'
               }`}
             >
-              <span>⏳ Solo Pendientes</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                filtroEstado === 'PENDIENTE' ? 'bg-white/20 text-white' : 'bg-[#EFE5D8] text-[#854D0E]'
-              }`}>
-                {metricasActivas.totalPiezasPendientes}
-              </span>
+              <span>{st.label}</span>
+              <span className="font-mono text-[10px] opacity-70">({st.count})</span>
             </button>
+          ))}
+        </div>
 
-            <button
-              type="button"
-              onClick={() => setFiltroEstado('EN_PRODUCCION')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                filtroEstado === 'EN_PRODUCCION'
-                  ? 'bg-[#2563EB] text-white shadow-xs'
-                  : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8]/40'
-              }`}
-            >
-              <span>🖨️ En Impresión</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                filtroEstado === 'EN_PRODUCCION' ? 'bg-white/20 text-white' : 'bg-[#DBEAFE] text-[#1D4ED8]'
-              }`}>
-                {metricasActivas.totalPiezasEnProduccion}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setFiltroEstado('LISTO_ENTREGA')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                filtroEstado === 'LISTO_ENTREGA'
-                  ? 'bg-[#1E5E3A] text-white shadow-xs'
-                  : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8]/40'
-              }`}
-            >
-              <span>✅ Listos</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                filtroEstado === 'LISTO_ENTREGA' ? 'bg-white/20 text-white' : 'bg-[#EBF7EE] text-[#1E5E3A]'
-              }`}>
-                {metricasActivas.totalPiezasListas}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setFiltroEstado('TODOS')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
-                filtroEstado === 'TODOS'
-                  ? 'bg-[#241C15] text-white shadow-xs'
-                  : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8]/40'
-              }`}
-            >
-              <span>⚡ Todas (Separadas)</span>
-              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-mono ${
-                filtroEstado === 'TODOS' ? 'bg-white/20 text-white' : 'bg-[#E2D9CC]/60 text-[#75695D]'
-              }`}>
-                {metricasActivas.totalPiezasActivas}
-              </span>
-            </button>
+        {/* Lado Derecho: Buscador + Dropdown Orden + Dropdown Color + Dropdown Categoría + Toggle Vista */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 justify-between xl:justify-end flex-1">
+          {/* Buscador */}
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#75695D]" />
+            <Input
+              type="text"
+              placeholder="Buscar pieza..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="pl-8.5 pr-2 h-8 text-xs rounded-xl border-[#E2D9CC] bg-[#FAF8F5] text-[#241C15] placeholder:text-[#A89F91] focus:bg-white"
+            />
           </div>
 
-          {/* Selector de Modo de Vista (Tabla vs Modelo vs Color) */}
-          <div className="flex items-center bg-[#FAF8F5] p-1 rounded-2xl border border-[#E2D9CC] self-start sm:self-auto overflow-x-auto max-w-full">
+          {/* Selector de Orden */}
+          <select
+            value={orden}
+            onChange={(e) => setOrden(e.target.value as OrdenPrioridad)}
+            aria-label="Ordenar piezas"
+            className="bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15] text-xs rounded-xl px-2.5 h-8 font-semibold focus:outline-none cursor-pointer"
+          >
+            <option value="LIFO_RECIENTES">Más recientes</option>
+            <option value="FIFO_ANTIGUOS">Más antiguos (FIFO)</option>
+            <option value="ENTREGA_URGENTE">Entrega urgente</option>
+          </select>
+
+          {/* Filtro por Color */}
+          <select
+            value={filtroColor}
+            onChange={(e) => setFiltroColor(e.target.value)}
+            aria-label="Filtrar por color"
+            className="bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15] text-xs rounded-xl px-2.5 h-8 font-semibold focus:outline-none cursor-pointer max-w-[130px] truncate"
+          >
+            <option value="TODOS">Todos los colores</option>
+            {listaColores.map((c) => (
+              <option key={c.nombreColor} value={c.nombreColor}>
+                {c.nombreColor}
+              </option>
+            ))}
+          </select>
+
+          {/* Filtro por Categoría */}
+          <select
+            value={filtroCategoria}
+            onChange={(e) => setFiltroCategoria(e.target.value)}
+            aria-label="Filtrar por categoría"
+            className="bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15] text-xs rounded-xl px-2.5 h-8 font-semibold focus:outline-none cursor-pointer max-w-[130px] truncate"
+          >
+            <option value="TODOS">Categorías</option>
+            {listaCategorias.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+
+          {/* Toggle de Modo de Vista (Íconos compactos) */}
+          <div className="flex items-center bg-[#FAF8F5] p-0.5 rounded-xl border border-[#E2D9CC]">
             <button
               type="button"
               onClick={() => setModoVista('COLA')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              title="Vista Cola de Producción"
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                 modoVista === 'COLA'
-                  ? 'bg-[#A36F4C] text-white shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8]/50'
+                  ? 'bg-white text-[#241C15] shadow-xs'
+                  : 'text-[#75695D] hover:text-[#241C15]'
               }`}
             >
               <TableIcon className="w-3.5 h-3.5" />
-              <span>Tabla de Producción</span>
             </button>
 
             <button
               type="button"
               onClick={() => setModoVista('MODELO')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              title="Agrupado por Modelo"
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                 modoVista === 'MODELO'
-                  ? 'bg-[#A36F4C] text-white shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8]/50'
+                  ? 'bg-white text-[#241C15] shadow-xs'
+                  : 'text-[#75695D] hover:text-[#241C15]'
               }`}
             >
               <Package className="w-3.5 h-3.5" />
-              <span>Por Modelo</span>
             </button>
 
             <button
               type="button"
               onClick={() => setModoVista('COLOR')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              title="Agrupado por Color"
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                 modoVista === 'COLOR'
-                  ? 'bg-[#A36F4C] text-white shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8]/50'
+                  ? 'bg-white text-[#241C15] shadow-xs'
+                  : 'text-[#75695D] hover:text-[#241C15]'
               }`}
             >
               <Palette className="w-3.5 h-3.5" />
-              <span>Por Color</span>
             </button>
-          </div>
-        </div>
-
-        {/* Fila 2: Ordenamiento Rápido (Más recientes vs Más antiguos) y Filtros Secundarios */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          {/* Quick Ordenamiento Switchers */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 max-w-full">
-            <span className="text-xs font-bold text-[#75695D] whitespace-nowrap flex items-center gap-1 mr-1">
-              <ArrowUpDown className="w-3.5 h-3.5 text-[#A36F4C]" />
-              Orden:
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setOrden('LIFO_RECIENTES')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                orden === 'LIFO_RECIENTES'
-                  ? 'bg-[#EFE5D8] text-[#8E5E3E] border border-[#D4BEA7] shadow-2xs font-extrabold'
-                  : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15]'
-              }`}
-            >
-              ✨ Más recientes
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOrden('FIFO_ANTIGUOS')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                orden === 'FIFO_ANTIGUOS'
-                  ? 'bg-[#EFE5D8] text-[#8E5E3E] border border-[#D4BEA7] shadow-2xs font-extrabold'
-                  : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15]'
-              }`}
-            >
-              🕒 Más antiguos (FIFO)
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOrden('ENTREGA_URGENTE')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                orden === 'ENTREGA_URGENTE'
-                  ? 'bg-[#FEE2E2] text-[#991B1B] border border-[#FCA5A5] shadow-2xs font-extrabold'
-                  : 'bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15]'
-              }`}
-            >
-              🔥 Entrega urgente
-            </button>
-          </div>
-
-          {/* Filtros Secundarios: Color, Categoría y Buscador */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1 lg:max-w-xl">
-            {/* Buscador */}
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#75695D]" />
-              <Input
-                type="text"
-                placeholder="Buscar modelo, cliente..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="pl-8.5 h-8.5 text-xs rounded-xl border-[#E2D9CC] bg-[#FAF8F5] text-[#241C15] placeholder:text-[#A89F91]"
-              />
-            </div>
-
-            {/* Filtro por Color de Filamento */}
-            <select
-              value={filtroColor}
-              onChange={(e) => setFiltroColor(e.target.value)}
-              aria-label="Filtrar por color de filamento"
-              className="bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15] text-xs rounded-xl px-2.5 h-8.5 font-semibold focus:outline-none focus:ring-2 focus:ring-[#A36F4C] cursor-pointer"
-            >
-              <option value="TODOS">🎨 Todos los Colores</option>
-              {listaColores.map((c) => (
-                <option key={c.nombreColor} value={c.nombreColor}>
-                  {c.nombreColor}
-                </option>
-              ))}
-            </select>
-
-            {/* Filtro por Categoría */}
-            <select
-              value={filtroCategoria}
-              onChange={(e) => setFiltroCategoria(e.target.value)}
-              aria-label="Filtrar por categoría de producto"
-              className="bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15] text-xs rounded-xl px-2.5 h-8.5 font-semibold focus:outline-none focus:ring-2 focus:ring-[#A36F4C] cursor-pointer"
-            >
-              <option value="TODOS">📂 Categorías</option>
-              {listaCategorias.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
       </div>
@@ -1254,14 +1093,14 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       {modoVista === 'COLA' && (
         <div className="space-y-6">
           {piezasProcesadas.length === 0 ? (
-            <Card className="bg-[#FFFFFF] border-[#E2D9CC] rounded-3xl p-10 text-center shadow-xs">
-              <div className="w-14 h-14 rounded-2xl bg-[#EBF7EE] text-[#1E5E3A] flex items-center justify-center mx-auto mb-3.5 border border-[#B4E3C0]">
-                <CheckCircle2 className="w-7 h-7" />
+            <Card className="bg-white border-[#E2D9CC] rounded-2xl p-10 text-center shadow-xs">
+              <div className="w-12 h-12 rounded-xl bg-[#FAF7F4] text-[#1E5E3A] flex items-center justify-center mx-auto mb-3 border border-[#E2D9CC]">
+                <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="font-black text-[#241C15] text-lg">
-                {filtroEstado === 'PENDIENTE' ? '¡No hay piezas pendientes de fabricar!' : '¡Taller al día!'}
+              <h3 className="font-black text-[#241C15] text-base">
+                {filtroEstado === 'PENDIENTE' ? 'No hay piezas pendientes de fabricar' : 'Taller al día'}
               </h3>
-              <p className="text-xs sm:text-sm text-[#75695D] mt-1 max-w-md mx-auto">
+              <p className="text-xs text-[#75695D] mt-1 max-w-md mx-auto">
                 {filtroEstado === 'PENDIENTE'
                   ? 'Todas las piezas solicitadas ya están en impresión o listas para entrega.'
                   : 'No hay piezas con los filtros seleccionados actualmente.'}
@@ -1273,18 +1112,18 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                       variant="outline"
                       size="sm"
                       onClick={() => setFiltroEstado('EN_PRODUCCION')}
-                      className="rounded-xl border-[#2563EB]/40 bg-[#DBEAFE]/40 text-[#1D4ED8] hover:bg-[#DBEAFE] text-xs font-bold gap-1.5 cursor-pointer"
+                      className="rounded-xl border-[#E2D9CC] bg-white text-[#1D4ED8] hover:bg-[#FAF8F5] text-xs font-bold gap-1.5 cursor-pointer"
                     >
-                      <span>🖨️ Ver piezas En Impresión ({data.metricas.totalPiezasEnProduccion})</span>
+                      <span>Ver piezas en impresión ({data.metricas.totalPiezasEnProduccion})</span>
                     </Button>
                   )}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setFiltroEstado('TODOS')}
-                    className="rounded-xl border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#FAF8F5] text-xs font-bold cursor-pointer"
+                    className="rounded-xl border-[#E2D9CC] bg-white text-[#241C15] hover:bg-[#FAF8F5] text-xs font-bold gap-1.5 cursor-pointer"
                   >
-                    <span>⚡ Ver Todas las Piezas</span>
+                    <span>Ver todas las piezas</span>
                   </Button>
                 </div>
               )}
@@ -1295,9 +1134,9 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               {/* Tabla 1: Pendientes */}
               {renderTablaDePiezas(
                 piezasPendientes,
-                '⏳ Piezas Pendientes de Impresión',
+                'Piezas Pendientes',
                 'Piezas en cola esperando asignación de cama de impresión.',
-                <Badge className="bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] font-bold text-xs">
+                <Badge className="bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] font-semibold text-xs">
                   {piezasPendientes.length} piezas
                 </Badge>,
                 'border-[#E8D49B]'
@@ -1306,9 +1145,9 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               {/* Tabla 2: En Impresión */}
               {renderTablaDePiezas(
                 piezasEnProduccion,
-                '🖨️ Piezas En Impresión',
+                'Piezas en Impresión',
                 'Piezas actualmente en proceso de impresión 3D en taller.',
-                <Badge className="bg-[#DBEAFE] text-[#1D4ED8] border-[#93C5FD] font-bold text-xs">
+                <Badge className="bg-[#DBEAFE] text-[#1D4ED8] border-[#93C5FD] font-semibold text-xs">
                   {piezasEnProduccion.length} piezas
                 </Badge>,
                 'border-[#93C5FD]'
@@ -1317,9 +1156,9 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               {/* Tabla 3: Listos */}
               {renderTablaDePiezas(
                 piezasListas,
-                '✅ Piezas Listas para Entrega',
+                'Piezas Listas para Entrega',
                 'Piezas impresas y verificadas listas para despacho o recojo.',
-                <Badge className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] font-bold text-xs">
+                <Badge className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] font-semibold text-xs">
                   {piezasListas.length} piezas
                 </Badge>,
                 'border-[#B4E3C0]'
@@ -1331,16 +1170,16 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               {renderTablaDePiezas(
                 piezasProcesadas,
                 filtroEstado === 'PENDIENTE' 
-                  ? '⏳ Tabla de Piezas Pendientes de Impresión' 
+                  ? 'Piezas Pendientes' 
                   : filtroEstado === 'EN_PRODUCCION'
-                  ? '🖨️ Tabla de Piezas En Impresión'
-                  : '✅ Tabla de Piezas Listas para Entrega',
+                  ? 'Piezas en Impresión'
+                  : 'Piezas Listas para Entrega',
                 filtroEstado === 'PENDIENTE'
                   ? 'Listado ordenado de piezas que requieren fabricación en taller.'
                   : filtroEstado === 'EN_PRODUCCION'
                   ? 'Piezas en proceso activo de impresión 3D.'
                   : 'Piezas terminadas listas para entrega al cliente.',
-                <Badge className={`font-bold text-xs ${
+                <Badge className={`font-semibold text-xs ${
                   filtroEstado === 'PENDIENTE'
                     ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047]'
                     : filtroEstado === 'EN_PRODUCCION'
@@ -1468,8 +1307,9 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                                   <span className="text-[10px] text-[#75695D]">• {ped.cantidad} ud(s)</span>
                                 </div>
                                 {ped.personalizacion && (
-                                  <p className="text-[11px] text-[#854D0E] font-medium">
-                                    ✨ {ped.personalizacion}
+                                  <p className="inline-flex items-center gap-1 text-[11px] text-[#854D0E] font-medium">
+                                    <Sparkles className="w-2.5 h-2.5 text-[#D97706] shrink-0" />
+                                    {ped.personalizacion}
                                   </p>
                                 )}
                               </div>
@@ -1503,7 +1343,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
               {gruposPorColorFiltrados.length} colores requeridos en producción
             </span>
             <span className="text-xs text-[#75695D]">
-              💡 Agrupa impresiones por bobina para evitar cambios innecesarios de filamento
+              Agrupa impresiones por bobina para optimizar cambios de filamento
             </span>
           </div>
 

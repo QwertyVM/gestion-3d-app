@@ -19,7 +19,6 @@ import {
   CircleDot, 
   ChevronDown, 
   X,
-  AlertTriangle,
   Hammer
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -49,7 +48,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const isFinanzasSection = pathname.startsWith('/finanzas') || pathname.startsWith('/inversiones')
   const isCatalogoSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario')
 
-  // Collapsible Accordion states (default open for smooth navigation)
+  // Collapsible Accordion states
   const [finanzasOpen, setFinanzasOpen] = useState(true)
   const [catalogoOpen, setCatalogoOpen] = useState(true)
 
@@ -69,7 +68,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
     }
 
     fetchMetrics()
-    const interval = setInterval(fetchMetrics, 20000)
+    const interval = setInterval(fetchMetrics, 25000)
 
     return () => {
       mounted = false
@@ -86,110 +85,96 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   return (
     <aside className={cn(
       'flex h-full flex-col bg-[#F8F6F2] text-[#75695D] select-none transition-colors border-r border-[#E2D9CC]',
-      isMobile ? 'w-full' : 'w-64 shadow-xs'
+      isMobile ? 'w-full' : 'w-64'
     )}>
       {/* ========================================================================= */}
       {/* 1. ENCABEZADO (BRAND HEADER)                                              */}
       {/* ========================================================================= */}
-      <div className="flex h-20 items-center justify-between px-5 py-4 border-b border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0">
+      <div className="flex h-16 items-center justify-between px-5 border-b border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0">
         <div className="flex items-center gap-3 min-w-0">
-          {/* Avatar Estilizado 'N' Terracota */}
-          <div className="h-10 w-10 bg-[#A36F4C] text-[#FFFFFF] rounded-2xl flex items-center justify-center font-black text-lg shadow-sm shrink-0 border border-[#8E5E3E]/20">
+          <div className="h-8 w-8 bg-[#A36F4C] text-[#FFFFFF] rounded-xl flex items-center justify-center font-black text-sm shadow-xs shrink-0">
             N
           </div>
-
-          {/* Textos de Marca */}
           <div className="flex flex-col min-w-0">
-            <span className="text-base font-black text-[#241C15] tracking-tight leading-tight truncate">
+            <span className="text-sm font-black text-[#241C15] tracking-tight leading-tight truncate">
               NOVA 3D
             </span>
-            <span className="text-xs text-[#75695D] font-semibold leading-tight truncate mt-0.5">
-              Taller & Gestión
+            <span className="text-[11px] text-[#75695D] font-medium leading-tight truncate">
+              Gestión de Taller
             </span>
           </div>
         </div>
 
-        {/* Botón de cierre móvil */}
         {isMobile && onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8] transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8] transition-colors cursor-pointer"
             title="Cerrar Menú"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. LISTA DE NAVEGACIÓN APLANADA (MENU ITEMS & 1-LEVEL ACCORDIONS)         */}
+      {/* 2. LISTA DE NAVEGACIÓN APLANADA                                           */}
       {/* ========================================================================= */}
-      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1 bg-[#F8F6F2] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex-1 overflow-y-auto py-3 px-3 space-y-1 bg-[#F8F6F2] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         
         {/* DASHBOARD PRINCIPAL */}
         <Link
           href="/"
           onClick={handleLinkClick}
           className={cn(
-            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 min-h-[44px]',
+            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
             isDashboard
-              ? 'bg-[#EFE5D8] text-[#241C15] font-bold shadow-2xs border border-[#D4BEA7]'
-              : 'text-[#75695D] font-semibold hover:bg-[#F1ECE4] hover:text-[#241C15]'
+              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
+              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
           )}
         >
           <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboard ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
           <span>Dashboard</span>
         </Link>
 
-        {/* TALLER DE PRODUCCIÓN (COLA DE FABRICACIÓN) */}
+        {/* TALLER DE PRODUCCIÓN */}
         <Link
           href="/taller"
           onClick={handleLinkClick}
           className={cn(
-            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 min-h-[44px]',
+            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
             isTaller
-              ? 'bg-[#EFE5D8] text-[#241C15] font-bold shadow-2xs border border-[#D4BEA7]'
-              : 'text-[#75695D] font-semibold hover:bg-[#F1ECE4] hover:text-[#241C15]'
+              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
+              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
           )}
         >
           <Hammer className={cn('h-4 w-4 shrink-0', isTaller ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
           <span>Taller de Producción</span>
 
-          {/* Badge de Piezas Pendientes en Taller */}
-          {(metrics.piezasTallerPendientes ?? 0) > 0 ? (
-            <span className="ml-auto text-[10px] font-mono font-black px-2 py-0.5 rounded-full bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0] shadow-2xs">
+          {(metrics.piezasTallerPendientes ?? 0) > 0 && (
+            <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F4] text-[#1E5E3A] border border-[#E2D9CC]">
               {metrics.piezasTallerPendientes} pzas
-            </span>
-          ) : (
-            <span className="ml-auto text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC]">
-              Libre
             </span>
           )}
         </Link>
 
-        {/* PEDIDOS (CON BADGE INTERACTIVO EN TIEMPO REAL) */}
+        {/* PEDIDOS */}
         <Link
           href="/pedidos"
           onClick={handleLinkClick}
           className={cn(
-            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 min-h-[44px]',
+            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
             isPedidos
-              ? 'bg-[#EFE5D8] text-[#241C15] font-bold shadow-2xs border border-[#D4BEA7]'
-              : 'text-[#75695D] font-semibold hover:bg-[#F1ECE4] hover:text-[#241C15]'
+              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
+              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
           )}
         >
           <ShoppingBag className={cn('h-4 w-4 shrink-0', isPedidos ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
           <span>Pedidos</span>
 
-          {/* Badge de Pedidos Pendientes */}
-          {metrics.pedidosPendientes > 0 ? (
-            <span className="ml-auto text-[10px] font-mono font-black px-2 py-0.5 rounded-full bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] shadow-2xs">
-              {metrics.pedidosPendientes} pend.
-            </span>
-          ) : (
-            <span className="ml-auto text-[9px] font-black uppercase px-1.5 py-0.5 rounded-md bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]">
-              Al día
+          {metrics.pedidosPendientes > 0 && (
+            <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
+              {metrics.pedidosPendientes}
             </span>
           )}
         </Link>
@@ -199,10 +184,10 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           href="/historico-mensual"
           onClick={handleLinkClick}
           className={cn(
-            'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 min-h-[44px]',
+            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
             isHistorico
-              ? 'bg-[#EFE5D8] text-[#241C15] font-bold shadow-2xs border border-[#D4BEA7]'
-              : 'text-[#75695D] font-semibold hover:bg-[#F1ECE4] hover:text-[#241C15]'
+              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
+              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
           )}
         >
           <History className={cn('h-4 w-4 shrink-0', isHistorico ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
@@ -210,20 +195,20 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         </Link>
 
         {/* ======================================================================= */}
-        {/* GRUPO FINANZAS (ACORDEÓN LIMPIO DE 1 NIVEL)                             */}
+        {/* GRUPO FINANZAS                                                          */}
         {/* ======================================================================= */}
         <div className="pt-2">
           <button
             type="button"
             onClick={() => setFinanzasOpen(!finanzasOpen)}
             className={cn(
-              'w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm font-bold transition-all duration-150 cursor-pointer min-h-[40px]',
+              'w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 cursor-pointer min-h-[36px]',
               isFinanzasSection
-                ? 'text-[#241C15] bg-[#F1ECE4]'
+                ? 'text-[#241C15] font-black'
                 : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
             )}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Wallet className={cn('h-4 w-4 shrink-0', isFinanzasSection ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
               <span>Finanzas</span>
             </div>
@@ -236,15 +221,14 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           </button>
 
           {finanzasOpen && (
-            <div className="pl-3.5 space-y-1 my-1 border-l-2 border-[#E2D9CC] ml-3.5 transition-all">
-              {/* Flujo de Caja */}
+            <div className="pl-3 space-y-0.5 my-1 border-l border-[#E2D9CC] ml-3 transition-all">
               <Link
                 href="/finanzas/flujo-caja"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 min-h-[36px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
                   pathname === '/finanzas/flujo-caja' || pathname === '/finanzas' || pathname === '/inversiones' || pathname === '/inversiones/flujo-caja'
-                    ? 'bg-[#EFE5D8] text-[#241C15] font-bold border border-[#D4BEA7]'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
                     : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
                 )}
               >
@@ -252,14 +236,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Flujo de Caja</span>
               </Link>
 
-              {/* Ingresos */}
               <Link
                 href="/finanzas/ingresos"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 min-h-[36px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
                   pathname === '/finanzas/ingresos'
-                    ? 'bg-[#EBF7EE] text-[#1E5E3A] font-bold border border-[#B4E3C0]'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
                     : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
                 )}
               >
@@ -267,14 +250,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Ingresos</span>
               </Link>
 
-              {/* Egresos */}
               <Link
                 href="/finanzas/egresos"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 min-h-[36px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
                   pathname === '/finanzas/egresos'
-                    ? 'bg-[#EFE5D8] text-[#241C15] font-bold border border-[#D4BEA7]'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
                     : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
                 )}
               >
@@ -282,14 +264,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Egresos</span>
               </Link>
 
-              {/* Tags de Gasto */}
               <Link
                 href="/finanzas/tags"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 min-h-[36px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
                   pathname === '/finanzas/tags'
-                    ? 'bg-[#EFE5D8] text-[#241C15] font-bold border border-[#D4BEA7]'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
                     : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
                 )}
               >
@@ -297,14 +278,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Tags de Gasto</span>
               </Link>
 
-              {/* Proyecciones & Presupuesto */}
               <Link
                 href="/finanzas/proyecciones"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 min-h-[36px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
                   pathname === '/finanzas/proyecciones' || pathname === '/finanzas/caja-chica'
-                    ? 'bg-[#EFE5D8] text-[#241C15] font-bold border border-[#D4BEA7]'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
                     : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
                 )}
               >
@@ -316,20 +296,20 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         </div>
 
         {/* ======================================================================= */}
-        {/* GRUPO CATÁLOGO & TALLER (ACORDEÓN LIMPIO DE 1 NIVEL)                    */}
+        {/* GRUPO CATÁLOGO & TALLER                                                 */}
         {/* ======================================================================= */}
         <div className="pt-2">
           <button
             type="button"
             onClick={() => setCatalogoOpen(!catalogoOpen)}
             className={cn(
-              'w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm font-bold transition-all duration-150 cursor-pointer min-h-[40px]',
+              'w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 cursor-pointer min-h-[36px]',
               isCatalogoSection
-                ? 'text-[#241C15] bg-[#F1ECE4]'
+                ? 'text-[#241C15] font-black'
                 : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
             )}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               <Package className={cn('h-4 w-4 shrink-0', isCatalogoSection ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
               <span>Catálogo & Taller</span>
             </div>
@@ -342,15 +322,14 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           </button>
 
           {catalogoOpen && (
-            <div className="pl-3.5 space-y-1 my-1 border-l-2 border-[#E2D9CC] ml-3.5 transition-all">
-              {/* Productos */}
+            <div className="pl-3 space-y-0.5 my-1 border-l border-[#E2D9CC] ml-3 transition-all">
               <Link
                 href="/catalogo"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 min-h-[36px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
                   pathname === '/catalogo'
-                    ? 'bg-[#EFE5D8] text-[#241C15] font-bold border border-[#D4BEA7]'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
                     : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
                 )}
               >
@@ -358,14 +337,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Productos</span>
               </Link>
 
-              {/* Categorías */}
               <Link
                 href="/catalogo/categorias"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 min-h-[36px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
                   pathname === '/catalogo/categorias'
-                    ? 'bg-[#EFE5D8] text-[#241C15] font-bold border border-[#D4BEA7]'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
                     : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
                 )}
               >
@@ -373,28 +351,25 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Categorías</span>
               </Link>
 
-              {/* Inventario de Filamentos */}
               <Link
                 href="/catalogo/inventario"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 min-h-[36px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
                   pathname === '/catalogo/inventario' || pathname === '/inventario'
-                    ? 'bg-[#EFE5D8] text-[#241C15] font-bold border border-[#D4BEA7]'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
                     : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
                 )}
               >
                 <CircleDot className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
-                <span>Inventario de Filamentos</span>
+                <span>Inventario Filamentos</span>
 
-                {/* Dot de advertencia ámbar dinámico si hay bobinas < 300g */}
                 {metrics.filamentosCriticos > 0 && (
                   <span 
-                    className="ml-auto flex items-center gap-1 text-[10px] font-extrabold text-[#854D0E] bg-[#FEF9C3] border border-[#FDE047] px-1.5 py-0.2 rounded-md shadow-2xs"
-                    title={`${metrics.filamentosCriticos} bobinas con stock crítico (<300g)`}
+                    className="ml-auto text-[10px] font-mono font-bold text-[#854D0E] bg-[#FEF3C7] border border-[#FDE68A] px-1.5 py-0.5 rounded-md"
+                    title={`${metrics.filamentosCriticos} bobinas críticas`}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#854D0E] animate-pulse shrink-0" />
-                    <span>{metrics.filamentosCriticos}</span>
+                    {metrics.filamentosCriticos}
                   </span>
                 )}
               </Link>
@@ -404,30 +379,22 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. FOOTER DEL TALLER (TARJETA BLANCA CON PADDING SIMÉTRICO GAP-3)          */}
+      {/* 3. FOOTER DEL TALLER                                                      */}
       {/* ========================================================================= */}
-      <div className="mt-auto p-3.5 border-t border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0">
-        <div className="rounded-2xl border border-[#E2D9CC] p-3 flex items-center gap-3 bg-[#FFFFFF] shadow-xs">
-          {/* Avatar '#1E1E1E' con 'N' blanca */}
-          <div className="h-9 w-9 bg-[#1E1E1E] text-white rounded-full flex items-center justify-center font-black text-sm shrink-0 shadow-2xs">
+      <div className="mt-auto p-3 border-t border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0">
+        <div className="rounded-xl border border-[#E2D9CC] p-2.5 flex items-center gap-2.5 bg-white shadow-xs">
+          <div className="h-7 w-7 bg-[#241C15] text-white rounded-lg flex items-center justify-center font-black text-xs shrink-0">
             N
           </div>
-
-          {/* Labels con padding protegido para que jamás se monten sobre el avatar ni el dot */}
-          <div className="flex-1 min-w-0 pr-1">
+          <div className="flex-1 min-w-0">
             <span className="font-bold text-xs text-[#241C15] truncate block leading-tight">
               NOVA Workshop
             </span>
-            <span className="text-[11px] text-[#75695D] truncate block leading-tight mt-0.5">
+            <span className="text-[10px] text-[#75695D] truncate block leading-tight">
               Taller Activo
             </span>
           </div>
-
-          {/* Dot verde esmeralda con pulso de sincronización */}
-          <div className="relative flex h-2.5 w-2.5 shrink-0 ml-auto" title="Sincronización en tiempo real">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1E5E3A] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#1E5E3A]"></span>
-          </div>
+          <div className="w-2 h-2 rounded-full bg-[#1E5E3A] shrink-0" title="En línea" />
         </div>
       </div>
     </aside>

@@ -384,59 +384,54 @@ export function CatalogoClient({
         </div>
 
         {/* ========================================================================= */}
-        {/* 2. FILA SUPERIOR DE KPIS (GRID 4 COLUMNAS)                                */}
+        {/* 2. FILA SUPERIOR DE KPIS (GRID 4 COLUMNAS MINIMALISTA)                    */}
         {/* ========================================================================= */}
-        {/* Fila de 4 KPIs Interactivos */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {/* KPI 1: Total Modelos */}
           <div 
             onClick={() => setEstadoFilter('TODOS')}
-            className={`p-3 sm:p-3.5 rounded-2xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs cursor-pointer transition-all ${
               estadoFilter === 'TODOS'
-                ? 'bg-[#FAF8F5] border-[#A36F4C] ring-2 ring-[#A36F4C]/25 shadow-xs'
-                : 'bg-[#FFFFFF] border-[#E2D9CC] hover:border-[#A36F4C]/50 hover:bg-[#F4EFEA]'
+                ? 'bg-white border-[#A36F4C] ring-1 ring-[#A36F4C]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
-                Total Modelos
-              </span>
-              <div className="p-1 rounded-xl bg-[#F5EBE1] text-[#A36F4C] flex-shrink-0">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">Total Modelos</span>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
                 <Boxes className="h-3.5 w-3.5" />
               </div>
             </div>
-            <div className="mt-1.5">
-              <div className="text-lg sm:text-2xl font-black text-[#241C15] font-mono tracking-tight">
-                {totalModelos} diseños
+            <div className="mt-2">
+              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+                {totalModelos} <span className="text-xs font-normal font-sans text-[#75695D]">diseños</span>
               </div>
-              <span className="text-[10px] sm:text-[11px] text-[#75695D] font-medium mt-0.5 block truncate">
-                En base de datos del taller
+              <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+                En catálogo general
               </span>
             </div>
           </div>
 
-          {/* KPI 2: Activos en Venta (Verde #1E5E3A) */}
+          {/* KPI 2: Activos en Venta */}
           <div 
             onClick={() => setEstadoFilter('ACTIVOS')}
-            className={`p-3 sm:p-3.5 rounded-2xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs cursor-pointer transition-all ${
               estadoFilter === 'ACTIVOS'
-                ? 'bg-[#EBF7EE]/40 border-[#1E5E3A] ring-2 ring-[#1E5E3A]/25 shadow-xs'
-                : 'bg-[#FFFFFF] border-[#E2D9CC] hover:border-[#1E5E3A]/50 hover:bg-[#F4EFEA]'
+                ? 'bg-white border-[#1E5E3A] ring-1 ring-[#1E5E3A]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
-                Activos en Venta
-              </span>
-              <div className="p-1 rounded-xl bg-[#EBF7EE] text-[#1E5E3A] flex-shrink-0">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">Activos en Venta</span>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
                 <PackageCheck className="h-3.5 w-3.5" />
               </div>
             </div>
-            <div className="mt-1.5">
-              <div className="text-lg sm:text-2xl font-black text-[#1E5E3A] font-mono tracking-tight">
-                {activosCount} modelos
+            <div className="mt-2">
+              <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
+                {activosCount} <span className="text-xs font-normal font-sans text-[#75695D]">modelos</span>
               </div>
-              <span className="text-[10px] sm:text-[11px] text-[#1E5E3A] font-bold mt-0.5 block truncate">
+              <span className="text-xs text-[#1E5E3A] font-medium mt-0.5 block truncate">
                 Disponibles para pedidos
               </span>
             </div>
@@ -445,26 +440,24 @@ export function CatalogoClient({
           {/* KPI 3: Descontinuados */}
           <div 
             onClick={() => setEstadoFilter('DESCONTINUADOS')}
-            className={`p-3 sm:p-3.5 rounded-2xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs cursor-pointer transition-all ${
               estadoFilter === 'DESCONTINUADOS'
-                ? 'bg-[#FAF8F5] border-[#75695D] ring-2 ring-[#75695D]/25 shadow-xs'
-                : 'bg-[#FFFFFF] border-[#E2D9CC] hover:border-[#75695D]/50 hover:bg-[#F4EFEA]'
+                ? 'bg-white border-[#75695D] ring-1 ring-[#75695D]'
+                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
-                Descontinuados
-              </span>
-              <div className="p-1 rounded-xl bg-[#EAE4DC] text-[#75695D] flex-shrink-0">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">Descontinuados</span>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#75695D]">
                 <Archive className="h-3.5 w-3.5" />
               </div>
             </div>
-            <div className="mt-1.5">
-              <div className="text-lg sm:text-2xl font-black text-[#75695D] font-mono tracking-tight">
-                {descontinuadosCount} archivados
+            <div className="mt-2">
+              <div className="text-xl sm:text-2xl font-black text-[#75695D] font-mono tabular-nums">
+                {descontinuadosCount} <span className="text-xs font-normal font-sans text-[#75695D]">archivados</span>
               </div>
-              <span className="text-[10px] sm:text-[11px] text-[#75695D] font-medium mt-0.5 block truncate">
-                Fuera de catálogo activo
+              <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+                Fuera de venta
               </span>
             </div>
           </div>
@@ -472,22 +465,20 @@ export function CatalogoClient({
           {/* KPI 4: Categorías Activas */}
           <Link
             href="/catalogo/categorias"
-            className="p-3 sm:p-3.5 rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] hover:border-[#A36F4C]/50 flex flex-col justify-between shadow-2xs transition-colors"
+            className="p-3.5 rounded-2xl bg-white border border-[#E2D9CC] hover:bg-[#FAF8F5] flex flex-col justify-between shadow-xs transition-colors"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#75695D] uppercase tracking-wider truncate">
-                Categorías Activas
-              </span>
-              <div className="p-1 rounded-xl bg-[#F5EBE1] text-[#A36F4C] flex-shrink-0">
+            <div className="flex items-center justify-between text-[#6B7280]">
+              <span className="text-xs font-semibold">Categorías</span>
+              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
                 <Layers className="h-3.5 w-3.5" />
               </div>
             </div>
-            <div className="mt-1.5">
-              <div className="text-lg sm:text-2xl font-black text-[#A36F4C] font-mono tracking-tight">
-                {categoriasActivasCount} familias
+            <div className="mt-2">
+              <div className="text-xl sm:text-2xl font-black text-[#A36F4C] font-mono tabular-nums">
+                {categoriasActivasCount} <span className="text-xs font-normal font-sans text-[#75695D]">familias</span>
               </div>
-              <span className="text-[10px] sm:text-[11px] text-[#A36F4C] font-bold mt-0.5 block truncate">
-                Organización de catálogo →
+              <span className="text-xs text-[#A36F4C] font-medium mt-0.5 block truncate">
+                Gestionar categorías →
               </span>
             </div>
           </Link>
@@ -623,28 +614,27 @@ export function CatalogoClient({
       {/* 4. TABLA OPERATIVA PRINCIPAL (EXCLUSIVA Y 100% RESPONSIVE)               */}
       {/* ========================================================================= */}
       
-      {/* VISTA ESCRITORIO (>= md / 768px): Tabla estructurada con scroll seguro y sin cortes */}
-      <div className="hidden md:block w-full bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse table-auto sm:table-fixed text-xs min-w-[760px]">
-            <colgroup>
-              <col className="w-[28%]" />
-              <col className="w-[14%]" />
-              <col className="w-[12%]" />
-              <col className="w-[26%]" />
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
-            </colgroup>
-            <thead>
-              <tr className="bg-[#F4EFEA] border-b border-[#E2D9CC] text-[#75695D] text-[11px] font-semibold">
-                <th className="py-3.5 px-4 font-bold text-left">Modelo & Familia</th>
-                <th className="py-3.5 px-4 font-bold text-center">Especificaciones</th>
-                <th className="py-3.5 px-4 font-bold text-right">Costo Base</th>
-                <th className="py-3.5 px-4 font-bold text-center">Niveles de Precios (Amigos / Mercado / Comunidad)</th>
-                <th className="py-3.5 px-4 font-bold text-center">Estado</th>
-                <th className="py-3.5 px-4 font-bold text-right pr-4">Acciones</th>
-              </tr>
-            </thead>
+      {/* VISTA ESCRITORIO (>= lg): Tabla ejecutiva table-fixed sin scroll horizontal */}
+      <div className="hidden lg:block w-full bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
+        <table className="w-full text-left border-collapse table-fixed text-xs">
+          <colgroup>
+            <col className="w-[28%]" />
+            <col className="w-[14%]" />
+            <col className="w-[12%]" />
+            <col className="w-[26%]" />
+            <col className="w-[10%]" />
+            <col className="w-[10%]" />
+          </colgroup>
+          <thead>
+            <tr className="bg-[#FAF8F5] border-b border-[#E2D9CC] text-[#75695D] text-[11px] font-semibold">
+              <th className="py-3.5 px-4 font-bold text-left">Modelo & Familia</th>
+              <th className="py-3.5 px-4 font-bold text-center">Especificaciones</th>
+              <th className="py-3.5 px-4 font-bold text-right">Costo Base</th>
+              <th className="py-3.5 px-4 font-bold text-center">Niveles de Precios (Amigos / Mercado / Comunidad)</th>
+              <th className="py-3.5 px-4 font-bold text-center">Estado</th>
+              <th className="py-3.5 px-4 font-bold text-right pr-4">Acciones</th>
+            </tr>
+          </thead>
             <tbody className="divide-y divide-[#E2D9CC]">
               {filteredProductos.length === 0 ? (
                 <tr>
@@ -839,11 +829,10 @@ export function CatalogoClient({
               )}
             </tbody>
           </table>
-        </div>
       </div>
 
-      {/* VISTA MÓVIL (< md / 768px): Tarjetas colapsables limpias y táctiles */}
-      <div className="block md:hidden space-y-3">
+      {/* VISTA MÓVIL Y TABLET (< lg): Tarjetas táctiles limpias */}
+      <div className="block lg:hidden space-y-3">
         {filteredProductos.length === 0 ? (
           <div className="p-8 text-center bg-[#FFFFFF] rounded-3xl border border-dashed border-[#E2D9CC] text-[#75695D] italic text-xs">
             No se encontraron productos

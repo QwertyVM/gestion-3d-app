@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -34,7 +34,7 @@ import { createIngreso, deleteIngreso, updateIngreso, swapIngresoOrder } from '@
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
+import { SearchableCombobox } from '@/components/ui/SearchableCombobox'
 import { VentaItem, IngresoDirectoItem } from './FlujoCajaClient'
 
 interface IngresosClientProps {
@@ -43,7 +43,7 @@ interface IngresosClientProps {
   ingresosDirectos: IngresoDirectoItem[]
 }
 
-const ITEMS_PER_PAGE = 5
+const ITEMS_PER_PAGE = 10
 
 export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosClientProps) {
   const router = useRouter()
@@ -59,7 +59,6 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
   const [openEditModal, setOpenEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<IngresoDirectoItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [activeTab, setActiveTab] = useState<'MOVIMIENTOS' | 'SALDOS'>('MOVIMIENTOS')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -104,6 +103,19 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+  // Helper to summarize order items cleanly (group duplicate product names)
+  const summarizeOrderItems = (items?: any[]) => {
+    if (!items || items.length === 0) return 'Modelos 3D'
+    const itemCounts = new Map<string, number>()
+    items.forEach((it: any) => {
+      const name = it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Modelo 3D'
+      itemCounts.set(name, (itemCounts.get(name) || 0) + (it.cantidad || 1))
+    })
+    return Array.from(itemCounts.entries())
+      .map(([name, qty]) => `${name} (x${qty})`)
+      .join(', ')
+  }
+
   // Consolidated Incomes List
   const unifiedIngresos = useMemo(() => {
     const list: Array<{
@@ -129,9 +141,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
     // From Pedidos (Multi-product orders)
     if (pedidos && pedidos.length > 0) {
       pedidos.forEach(p => {
-        const itemsSummary = p.items && p.items.length > 0
-          ? p.items.map((it: any) => `${it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Modelo 3D'} (x${it.cantidad})`).join(', ')
-          : 'Modelos 3D'
+        const itemsSummary = summarizeOrderItems(p.items)
         const categoria = p.items?.[0]?.producto?.lineaCategoria || 'General'
 
         if (Array.isArray(p.pagos) && p.pagos.length > 0) {
@@ -141,7 +151,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
             const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${numAbono}`
             const concepto = isSingleFull
               ? `Pago Total del pedido ${p.codigo}: ${itemsSummary}`
-              : `Abono número ${numAbono} del pedido ${p.codigo}: ${itemsSummary}`
+              : `Abono #${numAbono} del pedido ${p.codigo}: ${itemsSummary}`
 
             list.push({
               id: `pago-ped-${pg.id || `${p.id}-${idx}`}`,
@@ -168,7 +178,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
             fecha: p.fecha,
             origen: 'VENTA_CATALOGO',
             cliente: p.cliente,
-            concepto: `Abono número 1 del pedido ${p.codigo}: ${itemsSummary}`,
+            concepto: `Abono #1 del pedido ${p.codigo}: ${itemsSummary}`,
             categoria,
             montoCobrado: p.montoPagado,
             totalOriginal: p.total,
@@ -191,7 +201,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
             const tipoLabel = isSingleFull ? 'Pago Total' : `Abono #${numAbono}`
             const concepto = isSingleFull
               ? `Pago Total del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
-              : `Abono número ${numAbono} del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
+              : `Abono #${numAbono} del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
 
             list.push({
               id: `pago-${p.id || `${v.id}-${idx}`}`,
@@ -218,7 +228,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
             fecha: v.fecha,
             origen: 'VENTA_CATALOGO',
             cliente: v.cliente,
-            concepto: `Abono número 1 del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`,
+            concepto: `Abono #1 del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`,
             categoria: v.producto.lineaCategoria,
             montoCobrado: v.montoPagado,
             totalOriginal: v.total,
@@ -406,77 +416,91 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] shadow-sm">
               <ArrowUpRight className="h-6 w-6 stroke-[2.5]" />
             </div>
-            Registro de Ingresos
+            <span>Registro de Ingresos</span>
           </h1>
           <p className="text-sm text-[#75695D] mt-1">
-            Control de cobros por ventas de productos 3D y servicios de impresión / diseño personalizado.
+            Control de cobros por ventas de productos 3D y servicios de impresión o diseño.
           </p>
         </div>
 
         <Button 
           onClick={handleOpenCreate}
-          className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold rounded-xl shadow-md shadow-[#1E5E3A]/20 transition-all cursor-pointer h-10 px-4 text-xs active:scale-[0.98]"
+          className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold rounded-xl shadow-xs transition-all cursor-pointer h-9 px-3.5 text-xs active:scale-[0.98] self-start sm:self-auto"
         >
           <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
           Registrar Ingreso Directo
         </Button>
       </div>
 
-      {/* KPI Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
-            <span>Total Ingresos Cobrados</span>
-            <CheckCircle2 className="h-3.5 w-3.5 stroke-[2.5]" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#1E5E3A] font-mono mt-1">
-            {formatCurrency(totalIngresosCobrados)}
+      {/* KPI Overview Minimalista */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Total Ingresos Cobrados */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Total Ingresos Cobrados</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
-            Dinero real ingresado a caja
-          </span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
+              {formatCurrency(totalIngresosCobrados)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              Dinero real ingresado a caja
+            </span>
+          </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
-            <span>Facturación Total en Ventas</span>
-            <Package className="h-3.5 w-3.5 stroke-[2.5]" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#241C15] font-mono mt-1">
-            {formatCurrency(totalFacturadoVentas)}
+        {/* Facturación en Ventas */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Facturación en Ventas</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+              <Package className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
-            Monto total de ventas generadas
-          </span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+              {formatCurrency(totalFacturadoVentas)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              Monto total de ventas generadas
+            </span>
+          </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-3.5 shadow-2xs">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#8C6D1F] flex items-center justify-between">
-            <span>Cuentas por Cobrar (Saldos)</span>
-            <Clock className="h-3.5 w-3.5 stroke-[2.5]" />
-          </span>
-          <div className="text-xl sm:text-2xl font-extrabold text-[#8C6D1F] font-mono mt-1">
-            {formatCurrency(totalSaldosPorCobrar)}
+        {/* Cuentas por Cobrar */}
+        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Cuentas por Cobrar</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#8C6D1F]">
+              <Clock className="h-3.5 w-3.5" />
+            </div>
           </div>
-          <span className="text-[11px] text-[#75695D] mt-0.5 block truncate">
-            Saldos pendientes de entrega
-          </span>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black text-[#8C6D1F] font-mono tabular-nums">
+              {formatCurrency(totalSaldosPorCobrar)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              Saldos pendientes de entrega
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Main Container: Single Unified Master Card (Toolbar + Table) */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-xs rounded-2xl">
+      {/* Main Container: Master Card (Toolbar + Zero-Scroll Table) */}
+      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-2xs rounded-2xl">
         {/* Unified Integrated Toolbar */}
-        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col md:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
+        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
           {/* Search */}
-          <div className="relative w-full md:w-80 flex-shrink-0">
+          <div className="relative w-full sm:w-80 flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
             <Input 
               placeholder="Buscar por cliente, modelo o servicio..."
@@ -490,7 +514,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
             {search && (
               <button 
                 onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -498,12 +522,12 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
           </div>
 
           {/* Type Filters */}
-          <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
+          <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] w-full sm:w-auto justify-center sm:justify-start">
             <button
               onClick={() => { setTipoFilter('TODOS'); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 tipoFilter === 'TODOS'
-                  ? 'bg-[#1E5E3A] text-white shadow-sm'
+                  ? 'bg-[#241C15] text-white shadow-2xs'
                   : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
               }`}
             >
@@ -513,7 +537,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
               onClick={() => { setTipoFilter('VENTAS'); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                 tipoFilter === 'VENTAS'
-                  ? 'bg-[#A36F4C] text-white shadow-sm'
+                  ? 'bg-[#1E5E3A] text-white shadow-2xs'
                   : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
               }`}
             >
@@ -524,7 +548,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
               onClick={() => { setTipoFilter('DIRECTOS'); setCurrentPage(1); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap ${
                 tipoFilter === 'DIRECTOS'
-                  ? 'bg-[#8C6D1F] text-white shadow-sm'
+                  ? 'bg-[#8C6D1F] text-white shadow-2xs'
                   : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
               }`}
             >
@@ -533,7 +557,8 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
             </button>
           </div>
         </div>
-        {/* Mobile View (< md): Cards */}
+
+        {/* Mobile View: Cards */}
         <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
           {paginatedIngresos.length === 0 ? (
             <div className="p-8 text-center text-[#75695D] text-xs">
@@ -556,17 +581,17 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
                   onClick={() => {
                     if (isDirect && ing.rawItem) handleOpenEdit(ing.rawItem)
                   }}
-                  className={`p-3.5 space-y-2.5 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors ${isDirect ? 'cursor-pointer' : ''}`}
+                  className={`p-3.5 space-y-2 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors ${isDirect ? 'cursor-pointer' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <span className="font-bold text-sm text-[#241C15] block truncate">{ing.concepto}</span>
+                      <span className="font-bold text-xs text-[#241C15] block truncate">{ing.concepto}</span>
                       <span className="text-[11px] text-[#75695D] font-mono block mt-0.5">
                         {formatDate(ing.fecha)} • {ing.cliente}
                       </span>
                     </div>
 
-                    <span className="text-sm font-mono font-extrabold text-[#1E5E3A] flex-shrink-0">
+                    <span className="text-sm font-mono font-bold text-[#1E5E3A] flex-shrink-0 tabular-nums">
                       +{formatCurrency(ing.montoCobrado)}
                     </span>
                   </div>
@@ -589,8 +614,8 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
                         </Badge>
                       )}
 
-                      <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] text-[10px] font-medium">
-                        {ing.metodoPago || 'Yape'}
+                      <Badge variant="outline" className="bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] text-[10px] font-medium">
+                        {ing.metodoPago || 'YAPE'}
                       </Badge>
                     </div>
 
@@ -674,181 +699,214 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
           )}
         </div>
 
-        {/* Desktop View (>= md): Table */}
-        <div className="hidden md:block overflow-x-auto scrollbar-thin">
-          <Table className="w-full min-w-[650px]">
-            <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
-            <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-left">Fecha</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Origen / Tipo</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Cliente / Entidad</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-left">Concepto / Detalle</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center hidden sm:table-cell">Método</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-4 py-3 text-right">Monto Cobrado</TableHead>
-              <TableHead className="text-[#241C15] font-bold px-3 py-3 text-center">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedIngresos.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-[#75695D]">
-                  No se encontraron ingresos registrados en este periodo.
-                </TableCell>
+        {/* Desktop View: Clean Zero-Scroll Table (5 Columns / table-fixed) */}
+        <div className="hidden md:block">
+          <Table className="w-full table-fixed">
+            <TableHeader className="bg-[#FAF8F5]/80 border-b border-[#E2D9CC]">
+              <TableRow className="border-[#E2D9CC] hover:bg-transparent">
+                <TableHead className="w-[130px] px-4 py-3 text-xs font-bold text-[#75695D] text-left">
+                  Fecha & Tipo
+                </TableHead>
+                <TableHead className="px-3 py-3 text-xs font-bold text-[#75695D] text-left">
+                  Concepto & Detalle
+                </TableHead>
+                <TableHead className="w-[140px] px-3 py-3 text-xs font-bold text-[#75695D] text-left">
+                  Cliente / Entidad
+                </TableHead>
+                <TableHead className="w-[115px] px-4 py-3 text-xs font-bold text-[#75695D] text-right">
+                  Monto Cobrado
+                </TableHead>
+                <TableHead className="w-[115px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
+                  Acción
+                </TableHead>
               </TableRow>
-            ) : (
-              paginatedIngresos.map((ing) => {
-                const isDirect = ing.origen === 'INGRESO_DIRECTO' && ing.rawItem
-                const globalDirectIndex = isDirect ? directos.findIndex(d => d.id === ing.rawId) : -1
-                const prevNeighbor = globalDirectIndex > 0 ? directos[globalDirectIndex - 1] : null
-                const nextNeighbor = globalDirectIndex >= 0 && globalDirectIndex < directos.length - 1 ? directos[globalDirectIndex + 1] : null
+            </TableHeader>
+            <TableBody>
+              {paginatedIngresos.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-12 text-[#75695D] text-xs">
+                    No se encontraron ingresos registrados con los filtros aplicados.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedIngresos.map((ing) => {
+                  const isDirect = ing.origen === 'INGRESO_DIRECTO' && ing.rawItem
+                  const globalDirectIndex = isDirect ? directos.findIndex(d => d.id === ing.rawId) : -1
+                  const prevNeighbor = globalDirectIndex > 0 ? directos[globalDirectIndex - 1] : null
+                  const nextNeighbor = globalDirectIndex >= 0 && globalDirectIndex < directos.length - 1 ? directos[globalDirectIndex + 1] : null
 
-                const ingDay = ing.fecha ? ing.fecha.split('T')[0] : ''
-                const canMoveUp = isDirect && !!prevNeighbor && prevNeighbor.fecha.split('T')[0] === ingDay
-                const canMoveDown = isDirect && !!nextNeighbor && nextNeighbor.fecha.split('T')[0] === ingDay
+                  const ingDay = ing.fecha ? ing.fecha.split('T')[0] : ''
+                  const canMoveUp = isDirect && !!prevNeighbor && prevNeighbor.fecha.split('T')[0] === ingDay
+                  const canMoveDown = isDirect && !!nextNeighbor && nextNeighbor.fecha.split('T')[0] === ingDay
 
-                return (
-                  <TableRow 
-                    key={ing.id} 
-                    onClick={() => {
-                      if (isDirect && ing.rawItem) handleOpenEdit(ing.rawItem)
-                    }}
-                    className={`border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors ${isDirect ? 'cursor-pointer group' : ''}`}
-                  >
-                    <TableCell className="px-4 py-3 text-xs text-[#75695D] font-mono whitespace-nowrap">
-                      {formatDate(ing.fecha)}
-                    </TableCell>
+                  return (
+                    <TableRow 
+                      key={ing.id} 
+                      onClick={() => {
+                        if (isDirect && ing.rawItem) handleOpenEdit(ing.rawItem)
+                      }}
+                      className={`border-b border-[#E2D9CC]/60 hover:bg-[#FAF8F5]/60 transition-colors ${isDirect ? 'cursor-pointer group' : ''}`}
+                    >
+                      {/* 1. Fecha & Tipo */}
+                      <TableCell className="px-4 py-3 align-top">
+                        <div className="space-y-1">
+                          <span className="text-xs text-[#75695D] font-mono block">
+                            {formatDate(ing.fecha)}
+                          </span>
+                          <div>
+                            {ing.origen === 'VENTA_CATALOGO' ? (
+                              (ing as any).tipoLabel === 'Pago Total' ? (
+                                <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold px-1.5 py-0">
+                                  Pago Total (100%)
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold px-1.5 py-0">
+                                  {(ing as any).tipoLabel || 'Abono'}
+                                </Badge>
+                              )
+                            ) : (
+                              <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold px-1.5 py-0">
+                                Servicio Directo
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
 
-                    <TableCell className="px-3 py-3 whitespace-nowrap">
-                      {ing.origen === 'VENTA_CATALOGO' ? (
-                        (ing as any).tipoLabel === 'Pago Total' ? (
-                          <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold">
-                            Pago Total (100%)
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-xs font-bold">
-                            {(ing as any).tipoLabel || 'Abono'}
-                          </Badge>
-                        )
-                      ) : (
-                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-xs font-bold">
-                          Servicio Directo
-                        </Badge>
-                      )}
-                    </TableCell>
+                      {/* 2. Concepto & Detalle */}
+                      <TableCell className="px-3 py-3 align-top min-w-0">
+                        <div className="min-w-0">
+                          <span 
+                            title={ing.concepto}
+                            className={`text-xs font-semibold text-[#241C15] block truncate ${isDirect ? 'group-hover:text-[#1E5E3A] transition-colors' : ''}`}
+                          >
+                            {ing.concepto}
+                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#75695D] truncate">
+                            <span className="font-mono font-medium text-[#75695D] flex-shrink-0">
+                              {ing.metodoPago || 'YAPE'}
+                            </span>
+                            {ing.saldoPendiente && ing.saldoPendiente > 0 ? (
+                              <span className="text-[#8C6D1F] font-bold flex-shrink-0">
+                                • Resta: {formatCurrency(ing.saldoPendiente)}
+                              </span>
+                            ) : null}
+                            {ing.notas ? (
+                              <span className="italic truncate" title={ing.notas}>
+                                • {ing.notas}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </TableCell>
 
-                    <TableCell className="px-3 py-3 font-bold text-[#241C15] whitespace-nowrap">
-                      <span className={isDirect ? "group-hover:text-[#1E5E3A] transition-colors" : ""}>
-                        {ing.cliente}
-                      </span>
-                    </TableCell>
+                      {/* 3. Cliente / Entidad */}
+                      <TableCell className="px-3 py-3 align-top min-w-0">
+                        <span 
+                          title={ing.cliente}
+                          className={`text-xs font-medium text-[#241C15] block truncate ${isDirect ? 'group-hover:text-[#1E5E3A] transition-colors' : ''}`}
+                        >
+                          {ing.cliente}
+                        </span>
+                        <span className="text-[10px] text-[#75695D] block truncate">
+                          {ing.categoria}
+                        </span>
+                      </TableCell>
 
-                    <TableCell className="px-3 py-3">
-                      <div className="flex flex-col">
-                        <span className={`text-sm font-semibold text-[#241C15] ${isDirect ? 'group-hover:text-[#1E5E3A] transition-colors' : ''}`}>
-                          {ing.concepto}
+                      {/* 4. Monto Cobrado */}
+                      <TableCell className="px-4 py-3 align-top text-right whitespace-nowrap">
+                        <span className="font-mono font-bold tabular-nums text-xs sm:text-sm text-[#1E5E3A] block">
+                          +{formatCurrency(ing.montoCobrado)}
                         </span>
                         {ing.saldoPendiente && ing.saldoPendiente > 0 ? (
-                          <span className="text-[11px] text-[#8C6D1F] font-bold">
-                            Saldo pendiente: {formatCurrency(ing.saldoPendiente)}
+                          <span className="text-[10px] text-[#8C6D1F] font-semibold block">
+                            Saldo: {formatCurrency(ing.saldoPendiente)}
                           </span>
                         ) : null}
-                        {ing.notas ? (
-                          <span className="text-[11px] text-[#75695D] italic">
-                            {ing.notas}
-                          </span>
-                        ) : null}
-                      </div>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell className="px-3 py-3 text-center hidden sm:table-cell whitespace-nowrap">
-                      <Badge variant="outline" className="bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] text-xs font-medium">
-                        {ing.metodoPago || 'Yape'}
-                      </Badge>
-                    </TableCell>
+                      {/* 5. Acciones */}
+                      <TableCell className="px-3 py-3 align-top text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        {isDirect && ing.rawItem ? (
+                          <div className="flex items-center justify-end gap-1">
+                            {/* Reorder Micro Buttons con espacio reservado invisible para alineación perfecta */}
+                            <div className={`flex items-center bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5 ${canMoveUp || canMoveDown ? '' : 'invisible'}`}>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                disabled={!canMoveUp}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (prevNeighbor) handleMoveIngreso(ing.rawId, prevNeighbor.id, 'up')
+                                }}
+                                className="h-5 w-5 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 cursor-pointer rounded p-0"
+                                title="Subir posición"
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                disabled={!canMoveDown}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (nextNeighbor) handleMoveIngreso(ing.rawId, nextNeighbor.id, 'down')
+                                }}
+                                className="h-5 w-5 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 cursor-pointer rounded p-0"
+                                title="Bajar posición"
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </div>
 
-                    <TableCell className="px-4 py-3 text-right font-mono font-extrabold text-[#1E5E3A] whitespace-nowrap">
-                      +{formatCurrency(ing.montoCobrado)}
-                    </TableCell>
-
-                    <TableCell className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      {isDirect && ing.rawItem ? (
-                        <div className="flex items-center justify-center gap-1.5">
-                          {/* Reorder Buttons (Up / Down in same day) */}
-                          <div className="flex items-center bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5 shadow-xs">
                             <Button
                               size="icon"
                               variant="ghost"
-                              disabled={!canMoveUp}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (prevNeighbor) handleMoveIngreso(ing.rawId, prevNeighbor.id, 'up')
-                              }}
-                              className="h-7 w-7 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer rounded transition-colors"
-                              title={canMoveUp ? "Subir posición en este día" : "Límite superior del día"}
+                              onClick={(e) => handleOpenEdit(ing.rawItem!, e)}
+                              className="h-7 w-7 text-[#75695D] hover:text-[#1E5E3A] hover:bg-emerald-50 rounded-lg cursor-pointer"
+                              title="Editar ingreso directo"
                             >
-                              <ChevronUp className="h-4 w-4" />
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
+
                             <Button
                               size="icon"
                               variant="ghost"
-                              disabled={!canMoveDown}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (nextNeighbor) handleMoveIngreso(ing.rawId, nextNeighbor.id, 'down')
-                              }}
-                              className="h-7 w-7 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer rounded transition-colors"
-                              title={canMoveDown ? "Bajar posición en este día" : "Límite inferior del día"}
+                              onClick={(e) => handleDeleteDirect(ing.rawId, ing.concepto, e)}
+                              className="h-7 w-7 text-[#75695D] hover:text-[#A34335] hover:bg-red-50 rounded-lg cursor-pointer"
+                              title="Eliminar ingreso directo"
                             >
-                              <ChevronDown className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
-
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => handleOpenEdit(ing.rawItem!, e)}
-                            className="h-8 w-8 text-[#75695D] hover:text-[#1E5E3A] hover:bg-emerald-50 rounded-lg cursor-pointer"
-                            title="Editar ingreso directo"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => handleDeleteDirect(ing.rawId, ing.concepto, e)}
-                            className="h-8 w-8 text-[#75695D] hover:text-[#A36F4C] hover:bg-red-50 rounded-lg cursor-pointer"
-                            title="Eliminar ingreso directo"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Link href="/pedidos">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-[11px] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] rounded-lg cursor-pointer font-medium gap-1"
-                          >
-                            <span>Ver Pedido</span>
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                        </Link>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
+                        ) : (
+                          <div className="flex items-center justify-end">
+                            <Link href="/pedidos">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-[11px] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] rounded-lg cursor-pointer font-medium gap-1"
+                              >
+                                <span>Ver</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </Button>
+                            </Link>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
         </div>
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#F4EFEA] text-xs text-[#75695D]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#FAF8F5]/80 text-xs text-[#75695D]">
             <div>
-              Mostrando página <span className="text-[#241C15] font-bold">{currentPage}</span> de <span className="text-[#241C15] font-bold">{totalPages}</span> ({filteredIngresos.length} ingresos)
+              Mostrando <span className="text-[#241C15] font-bold">{paginatedIngresos.length}</span> de <span className="text-[#241C15] font-bold">{filteredIngresos.length}</span> ingresos (Página {currentPage} de {totalPages})
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -857,7 +915,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-2xs"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Anterior
@@ -870,7 +928,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
                     variant={currentPage === page ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 w-8 p-0 cursor-pointer shadow-sm ${
+                    className={`h-8 w-8 p-0 cursor-pointer shadow-2xs ${
                       currentPage === page 
                         ? "bg-[#1E5E3A] text-white hover:bg-[#16472C] font-bold" 
                         : "border-[#E2D9CC] bg-[#FFFFFF] text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15]"
@@ -886,7 +944,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-sm"
+                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-2xs"
               >
                 Siguiente
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -910,7 +968,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
                     Registrar Ingreso Directo
                   </DialogTitle>
                   <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                    Servicios de impresión externa, modelado 3D, préstamos o aportes de capital.
+                    Servicios de impresión externa, modelado 3D, préstamos o aportes.
                   </DialogDescription>
                 </div>
               </div>
@@ -1043,7 +1101,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#1E5E3A]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
@@ -1218,7 +1276,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-[#1E5E3A]/20 cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   {isSubmitting ? (
                     <>

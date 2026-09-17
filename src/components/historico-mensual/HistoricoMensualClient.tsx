@@ -277,12 +277,11 @@ export function HistoricoMensualClient({
   ventas,
   ingresosDirectos = []
 }: HistoricoMensualClientProps) {
-  const [viewMode, setViewMode] = useState<'PANEL_EJECUTIVO' | 'TABLA_MATRICIAL' | 'AUDITORIA_CARTERA'>('PANEL_EJECUTIVO')
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<string>('TODOS')
   const [selectedMonthDetail, setSelectedMonthDetail] = useState<MonthlyCashflowItem | null>(null)
   const [modalCategoryFilter, setModalCategoryFilter] = useState<'TODOS' | 'INGRESOS' | 'EGRESOS' | 'CARTERA_COBRANZAS'>('TODOS')
   const [modalSearch, setModalSearch] = useState('')
-  const [showFiltersPanel, setShowFiltersPanel] = useState(true)
+  const [showFiltersPanel, setShowFiltersPanel] = useState(false)
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -848,8 +847,6 @@ export function HistoricoMensualClient({
     return monthlyData.filter(m => m.monthKey === selectedMonthFilter)
   }, [monthlyData, selectedMonthFilter])
 
-  const agostoData = monthlyData.find(m => m.monthKey === '2026-08')
-
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-12">
       {/* ========================================================================= */}
@@ -858,18 +855,16 @@ export function HistoricoMensualClient({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="p-2.5 rounded-2xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#633E20] shadow-sm">
-              <History className="h-6 w-6 stroke-[2.5]" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241C15]">
-              Histórico Mensual
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-[#241C15] flex items-center gap-2.5">
+              <History className="h-6 w-6 sm:h-7 sm:w-7 text-[#A36F4C] flex-shrink-0" />
+              <span>Histórico Mensual</span>
             </h1>
-            <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-extrabold px-3 py-1">
-              {metricasHistoricas.totalActiveCount} Tags/Conceptos Activos
-            </Badge>
+            <span className="text-xs font-bold text-[#1E5E3A] font-mono bg-[#EBF7EE] border border-[#B4E3C0] px-2.5 py-0.5 rounded-full">
+              {metricasHistoricas.totalActiveCount} partidas activas
+            </span>
           </div>
-          <p className="text-xs sm:text-sm text-[#75695D] mt-1.5 max-w-3xl">
-            Control contable histórico multimes. Selecciona qué tags y conceptos reales de tu base de datos sumar a los indicadores y todos los valores se recalcularán al instante.
+          <p className="text-xs sm:text-sm text-[#75695D] mt-1">
+            Evolución de flujo de caja, ingresos cobrados, egresos totales y rentabilidad operativa mes a mes.
           </p>
         </div>
 
@@ -879,14 +874,18 @@ export function HistoricoMensualClient({
             variant="outline"
             size="sm"
             onClick={() => setShowFiltersPanel(!showFiltersPanel)}
-            className="h-9 px-3.5 text-xs font-bold border-[#D4BEA7] bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#241C15] rounded-xl shadow-2xs flex items-center gap-1.5 cursor-pointer"
+            className={`h-9 px-3.5 text-xs font-bold rounded-xl shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all ${
+              showFiltersPanel
+                ? 'bg-[#241C15] text-white border-[#241C15]'
+                : 'border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#241C15]'
+            }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5 text-[#A36F4C]" />
-            <span>{showFiltersPanel ? 'Ocultar Filtros' : 'Configurar Filtros'}</span>
+            <span>{showFiltersPanel ? 'Ocultar Filtros' : 'Filtros Contables'}</span>
           </Button>
 
           {/* Selector de Mes */}
-          <div className="flex items-center gap-1.5 bg-[#FFFFFF] border border-[#D4BEA7] rounded-xl px-3 py-1.5 shadow-2xs">
+          <div className="flex items-center gap-1.5 bg-[#FFFFFF] border border-[#E2D9CC] rounded-xl px-3 py-1.5 shadow-2xs">
             <Filter className="h-3.5 w-3.5 text-[#A36F4C]" />
             <span className="text-xs font-semibold text-[#75695D]">Mes:</span>
             <select
@@ -906,850 +905,589 @@ export function HistoricoMensualClient({
       {/* ========================================================================= */}
       {/* 2. CHECKLIST 100% REAL DE CONCEPTOS Y TAGS DE LA BASE DE DATOS            */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* 2. CHECKLIST 100% REAL DE CONCEPTOS Y TAGS DE LA BASE DE DATOS            */}
+      {/* ========================================================================= */}
       {showFiltersPanel && (
-        <Card className="bg-[#FFFFFF] border-[#D4BEA7] shadow-sm rounded-3xl p-5 sm:p-6 space-y-4 border-2">
+        <div className="bg-white border border-[#E2D9CC] rounded-3xl p-4 sm:p-5 shadow-xs space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Cabecera del Panel con Presets */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#E2D9CC]">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#E2D9CC]/70">
             <div>
               <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-[#A36F4C]" />
-                <h2 className="text-sm sm:text-base font-extrabold text-[#241C15]">
-                  Checklist de Conceptos Reales: Elige qué sumar a los Indicadores
-                </h2>
+                <div className="p-1.5 rounded-xl bg-[#FAF8F5] text-[#A36F4C] border border-[#E2D9CC]">
+                  <SlidersHorizontal className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm sm:text-base font-black text-[#241C15]">
+                    Checklist de Partidas Contables
+                  </h2>
+                  <p className="text-xs text-[#75695D] mt-0.5">
+                    Selecciona qué conceptos sumar a los indicadores dinámicos y métricas del taller.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-[#75695D] mt-0.5">
-                Generado directamente desde tus registros y tags en base de datos.
-              </p>
             </div>
 
             {/* Presets Rápidos */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-bold text-[#75695D] mr-1">Presets:</span>
+            <div className="flex flex-wrap items-center gap-1.5 self-start lg:self-auto">
+              <span className="text-xs font-bold text-[#75695D] mr-1">Presets:</span>
               <button
                 type="button"
                 onClick={() => applyPreset('OPERATIVO')}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#EBF7EE] text-[#1E5E3A] hover:bg-[#D7EFE0] border border-[#B4E3C0] transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#EBF7EE] text-[#1E5E3A] hover:bg-[#D7EFE0] border border-[#B4E3C0] transition-all cursor-pointer active:scale-95"
               >
                 Operativo
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('TOTAL_CON_MAQUINARIA')}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#EFE5D8] text-[#633E20] hover:bg-[#E5D5C2] border border-[#D4BEA7] transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FAF8F5] text-[#633E20] hover:bg-[#F4EFEA] border border-[#E2D9CC] transition-all cursor-pointer active:scale-95"
               >
-                + Con Activos Fijos
+                + Activos Fijos
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('SOLO_VENTAS_INSUMOS')}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-[#FAF8F5] text-[#241C15] hover:bg-[#F4EFEA] border border-[#E2D9CC] transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FAF8F5] text-[#241C15] hover:bg-[#F4EFEA] border border-[#E2D9CC] transition-all cursor-pointer active:scale-95"
               >
                 Ventas vs Insumos
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('TODO_MARCADO')}
-                className="px-2 py-1 rounded-lg text-xs font-semibold text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-[#75695D] hover:text-[#241C15] hover:bg-[#FAF8F5] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer active:scale-95"
               >
                 Marcar Todos
               </button>
               <button
                 type="button"
                 onClick={() => applyPreset('LIMPIAR')}
-                className="px-2 py-1 rounded-lg text-xs font-semibold text-[#A34335] hover:bg-red-50 transition-colors cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-[#A34335] hover:bg-red-50 border border-transparent hover:border-red-200 transition-all cursor-pointer active:scale-95"
               >
                 Limpiar
               </button>
             </div>
           </div>
 
-          {/* Grid de Checkboxes Reales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+          {/* Grid de 4 Columnas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* 1. INGRESOS */}
-            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5">
-              <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]/70">
-                <span className="text-xs font-extrabold text-[#1E5E3A] uppercase tracking-wider flex items-center gap-1.5">
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                  Ingresos
-                </span>
-                <span className="text-[10px] text-[#75695D] font-mono">BD</span>
-              </div>
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/70">
+                  <span className="text-xs font-black text-[#1E5E3A] uppercase tracking-wider flex items-center gap-1.5">
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                    Ingresos
+                  </span>
+                  <span className="text-[10px] font-bold font-mono text-[#1E5E3A] bg-[#EBF7EE] border border-[#B4E3C0] px-1.5 py-0.2 rounded-md">
+                    {(includeVentas ? 1 : 0) + Object.values(selectedIngresoCats).filter(Boolean).length} activos
+                  </span>
+                </div>
 
-              <div className="space-y-1.5 text-xs">
-                {/* Ventas de Pedidos 3D */}
-                <label className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeVentas}
-                    onChange={(e) => setIncludeVentas(e.target.checked)}
-                    className="mt-0.5 rounded text-[#1E5E3A] focus:ring-[#1E5E3A] cursor-pointer"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <span className="font-bold text-[#241C15] block truncate">Ventas (Pedidos 3D)</span>
-                    <span className="text-[10px] text-[#1E5E3A] font-mono font-semibold block">{formatCurrency(availableTags.totalVentasCobrado)}</span>
+                <div className="space-y-1.5 mt-2.5 text-xs">
+                  {/* Ventas Pedidos 3D */}
+                  <div
+                    onClick={() => setIncludeVentas(!includeVentas)}
+                    className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all cursor-pointer select-none ${
+                      includeVentas
+                        ? 'bg-white border-[#E2D9CC] shadow-2xs'
+                        : 'bg-transparent border-transparent hover:bg-white/60 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
+                        includeVentas ? 'bg-[#1E5E3A] border-[#1E5E3A] text-white' : 'bg-white border-[#D4BEA7]'
+                      }`}>
+                        {includeVentas && <Check className="h-3 w-3 stroke-[3]" />}
+                      </div>
+                      <span className="font-bold text-[#241C15] truncate">Ventas (Pedidos 3D)</span>
+                    </div>
+                    <span className="font-mono font-bold text-xs text-[#1E5E3A] shrink-0">
+                      {formatCurrency(availableTags.totalVentasCobrado)}
+                    </span>
                   </div>
-                </label>
 
-                {/* Categorías reales de ingresos directos */}
-                {availableTags.ingresosDirectosCats.map(cat => (
-                  <label key={cat} className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedIngresoCats[cat])}
-                      onChange={(e) => setSelectedIngresoCats(prev => ({ ...prev, [cat]: e.target.checked }))}
-                      className="mt-0.5 rounded text-[#1E5E3A] focus:ring-[#1E5E3A] cursor-pointer"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <span className="font-semibold text-[#241C15] block truncate">{cat}</span>
-                      <span className="text-[10px] text-[#1E5E3A] font-mono font-semibold block">{formatCurrency(availableTags.ingresosDirectosTotales[cat] || 0)}</span>
-                    </div>
-                  </label>
-                ))}
+                  {/* Categorías Directas */}
+                  {availableTags.ingresosDirectosCats.map(cat => {
+                    const isChecked = Boolean(selectedIngresoCats[cat])
+                    return (
+                      <div
+                        key={cat}
+                        onClick={() => setSelectedIngresoCats(prev => ({ ...prev, [cat]: !prev[cat] }))}
+                        className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all cursor-pointer select-none ${
+                          isChecked
+                            ? 'bg-white border-[#E2D9CC] shadow-2xs'
+                            : 'bg-transparent border-transparent hover:bg-white/60 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
+                            isChecked ? 'bg-[#1E5E3A] border-[#1E5E3A] text-white' : 'bg-white border-[#D4BEA7]'
+                          }`}>
+                            {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                          </div>
+                          <span className="font-semibold text-[#241C15] truncate">{cat}</span>
+                        </div>
+                        <span className="font-mono font-semibold text-xs text-[#1E5E3A] shrink-0">
+                          {formatCurrency(availableTags.ingresosDirectosTotales[cat] || 0)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* 2. EGRESOS - INSUMOS (TAGS REALES) */}
-            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5">
-              <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]/70">
-                <span className="text-xs font-extrabold text-[#8C6D1F] uppercase tracking-wider flex items-center gap-1.5">
-                  <ShoppingBag className="h-3.5 w-3.5" />
-                  Insumos (Tags)
-                </span>
-                <span className="text-[10px] text-[#75695D] font-mono">{availableTags.insumosSubcats.length} tags</span>
-              </div>
+            {/* 2. INSUMOS */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/70">
+                  <span className="text-xs font-black text-[#A36F4C] uppercase tracking-wider flex items-center gap-1.5">
+                    <ShoppingBag className="h-3.5 w-3.5" />
+                    Insumos
+                  </span>
+                  <span className="text-[10px] font-bold font-mono text-[#A36F4C] bg-[#FAF8F5] border border-[#E2D9CC] px-1.5 py-0.2 rounded-md">
+                    {Object.values(selectedInsumos).filter(Boolean).length} / {availableTags.insumosSubcats.length}
+                  </span>
+                </div>
 
-              <div className="space-y-1.5 text-xs max-h-56 overflow-y-auto pr-1">
-                {availableTags.insumosSubcats.map(sub => (
-                  <label key={sub} className="flex items-start gap-2 p-1 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedInsumos[sub])}
-                      onChange={(e) => setSelectedInsumos(prev => ({ ...prev, [sub]: e.target.checked }))}
-                      className="mt-0.5 rounded text-[#8C6D1F] focus:ring-[#8C6D1F] cursor-pointer"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <span className="font-semibold text-[#241C15] block truncate">{sub}</span>
-                      <span className="text-[10px] text-[#A36F4C] font-mono block">{formatCurrency(availableTags.insumosTotales[sub] || 0)}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. EGRESOS - SERVICIOS (TAGS REALES) */}
-            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5">
-              <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]/70">
-                <span className="text-xs font-extrabold text-[#A36F4C] uppercase tracking-wider flex items-center gap-1.5">
-                  <Truck className="h-3.5 w-3.5" />
-                  Servicios (Tags)
-                </span>
-                <span className="text-[10px] text-[#75695D] font-mono">{availableTags.serviciosSubcats.length} tags</span>
-              </div>
-
-              <div className="space-y-1.5 text-xs">
-                {availableTags.serviciosSubcats.map(sub => (
-                  <label key={sub} className="flex items-start gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC] transition-all cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedServicios[sub])}
-                      onChange={(e) => setSelectedServicios(prev => ({ ...prev, [sub]: e.target.checked }))}
-                      className="mt-0.5 rounded text-[#A36F4C] focus:ring-[#A36F4C] cursor-pointer"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <span className="font-semibold text-[#241C15] block truncate">{sub}</span>
-                      <span className="text-[10px] text-[#A36F4C] font-mono block">{formatCurrency(availableTags.serviciosTotales[sub] || 0)}</span>
-                    </div>
-                  </label>
-                ))}
+                <div className="space-y-1.5 mt-2.5 text-xs max-h-56 overflow-y-auto pr-0.5 scrollbar-thin">
+                  {availableTags.insumosSubcats.map(sub => {
+                    const isChecked = Boolean(selectedInsumos[sub])
+                    return (
+                      <div
+                        key={sub}
+                        onClick={() => setSelectedInsumos(prev => ({ ...prev, [sub]: !prev[sub] }))}
+                        className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all cursor-pointer select-none ${
+                          isChecked
+                            ? 'bg-white border-[#E2D9CC] shadow-2xs'
+                            : 'bg-transparent border-transparent hover:bg-white/60 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
+                            isChecked ? 'bg-[#A36F4C] border-[#A36F4C] text-white' : 'bg-white border-[#D4BEA7]'
+                          }`}>
+                            {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                          </div>
+                          <span className="font-semibold text-[#241C15] truncate">{sub}</span>
+                        </div>
+                        <span className="font-mono text-xs text-[#A36F4C] shrink-0">
+                          {formatCurrency(availableTags.insumosTotales[sub] || 0)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* 4. EGRESOS - ACTIVOS FIJOS (TAGS REALES) */}
-            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5">
-              <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]/70">
-                <span className="text-xs font-extrabold text-[#633E20] uppercase tracking-wider flex items-center gap-1.5">
-                  <Wrench className="h-3.5 w-3.5" />
-                  Activos Fijos (CAPEX)
-                </span>
-                <span className="text-[10px] text-[#75695D] font-mono">{availableTags.activosFijosSubcats.length} tags</span>
+            {/* 3. SERVICIOS */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/70">
+                  <span className="text-xs font-black text-[#A36F4C] uppercase tracking-wider flex items-center gap-1.5">
+                    <Truck className="h-3.5 w-3.5" />
+                    Servicios
+                  </span>
+                  <span className="text-[10px] font-bold font-mono text-[#A36F4C] bg-[#FAF8F5] border border-[#E2D9CC] px-1.5 py-0.2 rounded-md">
+                    {Object.values(selectedServicios).filter(Boolean).length} / {availableTags.serviciosSubcats.length}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 mt-2.5 text-xs">
+                  {availableTags.serviciosSubcats.map(sub => {
+                    const isChecked = Boolean(selectedServicios[sub])
+                    return (
+                      <div
+                        key={sub}
+                        onClick={() => setSelectedServicios(prev => ({ ...prev, [sub]: !prev[sub] }))}
+                        className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all cursor-pointer select-none ${
+                          isChecked
+                            ? 'bg-white border-[#E2D9CC] shadow-2xs'
+                            : 'bg-transparent border-transparent hover:bg-white/60 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
+                            isChecked ? 'bg-[#A36F4C] border-[#A36F4C] text-white' : 'bg-white border-[#D4BEA7]'
+                          }`}>
+                            {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                          </div>
+                          <span className="font-semibold text-[#241C15] truncate">{sub}</span>
+                        </div>
+                        <span className="font-mono text-xs text-[#A36F4C] shrink-0">
+                          {formatCurrency(availableTags.serviciosTotales[sub] || 0)}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
+            </div>
 
-              <div className="space-y-1.5 text-xs">
-                {availableTags.activosFijosSubcats.map(sub => (
-                  <label key={sub} className={`flex items-start gap-2 p-1.5 rounded-lg transition-all cursor-pointer select-none ${selectedActivosFijos[sub] ? 'bg-[#EFE5D8] border border-[#D4BEA7]' : 'hover:bg-[#FFFFFF] border border-transparent hover:border-[#E2D9CC]'}`}>
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selectedActivosFijos[sub])}
-                      onChange={(e) => setSelectedActivosFijos(prev => ({ ...prev, [sub]: e.target.checked }))}
-                      className="mt-0.5 rounded text-[#633E20] focus:ring-[#633E20] cursor-pointer"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <span className="font-extrabold text-[#633E20] block truncate">{sub}</span>
-                      <span className="text-[10px] text-[#633E20] font-mono font-bold block">{formatCurrency(availableTags.activosFijosTotales[sub] || 0)}</span>
+            {/* 4. ACTIVOS FIJOS (CAPEX) */}
+            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-2.5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/70">
+                  <span className="text-xs font-black text-[#633E20] uppercase tracking-wider flex items-center gap-1.5">
+                    <Wrench className="h-3.5 w-3.5" />
+                    Activos Fijos (CAPEX)
+                  </span>
+                  <span className="text-[10px] font-bold font-mono text-[#633E20] bg-[#EFE5D8] border border-[#D4BEA7] px-1.5 py-0.2 rounded-md">
+                    {Object.values(selectedActivosFijos).filter(Boolean).length} / {availableTags.activosFijosSubcats.length}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 mt-2.5 text-xs">
+                  {availableTags.activosFijosSubcats.map(sub => {
+                    const isChecked = Boolean(selectedActivosFijos[sub])
+                    return (
+                      <div
+                        key={sub}
+                        onClick={() => setSelectedActivosFijos(prev => ({ ...prev, [sub]: !prev[sub] }))}
+                        className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all cursor-pointer select-none ${
+                          isChecked
+                            ? 'bg-white border-[#D4BEA7] shadow-2xs text-[#633E20]'
+                            : 'bg-transparent border-transparent hover:bg-white/60 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
+                            isChecked ? 'bg-[#633E20] border-[#633E20] text-white' : 'bg-white border-[#D4BEA7]'
+                          }`}>
+                            {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                          </div>
+                          <span className="font-bold text-[#241C15] truncate">{sub}</span>
+                        </div>
+                        <span className="font-mono font-bold text-xs text-[#633E20] shrink-0">
+                          {formatCurrency(availableTags.activosFijosTotales[sub] || 0)}
+                        </span>
+                      </div>
+                    )
+                  })}
+
+                  {availableTags.hasAportesCapital && (
+                    <div
+                      onClick={() => setIncludeAportesCapital(!includeAportesCapital)}
+                      className={`flex items-center justify-between gap-2 p-2 rounded-xl border transition-all cursor-pointer select-none ${
+                        includeAportesCapital
+                          ? 'bg-white border-[#D4BEA7] shadow-2xs'
+                          : 'bg-transparent border-transparent hover:bg-white/60 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
+                          includeAportesCapital ? 'bg-[#633E20] border-[#633E20] text-white' : 'bg-white border-[#D4BEA7]'
+                        }`}>
+                          {includeAportesCapital && <Check className="h-3 w-3 stroke-[3]" />}
+                        </div>
+                        <span className="font-semibold text-[#241C15]">Aportes de Capital</span>
+                      </div>
                     </div>
-                  </label>
-                ))}
-
-                {availableTags.hasAportesCapital && (
-                  <label className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-[#FFFFFF] cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={includeAportesCapital}
-                      onChange={(e) => setIncludeAportesCapital(e.target.checked)}
-                      className="rounded text-[#633E20] focus:ring-[#633E20] cursor-pointer"
-                    />
-                    <span className="font-semibold text-[#241C15]">Aportes de Capital</span>
-                  </label>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* ========================================================================= */}
-      {/* 3. INDICADORES DINÁMICOS GLOBALES                                         */}
+      {/* 3. INDICADORES DINÁMICOS GLOBALES MINIMALISTAS                            */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {/* KPI 1: Flujo Neto Dinámico Calculado */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <CardHeader className="pb-1 pt-3.5 px-4">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
-              <span>Flujo Neto Calculado</span>
+        <div className="bg-white border border-[#E2D9CC] shadow-xs rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Flujo Neto Calculado</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
               <ShieldCheck className="h-3.5 w-3.5" />
-            </span>
-            <div className={`text-xl sm:text-2xl font-black font-mono mt-0.5 truncate ${metricasHistoricas.sumaFlujoNetoCalculado >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className={`text-xl sm:text-2xl font-black font-mono tabular-nums ${metricasHistoricas.sumaFlujoNetoCalculado >= 0 ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
               {metricasHistoricas.sumaFlujoNetoCalculado >= 0 ? `+${formatCurrency(metricasHistoricas.sumaFlujoNetoCalculado)}` : formatCurrency(metricasHistoricas.sumaFlujoNetoCalculado)}
             </div>
-          </CardHeader>
-          <CardContent className="pb-3 px-4 text-[11px] text-[#75695D]">
-            <span>Margen resultante: <strong>{metricasHistoricas.margenGlobal.toFixed(1)}%</strong></span>
-          </CardContent>
-        </Card>
-
-        {/* KPI 2: Ingresos Seleccionados */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#1E5E3A]" />
-          <CardHeader className="pb-1 pt-3.5 px-4">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#1E5E3A] flex items-center justify-between">
-              <span>Ingresos Seleccionados</span>
-              <ArrowUpRight className="h-3.5 w-3.5" />
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              Margen resultante: <strong className="text-[#241C15]">{metricasHistoricas.margenGlobal.toFixed(1)}%</strong>
             </span>
-            <div className="text-xl sm:text-2xl font-black font-mono text-[#241C15] mt-0.5 truncate">
-              {formatCurrency(metricasHistoricas.sumaIngresosCalculados)}
-            </div>
-          </CardHeader>
-          <CardContent className="pb-3 px-4 text-[11px] text-[#75695D]">
-            <span>{metricasHistoricas.activeIngresosCount} conceptos de ingreso activos</span>
-          </CardContent>
-        </Card>
-
-        {/* KPI 3: Egresos Seleccionados */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#A36F4C]" />
-          <CardHeader className="pb-1 pt-3.5 px-4">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#A36F4C] flex items-center justify-between">
-              <span>Egresos Seleccionados</span>
-              <ArrowDownRight className="h-3.5 w-3.5" />
-            </span>
-            <div className="text-xl sm:text-2xl font-black font-mono text-[#944917] mt-0.5 truncate">
-              {formatCurrency(metricasHistoricas.sumaEgresosCalculados)}
-            </div>
-          </CardHeader>
-          <CardContent className="pb-3 px-4 text-[11px] text-[#75695D]">
-            <span>{metricasHistoricas.activeInsumosCount + metricasHistoricas.activeServiciosCount + metricasHistoricas.activeActivosFijosCount} tags de egreso activos</span>
-          </CardContent>
-        </Card>
-
-        {/* KPI 4: Ventas Facturadas Históricas */}
-        <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-sm relative overflow-hidden rounded-2xl">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-[#633E20]" />
-          <CardHeader className="pb-1 pt-3.5 px-4">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[#633E20] flex items-center justify-between">
-              <span>Ventas Facturadas Totales</span>
-              <Package className="h-3.5 w-3.5" />
-            </span>
-            <div className="text-xl sm:text-2xl font-black font-mono text-[#633E20] mt-0.5 truncate">
-              {formatCurrency(metricasHistoricas.sumaFacturado)}
-            </div>
-          </CardHeader>
-          <CardContent className="pb-3 px-4 text-[11px] text-[#75695D]">
-            <span>100% cobrado en caja</span>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 4. BLOQUE AUDITORÍA DE CARTERA: AGOSTO 2026                               */}
-      {/* ========================================================================= */}
-      {agostoData && (
-        <Card className="bg-[#FFFFFF] border-[#D4BEA7] shadow-sm rounded-3xl p-5 sm:p-6 relative overflow-hidden">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E2D9CC]">
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black uppercase tracking-wider text-[#A36F4C] bg-[#EFE5D8] px-2.5 py-0.5 rounded-md">
-                  Auditoría de Cobranzas
-                </span>
-                <h2 className="text-lg sm:text-xl font-extrabold text-[#241C15]">
-                  ¿Cuánto faltó cobrar de Agosto 2026?
-                </h2>
-                <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-xs font-bold">
-                  ✅ 100% Recuperado
-                </Badge>
-              </div>
-              <p className="text-xs sm:text-sm text-[#75695D] mt-1">
-                Al cierre del 31 de Agosto faltó cobrar exactamente <strong>S/ 191.00</strong> de un total facturado de <strong>S/ 881.97</strong> (5 clientes de contra entrega).
-              </p>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedMonthDetail(agostoData)
-                setModalCategoryFilter('CARTERA_COBRANZAS')
-                setModalSearch('')
-              }}
-              className="h-8 text-xs font-bold border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] rounded-xl cursor-pointer"
-            >
-              <Eye className="h-3.5 w-3.5 mr-1 text-[#A36F4C]" />
-              Ver Clientes de Agosto
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
-            <div className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC]">
-              <span className="text-[10px] font-bold uppercase text-[#75695D] block">Total Facturado Agosto</span>
-              <div className="text-lg sm:text-xl font-black font-mono text-[#241C15] mt-0.5">{formatCurrency(agostoData.totalFacturadoVentas)}</div>
-              <span className="text-[10px] text-[#75695D] block mt-0.5">10 pedidos generados</span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-[#EBF7EE]/60 border border-[#B4E3C0]">
-              <span className="text-[10px] font-bold uppercase text-[#1E5E3A] block">Cobrado en Agosto (en su mes)</span>
-              <div className="text-lg sm:text-xl font-black font-mono text-[#1E5E3A] mt-0.5">+{formatCurrency(agostoData.cobradoVentasEnMesOrigen)}</div>
-              <span className="text-[10px] text-[#1E5E3A] font-semibold block mt-0.5">{agostoData.efectividadCobroMesOrigenPct}% cobrado al momento</span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-[#FDF6E2] border border-[#E8D49B]">
-              <span className="text-[10px] font-bold uppercase text-[#8C6D1F] block">Faltó Cobrar de Agosto (al 31/08)</span>
-              <div className="text-lg sm:text-xl font-black font-mono text-[#8C6D1F] mt-0.5">S/ {agostoData.saldoFaltoCobrarAlCierre.toFixed(2)}</div>
-              <span className="text-[10px] text-[#8C6D1F] font-semibold block mt-0.5">5 clientes con saldo de entrega</span>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-[#EBF7EE] border border-[#B4E3C0]">
-              <span className="text-[10px] font-bold uppercase text-[#1E5E3A] block">Recuperado en Septiembre</span>
-              <div className="text-lg sm:text-xl font-black font-mono text-[#1E5E3A] mt-0.5">+{formatCurrency(agostoData.recuperadoEnMesesPosteriores)}</div>
-              <span className="text-[10px] text-[#1E5E3A] font-extrabold block mt-0.5">Saldo pendiente hoy: S/ 0.00</span>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 5. EVOLUCIÓN HISTÓRICA RECALCULADA                                        */}
-      {/* ========================================================================= */}
-      <Card className="bg-[#FFFFFF] border-[#D4BEA7] shadow-sm rounded-3xl p-4 sm:p-6 space-y-5">
-        {/* Cabecera de Vistas */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E2D9CC]">
-          <div>
-            <h2 className="text-base sm:text-lg font-extrabold text-[#241C15] flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-[#A36F4C]" />
-              <span>Evolución Histórica Dinámica</span>
-            </h2>
-            <p className="text-xs text-[#75695D]">
-              Comparativa mes a mes de ingresos y egresos según los tags y conceptos activos.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setViewMode('PANEL_EJECUTIVO')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'PANEL_EJECUTIVO'
-                  ? 'bg-[#241C15] text-white shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15]'
-              }`}
-            >
-              <BarChart3 className="h-3.5 w-3.5" />
-              <span>Panel & Gráfica</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('TABLA_MATRICIAL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'TABLA_MATRICIAL'
-                  ? 'bg-[#241C15] text-white shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15]'
-              }`}
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              <span>Tabla Matricial</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('AUDITORIA_CARTERA')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                viewMode === 'AUDITORIA_CARTERA'
-                  ? 'bg-[#241C15] text-white shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15]'
-              }`}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              <span>Historial Cobranzas</span>
-            </button>
           </div>
         </div>
 
-        {/* VISTA 1: Panel Ejecutivo con Gráfico y Tarjetas Recalculadas */}
-        {viewMode === 'PANEL_EJECUTIVO' && (
-          <div className="space-y-6">
-            {/* Gráfico ComposedChart */}
-            <div className="bg-[#FAF8F5] border border-[#E2D9CC] rounded-2xl p-4 sm:p-5">
-              <div className="flex items-center justify-between pb-3 border-b border-[#E2D9CC]/70">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
-                  Evolución: Ingresos Seleccionados vs Egresos Seleccionados vs Flujo Neto
-                </span>
-                <span className="text-[11px] text-[#75695D] font-mono">
-                  {monthlyData.length} meses registrados
-                </span>
-              </div>
-
-              <div className="h-[280px] sm:h-[340px] w-full pt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="flujoSuperavitGradHistDin" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#1E5E3A" stopOpacity={0.15} />
-                        <stop offset="95%" stopColor="#1E5E3A" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.7} />
-                    <XAxis 
-                      dataKey="nombreMes" 
-                      stroke="#75695D" 
-                      fontSize={11} 
-                      tickLine={false} 
-                      axisLine={{ stroke: '#E2D9CC' }}
-                    />
-                    <YAxis 
-                      stroke="#75695D" 
-                      fontSize={11} 
-                      tickLine={false} 
-                      axisLine={{ stroke: '#E2D9CC' }}
-                      tickFormatter={(v) => `S/${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`}
-                    />
-                    <RechartsTooltip content={<CustomMonthlyChartTooltip />} />
-                    <Legend 
-                      verticalAlign="top" 
-                      height={36} 
-                      iconType="circle"
-                      formatter={(value) => (
-                        <span className="text-xs font-semibold text-[#241C15] mr-3">
-                          {value === 'ingresosTotalesCalculados' ? 'Ingresos Seleccionados (+)' : value === 'egresosTotalesCalculados' ? 'Egresos Seleccionados (-)' : 'Flujo Neto Resultante'}
-                        </span>
-                      )}
-                    />
-                    
-                    <Bar dataKey="ingresosTotalesCalculados" name="ingresosTotalesCalculados" fill="#1E5E3A" radius={[6, 6, 0, 0]} maxBarSize={48} />
-                    <Bar dataKey="egresosTotalesCalculados" name="egresosTotalesCalculados" fill="#A36F4C" radius={[6, 6, 0, 0]} maxBarSize={48} />
-
-                    <Area 
-                      type="monotone" 
-                      dataKey="flujoNetoCalculado" 
-                      stroke="none" 
-                      fill="url(#flujoSuperavitGradHistDin)" 
-                      legendType="none" 
-                      tooltipType="none" 
-                    />
-
-                    <Line 
-                      type="monotone" 
-                      dataKey="flujoNetoCalculado" 
-                      name="flujoNetoCalculado" 
-                      stroke="#241C15" 
-                      strokeWidth={2.5}
-                      dot={{ fill: '#241C15', r: 4.5, strokeWidth: 2, stroke: '#FFFFFF' }}
-                      activeDot={{ r: 6.5, fill: '#1E5E3A', stroke: '#FFFFFF', strokeWidth: 2 }}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
+        {/* KPI 2: Ingresos Seleccionados */}
+        <div className="bg-white border border-[#E2D9CC] shadow-xs rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Ingresos Seleccionados</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black font-mono text-[#241C15] tabular-nums">
+              {formatCurrency(metricasHistoricas.sumaIngresosCalculados)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              {metricasHistoricas.activeIngresosCount} conceptos activos
+            </span>
+          </div>
+        </div>
 
-            {/* Tarjetas Mensuales Dinámicas */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* KPI 3: Egresos Seleccionados */}
+        <div className="bg-white border border-[#E2D9CC] shadow-xs rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Egresos Seleccionados</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+              <ArrowDownRight className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black font-mono text-[#944917] tabular-nums">
+              {formatCurrency(metricasHistoricas.sumaEgresosCalculados)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              {metricasHistoricas.activeInsumosCount + metricasHistoricas.activeServiciosCount + metricasHistoricas.activeActivosFijosCount} tags activos
+            </span>
+          </div>
+        </div>
+
+        {/* KPI 4: Ventas Facturadas Históricas */}
+        <div className="bg-white border border-[#E2D9CC] shadow-xs rounded-2xl p-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[#6B7280]">
+            <span className="text-xs font-semibold">Ventas Facturadas</span>
+            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#633E20]">
+              <Package className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <div className="mt-2">
+            <div className="text-xl sm:text-2xl font-black font-mono text-[#633E20] tabular-nums">
+              {formatCurrency(metricasHistoricas.sumaFacturado)}
+            </div>
+            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              100% cobrado en caja
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4. EVOLUCIÓN HISTÓRICA: GRÁFICO COMBINADO                                 */}
+      {/* ========================================================================= */}
+      <div className="bg-white border border-[#E2D9CC] rounded-3xl p-4 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2D9CC]/70">
+          <div>
+            <h2 className="text-base font-bold text-[#241C15] flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-[#A36F4C]" />
+              <span>Evolución Mensual: Ingresos vs Egresos vs Flujo Neto</span>
+            </h2>
+            <p className="text-xs text-[#75695D] mt-0.5">
+              Comparativa histórica según las partidas y conceptos activos en el filtro contable.
+            </p>
+          </div>
+          <span className="text-xs font-mono text-[#75695D] self-start sm:self-auto bg-[#FAF8F5] px-2.5 py-1 rounded-xl border border-[#E2D9CC]">
+            {monthlyData.length} {monthlyData.length === 1 ? 'mes registrado' : 'meses registrados'}
+          </span>
+        </div>
+
+        {/* Gráfico Recharts */}
+        <div className="h-[280px] sm:h-[320px] w-full pt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="flujoSuperavitGradHistDin" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#1E5E3A" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#1E5E3A" stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.6} />
+              <XAxis 
+                dataKey="nombreMes" 
+                stroke="#75695D" 
+                fontSize={11} 
+                tickLine={false} 
+                axisLine={{ stroke: '#E2D9CC' }}
+              />
+              <YAxis 
+                stroke="#75695D" 
+                fontSize={11} 
+                tickLine={false} 
+                axisLine={{ stroke: '#E2D9CC' }}
+                tickFormatter={(v) => `S/${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`}
+              />
+              <RechartsTooltip content={<CustomMonthlyChartTooltip />} />
+              <Legend 
+                verticalAlign="top" 
+                height={36} 
+                iconType="circle"
+                formatter={(value) => (
+                  <span className="text-xs font-semibold text-[#241C15] mr-3">
+                    {value === 'ingresosTotalesCalculados' ? 'Ingresos Seleccionados (+)' : value === 'egresosTotalesCalculados' ? 'Egresos Seleccionados (-)' : 'Flujo Neto Resultante'}
+                  </span>
+                )}
+              />
+              
+              <Bar dataKey="ingresosTotalesCalculados" name="ingresosTotalesCalculados" fill="#1E5E3A" radius={[6, 6, 0, 0]} maxBarSize={44} />
+              <Bar dataKey="egresosTotalesCalculados" name="egresosTotalesCalculados" fill="#A36F4C" radius={[6, 6, 0, 0]} maxBarSize={44} />
+
+              <Area 
+                type="monotone" 
+                dataKey="flujoNetoCalculado" 
+                stroke="none" 
+                fill="url(#flujoSuperavitGradHistDin)" 
+                legendType="none" 
+                tooltipType="none" 
+              />
+
+              <Line 
+                type="monotone" 
+                dataKey="flujoNetoCalculado" 
+                name="flujoNetoCalculado" 
+                stroke="#241C15" 
+                strokeWidth={2.5}
+                dot={{ fill: '#241C15', r: 4, strokeWidth: 2, stroke: '#FFFFFF' }}
+                activeDot={{ r: 6, fill: '#1E5E3A', stroke: '#FFFFFF', strokeWidth: 2 }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 5. TABLA MATRICIAL MENSUAL (ZERO-SCROLL & EDITORIAL LAYOUT)                */}
+      {/* ========================================================================= */}
+      <div className="bg-white border border-[#E2D9CC] rounded-3xl shadow-xs overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-[#E2D9CC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
+          <div>
+            <h2 className="text-base font-bold text-[#241C15] flex items-center gap-2">
+              <FileSpreadsheet className="h-4 w-4 text-[#A36F4C]" />
+              <span>Libro Mayor & Resultados por Mes</span>
+            </h2>
+            <p className="text-xs text-[#75695D] mt-0.5">
+              Consolidado mensual con desglose contable, efectividad de cobranza y acceso a auditoría de partidas.
+            </p>
+          </div>
+
+          <span className="text-xs text-[#75695D] font-medium">
+            Haz clic en <strong className="text-[#241C15]">Auditar</strong> o en cualquier fila para inspeccionar movimientos.
+          </span>
+        </div>
+
+        <div className="w-full overflow-x-auto no-scrollbar">
+          <Table className="w-full">
+            <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
+              <TableRow className="border-[#E2D9CC] hover:bg-transparent text-xs font-bold text-[#75695D]">
+                <TableHead className="px-4 py-3 text-left">Mes / Período</TableHead>
+                <TableHead className="px-3 py-3 text-right text-[#1E5E3A]">Ingresos Cobrados</TableHead>
+                <TableHead className="px-3 py-3 text-right text-[#A36F4C]">Insumos & Operación</TableHead>
+                <TableHead className="px-3 py-3 text-right text-[#633E20]">Activos Fijos</TableHead>
+                <TableHead className="px-3 py-3 text-right font-bold text-[#241C15]">Egresos Totales</TableHead>
+                <TableHead className="px-4 py-3 text-right font-bold text-[#1E5E3A]">Flujo Neto</TableHead>
+                <TableHead className="px-3 py-3 text-center">Margen</TableHead>
+                <TableHead className="px-3 py-3 text-center">Cobranza</TableHead>
+                <TableHead className="px-4 py-3 text-right">Acción</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {displayedMonths.map((m) => {
                 const isPos = m.flujoNetoCalculado >= 0
+                const sumaInsumosMes = Object.values(m.egresosInsumosDetalle).reduce((s, v) => s + v, 0) + Object.values(m.egresosServiciosDetalle).reduce((s, v) => s + v, 0)
+                const sumaActivosFijosMes = Object.values(m.egresosActivosFijosDetalle).reduce((s, v) => s + v, 0)
+
                 return (
-                  <div 
+                  <TableRow 
                     key={m.monthKey}
-                    className="bg-[#FFFFFF] border border-[#E2D9CC] hover:border-[#D4BEA7] rounded-3xl p-5 shadow-xs transition-all flex flex-col justify-between space-y-4"
+                    onClick={() => {
+                      setSelectedMonthDetail(m)
+                      setModalCategoryFilter('TODOS')
+                      setModalSearch('')
+                    }}
+                    className="border-b border-[#E2D9CC]/60 hover:bg-[#FAF8F5]/80 transition-colors cursor-pointer text-xs group"
                   >
-                    {/* Cabecera */}
-                    <div className="flex items-center justify-between gap-2 border-b border-[#E2D9CC]/70 pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-base sm:text-lg text-[#241C15]">
-                            {m.nombreMes}
-                          </span>
-                          {m.esMesActual && (
-                            <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[9px] font-bold px-1.5 py-0">
-                              Mes Actual
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-[#75695D] font-mono">
-                          {m.movimientos.filter(mov => mov.incluidoEnCalculo).length} movimientos activos en el cálculo
+                    {/* 1. Mes */}
+                    <TableCell className="px-4 py-3.5 font-bold text-[#241C15]">
+                      <div className="flex items-center gap-2">
+                        <span className="group-hover:text-[#A36F4C] transition-colors font-bold text-sm">
+                          {m.nombreMes}
                         </span>
+                        {m.esMesActual && (
+                          <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[9px] font-bold px-1.5 py-0">
+                            En Curso
+                          </Badge>
+                        )}
                       </div>
-                      
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs font-extrabold px-2.5 py-0.5 ${
-                          isPos 
-                            ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]' 
-                            : 'bg-red-50 text-[#A34335] border-red-200'
-                        }`}
+                      <span className="text-[11px] text-[#75695D] font-normal block mt-0.5">
+                        {m.cantidadPedidos} pedidos • {m.movimientos.length} movimientos
+                      </span>
+                    </TableCell>
+
+                    {/* 2. Ingresos Cobrados */}
+                    <TableCell className="px-3 py-3.5 text-right font-mono font-bold text-[#1E5E3A] align-middle">
+                      +{formatCurrency(m.ingresosTotalesCalculados)}
+                    </TableCell>
+
+                    {/* 3. Insumos & Services */}
+                    <TableCell className="px-3 py-3.5 text-right font-mono text-[#A36F4C] align-middle">
+                      -{formatCurrency(sumaInsumosMes)}
+                    </TableCell>
+
+                    {/* 4. Activos Fijos */}
+                    <TableCell className="px-3 py-3.5 text-right font-mono text-[#633E20] align-middle">
+                      {sumaActivosFijosMes > 0 ? `-${formatCurrency(sumaActivosFijosMes)}` : <span className="text-[#75695D]/50">—</span>}
+                    </TableCell>
+
+                    {/* 5. Egresos Totales */}
+                    <TableCell className="px-3 py-3.5 text-right font-mono font-bold text-[#944917] align-middle">
+                      -{formatCurrency(m.egresosTotalesCalculados)}
+                    </TableCell>
+
+                    {/* 6. Flujo Neto */}
+                    <TableCell className={`px-4 py-3.5 text-right font-mono font-black text-sm align-middle ${isPos ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
+                      {isPos ? `+${formatCurrency(m.flujoNetoCalculado)}` : formatCurrency(m.flujoNetoCalculado)}
+                    </TableCell>
+
+                    {/* 7. Margen % */}
+                    <TableCell className="px-3 py-3.5 text-center font-mono font-bold align-middle">
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] ${
+                        m.margenCalculadoPct >= 30
+                          ? 'bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0]'
+                          : m.margenCalculadoPct >= 0
+                          ? 'bg-[#FAF8F5] text-[#241C15] border border-[#E2D9CC]'
+                          : 'bg-red-50 text-[#A34335] border border-red-200'
+                      }`}>
+                        {m.margenCalculadoPct}%
+                      </span>
+                    </TableCell>
+
+                    {/* 8. Efectividad de Cobranza */}
+                    <TableCell className="px-3 py-3.5 text-center font-mono text-xs text-[#75695D] align-middle">
+                      {m.efectividadCobroMesOrigenPct}% cobrado
+                    </TableCell>
+
+                    {/* 9. Acción Auditar */}
+                    <TableCell className="px-4 py-3.5 text-right align-middle">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedMonthDetail(m)
+                          setModalCategoryFilter('TODOS')
+                          setModalSearch('')
+                        }}
+                        className="h-7.5 px-3 text-xs font-bold border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#F4EFEA] hover:border-[#D4BEA7] text-[#241C15] rounded-xl cursor-pointer shadow-2xs inline-flex items-center gap-1.5"
                       >
-                        {isPos ? 'Superávit' : 'Déficit'}
-                      </Badge>
-                    </div>
-
-                    {/* 3 Bloques Numéricos Resultantes */}
-                    <div className="grid grid-cols-3 gap-2 text-center bg-[#FAF8F5] p-3 rounded-2xl border border-[#E2D9CC]/70">
-                      <div className="space-y-0.5">
-                        <span className="text-[10px] uppercase font-bold text-[#1E5E3A] block">
-                          Ingresos (+)
-                        </span>
-                        <span className="font-mono font-extrabold text-sm sm:text-base text-[#1E5E3A] block truncate">
-                          +{formatCurrency(m.ingresosTotalesCalculados)}
-                        </span>
-                      </div>
-
-                      <div className="space-y-0.5 border-x border-[#E2D9CC]/80 px-1">
-                        <span className="text-[10px] uppercase font-bold text-[#A36F4C] block">
-                          Egresos (-)
-                        </span>
-                        <span className="font-mono font-extrabold text-sm sm:text-base text-[#A36F4C] block truncate">
-                          -{formatCurrency(m.egresosTotalesCalculados)}
-                        </span>
-                      </div>
-
-                      <div className="space-y-0.5">
-                        <span className="text-[10px] uppercase font-bold text-[#241C15] block">
-                          Flujo Neto
-                        </span>
-                        <span className={`font-mono font-black text-sm sm:text-base block truncate ${isPos ? 'text-[#1E5E3A]' : 'text-[#A34335]'}`}>
-                          {isPos ? `+${formatCurrency(m.flujoNetoCalculado)}` : formatCurrency(m.flujoNetoCalculado)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Desglose de Conceptos Reales que sumaron en este Mes */}
-                    <div className="space-y-1.5 p-3 rounded-xl bg-[#FAF8F5]/60 border border-[#E2D9CC]/60 text-xs text-[#75695D]">
-                      <div className="flex justify-between items-center text-[#241C15] font-semibold pb-1 border-b border-[#E2D9CC]/50">
-                        <span>Desglose de Partidas en {m.mesCorto}:</span>
-                        <span className="font-mono text-[11px] text-[#1E5E3A]">Margen: {m.margenCalculadoPct}%</span>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <span>Ventas (Abonos de Pedidos 3D):</span>
-                        <span className="font-mono font-bold text-[#1E5E3A]">+{formatCurrency(m.ingresosVentasCobradas)}</span>
-                      </div>
-
-                      {Object.entries(m.ingresosDirectosDetalle).map(([cat, val]) => (
-                        <div key={cat} className="flex justify-between items-center text-[#1E5E3A]">
-                          <span>{cat}:</span>
-                          <span className="font-mono font-semibold">+{formatCurrency(val)}</span>
-                        </div>
-                      ))}
-
-                      {Object.entries(m.egresosInsumosDetalle).map(([sub, val]) => (
-                        <div key={sub} className="flex justify-between items-center text-[#A36F4C]">
-                          <span>Insumo ({sub}):</span>
-                          <span className="font-mono font-semibold">-{formatCurrency(val)}</span>
-                        </div>
-                      ))}
-
-                      {Object.entries(m.egresosServiciosDetalle).map(([sub, val]) => (
-                        <div key={sub} className="flex justify-between items-center text-[#A36F4C]">
-                          <span>Servicio ({sub}):</span>
-                          <span className="font-mono font-semibold">-{formatCurrency(val)}</span>
-                        </div>
-                      ))}
-
-                      {Object.entries(m.egresosActivosFijosDetalle).map(([sub, val]) => (
-                        <div key={sub} className="flex justify-between items-center text-[#633E20] font-bold bg-[#EFE5D8]/50 p-1 rounded">
-                          <span>Activo Fijo ({sub}):</span>
-                          <span className="font-mono">-{formatCurrency(val)}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Botón Auditar Movimientos */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedMonthDetail(m)
-                        setModalCategoryFilter('TODOS')
-                        setModalSearch('')
-                      }}
-                      className="w-full h-8 text-xs font-bold border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#241C15] flex items-center justify-center gap-1.5 rounded-xl cursor-pointer shadow-2xs"
-                    >
-                      <Eye className="h-3.5 w-3.5 text-[#A36F4C]" />
-                      <span>Auditar Libro Mensual ({m.movimientos.length} movs.)</span>
-                    </Button>
-                  </div>
+                        <Eye className="h-3.5 w-3.5 text-[#A36F4C]" />
+                        <span>Auditar</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </div>
-          </div>
-        )}
-
-        {/* VISTA 2: Tabla Matricial Completa */}
-        {viewMode === 'TABLA_MATRICIAL' && (
-          <div className="overflow-x-auto scrollbar-thin border border-[#E2D9CC] rounded-2xl overflow-hidden">
-            <Table className="w-full min-w-[850px]">
-              <TableHeader className="bg-[#F4EFEA] border-b border-[#E2D9CC]">
-                <TableRow className="border-[#E2D9CC] hover:bg-transparent text-xs font-bold">
-                  <TableHead className="text-[#241C15] px-4 py-3">Mes / Período</TableHead>
-                  <TableHead className="text-[#1E5E3A] px-3 py-3 text-right">Ventas (+)</TableHead>
-                  <TableHead className="text-[#1E5E3A] px-3 py-3 text-right font-bold bg-[#EBF7EE]/40">Ingresos Sel. (+)</TableHead>
-                  <TableHead className="text-[#A36F4C] px-3 py-3 text-right">Insumos (-)</TableHead>
-                  <TableHead className="text-[#A36F4C] px-3 py-3 text-right">Servicios (-)</TableHead>
-                  <TableHead className="text-[#633E20] px-3 py-3 text-right">Act. Fijos (-)</TableHead>
-                  <TableHead className="text-[#633E20] px-3 py-3 text-right font-black bg-[#FAF8F5]">Egresos Sel. (-)</TableHead>
-                  <TableHead className="text-[#1E5E3A] px-4 py-3 text-right font-black">Flujo Neto (=)</TableHead>
-                  <TableHead className="text-[#241C15] px-3 py-3 text-center">Auditar</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedMonths.map((m) => {
-                  const isPos = m.flujoNetoCalculado >= 0
-                  const sumaInsumosMes = Object.values(m.egresosInsumosDetalle).reduce((s, v) => s + v, 0)
-                  const sumaServiciosMes = Object.values(m.egresosServiciosDetalle).reduce((s, v) => s + v, 0)
-                  const sumaActivosFijosMes = Object.values(m.egresosActivosFijosDetalle).reduce((s, v) => s + v, 0)
-
-                  return (
-                    <TableRow key={m.monthKey} className="border-[#E2D9CC]/70 hover:bg-[#FDFBF7] transition-colors text-xs">
-                      <TableCell className="px-4 py-3 font-bold text-[#241C15] whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <span>{m.nombreMes}</span>
-                          {m.esMesActual && (
-                            <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[9px] font-bold px-1 py-0">
-                              En Curso
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="px-3 py-3 text-right font-mono text-[#1E5E3A]">
-                        +{formatCurrency(m.ingresosVentasCobradas)}
-                      </TableCell>
-
-                      <TableCell className="px-3 py-3 text-right font-mono font-bold text-[#1E5E3A] bg-[#EBF7EE]/40">
-                        +{formatCurrency(m.ingresosTotalesCalculados)}
-                      </TableCell>
-
-                      <TableCell className="px-3 py-3 text-right font-mono text-[#A36F4C]">
-                        -{formatCurrency(sumaInsumosMes)}
-                      </TableCell>
-
-                      <TableCell className="px-3 py-3 text-right font-mono text-[#A36F4C]">
-                        -{formatCurrency(sumaServiciosMes)}
-                      </TableCell>
-
-                      <TableCell className="px-3 py-3 text-right font-mono text-[#633E20]">
-                        {sumaActivosFijosMes > 0 ? formatCurrency(sumaActivosFijosMes) : '—'}
-                      </TableCell>
-
-                      <TableCell className="px-3 py-3 text-right font-mono font-extrabold text-[#633E20] bg-[#FAF8F5]/60">
-                        -{formatCurrency(m.egresosTotalesCalculados)}
-                      </TableCell>
-
-                      <TableCell className={`px-4 py-3 text-right font-mono font-black ${isPos ? 'text-[#1E5E3A] bg-[#EBF7EE]/40' : 'text-[#A34335] bg-red-50/40'}`}>
-                        {isPos ? `+${formatCurrency(m.flujoNetoCalculado)}` : formatCurrency(m.flujoNetoCalculado)}
-                      </TableCell>
-
-                      <TableCell className="px-3 py-3 text-center whitespace-nowrap">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedMonthDetail(m)
-                            setModalCategoryFilter('TODOS')
-                            setModalSearch('')
-                          }}
-                          className="h-7 px-2 text-[11px] font-bold border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#241C15] rounded-lg cursor-pointer"
-                        >
-                          <Eye className="h-3 w-3 mr-1 text-[#A36F4C]" />
-                          Auditar
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-
-        {/* VISTA 3: Historial y Auditoría de Cuentas por Cobrar y Cobranzas Recibidas */}
-        {viewMode === 'AUDITORIA_CARTERA' && (
-          <div className="space-y-4">
-            <div className="p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E2D9CC] text-xs text-[#75695D] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <span className="font-bold text-[#241C15] block">Auditoría Histórica de Cobranzas Efectivas y Cartera:</span>
-                Supervisa mes a mes tanto el dinero cobrado que ingresó a caja como los saldos pendientes generados por nuevos pedidos.
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {monthlyData.map((m) => (
-                <div key={m.monthKey} className="p-4 sm:p-5 rounded-3xl bg-[#FFFFFF] border border-[#E2D9CC] shadow-xs space-y-4">
-                  {/* Encabezado del Mes */}
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#E2D9CC]/70">
-                    <div className="flex items-center gap-2.5">
-                      <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] text-[#A36F4C]">
-                        <CalendarDays className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-base sm:text-lg text-[#241C15]">{m.nombreMes}</span>
-                          {m.esMesActual && (
-                            <Badge variant="outline" className="text-[10px] font-bold bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]">
-                              Mes en Curso
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="text-xs text-[#75695D]">
-                          {m.cantidadPedidos} pedidos nuevos creados • {m.cobranzasRecaudadasEnMes.length} cobranzas ingresadas a caja
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Resumen de Cifras del Mes */}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs">
-                      <div className="p-2 rounded-xl bg-[#EBF7EE]/60 border border-[#B4E3C0]">
-                        <span className="text-[10px] font-bold text-[#1E5E3A] block uppercase">Cobrado a Caja:</span>
-                        <strong className="font-mono text-sm text-[#1E5E3A]">+{formatCurrency(m.ingresosVentasCobradas)}</strong>
-                      </div>
-                      <div className="p-2 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
-                        <span className="text-[10px] font-bold text-[#75695D] block uppercase">Facturado Pedidos:</span>
-                        <strong className="font-mono text-sm text-[#241C15]">{formatCurrency(m.totalFacturadoVentas)}</strong>
-                      </div>
-                      {m.saldoFaltoCobrarAlCierre > 0 && (
-                        <div className="p-2 rounded-xl bg-[#FDF6E2] border border-[#E8D49B]">
-                          <span className="text-[10px] font-bold text-[#8C6D1F] block uppercase">Faltó al Cierre:</span>
-                          <strong className="font-mono text-sm text-[#8C6D1F]">S/ {m.saldoFaltoCobrarAlCierre.toFixed(2)}</strong>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* BLOQUE 1: Cobranzas Efectivas Ingresadas a Caja en este Mes */}
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-[#1E5E3A] uppercase tracking-wider flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Cobranzas Percibidas en {m.mesCorto} (Flujo Real de Caja)
-                      </span>
-                      <span className="text-[11px] font-mono text-[#75695D]">
-                        Total Recaudado: <strong className="text-[#1E5E3A]">+{formatCurrency(m.ingresosVentasCobradas)}</strong>
-                      </span>
-                    </div>
-
-                    {m.cobranzasRecaudadasEnMes.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                        {m.cobranzasRecaudadasEnMes.map((p) => (
-                          <div key={p.id} className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1.5 hover:border-[#B4E3C0] transition-colors">
-                            <div className="flex items-start justify-between gap-1.5">
-                              <div className="min-w-0 flex-1">
-                                <span className="font-extrabold text-xs text-[#241C15] block truncate">{p.cliente}</span>
-                                <span className="text-[10px] text-[#75695D] block truncate">{p.modelo} (x{p.cantidad})</span>
-                              </div>
-                              <span className="font-mono font-black text-xs sm:text-sm text-[#1E5E3A] flex-shrink-0">
-                                +{formatCurrency(p.monto)}
-                              </span>
-                            </div>
-
-                            <div className="flex justify-between items-center text-[10px] pt-1.5 border-t border-[#E2D9CC]/60">
-                              <span className="text-[#75695D] font-mono">
-                                {formatDate(p.fechaPago)} • {p.metodoPago}
-                              </span>
-                              {p.esDeMesAnterior ? (
-                                <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[9px] font-bold py-0">
-                                  Recuperación de Cartera (Pedido de Ago)
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-[#FAF8F5] text-[#75695D] border-[#D4BEA7] text-[9px] font-semibold py-0">
-                                  {p.tipo}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-3 rounded-xl bg-[#FAF8F5] border border-dashed border-[#E2D9CC] text-xs text-[#75695D] italic">
-                        No se registraron cobranzas recibidas en este mes.
-                      </div>
-                    )}
-                  </div>
-
-                  {/* BLOQUE 2: Cartera / Cuentas por Cobrar Originadas por Pedidos de este Mes */}
-                  <div className="space-y-2.5 pt-2 border-t border-[#E2D9CC]/50">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-[#8C6D1F] uppercase tracking-wider flex items-center gap-1.5">
-                        <History className="h-3.5 w-3.5" />
-                        Cartera Originada por Pedidos de {m.mesCorto}
-                      </span>
-                      {m.saldoFaltoCobrarAlCierre > 0 && (
-                        <span className="text-[11px] font-mono text-[#75695D]">
-                          Faltó al Cierre: <strong className="text-[#8C6D1F]">S/ {m.saldoFaltoCobrarAlCierre.toFixed(2)}</strong> • Recuperado: <strong className="text-[#1E5E3A]">+{formatCurrency(m.recuperadoEnMesesPosteriores)}</strong>
-                        </span>
-                      )}
-                    </div>
-
-                    {m.clientesCartera.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                        {m.clientesCartera.map((c) => (
-                          <div key={c.ventaId} className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1.5">
-                            <div className="flex items-start justify-between gap-1">
-                              <div className="min-w-0 flex-1">
-                                <span className="font-bold text-xs text-[#241C15] block truncate">{c.cliente}</span>
-                                <span className="text-[10px] text-[#75695D] block truncate">{c.modelo} (x{c.cantidad})</span>
-                              </div>
-                              <Badge variant="outline" className={`text-[9px] font-bold flex-shrink-0 ${c.saldoPendienteHoy <= 0 ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]' : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'}`}>
-                                {c.saldoPendienteHoy <= 0 ? 'Saneado 100%' : `Debe S/ ${c.saldoPendienteHoy.toFixed(2)}`}
-                              </Badge>
-                            </div>
-
-                            <div className="flex justify-between items-center text-[11px] pt-1 border-t border-[#E2D9CC]/60">
-                              <span className="text-[#75695D]">Total Factura: {formatCurrency(c.totalFacturado)}</span>
-                              <span className="font-mono font-extrabold text-[#1E5E3A]">+{formatCurrency(c.cobradoPosterior)} cobrado</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-2.5 rounded-xl bg-[#FAF8F5]/60 border border-[#E2D9CC]/60 text-xs text-[#75695D]">
-                        {m.cantidadPedidos > 0 
-                          ? 'Todos los pedidos creados en este período fueron cobrados al 100% al momento de la venta.' 
-                          : 'No se crearon nuevos pedidos de venta en este período.'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </Card>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
       {/* ========================================================================= */}
       {/* 6. MODAL INTERACTIVO DE AUDITORÍA CONTABLE                                */}
