@@ -105,6 +105,7 @@ export interface PedidoView {
   codigo: string
   fecha: string
   cliente: string
+  dni?: string | null
   telefono: string | null
   canalVenta: string | null
   destinoEnvio: string | null

@@ -9,7 +9,7 @@ declare global {
 }
 
 export function getPrisma(): PrismaClient {
-  if (!globalThis.prismaGlobal || !('pagoVenta' in globalThis.prismaGlobal)) {
+  if (!globalThis.prismaGlobal || !('pagoVenta' in globalThis.prismaGlobal) || !('cliente' in globalThis.prismaGlobal)) {
     if (globalThis.prismaGlobal) {
       try {
         (globalThis.prismaGlobal as any).$disconnect()

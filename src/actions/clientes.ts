@@ -20,6 +20,7 @@ export interface ClienteItem {
   id: string
   negocio: string
   nombre: string
+  dni?: string | null
   telefono?: string | null
   email?: string | null
   canalOrigen?: string | null
@@ -82,18 +83,12 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
     orderBy: { nombre: 'asc' }
   })
 
-  // 2. Pedidos del negocio para métricas
+  // 2. Pedidos del negocio para métricas consolidadas (fuente única de pedidos y ventas)
   const dbPedidos = await prisma.pedido.findMany({
     where: { negocio: targetNegocio },
     include: {
       items: true
     },
-    orderBy: { fecha: 'desc' }
-  })
-
-  // 3. Ventas rápidas del negocio para métricas
-  const dbVentas = await prisma.venta.findMany({
-    where: { negocio: targetNegocio },
     orderBy: { fecha: 'desc' }
   })
 
@@ -106,6 +101,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
     piezasCount: number
     ultimoPedidoFecha?: string | null
     canales: Record<string, number>
+    dniSugerido?: string | null
     telefonoSugerido?: string | null
     canalSugerido?: string | null
     destinoSugerido?: string | null
@@ -126,6 +122,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
         piezasCount: 0,
         ultimoPedidoFecha: null,
         canales: {},
+        dniSugerido: p.dni || null,
         telefonoSugerido: p.telefono || null,
         canalSugerido: p.canalVenta || null,
         destinoSugerido: p.destinoEnvio || null
@@ -148,43 +145,6 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
     }
 
     const fechaStr = p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha)
-    if (!m.ultimoPedidoFecha || new Date(fechaStr).getTime() > new Date(m.ultimoPedidoFecha).getTime()) {
-      m.ultimoPedidoFecha = fechaStr
-    }
-  })
-
-  // Procesar ventas
-  dbVentas.forEach((v: any) => {
-    const rawName = (v.cliente || '').trim()
-    if (!rawName) return
-    const key = rawName.toLowerCase()
-
-    if (!metricsMap[key]) {
-      metricsMap[key] = {
-        totalComprado: 0,
-        totalPagado: 0,
-        saldoPendiente: 0,
-        pedidosCount: 0,
-        piezasCount: 0,
-        ultimoPedidoFecha: null,
-        canales: {},
-        canalSugerido: v.canalVenta || null,
-        destinoSugerido: v.destinoEnvio || null
-      }
-    }
-
-    const m = metricsMap[key]
-    m.totalComprado += Number(v.total || 0)
-    m.totalPagado += Number(v.montoPagado || 0)
-    m.saldoPendiente += Number(v.saldoPendiente || 0)
-    m.pedidosCount += 1
-    m.piezasCount += Number(v.cantidad) || 1
-
-    if (v.canalVenta) {
-      m.canales[v.canalVenta] = (m.canales[v.canalVenta] || 0) + 1
-    }
-
-    const fechaStr = v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha)
     if (!m.ultimoPedidoFecha || new Date(fechaStr).getTime() > new Date(m.ultimoPedidoFecha).getTime()) {
       m.ultimoPedidoFecha = fechaStr
     }
@@ -220,6 +180,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
       id: c.id,
       negocio: c.negocio,
       nombre: c.nombre,
+      dni: c.dni || m.dniSugerido || null,
       telefono: c.telefono || m.telefonoSugerido || null,
       email: c.email || null,
       canalOrigen: c.canalOrigen || canalPreferido || null,
@@ -245,8 +206,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
     if (!registeredNames.has(key)) {
       // Encontrar el nombre capitalizado original en los pedidos
       const originalPed = dbPedidos.find((p: any) => p.cliente.trim().toLowerCase() === key)
-      const originalVenta = dbVentas.find((v: any) => v.cliente.trim().toLowerCase() === key)
-      const nombreReal = originalPed?.cliente.trim() || originalVenta?.cliente.trim() || key
+      const nombreReal = originalPed?.cliente.trim() || key
 
       let canalPreferido = m.canalSugerido || null
       if (Object.keys(m.canales).length > 0) {
@@ -263,6 +223,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
         id: `auto-${key}`,
         negocio: targetNegocio,
         nombre: nombreReal,
+        dni: m.dniSugerido || null,
         telefono: m.telefonoSugerido || null,
         email: null,
         canalOrigen: canalPreferido,
@@ -289,7 +250,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
 }
 
 /**
- * Obtener detalle e historial de pedidos y ventas de un cliente específico
+ * Obtener detalle e historial de pedidos de un cliente específico (fuente única de pedidos)
  */
 export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio): Promise<ClienteDetalleView | null> {
   const targetNegocio = negocio || await getActiveNegocioServer()
@@ -307,7 +268,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
 
   const clientName = cliente ? cliente.nombre : idOrName.replace(/^auto-/, '')
 
-  // Obtener pedidos del cliente
+  // Obtener pedidos del cliente (fuente única de pedidos y ventas)
   const pedidos = await prisma.pedido.findMany({
     where: {
       cliente: { equals: clientName, mode: 'insensitive' },
@@ -321,32 +282,21 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
     orderBy: { fecha: 'desc' }
   })
 
-  // Obtener ventas rápidas del cliente
-  const ventas = await prisma.venta.findMany({
-    where: {
-      cliente: { equals: clientName, mode: 'insensitive' },
-      negocio: targetNegocio
-    },
-    include: {
-      producto: true
-    },
-    orderBy: { fecha: 'desc' }
-  })
-
-  const totalComprado = pedidos.reduce((acc: number, p: any) => acc + Number(p.total), 0) + ventas.reduce((acc: number, v: any) => acc + Number(v.total), 0)
-  const totalPagado = pedidos.reduce((acc: number, p: any) => acc + Number(p.montoPagado), 0) + ventas.reduce((acc: number, v: any) => acc + Number(v.montoPagado), 0)
-  const saldoPendiente = pedidos.reduce((acc: number, p: any) => acc + Number(p.saldoPendiente), 0) + ventas.reduce((acc: number, v: any) => acc + Number(v.saldoPendiente), 0)
-  const pedidosCount = pedidos.length + ventas.length
-  const piezasCount = pedidos.reduce((acc: number, p: any) => acc + p.items.reduce((s: number, it: any) => s + Number(it.cantidad), 0), 0) + ventas.reduce((acc: number, v: any) => acc + Number(v.cantidad), 0)
-  const ultimoPedidoFecha = pedidos[0]?.fecha.toISOString() || ventas[0]?.fecha.toISOString() || null
+  const totalComprado = pedidos.reduce((acc: number, p: any) => acc + Number(p.total), 0)
+  const totalPagado = pedidos.reduce((acc: number, p: any) => acc + Number(p.montoPagado), 0)
+  const saldoPendiente = pedidos.reduce((acc: number, p: any) => acc + Number(p.saldoPendiente), 0)
+  const pedidosCount = pedidos.length
+  const piezasCount = pedidos.reduce((acc: number, p: any) => acc + p.items.reduce((s: number, it: any) => s + Number(it.cantidad), 0), 0)
+  const ultimoPedidoFecha = pedidos[0]?.fecha.toISOString() || null
 
   return {
     id: cliente?.id || `auto-${clientName.toLowerCase()}`,
     negocio: targetNegocio,
     nombre: clientName,
+    dni: cliente?.dni || pedidos.find((p: any) => p.dni)?.dni || null,
     telefono: cliente?.telefono || pedidos.find((p: any) => p.telefono)?.telefono || null,
     email: cliente?.email || null,
-    canalOrigen: cliente?.canalOrigen || pedidos[0]?.canalVenta || ventas[0]?.canalVenta || null,
+    canalOrigen: cliente?.canalOrigen || pedidos[0]?.canalVenta || null,
     handleSocial: cliente?.handleSocial || null,
     direccion: cliente?.direccion || pedidos.find((p: any) => p.destinoEnvio)?.destinoEnvio || null,
     distrito: cliente?.distrito || null,
@@ -358,7 +308,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
     pedidosCount,
     piezasCount,
     ultimoPedidoFecha,
-    canalPreferido: cliente?.canalOrigen || pedidos[0]?.canalVenta || ventas[0]?.canalVenta || null,
+    canalPreferido: cliente?.canalOrigen || pedidos[0]?.canalVenta || null,
     createdAt: cliente?.createdAt.toISOString() || new Date().toISOString(),
     updatedAt: cliente?.updatedAt.toISOString() || new Date().toISOString(),
     pedidos: pedidos.map((p: any) => ({
@@ -377,16 +327,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
         subtotal: Number(it.subtotal)
       }))
     })),
-    ventas: ventas.map((v: any) => ({
-      id: v.id,
-      fecha: v.fecha.toISOString(),
-      estado: v.estado,
-      total: Number(v.total),
-      montoPagado: Number(v.montoPagado),
-      saldoPendiente: Number(v.saldoPendiente),
-      productoNombre: v.nombreProductoSnapshot || v.producto?.nombreModelo || 'Producto',
-      cantidad: Number(v.cantidad)
-    }))
+    ventas: []
   }
 }
 
@@ -396,6 +337,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
 export async function createCliente(data: {
   negocio?: TipoNegocio
   nombre: string
+  dni?: string
   telefono?: string
   email?: string
   canalOrigen?: string
@@ -429,6 +371,7 @@ export async function createCliente(data: {
     data: {
       negocio: targetNegocio,
       nombre: cleanNombre,
+      dni: data.dni?.trim() || null,
       telefono: data.telefono?.trim() || null,
       email: data.email?.trim() || null,
       canalOrigen: data.canalOrigen?.trim() || null,
@@ -453,6 +396,7 @@ export async function createCliente(data: {
  */
 export async function updateCliente(idOrName: string, data: {
   nombre?: string
+  dni?: string
   telefono?: string
   email?: string
   canalOrigen?: string
@@ -471,6 +415,7 @@ export async function updateCliente(idOrName: string, data: {
       data: {
         negocio: targetNegocio,
         nombre: rawNombre,
+        dni: data.dni?.trim() || null,
         telefono: data.telefono?.trim() || null,
         email: data.email?.trim() || null,
         canalOrigen: data.canalOrigen?.trim() || null,
@@ -493,6 +438,7 @@ export async function updateCliente(idOrName: string, data: {
     where: { id: idOrName },
     data: {
       ...(data.nombre !== undefined ? { nombre: data.nombre.trim() } : {}),
+      ...(data.dni !== undefined ? { dni: data.dni.trim() || null } : {}),
       ...(data.telefono !== undefined ? { telefono: data.telefono.trim() || null } : {}),
       ...(data.email !== undefined ? { email: data.email.trim() || null } : {}),
       ...(data.canalOrigen !== undefined ? { canalOrigen: data.canalOrigen.trim() || null } : {}),

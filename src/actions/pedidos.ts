@@ -43,6 +43,7 @@ export interface ItemPedidoInput {
 export interface CreatePedidoInput {
   negocio?: TipoNegocio
   cliente: string
+  dni?: string | null
   telefono?: string | null
   canalVenta?: string | null
   destinoEnvio?: string | null
@@ -155,6 +156,7 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
     codigo: p.codigo,
     fecha: p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha),
     cliente: p.cliente,
+    dni: p.dni || null,
     telefono: p.telefono || null,
     canalVenta: p.canalVenta || null,
     destinoEnvio: p.destinoEnvio || null,
@@ -325,6 +327,7 @@ export async function createPedido(data: CreatePedidoInput) {
           codigo: codigoGenerado,
           fecha: fechaPedido,
           cliente: data.cliente.trim(),
+          dni: data.dni?.trim() || null,
           telefono: data.telefono?.trim() || null,
           canalVenta: data.canalVenta || 'WhatsApp',
           destinoEnvio: data.destinoEnvio?.trim() || null,
@@ -522,6 +525,7 @@ export async function deletePedido(id: string) {
 
 export interface UpdatePedidoInput {
   cliente: string
+  dni?: string | null
   telefono?: string | null
   canalVenta?: string | null
   destinoEnvio?: string | null
@@ -612,7 +616,8 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
         where: { id },
         data: {
           cliente: data.cliente.trim(),
-          telefono: data.telefono?.trim() || null,
+          dni: data.dni !== undefined ? (data.dni?.trim() || null) : current.dni,
+          telefono: data.telefono !== undefined ? (data.telefono?.trim() || null) : current.telefono,
           canalVenta: data.canalVenta || 'WhatsApp',
           destinoEnvio: data.destinoEnvio?.trim() || null,
           diaEntregaPrometida: data.diaEntregaPrometida?.trim() || null,

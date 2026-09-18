@@ -71,8 +71,9 @@ model Cliente {
   id           String    @id @default(uuid())
   negocio      String    @default("3D")
   nombre       String
-  telefono     String?
-  email        String?
+  dni          String?   // DNI / RUC / CE
+  telefono     String?   // WhatsApp / Celular
+  email        String?   // Correo electrónico
   canalOrigen  String?   // WhatsApp, Instagram, TikTok, Feria, Recomendación, Directo
   handleSocial String?   // @usuario_instagram
   direccion    String?
@@ -266,6 +267,7 @@ model Pedido {
   codigo              String        // Ej: "PED-001" o "BG-001"
   fecha               DateTime      @default(now())
   cliente             String
+  dni                 String?       // DNI / RUC del cliente
   telefono            String?
   canalVenta          String?       // WhatsApp, Instagram, TikTok, Feria, Recomendación, Directo
   destinoEnvio        String?

@@ -12,6 +12,7 @@ import {
   ShoppingBag, 
   MapPin, 
   AtSign, 
+  Mail,
   Eye, 
   Pencil, 
   Trash2, 
@@ -25,7 +26,12 @@ import {
   ExternalLink,
   ChevronRight,
   Filter,
-  UserCheck
+  UserCheck,
+  User,
+  CreditCard,
+  Globe,
+  Building2,
+  FileText
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -71,6 +77,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
   // Form State
   const [formData, setFormData] = useState({
     nombre: '',
+    dni: '',
     telefono: '',
     email: '',
     canalOrigen: 'Instagram',
@@ -119,7 +126,9 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
       const q = search.trim().toLowerCase()
       const matchSearch = !q || 
         c.nombre.toLowerCase().includes(q) ||
+        (c.dni && c.dni.toLowerCase().includes(q)) ||
         (c.telefono && c.telefono.toLowerCase().includes(q)) ||
+        (c.email && c.email.toLowerCase().includes(q)) ||
         (c.handleSocial && c.handleSocial.toLowerCase().includes(q)) ||
         (c.distrito && c.distrito.toLowerCase().includes(q)) ||
         (c.direccion && c.direccion.toLowerCase().includes(q))
@@ -145,6 +154,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
     setEditingId(null)
     setFormData({
       nombre: '',
+      dni: '',
       telefono: '',
       email: '',
       canalOrigen: 'Instagram',
@@ -161,6 +171,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
     setEditingId(c.id)
     setFormData({
       nombre: c.nombre,
+      dni: c.dni || '',
       telefono: c.telefono || '',
       email: c.email || '',
       canalOrigen: c.canalOrigen || c.canalPreferido || 'Instagram',
@@ -201,6 +212,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
       if (editingId) {
         const updated = await updateCliente(editingId, {
           nombre: formData.nombre.trim(),
+          dni: formData.dni.trim() || undefined,
           telefono: formData.telefono.trim() || undefined,
           email: formData.email.trim() || undefined,
           canalOrigen: formData.canalOrigen.trim() || undefined,
@@ -214,6 +226,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
       } else {
         const nuevo = await createCliente({
           nombre: formData.nombre.trim(),
+          dni: formData.dni.trim() || undefined,
           telefono: formData.telefono.trim() || undefined,
           email: formData.email.trim() || undefined,
           canalOrigen: formData.canalOrigen.trim() || undefined,
@@ -505,6 +518,11 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                             {c.nombre}
                           </button>
                           <div className="flex items-center gap-1.5 mt-0.5">
+                            {c.dni && (
+                              <span className="text-[10px] font-mono font-bold px-1 py-0 rounded bg-[#F8F6F2] border border-[#E2D9CC] text-[#75695D]">
+                                DNI: {c.dni}
+                              </span>
+                            )}
                             {c.handleSocial ? (
                               <span className="text-[10px] text-[#A36F4C] font-semibold flex items-center gap-0.5 truncate">
                                 <AtSign className="h-3 w-3 inline shrink-0" />
@@ -520,24 +538,33 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                       </div>
                     </td>
 
-                    {/* Col 2: Contacto & WhatsApp Rápido */}
+                    {/* Col 2: Contacto & WhatsApp Rápido & Correo */}
                     <td className="py-3 px-4 min-w-0">
-                      {c.telefono ? (
-                        <div className="flex items-center gap-1.5">
-                          <a
-                            href={getWhatsAppUrl(c.telefono, c.nombre)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] hover:bg-[#DCF4E3] text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
-                            title="Abrir chat de WhatsApp"
-                          >
-                            <MessageCircle className="h-3.5 w-3.5 shrink-0 fill-[#1E5E3A]" />
-                            <span className="font-mono">{c.telefono}</span>
-                          </a>
-                        </div>
-                      ) : (
-                        <span className="text-[#75695D] text-[11px] italic">Sin teléfono</span>
-                      )}
+                      <div className="space-y-1">
+                        {c.telefono ? (
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={getWhatsAppUrl(c.telefono, c.nombre)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] hover:bg-[#DCF4E3] text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
+                              title="Abrir chat de WhatsApp"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5 shrink-0 fill-[#1E5E3A]" />
+                              <span className="font-mono">{c.telefono}</span>
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="text-[#75695D] text-[11px] italic block">Sin teléfono</span>
+                        )}
+
+                        {c.email && (
+                          <div className="flex items-center gap-1 text-[11px] text-[#75695D] truncate" title={c.email}>
+                            <Mail className="h-3 w-3 shrink-0 text-[#A36F4C]" />
+                            <span className="truncate">{c.email}</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
 
                     {/* Col 3: Ubicación */}
@@ -710,7 +737,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
       {/* 6. MODAL: CREAR / EDITAR CLIENTE                                          */}
       {/* ========================================================================= */}
       <Dialog open={modalFormOpen} onOpenChange={setModalFormOpen}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[500px] max-h-[90dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[580px] max-h-[90dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
           <form onSubmit={handleSubmitForm} className="p-5 sm:p-6 space-y-4">
             
             {/* Header */}
@@ -739,92 +766,155 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
 
             {/* Inputs */}
             <div className="space-y-3.5">
+              {/* Nombre Completo */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                <Label className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider">
                   Nombre Completo *
                 </Label>
-                <Input 
-                  value={formData.nombre}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
-                  placeholder="Ej: Juan Pérez / Empresa ABC"
-                  required
-                  autoFocus
-                  className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]/70 pointer-events-none" />
+                  <Input 
+                    value={formData.nombre}
+                    onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                    placeholder="Ej: Juan Pérez / Empresa ABC"
+                    required
+                    autoFocus
+                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10 pl-9.5 focus:bg-white transition-colors"
+                  />
+                </div>
               </div>
 
+              {/* Fila 1: DNI y Teléfono (2 columnas) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                  <Label className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider">
+                    DNI / RUC / CE
+                  </Label>
+                  <div className="relative">
+                    <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]/70 pointer-events-none" />
+                    <Input 
+                      value={formData.dni}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dni: e.target.value }))}
+                      placeholder="Ej: 72345678"
+                      maxLength={12}
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-mono font-bold text-[#241C15] h-10 pl-9.5 focus:bg-white transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider">
                     Teléfono / WhatsApp
                   </Label>
-                  <Input 
-                    value={formData.telefono}
-                    onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
-                    placeholder="Ej: 987654321"
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-mono font-bold text-[#241C15] h-10"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    Canal de Origen
-                  </Label>
-                  <select
-                    value={formData.canalOrigen}
-                    onChange={(e) => setFormData(prev => ({ ...prev, canalOrigen: e.target.value }))}
-                    className="w-full h-10 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] px-3 text-xs font-bold text-[#241C15]"
-                  >
-                    <option value="Instagram">Instagram</option>
-                    <option value="WhatsApp">WhatsApp</option>
-                    <option value="TikTok">TikTok</option>
-                    <option value="Feria">Feria / Evento</option>
-                    <option value="Recomendación">Recomendación</option>
-                    <option value="Directo">Directo / Amigo</option>
-                  </select>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]/70 pointer-events-none" />
+                    <Input 
+                      value={formData.telefono}
+                      onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
+                      placeholder="Ej: 987654321"
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-mono font-bold text-[#241C15] h-10 pl-9.5 focus:bg-white transition-colors"
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* Fila 2: Correo Electrónico (Ancho Completo para evitar truncamiento) */}
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider">
+                  Correo Electrónico
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]/70 pointer-events-none" />
+                  <Input 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="cliente@ejemplo.com"
+                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-medium text-[#241C15] h-10 pl-9.5 focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Fila 3: Canal de Origen y Red Social */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    Instagram Handle
+                  <Label className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider">
+                    Canal de Origen
                   </Label>
-                  <Input 
-                    value={formData.handleSocial}
-                    onChange={(e) => setFormData(prev => ({ ...prev, handleSocial: e.target.value }))}
-                    placeholder="@usuario"
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-medium text-[#241C15] h-10"
-                  />
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]/70 pointer-events-none" />
+                    <select
+                      value={formData.canalOrigen}
+                      onChange={(e) => setFormData(prev => ({ ...prev, canalOrigen: e.target.value }))}
+                      className="w-full h-10 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] pl-9.5 pr-3 text-xs font-bold text-[#241C15] focus:bg-white transition-colors outline-none cursor-pointer"
+                    >
+                      <option value="Instagram">Instagram</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="TikTok">TikTok</option>
+                      <option value="Feria">Feria / Evento</option>
+                      <option value="Recomendación">Recomendación</option>
+                      <option value="Directo">Directo / Amigo</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    Distrito / Ciudad
+                  <Label className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider">
+                    {formData.canalOrigen === 'Instagram'
+                      ? 'Usuario Instagram'
+                      : formData.canalOrigen === 'TikTok'
+                      ? 'Usuario TikTok'
+                      : 'Usuario / Red Social'}
                   </Label>
-                  <Input 
-                    value={formData.distrito}
-                    onChange={(e) => setFormData(prev => ({ ...prev, distrito: e.target.value }))}
-                    placeholder="Ej: Miraflores, Lima"
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-medium text-[#241C15] h-10"
-                  />
+                  <div className="relative">
+                    <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]/70 pointer-events-none" />
+                    <Input 
+                      value={formData.handleSocial}
+                      onChange={(e) => setFormData(prev => ({ ...prev, handleSocial: e.target.value }))}
+                      placeholder={formData.canalOrigen === 'Instagram' || formData.canalOrigen === 'TikTok' ? '@usuario' : 'Perfil o contacto'}
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-medium text-[#241C15] h-10 pl-9.5 focus:bg-white transition-colors"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                  Dirección de Entrega Habitual
-                </Label>
-                <Input 
-                  value={formData.direccion}
-                  onChange={(e) => setFormData(prev => ({ ...prev, direccion: e.target.value }))}
-                  placeholder="Ej: Av. Larco 123 Dpto 402"
-                  className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-medium text-[#241C15] h-10"
-                />
+              {/* Fila 4: Distrito y Dirección de Entrega */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider">
+                    Distrito / Ciudad
+                  </Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]/70 pointer-events-none" />
+                    <Input 
+                      value={formData.distrito}
+                      onChange={(e) => setFormData(prev => ({ ...prev, distrito: e.target.value }))}
+                      placeholder="Ej: Miraflores, Lima"
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-medium text-[#241C15] h-10 pl-9.5 focus:bg-white transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider">
+                    Dirección de Entrega
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]/70 pointer-events-none" />
+                    <Input 
+                      value={formData.direccion}
+                      onChange={(e) => setFormData(prev => ({ ...prev, direccion: e.target.value }))}
+                      placeholder="Ej: Av. Larco 123 Dpto 402"
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs font-medium text-[#241C15] h-10 pl-9.5 focus:bg-white transition-colors"
+                    />
+                  </div>
+                </div>
               </div>
 
+              {/* Fila 5: Notas / Preferencias */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#75695D] uppercase tracking-wider">
+                <Label className="text-[11px] font-bold text-[#75695D] uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-[#A36F4C]" />
                   Notas / Preferencias del Cliente
                 </Label>
                 <textarea
@@ -832,7 +922,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                   onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
                   placeholder="Ej: Le gustan los colores pastel, pide entrega por Olva Courier, etc."
                   rows={2}
-                  className="w-full bg-[#F8F6F2] border border-[#E2D9CC] rounded-xl p-2.5 text-xs text-[#241C15] font-medium resize-none focus:bg-white"
+                  className="w-full bg-[#F8F6F2] border border-[#E2D9CC] rounded-xl p-3 text-xs text-[#241C15] font-medium resize-none focus:bg-white focus:outline-none transition-colors"
                 />
               </div>
             </div>
@@ -842,14 +932,14 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
               <button
                 type="button"
                 onClick={() => setModalFormOpen(false)}
-                className="px-4 py-2 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F8F6F2] text-xs font-bold text-[#75695D] cursor-pointer"
+                className="px-4 py-2 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F8F6F2] text-xs font-bold text-[#75695D] cursor-pointer transition-colors"
               >
                 Cancelar
               </button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-5 py-2 rounded-xl bg-[#A36F4C] hover:bg-[#8C5D3D] text-white text-xs font-bold shadow-sm cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-[#A36F4C] hover:bg-[#8C5D3D] text-white text-xs font-bold shadow-sm cursor-pointer transition-colors"
               >
                 {isSubmitting ? 'Guardando...' : editingId ? 'Guardar Cambios' : 'Registrar Cliente'}
               </Button>
@@ -875,9 +965,20 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                   <DialogTitle className="text-base sm:text-lg font-black text-[#241C15]">
                     {selectedDetalle?.nombre || 'Cargando cliente...'}
                   </DialogTitle>
-                  <div className="flex items-center gap-2 mt-0.5 text-xs text-[#75695D]">
+                  <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-[#75695D]">
+                    {selectedDetalle?.dni && (
+                      <span className="font-mono font-bold px-1.5 py-0.5 rounded bg-[#FAF8F5] border border-[#E2D9CC] text-[#241C15]">
+                        DNI: {selectedDetalle.dni}
+                      </span>
+                    )}
                     {selectedDetalle?.telefono && (
                       <span className="font-mono font-bold text-[#241C15]">{selectedDetalle.telefono}</span>
+                    )}
+                    {selectedDetalle?.email && (
+                      <span className="text-[#75695D] flex items-center gap-1">
+                        <Mail className="h-3 w-3 inline text-[#A36F4C]" />
+                        {selectedDetalle.email}
+                      </span>
                     )}
                     {selectedDetalle?.distrito && (
                       <span>• {selectedDetalle.distrito}</span>
@@ -955,68 +1056,49 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
                       <ShoppingBag className="h-3.5 w-3.5 text-[#A36F4C]" />
-                      Historial de Pedidos ({selectedDetalle.pedidos.length + selectedDetalle.ventas.length})
+                      Historial de Pedidos ({selectedDetalle.pedidos.length})
                     </h4>
                   </div>
 
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {selectedDetalle.pedidos.length === 0 && selectedDetalle.ventas.length === 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {selectedDetalle.pedidos.length === 0 ? (
                       <div className="p-4 bg-[#FAF8F5] text-center text-xs text-[#75695D] italic rounded-xl border border-[#E2D9CC]">
                         Este cliente aún no tiene pedidos registrados
                       </div>
                     ) : (
-                      <>
-                        {selectedDetalle.pedidos.map(p => (
-                          <div key={p.id} className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E2D9CC] text-xs space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono font-bold text-[#241C15]">{p.codigo}</span>
-                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-white text-[#75695D] border-[#E2D9CC]">
-                                  {p.estado}
-                                </Badge>
+                      selectedDetalle.pedidos.map(p => (
+                        <div key={p.id} className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E2D9CC] text-xs space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-[#241C15]">{p.codigo}</span>
+                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-white text-[#75695D] border-[#E2D9CC]">
+                                {p.estado}
+                              </Badge>
+                            </div>
+                            <span className="font-mono font-black text-[#241C15]">
+                              {formatCurrency(p.total)}
+                            </span>
+                          </div>
+
+                          <div className="text-[11px] text-[#75695D] space-y-0.5">
+                            {p.items.map((it, idx) => (
+                              <div key={idx} className="flex justify-between">
+                                <span>{it.cantidad}x {it.nombre}</span>
+                                <span className="font-mono">{formatCurrency(it.subtotal)}</span>
                               </div>
-                              <span className="font-mono font-black text-[#241C15]">
-                                {formatCurrency(p.total)}
-                              </span>
-                            </div>
-
-                            <div className="text-[11px] text-[#75695D] space-y-0.5">
-                              {p.items.map((it, idx) => (
-                                <div key={idx} className="flex justify-between">
-                                  <span>{it.cantidad}x {it.nombre}</span>
-                                  <span className="font-mono">{formatCurrency(it.subtotal)}</span>
-                                </div>
-                              ))}
-                            </div>
-
-                            <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/70 text-[10px] text-[#75695D]">
-                              <span>{new Date(p.fecha).toLocaleDateString('es-PE')}</span>
-                              {p.saldoPendiente > 0 ? (
-                                <span className="text-[#DC2626] font-bold">Saldo: {formatCurrency(p.saldoPendiente)}</span>
-                              ) : (
-                                <span className="text-[#1E5E3A] font-bold">Pagado 100%</span>
-                              )}
-                            </div>
+                            ))}
                           </div>
-                        ))}
 
-                        {selectedDetalle.ventas.map(v => (
-                          <div key={v.id} className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E2D9CC] text-xs space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-[#241C15]">{v.cantidad}x {v.productoNombre}</span>
-                              <span className="font-mono font-black text-[#241C15]">{formatCurrency(v.total)}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-[10px] text-[#75695D]">
-                              <span>Venta directa • {new Date(v.fecha).toLocaleDateString('es-PE')}</span>
-                              {v.saldoPendiente > 0 ? (
-                                <span className="text-[#DC2626] font-bold">Saldo: {formatCurrency(v.saldoPendiente)}</span>
-                              ) : (
-                                <span className="text-[#1E5E3A] font-bold">Pagado 100%</span>
-                              )}
-                            </div>
+                          <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/70 text-[10px] text-[#75695D]">
+                            <span>{new Date(p.fecha).toLocaleDateString('es-PE')}</span>
+                            {p.saldoPendiente > 0 ? (
+                              <span className="text-[#DC2626] font-bold">Saldo: {formatCurrency(p.saldoPendiente)}</span>
+                            ) : (
+                              <span className="text-[#1E5E3A] font-bold">Pagado 100%</span>
+                            )}
                           </div>
-                        ))}
-                      </>
+                        </div>
+                      ))
                     )}
                   </div>
                 </div>
