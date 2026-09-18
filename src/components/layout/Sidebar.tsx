@@ -19,7 +19,8 @@ import {
   CircleDot, 
   ChevronDown, 
   X,
-  Hammer
+  Hammer,
+  Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getNavLiveMetrics } from '@/actions/nav'
@@ -46,6 +47,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const isDashboard = pathname === '/'
   const isTaller = pathname.startsWith('/taller')
   const isPedidos = pathname.startsWith('/pedidos') || pathname.startsWith('/ventas')
+  const isClientes = pathname.startsWith('/clientes')
   const isHistorico = pathname.startsWith('/historico-mensual') || pathname.startsWith('/flujo-mensual')
   
   const isFinanzasSection = pathname.startsWith('/finanzas') || pathname.startsWith('/inversiones')
@@ -172,6 +174,21 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
               {metrics.pedidosPendientes}
             </span>
           )}
+        </Link>
+
+        {/* CLIENTES */}
+        <Link
+          href="/clientes"
+          onClick={handleLinkClick}
+          className={cn(
+            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
+            isClientes
+              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
+              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+          )}
+        >
+          <Users className={cn('h-4 w-4 shrink-0', isClientes ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
+          <span>Clientes</span>
         </Link>
 
         {/* HISTÓRICO MENSUAL */}
