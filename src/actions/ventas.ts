@@ -4,6 +4,8 @@ import prisma from '@/lib/prisma'
 import { EstadoVenta, TipoPrecio } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { ajustarStockBobina } from '@/actions/inventario'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
 function safeRevalidate() {
   try {
@@ -233,7 +235,7 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
     personalizacion: p.notas || null,
     gramosConsumidos: gramosConsumidosTotal,
     cantidad: totalCantidad,
-    tipoPrecio: items[0]?.tipoPrecio || 'COMUNIDAD',
+    tipoPrecio: items[0]?.tipoPrecio || 'MERCADO',
     precioUnitario: totalCantidad > 0 ? Number((Number(p.total) / totalCantidad).toFixed(2)) : Number(p.total),
     total: Number(p.total),
     montoPagado: Number(p.montoPagado),
@@ -264,9 +266,12 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
   }
 }
 
-export async function getVentas() {
+export async function getVentas(negocio?: TipoNegocio) {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+
   const [pedidos, allFilamentos] = await Promise.all([
     prisma.pedido.findMany({
+      where: { negocio: targetNegocio },
       include: {
         items: {
           include: {
@@ -306,6 +311,7 @@ function parseDateInput(fecha?: string | Date) {
 }
 
 export async function createVenta(data: {
+  negocio?: TipoNegocio
   cliente: string
   productoId: string
   cantidad: number
@@ -328,6 +334,8 @@ export async function createVenta(data: {
   tipoPagoInicial?: string
   notasPagoInicial?: string
 }) {
+  const targetNegocio = data.negocio || await getActiveNegocioServer()
+
   const total = data.cantidad * data.precioUnitario
   const montoPagado = Math.min(total, Math.max(0, data.montoPagado || 0))
   const saldoPendiente = Math.max(0, total - montoPagado)
@@ -353,6 +361,7 @@ export async function createVenta(data: {
 
   const venta = await prisma.venta.create({
     data: {
+      negocio: targetNegocio,
       cliente: data.cliente,
       productoId: data.productoId,
       nombreProductoSnapshot: producto?.nombreModelo || '',
@@ -397,10 +406,12 @@ export async function createVenta(data: {
 
   // Sincronizar creación como Pedido
   try {
-    const nextNum = (await prisma.pedido.count()) + 1
-    const codigo = `PED-${String(nextNum).padStart(3, '0')}`
+    const prefix = targetNegocio === 'BG' ? 'BG' : 'PED'
+    const nextNum = (await prisma.pedido.count({ where: { negocio: targetNegocio } })) + 1
+    const codigo = `${prefix}-${String(nextNum).padStart(3, '0')}`
     await prisma.pedido.create({
       data: {
+        negocio: targetNegocio,
         codigo,
         fecha: fechaVenta,
         cliente: data.cliente,
@@ -417,7 +428,7 @@ export async function createVenta(data: {
         items: {
           create: [{
             productoId: data.productoId,
-            nombreProductoSnapshot: producto?.nombreModelo || 'Modelo 3D',
+            nombreProductoSnapshot: producto?.nombreModelo || (targetNegocio === 'BG' ? 'Juego de Mesa' : 'Modelo 3D'),
             costoBaseSnapshot: producto?.costoBase || 0,
             colorFilamentoId: rawColores[0] || data.colorFilamentoId,
             coloresIds: rawColores,

@@ -3,6 +3,8 @@
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { ajustarStockBobina } from '@/actions/inventario'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
 function safeRevalidate() {
   try {
@@ -11,12 +13,16 @@ function safeRevalidate() {
     revalidatePath('/catalogo/inventario')
     revalidatePath('/inventario')
     revalidatePath('/ventas')
+    revalidatePath('/pedidos')
     revalidatePath('/')
   } catch (e) {}
 }
 
-export async function getProductos() {
+export async function getProductos(negocio?: TipoNegocio) {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+
   const productos = await prisma.producto.findMany({
+    where: { negocio: targetNegocio },
     orderBy: [
       { activo: 'desc' },
       { lineaCategoria: 'asc' },
@@ -38,23 +44,27 @@ export async function getProductos() {
 }
 
 export async function createProducto(data: {
+  negocio?: TipoNegocio
   lineaCategoria: string
   nombreModelo: string
   costoBase: number
   precioAmigos: number
   precioMercado: number
-  precioComunidad: number
+  precioComunidad?: number
   pesoGramos?: number
   activo?: boolean
 }) {
+  const targetNegocio = data.negocio || await getActiveNegocioServer()
+
   const producto = await prisma.producto.create({
     data: {
+      negocio: targetNegocio,
       lineaCategoria: data.lineaCategoria.trim(),
       nombreModelo: data.nombreModelo.trim(),
       costoBase: data.costoBase,
       precioAmigos: data.precioAmigos,
       precioMercado: data.precioMercado,
-      precioComunidad: data.precioComunidad,
+      precioComunidad: data.precioComunidad ?? data.precioMercado,
       pesoGramos: data.pesoGramos != null ? data.pesoGramos : 0,
       activo: data.activo ?? true
     }
@@ -79,7 +89,7 @@ export async function updateProducto(id: string, data: {
   costoBase: number
   precioAmigos: number
   precioMercado: number
-  precioComunidad: number
+  precioComunidad?: number
   pesoGramos?: number
   activo?: boolean
 }) {
@@ -95,7 +105,7 @@ export async function updateProducto(id: string, data: {
       costoBase: data.costoBase,
       precioAmigos: data.precioAmigos,
       precioMercado: data.precioMercado,
-      precioComunidad: data.precioComunidad,
+      precioComunidad: data.precioComunidad !== undefined ? data.precioComunidad : (current?.precioComunidad ?? data.precioMercado),
       ...(data.pesoGramos !== undefined ? { pesoGramos: data.pesoGramos } : {}),
       ...(data.activo !== undefined ? { activo: data.activo } : {})
     }
@@ -170,13 +180,14 @@ export async function duplicarProducto(id: string) {
 
   let nuevoNombre = `${current.nombreModelo} (Copia)`
   let count = 1
-  while (await prisma.producto.findUnique({ where: { nombreModelo: nuevoNombre } })) {
+  while (await prisma.producto.findFirst({ where: { nombreModelo: nuevoNombre, negocio: current.negocio } })) {
     count++
     nuevoNombre = `${current.nombreModelo} (Copia ${count})`
   }
 
   const duplicado = await prisma.producto.create({
     data: {
+      negocio: current.negocio,
       lineaCategoria: current.lineaCategoria,
       nombreModelo: nuevoNombre,
       costoBase: current.costoBase,

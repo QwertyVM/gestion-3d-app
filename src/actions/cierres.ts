@@ -5,9 +5,12 @@ import { revalidatePath } from 'next/cache'
 import { getInversiones } from './inversiones'
 import { getVentas } from './ventas'
 import { getIngresos } from './ingresos'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
 export interface CierreMesItem {
   id: string
+  negocio?: string
   mes: number
   anio: number
   nombrePeriodo: string
@@ -61,9 +64,12 @@ const NOMBRES_MESES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ]
 
-export async function getCierres(): Promise<CierreMesItem[]> {
+export async function getCierres(negocio?: TipoNegocio): Promise<CierreMesItem[]> {
   try {
+    const targetNegocio = negocio || await getActiveNegocioServer()
+
     const cierres = await prisma.cierreMes.findMany({
+      where: { negocio: targetNegocio },
       orderBy: [
         { anio: 'desc' },
         { mes: 'desc' }
@@ -72,6 +78,7 @@ export async function getCierres(): Promise<CierreMesItem[]> {
 
     return cierres.map(c => ({
       id: c.id,
+      negocio: c.negocio,
       mes: c.mes,
       anio: c.anio,
       nombrePeriodo: c.nombrePeriodo,
@@ -105,16 +112,17 @@ export async function getCierres(): Promise<CierreMesItem[]> {
   }
 }
 
-export async function getDatosPreCierre(mesInput?: number, anioInput?: number): Promise<DatosPreCierre> {
+export async function getDatosPreCierre(mesInput?: number, anioInput?: number, negocio?: TipoNegocio): Promise<DatosPreCierre> {
+  const targetNegocio = negocio || await getActiveNegocioServer()
   const now = new Date()
   const mes = mesInput || (now.getMonth() + 1) // 1-12
   const anio = anioInput || now.getFullYear()
   const nombrePeriodo = `${NOMBRES_MESES[mes - 1]} ${anio}`
 
   const [egresos, ventas, ingresosDirectos] = await Promise.all([
-    getInversiones(),
-    getVentas(),
-    getIngresos(),
+    getInversiones(targetNegocio),
+    getVentas(targetNegocio),
+    getIngresos(targetNegocio),
   ])
 
   // Filtrar o considerar movimientos del período o acumulados para conciliación
@@ -163,6 +171,7 @@ export async function getDatosPreCierre(mesInput?: number, anioInput?: number): 
 }
 
 export async function createCierreMes(data: {
+  negocio?: TipoNegocio
   mes: number
   anio: number
   nombrePeriodo: string
@@ -189,8 +198,11 @@ export async function createCierreMes(data: {
   notas?: string | null
 }) {
   try {
+    const targetNegocio = data.negocio || await getActiveNegocioServer()
+
     const created = await prisma.cierreMes.create({
       data: {
+        negocio: targetNegocio,
         mes: data.mes,
         anio: data.anio,
         nombrePeriodo: data.nombrePeriodo,

@@ -3,19 +3,25 @@
 import prisma from '@/lib/prisma'
 import { getVentas, registrarAbono } from '@/actions/ventas'
 import { addPagoPedido } from '@/actions/pedidos'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
-export async function getDashboardData() {
+export async function getDashboardData(negocio?: TipoNegocio) {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+
   const [inversiones, ventas, ingresosDirectos, filamentos] = await Promise.all([
     prisma.inversion.findMany({
+      where: { negocio: targetNegocio },
       orderBy: { createdAt: 'desc' }
     }),
-    getVentas(),
+    getVentas(targetNegocio),
     prisma.ingreso.findMany({
+      where: { negocio: targetNegocio },
       orderBy: { fecha: 'desc' }
     }),
-    prisma.inventarioFilamento.findMany({
+    targetNegocio === '3D' ? prisma.inventarioFilamento.findMany({
       where: { activo: true }
-    })
+    }) : Promise.resolve([])
   ])
 
   // 1. Egresos / Inversión Total en el Taller (Maquinaria + Insumos + Servicios)
@@ -265,6 +271,7 @@ export async function getDashboardData() {
 
   // Procesar pedidos de la base de datos
   const rawPedidos = await prisma.pedido.findMany({
+    where: { negocio: targetNegocio },
     include: {
       items: {
         include: {

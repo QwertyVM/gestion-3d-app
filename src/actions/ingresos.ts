@@ -2,6 +2,8 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
 function safeRevalidate() {
   try {
@@ -15,8 +17,11 @@ function safeRevalidate() {
   }
 }
 
-export async function getIngresos() {
+export async function getIngresos(negocio?: TipoNegocio) {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+
   const ingresos = await prisma.ingreso.findMany({
+    where: { negocio: targetNegocio },
     orderBy: { fecha: 'desc' }
   })
 
@@ -51,6 +56,7 @@ function parseDateInput(fecha?: string | Date) {
 }
 
 export async function createIngreso(data: {
+  negocio?: TipoNegocio
   cliente: string
   concepto: string
   categoria?: string
@@ -59,8 +65,11 @@ export async function createIngreso(data: {
   notas?: string
   fecha?: string
 }) {
+  const targetNegocio = data.negocio || await getActiveNegocioServer()
+
   const ingreso = await prisma.ingreso.create({
     data: {
+      negocio: targetNegocio,
       cliente: data.cliente,
       concepto: data.concepto,
       categoria: data.categoria || 'SERVICIO',

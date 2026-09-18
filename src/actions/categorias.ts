@@ -2,6 +2,8 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
 export interface CategoriaProductoSummary {
   id: string
@@ -22,9 +24,12 @@ export interface CategoriaItem {
   updatedAt: string
 }
 
-export async function getCategorias(): Promise<CategoriaItem[]> {
+export async function getCategorias(negocio?: TipoNegocio): Promise<CategoriaItem[]> {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+
   // Get all active and inactive products to ensure all categories are synchronized
   const productos = await prisma.producto.findMany({
+    where: { negocio: targetNegocio },
     select: { 
       id: true,
       lineaCategoria: true,
@@ -41,13 +46,22 @@ export async function getCategorias(): Promise<CategoriaItem[]> {
   const distinctProductCats = Array.from(new Set(productos.map(p => p.lineaCategoria?.trim()).filter(Boolean)))
   for (const catName of distinctProductCats) {
     await prisma.categoria.upsert({
-      where: { nombre: catName },
+      where: {
+        nombre_negocio: {
+          nombre: catName,
+          negocio: targetNegocio
+        }
+      },
       update: {},
-      create: { nombre: catName },
+      create: {
+        nombre: catName,
+        negocio: targetNegocio
+      },
     })
   }
 
   const categorias = await prisma.categoria.findMany({
+    where: { negocio: targetNegocio },
     orderBy: { nombre: 'asc' },
   })
 
@@ -82,7 +96,8 @@ export async function getCategorias(): Promise<CategoriaItem[]> {
   })
 }
 
-export async function createCategoria(data: { nombre: string; descripcion?: string }): Promise<CategoriaItem> {
+export async function createCategoria(data: { nombre: string; descripcion?: string; negocio?: TipoNegocio }): Promise<CategoriaItem> {
+  const targetNegocio = data.negocio || await getActiveNegocioServer()
   const cleanNombre = data.nombre.trim()
   if (!cleanNombre) {
     throw new Error('El nombre de la categoría es obligatorio')
@@ -90,6 +105,7 @@ export async function createCategoria(data: { nombre: string; descripcion?: stri
 
   const existing = await prisma.categoria.findFirst({
     where: {
+      negocio: targetNegocio,
       nombre: {
         equals: cleanNombre,
         mode: 'insensitive',
@@ -103,6 +119,7 @@ export async function createCategoria(data: { nombre: string; descripcion?: stri
 
   const categoria = await prisma.categoria.create({
     data: {
+      negocio: targetNegocio,
       nombre: cleanNombre,
       descripcion: data.descripcion?.trim() || null,
     },
@@ -140,6 +157,7 @@ export async function updateCategoria(id: string, data: { nombre: string; descri
   if (current.nombre !== cleanNombre) {
     const existing = await prisma.categoria.findFirst({
       where: {
+        negocio: current.negocio,
         nombre: {
           equals: cleanNombre,
           mode: 'insensitive',
@@ -152,9 +170,12 @@ export async function updateCategoria(id: string, data: { nombre: string; descri
       throw new Error('Ya existe otra categoría con este nombre')
     }
 
-    // Cascade update to all products that had the old category name
+    // Cascade update to all products that had the old category name in the same business
     await prisma.producto.updateMany({
-      where: { lineaCategoria: current.nombre },
+      where: {
+        negocio: current.negocio,
+        lineaCategoria: current.nombre
+      },
       data: { lineaCategoria: cleanNombre },
     })
   }
@@ -169,7 +190,10 @@ export async function updateCategoria(id: string, data: { nombre: string; descri
 
   // Get products for updated category
   const prods = await prisma.producto.findMany({
-    where: { lineaCategoria: cleanNombre },
+    where: {
+      negocio: current.negocio,
+      lineaCategoria: cleanNombre
+    },
     select: {
       id: true,
       nombreModelo: true,
@@ -214,7 +238,10 @@ export async function deleteCategoria(id: string) {
 
   // Check if products exist with this category
   const count = await prisma.producto.count({
-    where: { lineaCategoria: current.nombre },
+    where: {
+      negocio: current.negocio,
+      lineaCategoria: current.nombre
+    },
   })
 
   if (count > 0) {
@@ -229,3 +256,4 @@ export async function deleteCategoria(id: string) {
   revalidatePath('/catalogo/categorias')
   return { success: true, message: `Categoría "${current.nombre}" eliminada exitosamente.` }
 }
+

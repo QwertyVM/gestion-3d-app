@@ -3,6 +3,8 @@
 import prisma from '@/lib/prisma'
 import { CategoriaInversion } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
 function safeRevalidate() {
   try {
@@ -17,8 +19,11 @@ function safeRevalidate() {
   }
 }
 
-export async function getInversiones() {
+export async function getInversiones(negocio?: TipoNegocio) {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+
   const inversiones = await prisma.inversion.findMany({
+    where: { negocio: targetNegocio },
     orderBy: { createdAt: 'desc' }
   })
 
@@ -52,6 +57,7 @@ function parseDateInput(fecha?: string | Date) {
 }
 
 export async function createInversion(data: {
+  negocio?: TipoNegocio
   persona?: string
   categoria: CategoriaInversion
   subcategoria?: string | null
@@ -64,6 +70,8 @@ export async function createInversion(data: {
   numeroCuotas?: number | null
   fecha?: string | Date
 }) {
+  const targetNegocio = data.negocio || await getActiveNegocioServer()
+
   const costoTotal = (data.cantidad * data.costoUnitario) + (data.costoEnvio || 0)
   
   let montoCuota = null
@@ -87,6 +95,7 @@ export async function createInversion(data: {
 
   const inversion = await prisma.inversion.create({
     data: {
+      negocio: targetNegocio,
       persona: data.persona || 'Víctor',
       categoria: data.categoria,
       subcategoria: data.subcategoria || undefined,

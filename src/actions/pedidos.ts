@@ -4,6 +4,8 @@ import prisma from '@/lib/prisma'
 import { EstadoPedido, TipoPrecio } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { ajustarStockBobina } from '@/actions/inventario'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
 function safeRevalidate() {
   try {
@@ -39,6 +41,7 @@ export interface ItemPedidoInput {
 }
 
 export interface CreatePedidoInput {
+  negocio?: TipoNegocio
   cliente: string
   telefono?: string | null
   canalVenta?: string | null
@@ -171,10 +174,13 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
   }
 }
 
-export async function getPedidos() {
+export async function getPedidos(negocio?: TipoNegocio) {
   try {
+    const targetNegocio = negocio || await getActiveNegocioServer()
+
     const [pedidos, allFilamentos] = await Promise.all([
       prisma.pedido.findMany({
+        where: { negocio: targetNegocio },
         include: {
           items: {
             include: {
@@ -228,10 +234,13 @@ export async function getPedidoById(id: string) {
   }
 }
 
-async function generateNextCodigoPedido(): Promise<string> {
-  const count = await prisma.pedido.count()
+async function generateNextCodigoPedido(negocio: TipoNegocio = '3D'): Promise<string> {
+  const prefix = negocio === 'BG' ? 'BG' : 'PED'
+  const count = await prisma.pedido.count({
+    where: { negocio }
+  })
   const nextNum = count + 1
-  return `PED-${String(nextNum).padStart(3, '0')}`
+  return `${prefix}-${String(nextNum).padStart(3, '0')}`
 }
 
 function parseDateInput(fecha?: string | Date) {
@@ -252,6 +261,8 @@ function parseDateInput(fecha?: string | Date) {
 
 export async function createPedido(data: CreatePedidoInput) {
   try {
+    const targetNegocio = data.negocio || await getActiveNegocioServer()
+
     if (!data.cliente || !data.cliente.trim()) {
       return { success: false, error: 'El nombre del cliente es obligatorio' }
     }
@@ -283,13 +294,13 @@ export async function createPedido(data: CreatePedidoInput) {
 
       return {
         productoId: item.productoId,
-        nombreProductoSnapshot: prod?.nombreModelo || 'Modelo 3D',
+        nombreProductoSnapshot: prod?.nombreModelo || (targetNegocio === 'BG' ? 'Juego de Mesa' : 'Modelo 3D'),
         costoBaseSnapshot: prod ? Number(prod.costoBase) : 0,
         colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
         coloresIds: rawColores,
         personalizacion: item.personalizacion?.trim() || null,
         cantidad: qty,
-        tipoPrecio: item.tipoPrecio || 'COMUNIDAD',
+        tipoPrecio: item.tipoPrecio || 'MERCADO',
         precioUnitario: unitPrice,
         costoPackaging: packCost,
         porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
@@ -303,13 +314,14 @@ export async function createPedido(data: CreatePedidoInput) {
     const montoPagadoNum = Math.min(totalCalculado, Math.max(0, Number(data.montoPagado) || 0))
     const saldoPendienteNum = Number(Math.max(0, totalCalculado - montoPagadoNum).toFixed(2))
 
-    const codigoGenerado = await generateNextCodigoPedido()
+    const codigoGenerado = await generateNextCodigoPedido(targetNegocio)
     const fechaPedido = parseDateInput(data.fecha)
 
     // 3. Database Transaction
     const nuevoPedido = await prisma.$transaction(async (tx) => {
       const p = await tx.pedido.create({
         data: {
+          negocio: targetNegocio,
           codigo: codigoGenerado,
           fecha: fechaPedido,
           cliente: data.cliente.trim(),
@@ -570,7 +582,7 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
         coloresIds: rawColores,
         personalizacion: item.personalizacion?.trim() || null,
         cantidad: qty,
-        tipoPrecio: item.tipoPrecio || 'COMUNIDAD',
+        tipoPrecio: item.tipoPrecio || 'MERCADO',
         precioUnitario: unitPrice,
         costoPackaging: packCost,
         porcentajeAdicional: Number(item.porcentajeAdicional) || 0,

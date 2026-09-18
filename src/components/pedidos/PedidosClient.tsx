@@ -74,7 +74,7 @@ export interface ItemPedidoView {
     costoBase: number
     precioAmigos: number
     precioMercado: number
-    precioComunidad: number
+    precioComunidad?: number
     pesoGramos: number
     activo: boolean
   } | null
@@ -130,7 +130,7 @@ export interface ProductoOption {
   costoBase: number
   precioAmigos: number
   precioMercado: number
-  precioComunidad: number
+  precioComunidad?: number
   pesoGramos: number
   activo: boolean
 }
@@ -268,8 +268,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
-        tipoPrecio: 'COMUNIDAD',
-        precioUnitario: defaultProd ? defaultProd.precioComunidad : '',
+        tipoPrecio: 'MERCADO',
+        precioUnitario: defaultProd ? defaultProd.precioMercado : '',
         costoPackaging: '',
         porcentajeAdicional: 0,
         gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
@@ -294,8 +294,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
-        tipoPrecio: 'COMUNIDAD',
-        precioUnitario: defaultProd ? defaultProd.precioComunidad : '',
+        tipoPrecio: 'MERCADO',
+        precioUnitario: defaultProd ? defaultProd.precioMercado : '',
         costoPackaging: '',
         porcentajeAdicional: 0,
         gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
@@ -317,9 +317,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       if (updates.productoId && updates.productoId !== item.productoId) {
         const p = productos.find(prod => prod.id === updates.productoId)
         if (p) {
-          let pUnit = p.precioComunidad
+          let pUnit = p.precioMercado
           if (merged.tipoPrecio === 'AMIGOS') pUnit = p.precioAmigos
-          if (merged.tipoPrecio === 'MERCADO') pUnit = p.precioMercado
+          else if (merged.tipoPrecio === 'MERCADO') pUnit = p.precioMercado
           merged.precioUnitario = pUnit
           merged.gramosConsumidos = p.pesoGramos * (Number(merged.cantidad) || 1)
         }
@@ -331,7 +331,6 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         if (p) {
           if (updates.tipoPrecio === 'AMIGOS') merged.precioUnitario = p.precioAmigos
           else if (updates.tipoPrecio === 'MERCADO') merged.precioUnitario = p.precioMercado
-          else if (updates.tipoPrecio === 'COMUNIDAD') merged.precioUnitario = p.precioComunidad
         }
       }
 
@@ -393,8 +392,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
-        tipoPrecio: 'COMUNIDAD',
-        precioUnitario: defaultProd ? defaultProd.precioComunidad : '',
+        tipoPrecio: 'MERCADO',
+        precioUnitario: defaultProd ? defaultProd.precioMercado : '',
         costoPackaging: '',
         porcentajeAdicional: 0,
         gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
@@ -1434,8 +1433,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                               onChange={(e) => updateItem(item.id, { tipoPrecio: e.target.value as TipoPrecio })}
                               className="w-full h-8 rounded-lg border border-[#E2D9CC] bg-[#FFFFFF] px-2 text-xs font-semibold"
                             >
-                              <option value="COMUNIDAD">Comunidad</option>
-                              <option value="MERCADO">Mercado (60%)</option>
+                              <option value="MERCADO">Mercado</option>
                               <option value="AMIGOS">Amigos</option>
                               <option value="PERSONALIZADO">Personalizado</option>
                             </select>
@@ -2166,8 +2164,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                               onChange={(e) => updateItem(item.id, { tipoPrecio: e.target.value as TipoPrecio })}
                               className="w-full h-8 rounded-lg border border-[#E2D9CC] bg-[#FFFFFF] px-2 text-xs font-semibold"
                             >
-                              <option value="COMUNIDAD">Comunidad</option>
-                              <option value="MERCADO">Mercado (60%)</option>
+                              <option value="MERCADO">Mercado</option>
                               <option value="AMIGOS">Amigos</option>
                               <option value="PERSONALIZADO">Personalizado</option>
                             </select>

@@ -124,8 +124,8 @@ async function main() {
   }
 
   // 5. Ventas Reales
-  const productoSet5J = await prisma.producto.findUnique({ where: { nombreModelo: 'Mansiones de la Locura - Set 5 Jugadores (5 Tableros + 10 Marcadores)' } })
-  const productoZombicide = await prisma.producto.findUnique({ where: { nombreModelo: 'Inserto Zombicide 2ª Ed. (10 placas)' } })
+  const productoSet5J = await prisma.producto.findFirst({ where: { nombreModelo: 'Mansiones de la Locura - Set 5 Jugadores (5 Tableros + 10 Marcadores)' } })
+  const productoZombicide = await prisma.producto.findFirst({ where: { nombreModelo: 'Inserto Zombicide 2ª Ed. (10 placas)' } })
 
   if (productoSet5J && productoZombicide) {
     await prisma.venta.createMany({

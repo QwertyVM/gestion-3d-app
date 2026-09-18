@@ -122,7 +122,7 @@ export interface VentaItem {
     costoBase: number
     precioAmigos: number
     precioMercado: number
-    precioComunidad: number
+    precioComunidad?: number
     pesoGramos?: number
   }
 }
@@ -134,7 +134,7 @@ export interface ProductoOption {
   costoBase: number
   precioAmigos: number
   precioMercado: number
-  precioComunidad: number
+  precioComunidad?: number
   pesoGramos?: number
   activo: boolean
 }
@@ -194,7 +194,7 @@ export function VentasClient({
   const [editCliente, setEditCliente] = useState('')
   const [editProductoId, setEditProductoId] = useState('')
   const [editCantidad, setEditCantidad] = useState('1')
-  const [editTipoPrecio, setEditTipoPrecio] = useState<TipoPrecio>('COMUNIDAD')
+  const [editTipoPrecio, setEditTipoPrecio] = useState<TipoPrecio>('MERCADO')
   const [editPrecioUnitario, setEditPrecioUnitario] = useState('')
   const [editEstado, setEditEstado] = useState<EstadoVenta>('PENDIENTE')
   const [editCanalVenta, setEditCanalVenta] = useState('')
@@ -218,7 +218,7 @@ export function VentasClient({
   const [formCliente, setFormCliente] = useState('')
   const [formProductoId, setFormProductoId] = useState('')
   const [formCantidad, setFormCantidad] = useState('1')
-  const [formTipoPrecio, setFormTipoPrecio] = useState<TipoPrecio>('COMUNIDAD')
+  const [formTipoPrecio, setFormTipoPrecio] = useState<TipoPrecio>('MERCADO')
   const [formPrecioBase, setFormPrecioBase] = useState('0')
   const [formPrecioUnitario, setFormPrecioUnitario] = useState('')
   const [formMontoPagado, setFormMontoPagado] = useState('')
@@ -297,16 +297,15 @@ export function VentasClient({
       id: p.id,
       label: p.nombreModelo,
       sublabel: `${p.lineaCategoria} • Costo Base: S/ ${p.costoBase.toFixed(2)}`,
-      badge: `S/ ${p.precioComunidad.toFixed(2)}`,
+      badge: `S/ ${p.precioMercado.toFixed(2)}`,
       icon: Package,
     }))
   }, [productos])
 
   const nivelesPrecioComboboxItems: ComboboxItem[] = useMemo(() => [
-    { id: 'AMIGOS', label: '1. Precio Amigo', sublabel: 'Margen preferencial', badge: '35% margen' },
-    { id: 'MERCADO', label: '2. Precio Mercado', sublabel: 'Precio estándar venta', badge: '60% margen' },
-    { id: 'COMUNIDAD', label: '3. Precio Comunidad', sublabel: 'Precio seguidores / comunidad', badge: '80% margen' },
-    { id: 'PERSONALIZADO', label: '4. Personalizado', sublabel: 'Monto ingresado manualmente' },
+    { id: 'MERCADO', label: '1. Precio Mercado', sublabel: 'Precio estándar venta', badge: 'Mercado' },
+    { id: 'AMIGOS', label: '2. Precio Amigo', sublabel: 'Margen preferencial', badge: 'Amigos' },
+    { id: 'PERSONALIZADO', label: '3. Personalizado', sublabel: 'Monto ingresado manualmente' },
   ], [])
 
   const filamentosComboboxItems: ComboboxItem[] = useMemo(() => {
@@ -642,10 +641,9 @@ export function VentasClient({
     setEditTipoPrecio(tier)
     const found = productos.find(p => p.id === prodId)
     if (found && tier !== 'PERSONALIZADO') {
-      let base = found.precioComunidad
+      let base = found.precioMercado
       if (tier === 'AMIGOS') base = found.precioAmigos
       else if (tier === 'MERCADO') base = found.precioMercado
-      else if (tier === 'COMUNIDAD') base = found.precioComunidad
       const pack = parseFloat(editCostoPackaging) || 0
       setEditPrecioUnitario((base + pack).toFixed(2))
     }
@@ -671,10 +669,9 @@ export function VentasClient({
     const found = productos.find(p => p.id === prodId)
     if (found) {
       const pack = incluirPackaging ? montoProrrateoPackaging : 0
-      let base = found.precioComunidad
+      let base = found.precioMercado
       if (tier === 'AMIGOS') base = found.precioAmigos
       else if (tier === 'MERCADO') base = found.precioMercado
-      else if (tier === 'COMUNIDAD') base = found.precioComunidad
 
       setFormPrecioBase(base.toString())
       if (tier !== 'PERSONALIZADO') {
@@ -694,20 +691,16 @@ export function VentasClient({
     }
 
     const pack = incluirPackaging ? montoProrrateoPackaging : 0
-    const pAmigos = Number((selectedProduct.precioAmigos + pack).toFixed(2))
     const pMercado = Number((selectedProduct.precioMercado + pack).toFixed(2))
-    const pComunidad = Number((selectedProduct.precioComunidad + pack).toFixed(2))
+    const pAmigos = Number((selectedProduct.precioAmigos + pack).toFixed(2))
 
     // Compare with tolerance of 0.005
-    if (Math.abs(num - pAmigos) < 0.005) {
-      setFormTipoPrecio('AMIGOS')
-      setFormPrecioBase(selectedProduct.precioAmigos.toString())
-    } else if (Math.abs(num - pMercado) < 0.005) {
+    if (Math.abs(num - pMercado) < 0.005) {
       setFormTipoPrecio('MERCADO')
       setFormPrecioBase(selectedProduct.precioMercado.toString())
-    } else if (Math.abs(num - pComunidad) < 0.005) {
-      setFormTipoPrecio('COMUNIDAD')
-      setFormPrecioBase(selectedProduct.precioComunidad.toString())
+    } else if (Math.abs(num - pAmigos) < 0.005) {
+      setFormTipoPrecio('AMIGOS')
+      setFormPrecioBase(selectedProduct.precioAmigos.toString())
     } else {
       setFormTipoPrecio('PERSONALIZADO')
     }
@@ -725,8 +718,6 @@ export function VentasClient({
       setFormPrecioUnitario((selectedProduct.precioAmigos + pack).toFixed(2))
     } else if (formTipoPrecio === 'MERCADO') {
       setFormPrecioUnitario((selectedProduct.precioMercado + pack).toFixed(2))
-    } else if (formTipoPrecio === 'COMUNIDAD') {
-      setFormPrecioUnitario((selectedProduct.precioComunidad + pack).toFixed(2))
     }
   }
 
@@ -742,8 +733,6 @@ export function VentasClient({
       setFormPrecioUnitario((selectedProduct.precioAmigos + pack).toFixed(2))
     } else if (formTipoPrecio === 'MERCADO') {
       setFormPrecioUnitario((selectedProduct.precioMercado + pack).toFixed(2))
-    } else if (formTipoPrecio === 'COMUNIDAD') {
-      setFormPrecioUnitario((selectedProduct.precioComunidad + pack).toFixed(2))
     }
   }
 
@@ -830,12 +819,12 @@ export function VentasClient({
   // Open Create Modal
   const handleOpenCreate = () => {
     const firstProd = productos[0]
-    const defaultPrice = firstProd?.precioComunidad || 135
+    const defaultPrice = firstProd?.precioMercado || 30
     setFormFecha(new Date().toISOString().split('T')[0])
     setFormCliente('')
     setFormProductoId(firstProd?.id || '')
     setFormCantidad('1')
-    setFormTipoPrecio('COMUNIDAD')
+    setFormTipoPrecio('MERCADO')
     setFormPrecioBase(defaultPrice.toString())
     setFormPrecioUnitario(defaultPrice.toString())
     setFormMontoPagado('0')
@@ -2217,13 +2206,9 @@ export function VentasClient({
                     <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold px-1.5 py-0">
                       Amigo
                     </Badge>
-                  ) : formTipoPrecio === 'MERCADO' ? (
+                  ) : (
                     <Badge variant="outline" className="bg-[#EFE5D8] text-[#944917] border-[#D4BEA7] text-[10px] font-bold px-1.5 py-0">
                       Mercado
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold px-1.5 py-0">
-                      Comunidad
                     </Badge>
                   )}
                 </div>
@@ -2303,7 +2288,6 @@ export function VentasClient({
                             const pack = Number(((promedioPackaging * pNum) / 100).toFixed(2))
                             if (formTipoPrecio === 'AMIGOS') setFormPrecioUnitario((selectedProduct.precioAmigos + pack).toFixed(2))
                             else if (formTipoPrecio === 'MERCADO') setFormPrecioUnitario((selectedProduct.precioMercado + pack).toFixed(2))
-                            else if (formTipoPrecio === 'COMUNIDAD') setFormPrecioUnitario((selectedProduct.precioComunidad + pack).toFixed(2))
                           }
                         }}
                         className="text-[#A36F4C] hover:underline text-[11px] font-bold flex items-center gap-1 cursor-pointer"
@@ -2326,7 +2310,6 @@ export function VentasClient({
                           if (selectedProduct && formTipoPrecio !== 'PERSONALIZADO') {
                             if (formTipoPrecio === 'AMIGOS') setFormPrecioUnitario((selectedProduct.precioAmigos + pack).toFixed(2))
                             else if (formTipoPrecio === 'MERCADO') setFormPrecioUnitario((selectedProduct.precioMercado + pack).toFixed(2))
-                            else if (formTipoPrecio === 'COMUNIDAD') setFormPrecioUnitario((selectedProduct.precioComunidad + pack).toFixed(2))
                           }
                         }}
                         placeholder={promedioPackaging.toFixed(2)}

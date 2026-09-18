@@ -38,6 +38,7 @@ enum TipoPrecio {
 
 model Inversion {
   id                  String             @id @default(uuid())
+  negocio             String             @default("3D")
   persona             String             @default("Víctor")
   categoria           CategoriaInversion
   subcategoria        String?
@@ -57,20 +58,26 @@ model Inversion {
 
 model Categoria {
   id          String   @id @default(uuid())
-  nombre      String   @unique
+  negocio     String   @default("3D")
+  nombre      String
   descripcion String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([nombre, negocio])
 }
 
 model TagInsumo {
   id          String   @id @default(uuid())
-  nombre      String   @unique
+  negocio     String   @default("3D")
+  nombre      String
   descripcion String?
   color       String?  @default("amber") // blue, emerald, purple, amber, pink, indigo
   categoria   String?  @default("INSUMO") // INSUMO, ACTIVO_FIJO, SERVICIO
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@unique([nombre, negocio])
 }
 
 model InventarioFilamento {
@@ -116,8 +123,9 @@ model ConsumibleTaller {
 
 model Producto {
   id               String       @id @default(uuid())
+  negocio          String       @default("3D")
   lineaCategoria   String
-  nombreModelo     String       @unique
+  nombreModelo     String
   costoBase        Decimal      @db.Decimal(10, 2)
   precioAmigos     Decimal      @db.Decimal(10, 2)
   precioMercado    Decimal      @db.Decimal(10, 2)
@@ -128,10 +136,13 @@ model Producto {
   itemPedidos      ItemPedido[]
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
+
+  @@unique([nombreModelo, negocio])
 }
 
 model Venta {
   id                     String               @id @default(uuid())
+  negocio                String               @default("3D")
   fecha                  DateTime             @default(now())
   cliente                String
   productoId             String
@@ -175,6 +186,7 @@ model PagoVenta {
 
 model Ingreso {
   id          String   @id @default(uuid())
+  negocio     String   @default("3D")
   fecha       DateTime @default(now())
   cliente     String
   concepto    String
@@ -188,6 +200,7 @@ model Ingreso {
 
 model CierreMes {
   id                       String   @id @default(uuid())
+  negocio                  String   @default("3D")
   mes                      Int      // 1-12 (ej. 8 para Agosto)
   anio                     Int      // ej. 2026
   nombrePeriodo            String   // "Agosto 2026"
@@ -225,11 +238,14 @@ model CierreMes {
   notas                    String?
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+
+  @@unique([mes, anio, negocio])
 }
 
 model Pedido {
   id                  String        @id @default(uuid())
-  codigo              String        @unique // Ej: "PED-001"
+  negocio             String        @default("3D")
+  codigo              String        // Ej: "PED-001" o "BG-001"
   fecha               DateTime      @default(now())
   cliente             String
   telefono            String?
@@ -250,6 +266,8 @@ model Pedido {
   
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
+
+  @@unique([codigo, negocio])
 }
 
 model ItemPedido {

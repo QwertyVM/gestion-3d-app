@@ -1,19 +1,24 @@
 'use server'
 
 import prisma from '@/lib/prisma'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
-export async function getNavLiveMetrics() {
+export async function getNavLiveMetrics(negocio?: TipoNegocio) {
   try {
+    const targetNegocio = negocio || await getActiveNegocioServer()
+
     const [pedidosPendientes, filamentosCriticos, itemsPedidos, ventasPendientes] = await Promise.all([
       prisma.pedido.count({
         where: {
+          negocio: targetNegocio,
           OR: [
             { estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] } },
             { saldoPendiente: { gt: 0 } }
           ]
         }
       }),
-      prisma.inventarioFilamento.count({
+      targetNegocio === '3D' ? prisma.inventarioFilamento.count({
         where: {
           activo: true,
           OR: [
@@ -21,10 +26,11 @@ export async function getNavLiveMetrics() {
             { alertaCritica: true }
           ]
         }
-      }),
+      }) : Promise.resolve(0),
       prisma.itemPedido.findMany({
         where: {
           pedido: {
+            negocio: targetNegocio,
             estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] }
           }
         },
@@ -32,6 +38,7 @@ export async function getNavLiveMetrics() {
       }),
       prisma.venta.findMany({
         where: {
+          negocio: targetNegocio,
           estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] }
         },
         select: { cantidad: true }
@@ -56,3 +63,4 @@ export async function getNavLiveMetrics() {
     }
   }
 }
+

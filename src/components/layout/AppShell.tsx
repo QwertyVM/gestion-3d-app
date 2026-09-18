@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
+import { useBusiness } from '@/context/BusinessContext'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -11,6 +12,7 @@ interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname()
+  const { config, is3D } = useBusiness()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // Auto-close mobile drawer on route change
@@ -31,10 +33,10 @@ export function AppShell({ children }: AppShellProps) {
     if (pathname === '/finanzas/egresos') return 'Registro de Egresos'
     if (pathname === '/finanzas/tags') return 'Tags & Categorías'
     if (pathname === '/catalogo/categorias') return 'Categorías'
-    if (pathname.startsWith('/catalogo')) return 'Catálogo de Productos'
+    if (pathname.startsWith('/catalogo')) return is3D ? 'Catálogo de Modelos' : 'Catálogo de Juegos'
     if (pathname === '/finanzas/proyecciones') return 'Presupuesto & Proyecciones'
     if (pathname === '/finanzas/cierres') return 'Cierres de Mes'
-    return 'NOVA 3D'
+    return config.name
   }
 
   return (
@@ -85,8 +87,14 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <div className="h-8 w-8 rounded-xl bg-[#A36F4C] text-[#FFECD4] flex items-center justify-center font-bold text-xs shadow-2xs">
-              N
+            <div
+              className={`h-8 px-2 rounded-xl flex items-center justify-center font-bold text-xs shadow-2xs ${
+                is3D
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-indigo-600 text-white'
+              }`}
+            >
+              {config.id}
             </div>
           </div>
         </header>

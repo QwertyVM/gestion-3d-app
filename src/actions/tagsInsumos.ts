@@ -2,6 +2,8 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { TipoNegocio } from '@/lib/business'
+import { getActiveNegocioServer } from '@/lib/business-server'
 
 function safeRevalidate() {
   try {
@@ -29,14 +31,20 @@ export interface TagInsumoItem {
   updatedAt: string
 }
 
-export async function getTagsInsumos(): Promise<TagInsumoItem[]> {
-  // 1. Obtener todos los tags registrados en TagInsumo
+export async function getTagsInsumos(negocio?: TipoNegocio): Promise<TagInsumoItem[]> {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+
+  // 1. Obtener todos los tags registrados en TagInsumo del negocio activo
   const [tags, inversiones] = await Promise.all([
     prisma.tagInsumo.findMany({
+      where: { negocio: targetNegocio },
       orderBy: { nombre: 'asc' }
     }),
     prisma.inversion.findMany({
-      where: { subcategoria: { not: null } },
+      where: {
+        negocio: targetNegocio,
+        subcategoria: { not: null }
+      },
       select: { subcategoria: true, costoTotal: true }
     })
   ])
@@ -69,16 +77,21 @@ export async function getTagsInsumos(): Promise<TagInsumoItem[]> {
 }
 
 export async function createTagInsumo(data: {
+  negocio?: TipoNegocio
   nombre: string
   descripcion?: string | null
   color?: string
   categoria?: CategoriaTag
 }) {
+  const targetNegocio = data.negocio || await getActiveNegocioServer()
   const nombreTrim = data.nombre.trim()
   if (!nombreTrim) throw new Error("El nombre del tag es obligatorio")
 
   const exists = await prisma.tagInsumo.findFirst({
-    where: { nombre: { equals: nombreTrim, mode: 'insensitive' } }
+    where: {
+      negocio: targetNegocio,
+      nombre: { equals: nombreTrim, mode: 'insensitive' }
+    }
   })
 
   if (exists) {
@@ -87,6 +100,7 @@ export async function createTagInsumo(data: {
 
   const created = await prisma.tagInsumo.create({
     data: {
+      negocio: targetNegocio,
       nombre: nombreTrim,
       descripcion: data.descripcion?.trim() || null,
       color: data.color || 'amber',
@@ -121,10 +135,11 @@ export async function updateTagInsumo(id: string, data: {
   const current = await prisma.tagInsumo.findUnique({ where: { id } })
   if (!current) throw new Error("Tag no encontrado")
 
-  // Si cambia el nombre, verificar que no esté duplicado
+  // Si cambia el nombre, verificar que no esté duplicado en el mismo negocio
   if (current.nombre.toLowerCase() !== nombreTrim.toLowerCase()) {
     const duplicate = await prisma.tagInsumo.findFirst({
       where: { 
+        negocio: current.negocio,
         nombre: { equals: nombreTrim, mode: 'insensitive' },
         id: { not: id }
       }
@@ -142,9 +157,12 @@ export async function updateTagInsumo(id: string, data: {
     }
   })
 
-  // Actualizar también los registros de inversiones asociadas
+  // Actualizar también los registros de inversiones asociadas del mismo negocio
   await prisma.inversion.updateMany({
-    where: { subcategoria: { equals: current.nombre, mode: 'insensitive' } },
+    where: {
+      negocio: current.negocio,
+      subcategoria: { equals: current.nombre, mode: 'insensitive' }
+    },
     data: { subcategoria: nombreTrim }
   })
 
@@ -165,9 +183,12 @@ export async function deleteTagInsumo(id: string) {
   const current = await prisma.tagInsumo.findUnique({ where: { id } })
   if (!current) throw new Error("Tag no encontrado")
 
-  // 1. Limpiar la referencia en las inversiones existentes
+  // 1. Limpiar la referencia en las inversiones existentes del mismo negocio
   await prisma.inversion.updateMany({
-    where: { subcategoria: { equals: current.nombre, mode: 'insensitive' } },
+    where: {
+      negocio: current.negocio,
+      subcategoria: { equals: current.nombre, mode: 'insensitive' }
+    },
     data: { subcategoria: null }
   })
 
@@ -176,3 +197,4 @@ export async function deleteTagInsumo(id: string) {
 
   safeRevalidate()
 }
+

@@ -23,6 +23,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getNavLiveMetrics } from '@/actions/nav'
+import { useBusiness } from '@/context/BusinessContext'
+import { BusinessSwitcher } from '@/components/layout/BusinessSwitcher'
 
 interface SidebarProps {
   isMobile?: boolean
@@ -31,6 +33,7 @@ interface SidebarProps {
 
 export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const { negocio, is3D, isBG, config } = useBusiness()
 
   // Dynamic live counters
   const [metrics, setMetrics] = useState<{ pedidosPendientes: number; filamentosCriticos: number; piezasTallerPendientes?: number }>({
@@ -52,13 +55,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const [finanzasOpen, setFinanzasOpen] = useState(true)
   const [catalogoOpen, setCatalogoOpen] = useState(true)
 
-  // Fetch live metrics on mount and when pathname changes
+  // Fetch live metrics on mount and when pathname or negocio changes
   useEffect(() => {
     let mounted = true
 
     const fetchMetrics = async () => {
       try {
-        const data = await getNavLiveMetrics()
+        const data = await getNavLiveMetrics(negocio)
         if (mounted) {
           setMetrics(data)
         }
@@ -74,7 +77,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       mounted = false
       clearInterval(interval)
     }
-  }, [pathname])
+  }, [pathname, negocio])
 
   const handleLinkClick = () => {
     if (isMobile && onClose) {
@@ -88,28 +91,18 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       isMobile ? 'w-full' : 'w-64'
     )}>
       {/* ========================================================================= */}
-      {/* 1. ENCABEZADO (BRAND HEADER)                                              */}
+      {/* 1. ENCABEZADO (BRAND HEADER / BUSINESS SWITCHER)                         */}
       {/* ========================================================================= */}
-      <div className="flex h-16 items-center justify-between px-5 border-b border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="h-8 w-8 bg-[#A36F4C] text-[#FFFFFF] rounded-xl flex items-center justify-center font-black text-sm shadow-xs shrink-0">
-            N
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-black text-[#241C15] tracking-tight leading-tight truncate">
-              NOVA 3D
-            </span>
-            <span className="text-[11px] text-[#75695D] font-medium leading-tight truncate">
-              Gestión de Taller
-            </span>
-          </div>
+      <div className="p-3 border-b border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0 flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <BusinessSwitcher />
         </div>
 
         {isMobile && onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8] transition-colors cursor-pointer"
+            className="p-2 rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8] border border-[#E2D9CC] transition-colors cursor-pointer shrink-0"
             title="Cerrar Menú"
           >
             <X className="h-4 w-4" />
@@ -133,30 +126,32 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
               : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
           )}
         >
-          <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboard ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
+          <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboard ? (is3D ? 'text-amber-600' : 'text-indigo-600') : 'text-[#75695D]')} />
           <span>Dashboard</span>
         </Link>
 
-        {/* TALLER DE PRODUCCIÓN */}
-        <Link
-          href="/taller"
-          onClick={handleLinkClick}
-          className={cn(
-            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
-            isTaller
-              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
-              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-          )}
-        >
-          <Hammer className={cn('h-4 w-4 shrink-0', isTaller ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
-          <span>Taller de Producción</span>
+        {/* TALLER DE PRODUCCIÓN (3D EXCLUSIVO) */}
+        {is3D && (
+          <Link
+            href="/taller"
+            onClick={handleLinkClick}
+            className={cn(
+              'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
+              isTaller
+                ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
+                : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+            )}
+          >
+            <Hammer className={cn('h-4 w-4 shrink-0', isTaller ? 'text-amber-600' : 'text-[#75695D]')} />
+            <span>Taller de Producción</span>
 
-          {(metrics.piezasTallerPendientes ?? 0) > 0 && (
-            <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F4] text-[#1E5E3A] border border-[#E2D9CC]">
-              {metrics.piezasTallerPendientes} pzas
-            </span>
-          )}
-        </Link>
+            {(metrics.piezasTallerPendientes ?? 0) > 0 && (
+              <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F4] text-[#1E5E3A] border border-[#E2D9CC]">
+                {metrics.piezasTallerPendientes} pzas
+              </span>
+            )}
+          </Link>
+        )}
 
         {/* PEDIDOS */}
         <Link
@@ -310,8 +305,8 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
             )}
           >
             <div className="flex items-center gap-2.5">
-              <Package className={cn('h-4 w-4 shrink-0', isCatalogoSection ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
-              <span>Catálogo & Taller</span>
+              <Package className={cn('h-4 w-4 shrink-0', isCatalogoSection ? (is3D ? 'text-amber-600' : 'text-indigo-600') : 'text-[#75695D]')} />
+              <span>{is3D ? 'Catálogo & Taller' : 'Catálogo & Stock'}</span>
             </div>
             <ChevronDown 
               className={cn(
@@ -334,7 +329,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 )}
               >
                 <PackageSearch className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
-                <span>Productos</span>
+                <span>{is3D ? 'Productos 3D' : 'Juegos de Mesa'}</span>
               </Link>
 
               <Link
@@ -351,47 +346,55 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Categorías</span>
               </Link>
 
-              <Link
-                href="/catalogo/inventario"
-                onClick={handleLinkClick}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
-                  pathname === '/catalogo/inventario' || pathname === '/inventario'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-                )}
-              >
-                <CircleDot className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
-                <span>Inventario Filamentos</span>
+              {is3D && (
+                <Link
+                  href="/catalogo/inventario"
+                  onClick={handleLinkClick}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                    pathname === '/catalogo/inventario' || pathname === '/inventario'
+                      ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                      : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                  )}
+                >
+                  <CircleDot className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                  <span>Inventario Filamentos</span>
 
-                {metrics.filamentosCriticos > 0 && (
-                  <span 
-                    className="ml-auto text-[10px] font-mono font-bold text-[#854D0E] bg-[#FEF3C7] border border-[#FDE68A] px-1.5 py-0.5 rounded-md"
-                    title={`${metrics.filamentosCriticos} bobinas críticas`}
-                  >
-                    {metrics.filamentosCriticos}
-                  </span>
-                )}
-              </Link>
+                  {metrics.filamentosCriticos > 0 && (
+                    <span 
+                      className="ml-auto text-[10px] font-mono font-bold text-[#854D0E] bg-[#FEF3C7] border border-[#FDE68A] px-1.5 py-0.5 rounded-md"
+                      title={`${metrics.filamentosCriticos} bobinas críticas`}
+                    >
+                      {metrics.filamentosCriticos}
+                    </span>
+                  )}
+                </Link>
+              )}
             </div>
           )}
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. FOOTER DEL TALLER                                                      */}
+      {/* 3. FOOTER DEL NEGOCIO                                                     */}
       {/* ========================================================================= */}
       <div className="mt-auto p-3 border-t border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0">
         <div className="rounded-xl border border-[#E2D9CC] p-2.5 flex items-center gap-2.5 bg-white shadow-xs">
-          <div className="h-7 w-7 bg-[#241C15] text-white rounded-lg flex items-center justify-center font-black text-xs shrink-0">
-            N
+          <div
+            className={`h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
+              is3D
+                ? 'bg-amber-600 text-white'
+                : 'bg-indigo-600 text-white'
+            }`}
+          >
+            {is3D ? '3D' : 'BG'}
           </div>
           <div className="flex-1 min-w-0">
             <span className="font-bold text-xs text-[#241C15] truncate block leading-tight">
-              NOVA Workshop
+              {config.name}
             </span>
             <span className="text-[10px] text-[#75695D] truncate block leading-tight">
-              Taller Activo
+              {config.badge} • Activo
             </span>
           </div>
           <div className="w-2 h-2 rounded-full bg-[#1E5E3A] shrink-0" title="En línea" />
