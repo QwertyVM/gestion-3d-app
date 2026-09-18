@@ -48,6 +48,7 @@ import {
 import { EstadoPedido, TipoPrecio } from '@prisma/client'
 import { createPedido, updateEstadoPedido, updatePedido, addPagoPedido, deletePedido } from '@/actions/pedidos'
 import { formatDate } from '@/lib/utils'
+import { MultiColorPicker } from '@/components/ui/MultiColorPicker'
 
 export interface ItemPedidoView {
   id: string
@@ -56,6 +57,8 @@ export interface ItemPedidoView {
   nombreProductoSnapshot: string
   costoBaseSnapshot: number
   colorFilamentoId: string | null
+  coloresIds?: string[]
+  colores?: FilamentoOption[]
   personalizacion: string | null
   cantidad: number
   tipoPrecio: TipoPrecio
@@ -78,11 +81,11 @@ export interface ItemPedidoView {
   colorFilamento?: {
     id: string
     nombreColor: string
-    numeroBobina: number
-    codigoHex: string
+    numeroBobina?: number | null
+    codigoHex?: string | null
     tipoMaterial: string
-    marca: string
-    stockGramos: number
+    marca?: string | null
+    stockGramos?: number | null
     stockBobinas: number
   } | null
 }
@@ -154,6 +157,7 @@ interface FormItemState {
   id: string
   productoId: string
   colorFilamentoId: string
+  coloresIds: string[]
   personalizacion: string
   cantidad: number | string
   tipoPrecio: TipoPrecio
@@ -261,6 +265,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         id: 'item-1',
         productoId: defaultProd ? defaultProd.id : '',
         colorFilamentoId: defaultFilId,
+        coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
@@ -286,6 +291,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         productoId: defaultProd ? defaultProd.id : '',
         colorFilamentoId: defaultFilId,
+        coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
@@ -384,6 +390,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         id: 'item-1',
         productoId: defaultProd ? defaultProd.id : '',
         colorFilamentoId: defaultFilId,
+        coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
         tipoPrecio: 'COMUNIDAD',
@@ -427,7 +434,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         descontarStock: formDescontarStock,
         items: formItems.map(it => ({
           productoId: it.productoId,
-          colorFilamentoId: it.colorFilamentoId || undefined,
+          colorFilamentoId: it.coloresIds?.[0] || it.colorFilamentoId || undefined,
+          coloresIds: it.coloresIds || [],
           personalizacion: it.personalizacion.trim() || undefined,
           cantidad: Number(it.cantidad) || 1,
           tipoPrecio: it.tipoPrecio,
@@ -466,18 +474,24 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
     setFormNotas(p.notas || '')
     setFormCostoEnvio(p.costoEnvio ? p.costoEnvio.toString() : '')
     setEditEstado(p.estado)
-    setFormItems(p.items.map((it, idx) => ({
-      id: it.id || `edit-item-${idx}`,
-      productoId: it.productoId,
-      colorFilamentoId: it.colorFilamentoId || '',
-      personalizacion: it.personalizacion || '',
-      cantidad: it.cantidad,
-      tipoPrecio: it.tipoPrecio,
-      precioUnitario: it.precioUnitario !== undefined && it.precioUnitario !== null ? it.precioUnitario : '',
-      costoPackaging: it.costoPackaging ? it.costoPackaging : '',
-      porcentajeAdicional: it.porcentajeAdicional || 0,
-      gramosConsumidos: it.gramosConsumidos || 0
-    })))
+    setFormItems(p.items.map((it, idx) => {
+      const rawCols = it.coloresIds && it.coloresIds.length > 0
+        ? it.coloresIds
+        : (it.colorFilamentoId ? [it.colorFilamentoId] : [])
+      return {
+        id: it.id || `edit-item-${idx}`,
+        productoId: it.productoId,
+        colorFilamentoId: it.colorFilamentoId || rawCols[0] || '',
+        coloresIds: rawCols,
+        personalizacion: it.personalizacion || '',
+        cantidad: it.cantidad,
+        tipoPrecio: it.tipoPrecio,
+        precioUnitario: it.precioUnitario !== undefined && it.precioUnitario !== null ? it.precioUnitario : '',
+        costoPackaging: it.costoPackaging ? it.costoPackaging : '',
+        porcentajeAdicional: it.porcentajeAdicional || 0,
+        gramosConsumidos: it.gramosConsumidos || 0
+      }
+    }))
     setIsEditModalOpen(true)
   }
 
@@ -507,7 +521,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         costoEnvio: Number(formCostoEnvio) || 0,
         items: formItems.map(it => ({
           productoId: it.productoId,
-          colorFilamentoId: it.colorFilamentoId || undefined,
+          colorFilamentoId: it.coloresIds?.[0] || it.colorFilamentoId || undefined,
+          coloresIds: it.coloresIds || [],
           personalizacion: it.personalizacion.trim() || undefined,
           cantidad: Number(it.cantidad) || 1,
           tipoPrecio: it.tipoPrecio,
@@ -613,7 +628,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   // =========================================================================
   const copyWhatsAppTicket = (p: PedidoView) => {
     const itemsText = p.items.map((it, idx) => {
-      const colorText = it.colorFilamento ? ` (Color: ${it.colorFilamento.nombreColor})` : ''
+      const itemColores = (it.colores && it.colores.length > 0)
+        ? it.colores
+        : (it.colorFilamento ? [it.colorFilamento] : [])
+      const colorText = itemColores.length > 1
+        ? ` (Colores: ${itemColores.map(c => c.nombreColor).join(' + ')})`
+        : itemColores.length === 1
+        ? ` (Color: ${itemColores[0].nombreColor})`
+        : ''
       const customText = it.personalizacion ? ` [Nota: ${it.personalizacion}]` : ''
       return `  ${idx + 1}. *${it.nombreProductoSnapshot}* x${it.cantidad}${colorText}${customText} — S/ ${it.subtotal.toFixed(2)}`
     }).join('\n')
@@ -1050,6 +1072,36 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             <div className="text-xs text-[#75695D] truncate max-w-[240px]">
                               {p.items.map(it => `${it.nombreProductoSnapshot} (x${it.cantidad})`).join(', ')}
                             </div>
+                            {/* Badges de Colores por Ítem sin desbordamiento */}
+                            <div className="flex flex-wrap items-center gap-1 pt-0.5 max-w-[280px]">
+                              {p.items.map((it, itIdx) => {
+                                const itemColores = (it.colores && it.colores.length > 0)
+                                  ? it.colores
+                                  : (it.colorFilamento ? [it.colorFilamento] : [])
+                                if (itemColores.length === 0) return null
+
+                                return (
+                                  <div
+                                    key={itIdx}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] text-[10px] text-[#241C15] shadow-2xs"
+                                    title={`Colores de ${it.nombreProductoSnapshot}: ${itemColores.map(c => c.nombreColor).join(', ')}`}
+                                  >
+                                    <div className="flex -space-x-1 shrink-0">
+                                      {itemColores.map((c, cIdx) => (
+                                        <span
+                                          key={cIdx}
+                                          className="w-2 h-2 rounded-full border border-black/20 shadow-2xs"
+                                          style={{ backgroundColor: c.codigoHex || '#1E1E1E' }}
+                                        />
+                                      ))}
+                                    </div>
+                                    <span className="truncate max-w-[90px] font-medium text-[#633E20]">
+                                      {itemColores.map(c => c.nombreColor).join(', ')}
+                                    </span>
+                                  </div>
+                                )
+                              })}
+                            </div>
                           </div>
                         </TableCell>
 
@@ -1360,34 +1412,16 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-[11px] text-[#241C15] font-bold">Bobina / Color de Filamento</Label>
-                              {(() => {
-                                const selectedFil = filamentos.find(f => f.id === item.colorFilamentoId)
-                                if (!selectedFil) return <span className="text-[10px] text-[#75695D] italic">Sin asignar</span>
-                                return (
-                                  <span className="flex items-center gap-1 text-[10px] font-bold text-[#633E20]">
-                                    <span
-                                      className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
-                                      style={{ backgroundColor: selectedFil.codigoHex || '#1E1E1E' }}
-                                    />
-                                    <span className="truncate max-w-[110px]">{selectedFil.nombreColor}</span>
-                                  </span>
-                                )
-                              })()}
-                            </div>
-                            <select
-                              value={item.colorFilamentoId}
-                              onChange={(e) => updateItem(item.id, { colorFilamentoId: e.target.value })}
-                              className="w-full h-9 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] px-3 text-xs text-[#241C15] font-medium"
-                            >
-                              <option value="">(Sin asignar / Varios colores)</option>
-                              {filamentos.map(f => (
-                                <option key={f.id} value={f.id}>
-                                  {f.nombreColor} ({f.tipoMaterial} - {f.marca || 'PLA'}) • {f.stockGramos ? `${f.stockGramos}g` : 'Disponible'}
-                                </option>
-                              ))}
-                            </select>
+                            <MultiColorPicker
+                              selectedColorIds={item.coloresIds || []}
+                              onChange={(cols) => updateItem(item.id, { 
+                                coloresIds: cols, 
+                                colorFilamentoId: cols[0] || '' 
+                              })}
+                              filamentos={filamentos}
+                              label="Color(es) de Filamento"
+                              placeholder="Sin asignar (Multicolor / Varios colores)"
+                            />
                           </div>
                         </div>
 
@@ -1713,17 +1747,32 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             )}
                           </TableCell>
                           <TableCell>
-                            {it.colorFilamento ? (
-                              <span className="flex items-center gap-1.5">
-                                <span
-                                  className="w-3 h-3 rounded-full border border-black/20"
-                                  style={{ backgroundColor: it.colorFilamento.codigoHex || '#1E1E1E' }}
-                                />
-                                <span>{it.colorFilamento.nombreColor}</span>
-                              </span>
-                            ) : (
-                              <span className="text-[#75695D]">—</span>
-                            )}
+                            {(() => {
+                              const itemColores = (it.colores && it.colores.length > 0)
+                                ? it.colores
+                                : (it.colorFilamento ? [it.colorFilamento] : [])
+
+                              if (itemColores.length === 0) {
+                                return <span className="text-[#A89F91] italic text-xs">Sin asignar</span>
+                              }
+
+                              return (
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {itemColores.map((col, cIdx) => (
+                                    <span
+                                      key={cIdx}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] text-xs font-semibold text-[#241C15]"
+                                    >
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
+                                        style={{ backgroundColor: col.codigoHex || '#1E1E1E' }}
+                                      />
+                                      <span>{col.nombreColor}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )
+                            })()}
                           </TableCell>
                           <TableCell className="text-center font-bold">{it.cantidad}</TableCell>
                           <TableCell className="text-right font-mono">{formatCurrency(it.precioUnitario)}</TableCell>
@@ -2095,34 +2144,16 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-[11px] text-[#241C15] font-bold">Bobina / Color de Filamento</Label>
-                              {(() => {
-                                const selectedFil = filamentos.find(f => f.id === item.colorFilamentoId)
-                                if (!selectedFil) return <span className="text-[10px] text-[#75695D] italic">Sin asignar</span>
-                                return (
-                                  <span className="flex items-center gap-1 text-[10px] font-bold text-[#633E20]">
-                                    <span
-                                      className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
-                                      style={{ backgroundColor: selectedFil.codigoHex || '#1E1E1E' }}
-                                    />
-                                    <span className="truncate max-w-[110px]">{selectedFil.nombreColor}</span>
-                                  </span>
-                                )
-                              })()}
-                            </div>
-                            <select
-                              value={item.colorFilamentoId}
-                              onChange={(e) => updateItem(item.id, { colorFilamentoId: e.target.value })}
-                              className="w-full h-9 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] px-3 text-xs text-[#241C15] font-medium"
-                            >
-                              <option value="">(Sin asignar / Varios colores)</option>
-                              {filamentos.map(f => (
-                                <option key={f.id} value={f.id}>
-                                  {f.nombreColor} ({f.tipoMaterial} - {f.marca || 'PLA'}) • {f.stockGramos ? `${f.stockGramos}g` : 'Disponible'}
-                                </option>
-                              ))}
-                            </select>
+                            <MultiColorPicker
+                              selectedColorIds={item.coloresIds || []}
+                              onChange={(cols) => updateItem(item.id, { 
+                                coloresIds: cols, 
+                                colorFilamentoId: cols[0] || '' 
+                              })}
+                              filamentos={filamentos}
+                              label="Color(es) de Filamento"
+                              placeholder="Sin asignar (Multicolor / Varios colores)"
+                            />
                           </div>
                         </div>
 

@@ -28,6 +28,7 @@ function safeRevalidate() {
 export interface ItemPedidoInput {
   productoId: string
   colorFilamentoId?: string | null
+  coloresIds?: string[]
   personalizacion?: string | null
   cantidad: number
   tipoPrecio: TipoPrecio
@@ -53,37 +54,42 @@ export interface CreatePedidoInput {
   descontarStock?: boolean
 }
 
-function serializePedido(p: any) {
-  const items = Array.isArray(p.items) ? p.items.map((it: any) => ({
-    id: it.id,
-    pedidoId: it.pedidoId,
-    productoId: it.productoId,
-    nombreProductoSnapshot: it.nombreProductoSnapshot || it.producto?.nombreModelo || '',
-    costoBaseSnapshot: it.costoBaseSnapshot != null ? Number(it.costoBaseSnapshot) : (it.producto ? Number(it.producto.costoBase) : 0),
-    colorFilamentoId: it.colorFilamentoId || null,
-    personalizacion: it.personalizacion || null,
-    cantidad: Number(it.cantidad),
-    tipoPrecio: it.tipoPrecio,
-    precioUnitario: Number(it.precioUnitario),
-    costoPackaging: it.costoPackaging != null ? Number(it.costoPackaging) : 0,
-    porcentajeAdicional: it.porcentajeAdicional != null ? Number(it.porcentajeAdicional) : 0,
-    gramosConsumidos: it.gramosConsumidos != null ? Number(it.gramosConsumidos) : 0,
-    subtotal: Number(it.subtotal),
-    estado: (it.estado || p.estado) as EstadoPedido,
-    createdAt: it.createdAt instanceof Date ? it.createdAt.toISOString() : String(it.createdAt),
-    updatedAt: it.updatedAt instanceof Date ? it.updatedAt.toISOString() : String(it.updatedAt),
-    producto: it.producto ? {
-      id: it.producto.id,
-      lineaCategoria: it.producto.lineaCategoria,
-      nombreModelo: it.producto.nombreModelo,
-      costoBase: Number(it.producto.costoBase),
-      precioAmigos: Number(it.producto.precioAmigos),
-      precioMercado: Number(it.producto.precioMercado),
-      precioComunidad: Number(it.producto.precioComunidad),
-      pesoGramos: it.producto.pesoGramos != null ? Number(it.producto.pesoGramos) : 0,
-      activo: it.producto.activo
-    } : null,
-    colorFilamento: it.colorFilamento ? {
+function serializePedido(p: any, filamentosMap?: Map<string, any>) {
+  const items = Array.isArray(p.items) ? p.items.map((it: any) => {
+    const rawColoresIds: string[] = Array.isArray(it.coloresIds) && it.coloresIds.length > 0
+      ? it.coloresIds
+      : (it.colorFilamentoId ? [it.colorFilamentoId] : [])
+
+    const resolvedColores = rawColoresIds.map(id => {
+      if (filamentosMap && filamentosMap.has(id)) {
+        const f = filamentosMap.get(id)
+        return {
+          id: f.id,
+          nombreColor: f.nombreColor,
+          numeroBobina: f.numeroBobina || 1,
+          codigoHex: f.codigoHex || '#1E1E1E',
+          tipoMaterial: f.tipoMaterial,
+          marca: f.marca || 'Genérica',
+          stockGramos: f.stockGramos ? Number(f.stockGramos) : 0,
+          stockBobinas: Number(f.stockBobinas || 1)
+        }
+      }
+      if (it.colorFilamento && it.colorFilamento.id === id) {
+        return {
+          id: it.colorFilamento.id,
+          nombreColor: it.colorFilamento.nombreColor,
+          numeroBobina: it.colorFilamento.numeroBobina || 1,
+          codigoHex: it.colorFilamento.codigoHex || '#1E1E1E',
+          tipoMaterial: it.colorFilamento.tipoMaterial,
+          marca: it.colorFilamento.marca || 'Genérica',
+          stockGramos: it.colorFilamento.stockGramos ? Number(it.colorFilamento.stockGramos) : 0,
+          stockBobinas: Number(it.colorFilamento.stockBobinas || 1)
+        }
+      }
+      return null
+    }).filter(Boolean)
+
+    const primaryColorFilamento = resolvedColores[0] || (it.colorFilamento ? {
       id: it.colorFilamento.id,
       nombreColor: it.colorFilamento.nombreColor,
       numeroBobina: it.colorFilamento.numeroBobina || 1,
@@ -91,9 +97,43 @@ function serializePedido(p: any) {
       tipoMaterial: it.colorFilamento.tipoMaterial,
       marca: it.colorFilamento.marca || 'Genérica',
       stockGramos: it.colorFilamento.stockGramos ? Number(it.colorFilamento.stockGramos) : 0,
-      stockBobinas: Number(it.colorFilamento.stockBobinas)
-    } : null
-  })) : []
+      stockBobinas: Number(it.colorFilamento.stockBobinas || 1)
+    } : null)
+
+    return {
+      id: it.id,
+      pedidoId: it.pedidoId,
+      productoId: it.productoId,
+      nombreProductoSnapshot: it.nombreProductoSnapshot || it.producto?.nombreModelo || '',
+      costoBaseSnapshot: it.costoBaseSnapshot != null ? Number(it.costoBaseSnapshot) : (it.producto ? Number(it.producto.costoBase) : 0),
+      colorFilamentoId: it.colorFilamentoId || rawColoresIds[0] || null,
+      coloresIds: rawColoresIds,
+      colores: resolvedColores.length > 0 ? resolvedColores : (primaryColorFilamento ? [primaryColorFilamento] : []),
+      personalizacion: it.personalizacion || null,
+      cantidad: Number(it.cantidad),
+      tipoPrecio: it.tipoPrecio,
+      precioUnitario: Number(it.precioUnitario),
+      costoPackaging: it.costoPackaging != null ? Number(it.costoPackaging) : 0,
+      porcentajeAdicional: it.porcentajeAdicional != null ? Number(it.porcentajeAdicional) : 0,
+      gramosConsumidos: it.gramosConsumidos != null ? Number(it.gramosConsumidos) : 0,
+      subtotal: Number(it.subtotal),
+      estado: (it.estado || p.estado) as EstadoPedido,
+      createdAt: it.createdAt instanceof Date ? it.createdAt.toISOString() : String(it.createdAt),
+      updatedAt: it.updatedAt instanceof Date ? it.updatedAt.toISOString() : String(it.updatedAt),
+      producto: it.producto ? {
+        id: it.producto.id,
+        lineaCategoria: it.producto.lineaCategoria,
+        nombreModelo: it.producto.nombreModelo,
+        costoBase: Number(it.producto.costoBase),
+        precioAmigos: Number(it.producto.precioAmigos),
+        precioMercado: Number(it.producto.precioMercado),
+        precioComunidad: Number(it.producto.precioComunidad),
+        pesoGramos: it.producto.pesoGramos != null ? Number(it.producto.pesoGramos) : 0,
+        activo: it.producto.activo
+      } : null,
+      colorFilamento: primaryColorFilamento
+    }
+  }) : []
 
   const pagos = Array.isArray(p.pagos) ? p.pagos.map((pg: any) => ({
     id: pg.id,
@@ -133,22 +173,26 @@ function serializePedido(p: any) {
 
 export async function getPedidos() {
   try {
-    const pedidos = await prisma.pedido.findMany({
-      include: {
-        items: {
-          include: {
-            producto: true,
-            colorFilamento: true
+    const [pedidos, allFilamentos] = await Promise.all([
+      prisma.pedido.findMany({
+        include: {
+          items: {
+            include: {
+              producto: true,
+              colorFilamento: true
+            }
+          },
+          pagos: {
+            orderBy: { fecha: 'asc' }
           }
         },
-        pagos: {
-          orderBy: { fecha: 'asc' }
-        }
-      },
-      orderBy: { fecha: 'desc' }
-    })
+        orderBy: { fecha: 'desc' }
+      }),
+      prisma.inventarioFilamento.findMany()
+    ])
 
-    return pedidos.map(serializePedido)
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+    return pedidos.map(p => serializePedido(p, filMap))
   } catch (error) {
     console.error('Error fetching pedidos:', error)
     return []
@@ -157,22 +201,27 @@ export async function getPedidos() {
 
 export async function getPedidoById(id: string) {
   try {
-    const pedido = await prisma.pedido.findUnique({
-      where: { id },
-      include: {
-        items: {
-          include: {
-            producto: true,
-            colorFilamento: true
+    const [pedido, allFilamentos] = await Promise.all([
+      prisma.pedido.findUnique({
+        where: { id },
+        include: {
+          items: {
+            include: {
+              producto: true,
+              colorFilamento: true
+            }
+          },
+          pagos: {
+            orderBy: { fecha: 'asc' }
           }
-        },
-        pagos: {
-          orderBy: { fecha: 'asc' }
         }
-      }
-    })
+      }),
+      prisma.inventarioFilamento.findMany()
+    ])
 
-    return pedido ? serializePedido(pedido) : null
+    if (!pedido) return null
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+    return serializePedido(pedido, filMap)
   } catch (error) {
     console.error(`Error fetching pedido ${id}:`, error)
     return null
@@ -228,11 +277,16 @@ export async function createPedido(data: CreatePedidoInput) {
       const itemSubtotal = Number(((unitPrice + packCost) * qty).toFixed(2))
       subtotalCalculado += itemSubtotal
 
+      const rawColores = Array.isArray(item.coloresIds) && item.coloresIds.length > 0
+        ? item.coloresIds
+        : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
+
       return {
         productoId: item.productoId,
         nombreProductoSnapshot: prod?.nombreModelo || 'Modelo 3D',
         costoBaseSnapshot: prod ? Number(prod.costoBase) : 0,
-        colorFilamentoId: item.colorFilamentoId || null,
+        colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
+        coloresIds: rawColores,
         personalizacion: item.personalizacion?.trim() || null,
         cantidad: qty,
         tipoPrecio: item.tipoPrecio || 'COMUNIDAD',
@@ -306,10 +360,19 @@ export async function createPedido(data: CreatePedidoInput) {
       return fullPedido || p
     })
 
-    // 4. Stock deduction if requested
+    // 4. Stock deduction if requested (split evenly across all selected colors)
     if (data.descontarStock) {
       for (const item of processedItems) {
-        if (item.colorFilamentoId && item.gramosConsumidos > 0) {
+        if (item.coloresIds && item.coloresIds.length > 0 && item.gramosConsumidos > 0) {
+          const splitGramos = Number((item.gramosConsumidos / item.coloresIds.length).toFixed(1))
+          for (const cId of item.coloresIds) {
+            try {
+              await ajustarStockBobina(cId, splitGramos)
+            } catch (stkErr) {
+              console.warn(`No se pudo descontar stock de la bobina ${cId}:`, stkErr)
+            }
+          }
+        } else if (item.colorFilamentoId && item.gramosConsumidos > 0) {
           try {
             await ajustarStockBobina(item.colorFilamentoId, item.gramosConsumidos)
           } catch (stkErr) {
@@ -319,8 +382,11 @@ export async function createPedido(data: CreatePedidoInput) {
       }
     }
 
+    const allFilamentos = await prisma.inventarioFilamento.findMany()
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+
     safeRevalidate()
-    return { success: true, pedido: serializePedido(nuevoPedido) }
+    return { success: true, pedido: serializePedido(nuevoPedido, filMap) }
   } catch (error: any) {
     console.error('Error creating pedido:', error)
     return { success: false, error: error.message || 'Error al registrar pedido' }
@@ -491,12 +557,17 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
       const itemSubtotal = Number(((unitPrice + packCost) * qty).toFixed(2))
       subtotalCalculado += itemSubtotal
 
+      const rawColores = Array.isArray(item.coloresIds) && item.coloresIds.length > 0
+        ? item.coloresIds
+        : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
+
       return {
         pedidoId: id,
         productoId: item.productoId,
         nombreProductoSnapshot: prod?.nombreModelo || 'Modelo 3D',
         costoBaseSnapshot: prod ? Number(prod.costoBase) : 0,
-        colorFilamentoId: item.colorFilamentoId || null,
+        colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
+        coloresIds: rawColores,
         personalizacion: item.personalizacion?.trim() || null,
         cantidad: qty,
         tipoPrecio: item.tipoPrecio || 'COMUNIDAD',
@@ -555,8 +626,11 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
       return p
     })
 
+    const allFilamentos = await prisma.inventarioFilamento.findMany()
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+
     safeRevalidate()
-    return { success: true, pedido: serializePedido(updated) }
+    return { success: true, pedido: serializePedido(updated, filMap) }
   } catch (error: any) {
     console.error('Error updating pedido:', error)
     return { success: false, error: error.message || 'Error al actualizar pedido' }

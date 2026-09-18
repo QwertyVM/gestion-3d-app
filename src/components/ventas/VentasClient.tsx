@@ -51,6 +51,7 @@ import { EstadoVenta, TipoPrecio } from '@prisma/client'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
+import { MultiColorPicker } from '@/components/ui/MultiColorPicker'
 
 export interface FilamentoOption {
   id: string
@@ -85,6 +86,8 @@ export interface VentaItem {
   costoBaseSnapshot?: number
   nombreProductoSnapshot?: string
   colorFilamentoId?: string | null
+  coloresIds?: string[]
+  colores?: FilamentoOption[]
   personalizacion?: string | null
   gramosConsumidos?: number
   colorFilamento?: {
@@ -198,6 +201,7 @@ export function VentasClient({
   const [editDestinoEnvio, setEditDestinoEnvio] = useState('')
   const [editDiaEntrega, setEditDiaEntrega] = useState('')
   const [editColorFilamentoId, setEditColorFilamentoId] = useState('')
+  const [editColoresIds, setEditColoresIds] = useState<string[]>([])
   const [editPersonalizacion, setEditPersonalizacion] = useState('')
   const [editCostoPackaging, setEditCostoPackaging] = useState('0')
   const [editPorcentajeAdicional, setEditPorcentajeAdicional] = useState('0')
@@ -234,6 +238,7 @@ export function VentasClient({
   // Personalización & Filament Color States
   const [incluirPersonalizacion, setIncluirPersonalizacion] = useState(false)
   const [formColorFilamentoId, setFormColorFilamentoId] = useState('')
+  const [formColoresIds, setFormColoresIds] = useState<string[]>([])
   const [formPersonalizacion, setFormPersonalizacion] = useState('')
   const [formGramosConsumidos, setFormGramosConsumidos] = useState('100')
 
@@ -555,7 +560,11 @@ export function VentasClient({
     setEditCanalVenta(v.canalVenta || 'Instagram')
     setEditDestinoEnvio(v.destinoEnvio || '')
     setEditDiaEntrega(v.diaEntregaPrometida || '')
-    setEditColorFilamentoId(v.colorFilamentoId || '')
+    const rawCols = v.coloresIds && v.coloresIds.length > 0
+      ? v.coloresIds
+      : (v.colorFilamentoId ? [v.colorFilamentoId] : [])
+    setEditColorFilamentoId(v.colorFilamentoId || rawCols[0] || '')
+    setEditColoresIds(rawCols)
     setEditPersonalizacion(v.personalizacion || '')
     setEditCostoPackaging((v.costoPackaging || 0).toString())
     setEditPorcentajeAdicional((v.porcentajeAdicional || 0).toString())
@@ -590,7 +599,8 @@ export function VentasClient({
         diaEntregaPrometida: editDiaEntrega.trim() || undefined,
         destinoEnvio: editDestinoEnvio.trim() || undefined,
         canalVenta: editCanalVenta.trim() || undefined,
-        colorFilamentoId: editColorFilamentoId ? editColorFilamentoId : null,
+        colorFilamentoId: editColoresIds[0] || (editColorFilamentoId ? editColorFilamentoId : null),
+        coloresIds: editColoresIds,
         personalizacion: editPersonalizacion.trim() ? editPersonalizacion.trim() : null,
         gramosConsumidos: pesoTotalEstimado,
         costoPackaging: parseFloat(editCostoPackaging) || 0,
@@ -838,6 +848,7 @@ export function VentasClient({
     setPorcentajePackaging('10')
     setIncluirPersonalizacion(false)
     setFormColorFilamentoId('')
+    setFormColoresIds([])
     setFormPersonalizacion('')
     setOpenCreateModal(true)
   }
@@ -872,7 +883,8 @@ export function VentasClient({
         fecha: formFecha || undefined,
         cliente: formCliente.trim(),
         productoId: formProductoId,
-        colorFilamentoId: formColorFilamentoId ? formColorFilamentoId : null,
+        colorFilamentoId: formColoresIds[0] || (formColorFilamentoId ? formColorFilamentoId : null),
+        coloresIds: formColoresIds,
         personalizacion: formPersonalizacion.trim() ? formPersonalizacion.trim() : null,
         gramosConsumidos: pesoTotalEstimado,
         cantidad: cant,
@@ -1153,30 +1165,32 @@ export function VentasClient({
                     </div>
 
                     <div className="flex items-center justify-between gap-2 text-[11px] text-[#75695D] flex-wrap">
-                      {v.colorFilamento ? (() => {
-                        const filamentoEnTaller = filamentos.find(f => f.id === v.colorFilamentoId || f.nombreColor === v.colorFilamento?.nombreColor)
-                        const stockGramosActual = filamentoEnTaller?.stockGramos ?? v.colorFilamento?.stockGramos ?? 1000
-                        const esBajoStock = stockGramosActual < 300 || Boolean(filamentoEnTaller?.alertaCritica)
+                      {(() => {
+                        const itemColores = (v.colores && v.colores.length > 0)
+                          ? v.colores
+                          : (v.colorFilamento ? [v.colorFilamento] : [])
+
+                        if (itemColores.length === 0) {
+                          return <span className="text-[10px] text-[#75695D] italic">Sin filamento específico</span>
+                        }
 
                         return (
-                          <div className="inline-flex items-center gap-1.5">
-                            <span 
-                              className="h-2.5 w-2.5 rounded-full border border-black/20 inline-block flex-shrink-0"
-                              style={{ backgroundColor: v.colorFilamento.codigoHex }}
-                            />
-                            <span className="font-semibold text-[#241C15] text-[11px]">
-                              {v.colorFilamento.nombreColor}
-                            </span>
-                            {esBajoStock && (
-                              <span className="text-[9px] font-bold text-[#854D0E] bg-[#FEF08A] px-1 rounded border border-[#FACC15]">
-                                ⚠️ {stockGramosActual}g
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {itemColores.map((col, cIdx) => (
+                              <span
+                                key={cIdx}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] text-xs font-semibold text-[#241C15]"
+                              >
+                                <span 
+                                  className="h-2.5 w-2.5 rounded-full border border-black/20 inline-block flex-shrink-0"
+                                  style={{ backgroundColor: col.codigoHex || '#1E1E1E' }}
+                                />
+                                <span>{col.nombreColor}</span>
                               </span>
-                            )}
+                            ))}
                           </div>
                         )
-                      })() : (
-                        <span className="text-[10px] text-[#75695D] italic">Sin filamento específico</span>
-                      )}
+                      })()}
 
                       <span className="text-[10px] text-[#75695D] font-mono">
                         {v.tipoPrecio}
@@ -1307,34 +1321,31 @@ export function VentasClient({
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-[#241C15]">{v.producto.nombreModelo}</span>
                         
-                        {/* Filamento asignado con alerta en amarillo si tiene bajo stock (< 300g) */}
-                        {v.colorFilamento && (() => {
-                          const filamentoEnTaller = filamentos.find(f => f.id === v.colorFilamentoId || f.nombreColor === v.colorFilamento?.nombreColor)
-                          const stockGramosActual = filamentoEnTaller?.stockGramos ?? v.colorFilamento?.stockGramos ?? 1000
-                          const esBajoStock = stockGramosActual < 300 || Boolean(filamentoEnTaller?.alertaCritica)
+                        {/* Filamentos asignados con swatches */}
+                        {(() => {
+                          const itemColores = (v.colores && v.colores.length > 0)
+                            ? v.colores
+                            : (v.colorFilamento ? [v.colorFilamento] : [])
+
+                          if (itemColores.length === 0) return null
 
                           return (
-                            <div 
-                              className={`inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-md shadow-2xs self-start border transition-colors ${
-                                esBajoStock
-                                  ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047]'
-                                  : 'bg-[#FAF8F5] text-[#241C15] border-[#E2D9CC]'
-                              }`}
-                              title={esBajoStock ? `⚠️ Bobina con stock bajo: ${stockGramosActual}g restantes` : `Color: ${v.colorFilamento.nombreColor}`}
-                            >
-                              <span 
-                                className="h-2.5 w-2.5 rounded-full border border-black/20 inline-block flex-shrink-0 shadow-xs"
-                                style={{ backgroundColor: v.colorFilamento.codigoHex }}
-                              />
-                              <span className="text-xs font-bold">
-                                {v.colorFilamento.nombreColor}
-                              </span>
-                              {esBajoStock && (
-                                <span className="text-[10px] font-extrabold text-[#854D0E] bg-[#FEF08A] px-1 py-0.2 rounded inline-flex items-center gap-0.5 border border-[#FACC15]">
-                                  <AlertTriangle className="h-2.5 w-2.5 text-[#A16207] stroke-[2.5]" />
-                                  {stockGramosActual}g
-                                </span>
-                              )}
+                            <div className="flex flex-wrap items-center gap-1 mt-1 max-w-[280px]">
+                              {itemColores.map((col, cIdx) => (
+                                <div
+                                  key={cIdx}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FAF8F5] text-[#241C15] border border-[#E2D9CC] shadow-2xs text-[11px]"
+                                  title={`Color: ${col.nombreColor}`}
+                                >
+                                  <span 
+                                    className="h-2.5 w-2.5 rounded-full border border-black/20 inline-block flex-shrink-0 shadow-xs"
+                                    style={{ backgroundColor: col.codigoHex || '#1E1E1E' }}
+                                  />
+                                  <span className="text-xs font-bold truncate max-w-[90px]">
+                                    {col.nombreColor}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                           )
                         })()}
@@ -2366,129 +2377,18 @@ export function VentasClient({
               )}
             </div>
 
-            {/* SECCIÓN: COLOR DE FILAMENTO CON CHECK DE STOCK EN TIEMPO REAL */}
+            {/* SECCIÓN: MULTI-COLOR DE FILAMENTO CON CHECK DE STOCK EN TIEMPO REAL */}
             <div className="p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-[#A36F4C]" />
-                  <span className="text-xs font-bold text-[#241C15]">
-                    Color de Filamento (Opcional)
-                  </span>
-                </div>
-                {formColorFilamentoId && (
-                  <button
-                    type="button"
-                    onClick={() => setFormColorFilamentoId('')}
-                    className="text-[11px] text-[#A34335] hover:underline font-semibold cursor-pointer"
-                  >
-                    Quitar selección
-                  </button>
-                )}
-              </div>
-
-              {/* Grid de Chips de Colores Disponibles con Gramaje */}
-              <div className="space-y-1.5">
-                <span className="text-[11px] text-[#75695D] font-medium block">
-                  Toca el color disponible en taller para asociar a este pedido:
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-0.5">
-                  {filamentos.map(f => {
-                    const isSelected = formColorFilamentoId === f.id
-                    const g = f.stockGramos ?? 1000
-                    const esBajoStock = g < 300 || Boolean(f.alertaCritica)
-
-                    const chipClasses = isSelected
-                      ? 'bg-[#EFE5D8] text-[#633E20] border-[#A36F4C] ring-2 ring-[#A36F4C] shadow-2xs font-bold'
-                      : esBajoStock
-                        ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] hover:bg-[#FEF08A] hover:border-[#EAB308] font-medium shadow-2xs'
-                        : 'bg-[#FFFFFF] text-[#241C15] border-[#E2D9CC] hover:bg-[#FAF8F5] hover:border-[#A36F4C] font-medium shadow-2xs'
-
-                    const tooltipText = esBajoStock
-                      ? '⚠️ Filamento con poco stock o en restock. Consultar disponibilidad antes de confirmar.'
-                      : `${f.nombreColor} (${g}g disponibles en taller)`
-
-                    return (
-                      <button
-                        key={f.id}
-                        type="button"
-                        title={tooltipText}
-                        onClick={() => setFormColorFilamentoId(isSelected ? '' : f.id)}
-                        className={`flex items-center gap-2 p-2 rounded-xl border text-xs transition-all cursor-pointer text-left active:scale-[0.98] ${chipClasses}`}
-                      >
-                        <span 
-                          className="w-3 h-3 rounded-full border border-black/15 flex-shrink-0 shadow-xs"
-                          style={{ backgroundColor: f.codigoHex }}
-                        />
-                        <div className="flex items-center justify-between min-w-0 flex-1 gap-1">
-                          <span className="truncate">{f.nombreColor}</span>
-                          {esBajoStock ? (
-                            <span className="text-[10px] font-extrabold flex items-center gap-0.5 flex-shrink-0 text-[#854D0E]">
-                              <span>⚠️</span>
-                              <span>{g}g</span>
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-mono text-[#75695D] flex-shrink-0">
-                              {g}g
-                            </span>
-                          )}
-                        </div>
-                        {isSelected && (
-                          <Check className="h-3.5 w-3.5 text-[#633E20] stroke-[2.5] flex-shrink-0" />
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* VALIDACIÓN DINÁMICA EN TIEMPO REAL: PESO REQUERIDO VS STOCK EN BOBINA */}
-              {(() => {
-                if (!formColorFilamentoId || !formProductoId) return null
-                const prod = productos.find(p => p.id === formProductoId)
-                const pesoUnitario = prod 
-                  ? (prod.pesoGramos != null && prod.pesoGramos > 0 ? Number(prod.pesoGramos) : Number((Number(prod.costoBase) / 0.065).toFixed(1))) 
-                  : 0
-                const pesoTotal = Math.round(pesoUnitario * (parseInt(formCantidad) || 1))
-                const fil = filamentos.find(f => f.id === formColorFilamentoId)
-                const gramosRestantes = fil?.stockGramos ?? 1000
-
-                if (gramosRestantes < pesoTotal) {
-                  return (
-                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-[#DC2626] flex items-start gap-2.5 shadow-2xs animate-in fade-in duration-150">
-                      <XCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
-                      <div className="space-y-0.5">
-                        <span className="font-bold block">Stock insuficiente en bobina abierta</span>
-                        <p className="text-[11px] text-red-700 leading-tight">
-                          Requiere <strong>{pesoTotal}g</strong> ({pesoUnitario}g × {formCantidad || 1} un.) y solo quedan <strong>{gramosRestantes}g</strong>. Abre una bobina sellada o cambia de color.
-                        </p>
-                      </div>
-                    </div>
-                  )
-                }
-
-                if (gramosRestantes < 300 || (gramosRestantes - pesoTotal < 100)) {
-                  return (
-                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-[#C2410C] flex items-start gap-2.5 shadow-2xs animate-in fade-in duration-150">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                      <div className="space-y-0.5">
-                        <span className="font-bold block">⚠️ Filamento con poco stock ({gramosRestantes}g restantes)</span>
-                        <p className="text-[11px] text-amber-800 leading-tight">
-                          Consumo estimado: <strong>{pesoTotal}g</strong>. Quedarán aprox. <strong>{gramosRestantes - pesoTotal}g</strong> tras la impresión.
-                        </p>
-                      </div>
-                    </div>
-                  )
-                }
-
-                return (
-                  <div className="p-2.5 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-xs text-[#1E5E3A] flex items-center gap-2 shadow-2xs animate-in fade-in duration-150">
-                    <CheckCircle2 className="h-4 w-4 text-[#1E5E3A] flex-shrink-0" />
-                    <span className="font-medium">
-                      <strong>Stock disponible:</strong> {gramosRestantes}g restantes — Suficiente para este pedido ({pesoTotal}g requeridos).
-                    </span>
-                  </div>
-                )
-              })()}
+              <MultiColorPicker
+                selectedColorIds={formColoresIds}
+                onChange={(cols) => {
+                  setFormColoresIds(cols)
+                  setFormColorFilamentoId(cols[0] || '')
+                }}
+                filamentos={filamentos}
+                label="Color(es) de Filamento (Opcional)"
+                placeholder="Toca para seleccionar uno o varios colores..."
+              />
             </div>
 
             {/* Precio Unitario Final Aplicado */}
@@ -2785,14 +2685,15 @@ export function VentasClient({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Color de Filamento</Label>
-                    <SearchableCombobox
-                      items={filamentosComboboxItems}
-                      value={editColorFilamentoId}
-                      onChange={(val) => setEditColorFilamentoId(val)}
-                      placeholder="Seleccionar color..."
-                      icon={Palette}
-                      inputClassName="bg-[#F4EFEA]"
+                    <MultiColorPicker
+                      selectedColorIds={editColoresIds}
+                      onChange={(cols) => {
+                        setEditColoresIds(cols)
+                        setEditColorFilamentoId(cols[0] || '')
+                      }}
+                      filamentos={filamentos}
+                      label="Color(es) de Filamento"
+                      placeholder="Seleccionar colores..."
                     />
                   </div>
                 </div>

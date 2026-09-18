@@ -140,6 +140,7 @@ model Venta {
   costoBaseSnapshot      Decimal?             @default(0.00) @db.Decimal(10, 2)
   colorFilamentoId       String?
   colorFilamento         InventarioFilamento? @relation(fields: [colorFilamentoId], references: [id])
+  coloresIds             String[]             @default([])
   personalizacion        String?
   gramosConsumidos       Decimal?             @default(0.00) @db.Decimal(10, 2) // Gramos descontados de la bobina
   cantidad               Int                  @default(1)
@@ -261,6 +262,7 @@ model ItemPedido {
   costoBaseSnapshot      Decimal?             @default(0.00) @db.Decimal(10, 2)
   colorFilamentoId       String?
   colorFilamento         InventarioFilamento? @relation(fields: [colorFilamentoId], references: [id])
+  coloresIds             String[]             @default([])
   personalizacion        String?
   cantidad               Int                  @default(1)
   tipoPrecio             TipoPrecio           @default(COMUNIDAD)

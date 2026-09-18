@@ -30,6 +30,13 @@ export interface PiezaTaller {
   lineaCategoria: string
   cantidad: number
   colorFilamentoId: string | null
+  coloresIds?: string[]
+  colores?: {
+    id: string
+    nombreColor: string
+    codigoHex: string
+    tipoMaterial: string
+  }[]
   nombreColor: string
   codigoHex: string
   tipoMaterial: string
@@ -167,7 +174,35 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           ? Number(item.gramosConsumidos)
           : pesoUnit * cant
 
-        const col = item.colorFilamento || (item.colorFilamentoId ? filamentoMap.get(item.colorFilamentoId) : null)
+        const rawColores: string[] = Array.isArray(item.coloresIds) && item.coloresIds.length > 0
+          ? item.coloresIds
+          : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
+
+        const resolvedColores = rawColores.map(id => {
+          const f = filamentoMap.get(id)
+          if (f) {
+            return {
+              id: f.id,
+              nombreColor: f.nombreColor,
+              codigoHex: f.codigoHex || '#1E1E1E',
+              tipoMaterial: f.tipoMaterial || 'PLA'
+            }
+          }
+          if (item.colorFilamento && item.colorFilamento.id === id) {
+            return {
+              id: item.colorFilamento.id,
+              nombreColor: item.colorFilamento.nombreColor,
+              codigoHex: item.colorFilamento.codigoHex || '#1E1E1E',
+              tipoMaterial: item.colorFilamento.tipoMaterial || 'PLA'
+            }
+          }
+          return null
+        }).filter(Boolean) as { id: string; nombreColor: string; codigoHex: string; tipoMaterial: string }[]
+
+        const primaryCol = resolvedColores[0] || item.colorFilamento || (item.colorFilamentoId ? filamentoMap.get(item.colorFilamentoId) : null)
+        const displayNombreColor = resolvedColores.length > 1
+          ? resolvedColores.map(c => c.nombreColor).join(' + ')
+          : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
 
         piezas.push({
           id: item.id,
@@ -183,10 +218,12 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           nombreModelo: item.nombreProductoSnapshot || item.producto?.nombreModelo || 'Pieza 3D',
           lineaCategoria: item.producto?.lineaCategoria || 'General',
           cantidad: cant,
-          colorFilamentoId: item.colorFilamentoId || null,
-          nombreColor: col ? col.nombreColor : 'Sin especificar',
-          codigoHex: col?.codigoHex || '#94A3B8',
-          tipoMaterial: col?.tipoMaterial || 'PLA',
+          colorFilamentoId: primaryCol?.id || item.colorFilamentoId || null,
+          coloresIds: rawColores,
+          colores: resolvedColores,
+          nombreColor: displayNombreColor,
+          codigoHex: primaryCol?.codigoHex || '#94A3B8',
+          tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
           personalizacion: item.personalizacion || null,
           pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
           pesoGramosTotal: Number(pesoTotal.toFixed(1)),
@@ -211,7 +248,35 @@ export async function getTallerData(): Promise<TallerDataResponse> {
         ? Number(v.gramosConsumidos)
         : pesoUnit * cant
 
-      const col = v.colorFilamento || (v.colorFilamentoId ? filamentoMap.get(v.colorFilamentoId) : null)
+      const rawColores: string[] = Array.isArray(v.coloresIds) && v.coloresIds.length > 0
+        ? v.coloresIds
+        : (v.colorFilamentoId ? [v.colorFilamentoId] : [])
+
+      const resolvedColores = rawColores.map(id => {
+        const f = filamentoMap.get(id)
+        if (f) {
+          return {
+            id: f.id,
+            nombreColor: f.nombreColor,
+            codigoHex: f.codigoHex || '#1E1E1E',
+            tipoMaterial: f.tipoMaterial || 'PLA'
+          }
+        }
+        if (v.colorFilamento && v.colorFilamento.id === id) {
+          return {
+            id: v.colorFilamento.id,
+            nombreColor: v.colorFilamento.nombreColor,
+            codigoHex: v.colorFilamento.codigoHex || '#1E1E1E',
+            tipoMaterial: v.colorFilamento.tipoMaterial || 'PLA'
+          }
+        }
+        return null
+      }).filter(Boolean) as { id: string; nombreColor: string; codigoHex: string; tipoMaterial: string }[]
+
+      const primaryCol = resolvedColores[0] || v.colorFilamento || (v.colorFilamentoId ? filamentoMap.get(v.colorFilamentoId) : null)
+      const displayNombreColor = resolvedColores.length > 1
+        ? resolvedColores.map(c => c.nombreColor).join(' + ')
+        : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
 
       piezas.push({
         id: v.id,
@@ -227,10 +292,12 @@ export async function getTallerData(): Promise<TallerDataResponse> {
         nombreModelo: v.nombreProductoSnapshot || v.producto?.nombreModelo || 'Pieza 3D',
         lineaCategoria: v.producto?.lineaCategoria || 'General',
         cantidad: cant,
-        colorFilamentoId: v.colorFilamentoId || null,
-        nombreColor: col ? col.nombreColor : 'Sin especificar',
-        codigoHex: col?.codigoHex || '#94A3B8',
-        tipoMaterial: col?.tipoMaterial || 'PLA',
+        colorFilamentoId: primaryCol?.id || v.colorFilamentoId || null,
+        coloresIds: rawColores,
+        colores: resolvedColores,
+        nombreColor: displayNombreColor,
+        codigoHex: primaryCol?.codigoHex || '#94A3B8',
+        tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
         personalizacion: v.personalizacion || null,
         pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
         pesoGramosTotal: Number(pesoTotal.toFixed(1)),

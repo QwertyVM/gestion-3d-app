@@ -53,6 +53,10 @@ function serializeVenta(v: any) {
     updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt || p.fecha),
   }))
 
+  const rawColoresIds: string[] = Array.isArray(v.coloresIds) && v.coloresIds.length > 0
+    ? v.coloresIds
+    : (v.colorFilamentoId ? [v.colorFilamentoId] : [])
+
   return {
     id: v.id,
     fecha: v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha),
@@ -60,7 +64,8 @@ function serializeVenta(v: any) {
     productoId: v.productoId,
     costoBaseSnapshot: v.costoBaseSnapshot != null ? Number(v.costoBaseSnapshot) : (v.producto ? Number(v.producto.costoBase) : 0),
     nombreProductoSnapshot: v.nombreProductoSnapshot || v.producto?.nombreModelo || '',
-    colorFilamentoId: v.colorFilamentoId || null,
+    colorFilamentoId: v.colorFilamentoId || rawColoresIds[0] || null,
+    coloresIds: rawColoresIds,
     personalizacion: v.personalizacion || null,
     gramosConsumidos: v.gramosConsumidos != null ? Number(v.gramosConsumidos) : 0,
     cantidad: Number(v.cantidad),
@@ -117,7 +122,7 @@ function serializeVenta(v: any) {
   }
 }
 
-function serializePedidoToVenta(p: any) {
+function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
   const items = Array.isArray(p.items) ? p.items : []
   const totalCantidad = items.reduce((sum: number, it: any) => sum + Number(it.cantidad || 0), 0) || 1
   
@@ -137,12 +142,16 @@ function serializePedidoToVenta(p: any) {
   let lineaCategoria = 'General'
   let colorFilamento = null
   let colorFilamentoId = null
+  let coloresIds: string[] = []
   let productoObj = null
 
   if (items.length === 1) {
     const single = items[0]
     nombreProducto = single.nombreProductoSnapshot || single.producto?.nombreModelo || `Pedido ${p.codigo}`
     lineaCategoria = single.producto?.lineaCategoria || 'General'
+    coloresIds = Array.isArray(single.coloresIds) && single.coloresIds.length > 0
+      ? single.coloresIds
+      : (single.colorFilamentoId ? [single.colorFilamentoId] : [])
     colorFilamento = single.colorFilamento ? {
       id: single.colorFilamento.id,
       nombreColor: single.colorFilamento.nombreColor,
@@ -154,7 +163,7 @@ function serializePedidoToVenta(p: any) {
       stockBobinas: Number(single.colorFilamento.stockBobinas || 1),
       alertaCritica: Boolean(single.colorFilamento.alertaCritica || (single.colorFilamento.stockGramos && Number(single.colorFilamento.stockGramos) < 300))
     } : null
-    colorFilamentoId = single.colorFilamentoId || null
+    colorFilamentoId = single.colorFilamentoId || coloresIds[0] || null
     productoObj = single.producto ? {
       id: single.producto.id,
       lineaCategoria: single.producto.lineaCategoria,
@@ -256,22 +265,26 @@ function serializePedidoToVenta(p: any) {
 }
 
 export async function getVentas() {
-  const pedidos = await prisma.pedido.findMany({
-    include: {
-      items: {
-        include: {
-          producto: true,
-          colorFilamento: true
+  const [pedidos, allFilamentos] = await Promise.all([
+    prisma.pedido.findMany({
+      include: {
+        items: {
+          include: {
+            producto: true,
+            colorFilamento: true
+          }
+        },
+        pagos: {
+          orderBy: { fecha: 'asc' }
         }
       },
-      pagos: {
-        orderBy: { fecha: 'asc' }
-      }
-    },
-    orderBy: { fecha: 'desc' }
-  })
+      orderBy: { fecha: 'desc' }
+    }),
+    prisma.inventarioFilamento.findMany()
+  ])
 
-  return pedidos.map(serializePedidoToVenta).sort((a, b) => {
+  const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+  return pedidos.map(p => serializePedidoToVenta(p, filMap)).sort((a, b) => {
     return new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
   })
 }
@@ -302,6 +315,7 @@ export async function createVenta(data: {
   costoPackaging?: number
   porcentajeAdicional?: number
   colorFilamentoId?: string | null
+  coloresIds?: string[]
   personalizacion?: string | null
   gramosConsumidos?: number | null
   estado: EstadoVenta
@@ -333,13 +347,18 @@ export async function createVenta(data: {
   const fechaVenta = parseDateInput(data.fecha) || new Date()
   const fechaPago = parseDateInput(data.fechaPagoInicial || data.fecha) || fechaVenta
 
+  const rawColores = Array.isArray(data.coloresIds) && data.coloresIds.length > 0
+    ? data.coloresIds
+    : (data.colorFilamentoId ? [data.colorFilamentoId] : [])
+
   const venta = await prisma.venta.create({
     data: {
       cliente: data.cliente,
       productoId: data.productoId,
       nombreProductoSnapshot: producto?.nombreModelo || '',
       costoBaseSnapshot: producto?.costoBase || 0,
-      colorFilamentoId: data.colorFilamentoId || null,
+      colorFilamentoId: rawColores[0] || data.colorFilamentoId || null,
+      coloresIds: rawColores,
       personalizacion: data.personalizacion || null,
       gramosConsumidos: gramosConsumidos || 0,
       cantidad: data.cantidad,
@@ -400,7 +419,8 @@ export async function createVenta(data: {
             productoId: data.productoId,
             nombreProductoSnapshot: producto?.nombreModelo || 'Modelo 3D',
             costoBaseSnapshot: producto?.costoBase || 0,
-            colorFilamentoId: data.colorFilamentoId,
+            colorFilamentoId: rawColores[0] || data.colorFilamentoId,
+            coloresIds: rawColores,
             personalizacion: data.personalizacion,
             cantidad: data.cantidad,
             tipoPrecio: data.tipoPrecio,
@@ -428,8 +448,11 @@ export async function createVenta(data: {
     console.warn('No se pudo sincronizar automáticamente como Pedido:', syncErr)
   }
 
-  if (data.colorFilamentoId && gramosConsumidos > 0 && data.estado !== 'CANCELADO') {
-    await ajustarStockBobina(data.colorFilamentoId, gramosConsumidos)
+  if (rawColores.length > 0 && gramosConsumidos > 0 && data.estado !== 'CANCELADO') {
+    const splitGramos = Number((gramosConsumidos / rawColores.length).toFixed(1))
+    for (const cId of rawColores) {
+      await ajustarStockBobina(cId, splitGramos)
+    }
   }
 
   safeRevalidate()
@@ -446,6 +469,7 @@ export async function updateVenta(id: string, data: {
   costoPackaging?: number
   porcentajeAdicional?: number
   colorFilamentoId?: string | null
+  coloresIds?: string[]
   personalizacion?: string | null
   gramosConsumidos?: number | null
   estado?: EstadoVenta
@@ -485,12 +509,16 @@ export async function updateVenta(id: string, data: {
     newFecha = parseDateInput(data.fecha) || current.fecha
   }
 
+  const rawColores = data.coloresIds !== undefined 
+    ? data.coloresIds 
+    : (Array.isArray(current.coloresIds) && current.coloresIds.length > 0 ? current.coloresIds : (data.colorFilamentoId !== undefined ? (data.colorFilamentoId ? [data.colorFilamentoId] : []) : (current.colorFilamentoId ? [current.colorFilamentoId] : [])))
+
   const prevGramos = current.gramosConsumidos != null ? Number(current.gramosConsumidos) : 0
   const prevColorId = current.colorFilamentoId
   const prevEstado = current.estado
 
   const newGramos = data.gramosConsumidos !== undefined ? (data.gramosConsumidos ?? 0) : prevGramos
-  const newColorId = data.colorFilamentoId !== undefined ? data.colorFilamentoId : prevColorId
+  const newColorId = rawColores[0] || (data.colorFilamentoId !== undefined ? data.colorFilamentoId : prevColorId)
   const newEstado = data.estado !== undefined ? data.estado : prevEstado
 
   // Ajustes de inventario de filamento
@@ -525,7 +553,8 @@ export async function updateVenta(id: string, data: {
       productoId: newProductoId,
       costoBaseSnapshot: costoSnapshot,
       nombreProductoSnapshot: nombreSnapshot,
-      colorFilamentoId: data.colorFilamentoId !== undefined ? data.colorFilamentoId : current.colorFilamentoId,
+      colorFilamentoId: newColorId,
+      coloresIds: rawColores,
       personalizacion: data.personalizacion !== undefined ? data.personalizacion : current.personalizacion,
       gramosConsumidos: data.gramosConsumidos !== undefined ? data.gramosConsumidos : current.gramosConsumidos,
       cantidad,
