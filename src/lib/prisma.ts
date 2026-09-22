@@ -9,7 +9,12 @@ declare global {
 }
 
 export function getPrisma(): PrismaClient {
-  if (!globalThis.prismaGlobal || !('pagoVenta' in globalThis.prismaGlobal) || !('cliente' in globalThis.prismaGlobal)) {
+  if (
+    !globalThis.prismaGlobal || 
+    !('pagoVenta' in globalThis.prismaGlobal) || 
+    !('cliente' in globalThis.prismaGlobal) ||
+    !('configuracionTienda' in globalThis.prismaGlobal)
+  ) {
     if (globalThis.prismaGlobal) {
       try {
         (globalThis.prismaGlobal as any).$disconnect()
@@ -22,7 +27,12 @@ export function getPrisma(): PrismaClient {
 
 const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop) {
-    const client = getPrisma()
+    let client = getPrisma()
+    if (!(prop in client)) {
+      // Re-instantiate if a newly compiled model is being accessed
+      globalThis.prismaGlobal = prismaClientSingleton()
+      client = globalThis.prismaGlobal
+    }
     const value = (client as any)[prop]
     if (typeof value === 'function') {
       return value.bind(client)
