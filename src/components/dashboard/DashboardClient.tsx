@@ -32,22 +32,11 @@ import {
   ArrowUpRight
 } from 'lucide-react'
 
+import { DateFilterControl } from '@/components/ui/DateFilterControl'
+import { DateRange, getPresetDateRange, isDateInRange, formatFechaEvolucion, MESES_ES } from '@/lib/date-utils'
+
 // Paleta de colores minimalista para gastos (Donut Chart)
 const DONUT_COLORS = ['#7C5835', '#A36F4C', '#B8A99A', '#059669', '#3B82F6', '#8C6239']
-
-// Formateador de fecha para el tooltip y eje X
-function formatFechaEvolucion(rawDate: string, conAnio = false) {
-  if (!rawDate) return ''
-  const parts = String(rawDate).split('-')
-  if (parts.length === 3) {
-    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic']
-    const day = d.getDate()
-    const month = months[d.getMonth()]
-    return conAnio ? `${day} ${month} ${d.getFullYear()}` : `${day} ${month}`
-  }
-  return rawDate
-}
 
 // Obtener iniciales de un nombre
 function getInitials(name: string) {
@@ -184,71 +173,327 @@ interface DashboardClientProps {
   topColores?: TopColorItem[]
   topClientes?: TopClienteItem[]
   topArticulos?: TopArticuloItem[]
+  rawVentas?: any[]
+  rawInversiones?: any[]
+  rawIngresosDirectos?: any[]
+  rawFilamentos?: any[]
 }
 
-type RangoTemporal = '15D' | '30D' | 'MES' | 'TODO'
-
 export function DashboardClient({ 
-  kpis, 
-  capacidadGasto,
-  graficoEvolucion, 
-  graficoInversion,
-  topClientes = [],
-  topArticulos = []
+  kpis: initialKpis, 
+  capacidadGasto: initialCapacidadGasto,
+  graficoEvolucion: initialGraficoEvolucion, 
+  graficoInversion: initialGraficoInversion,
+  topClientes: initialTopClientes = [],
+  topArticulos: initialTopArticulos = [],
+  rawVentas = [],
+  rawInversiones = [],
+  rawIngresosDirectos = [],
+  rawFilamentos = []
 }: DashboardClientProps) {
   const router = useRouter()
-  const [rangoTemporal, setRangoTemporal] = useState<RangoTemporal>('30D')
+  // Default to Mes Actual
+  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('ESTE_MES'))
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // Capacidad de gasto calculada
-  const gasto = capacidadGasto || {
-    saldoActualCaja: Math.max(0, kpis.totalCobradoVentas + kpis.totalIngresosDirectos - kpis.egresosTotales),
-    totalBlindadoMes: 368.88 + 878.00 + 111.00,
-    cuotaPrestamoMensual: 368.88,
-    reservaCapexMensual: 878.00,
-    gastosFijosTaller: 111.00,
-    gastoDisponibleHoy: Math.max(0, (kpis.totalCobradoVentas + kpis.totalIngresosDirectos - kpis.egresosTotales) - (368.88 + 878.00 + 111.00)),
-    gastoDisponibleProyectado: Math.max(0, (kpis.totalCobradoVentas + kpis.totalIngresosDirectos - kpis.egresosTotales) + 1746 - (368.88 + 878.00 + 111.00)),
-    pedidosProyectadosMes: 18,
-    gananciaProyectadaMes: 1746.00
-  }
+  // 1. Filtrar ventas por rango de fecha
+  const filteredVentas = useMemo(() => {
+    if (!rawVentas || rawVentas.length === 0) return []
+    return rawVentas.filter((v: any) => isDateInRange(v.fecha, dateRange.from, dateRange.to))
+  }, [rawVentas, dateRange])
 
-  // Filtrado temporal del gráfico de evolución
-  const graficoFiltrado = useMemo(() => {
-    if (!graficoEvolucion || graficoEvolucion.length === 0) return []
-    const sorted = [...graficoEvolucion].sort((a, b) => a.fecha.localeCompare(b.fecha))
-    
-    let baseList = sorted
-    if (rangoTemporal === '15D') {
-      baseList = sorted.slice(-15)
-    } else if (rangoTemporal === '30D') {
-      baseList = sorted.slice(-30)
-    } else if (rangoTemporal === 'MES') {
-      const now = new Date()
-      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-      const mesActualItems = sorted.filter(item => item.fecha.startsWith(currentYearMonth))
-      baseList = mesActualItems.length > 0 ? mesActualItems : sorted.slice(-15)
+  // 2. Filtrar inversiones / egresos por rango de fecha
+  const filteredInversiones = useMemo(() => {
+    if (!rawInversiones || rawInversiones.length === 0) return []
+    return rawInversiones.filter((inv: any) => isDateInRange(inv.fecha, dateRange.from, dateRange.to))
+  }, [rawInversiones, dateRange])
+
+  // 3. Filtrar ingresos directos por rango de fecha
+  const filteredIngresosDirectos = useMemo(() => {
+    if (!rawIngresosDirectos || rawIngresosDirectos.length === 0) return []
+    return rawIngresosDirectos.filter((ing: any) => isDateInRange(ing.fecha, dateRange.from, dateRange.to))
+  }, [rawIngresosDirectos, dateRange])
+
+  // 4. Calcular KPIs dinámicamente según el período seleccionado
+  const dynamicKpis = useMemo(() => {
+    if (rawVentas.length === 0 && rawInversiones.length === 0) {
+      return initialKpis
     }
 
-    return baseList.map(item => {
-      const ingresos = Number(item.ingresos || 0)
-      const costo = Number(item.costo || 0)
-      const ganancia = Number(item.ganancia != null ? item.ganancia : (ingresos - costo))
-      return {
-        ...item,
-        ingresos,
-        costo,
-        ganancia,
+    const ingresosVentas = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.total || 0), 0)
+    
+    const costoFabricacionTotal = filteredVentas.reduce((sum: number, v: any) => {
+      const costoBaseUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
+        ? Number(v.costoBaseSnapshot) 
+        : (Number(v.producto?.costoBase) || 0)
+      return sum + (costoBaseUnit * Number(v.cantidad || 1))
+    }, 0)
+
+    const gananciaNeta = ingresosVentas - costoFabricacionTotal
+    const margenPorcentaje = costoFabricacionTotal > 0 ? (gananciaNeta / costoFabricacionTotal) * 100 : 0
+
+    // Cobranzas efectivas dentro del período
+    const totalCobradoVentas = filteredVentas.reduce((sum: number, v: any) => {
+      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+        const pagosEnRango = v.pagos.filter((p: any) => isDateInRange(p.fecha, dateRange.from, dateRange.to))
+        if (pagosEnRango.length > 0) {
+          return sum + pagosEnRango.reduce((pSum: number, p: any) => pSum + Number(p.monto || 0), 0)
+        }
+      }
+      // Fallback si no hay array de pagos pero la fecha de venta está en rango
+      return sum + Number(v.montoPagado || 0)
+    }, 0)
+
+    const saldoPorCobrar = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.saldoPendiente || 0), 0)
+    const egresosTotales = filteredInversiones.reduce((sum: number, inv: any) => sum + Number(inv.costoTotal || 0), 0)
+    const ticketPromedio = filteredVentas.length > 0 ? ingresosVentas / filteredVentas.length : 0
+    const totalIngresosDirectos = filteredIngresosDirectos.reduce((sum: number, i: any) => sum + Number(i.monto || 0), 0)
+
+    return {
+      ingresosVentas,
+      costoFabricacionTotal,
+      gananciaNeta,
+      margenPorcentaje,
+      totalCobradoVentas,
+      saldoPorCobrar,
+      egresosTotales,
+      ticketPromedio,
+      totalIngresosDirectos
+    }
+  }, [filteredVentas, filteredInversiones, filteredIngresosDirectos, dateRange, rawVentas, rawInversiones, initialKpis])
+
+  // 5. Capacidad de gasto calculada para el período
+  const gasto = useMemo(() => {
+    const saldoActualCaja = Math.max(0, (dynamicKpis.totalCobradoVentas + dynamicKpis.totalIngresosDirectos) - dynamicKpis.egresosTotales)
+    const cuotaPrestamoMensual = 368.88
+    const reservaCapexMensual = 878.00
+    const gastosFijosTaller = 111.00
+    const totalBlindadoMes = cuotaPrestamoMensual + reservaCapexMensual + gastosFijosTaller
+    const gastoDisponibleHoy = Math.max(0, saldoActualCaja - totalBlindadoMes)
+    const margenUnitarioPromedio = dynamicKpis.ticketPromedio > 0 ? (dynamicKpis.gananciaNeta / Math.max(1, filteredVentas.length)) : 97.00
+    const pedidosProyectadosMes = Math.max(8, Math.min(30, Math.round(filteredVentas.length / Math.max(1, 1)) || 18))
+    const gananciaProyectadaMes = pedidosProyectadosMes * margenUnitarioPromedio
+    const gastoDisponibleProyectado = Math.max(0, (saldoActualCaja + gananciaProyectadaMes) - totalBlindadoMes)
+
+    return {
+      saldoActualCaja,
+      totalBlindadoMes,
+      cuotaPrestamoMensual,
+      reservaCapexMensual,
+      gastosFijosTaller,
+      gastoDisponibleHoy,
+      gastoDisponibleProyectado,
+      pedidosProyectadosMes,
+      gananciaProyectadaMes
+    }
+  }, [dynamicKpis, filteredVentas.length])
+
+  // 6. Gráfico de evolución diario dinámico
+  const graficoFiltrado = useMemo(() => {
+    if (rawVentas.length === 0) return initialGraficoEvolucion
+
+    const timelineMap: Record<string, { ingresos: number; costo: number; ganancia: number }> = {}
+
+    // A. Costos y ventas base
+    filteredVentas.forEach((venta: any) => {
+      const vDate = String(venta.fecha).split('T')[0]
+      if (!timelineMap[vDate]) {
+        timelineMap[vDate] = { ingresos: 0, costo: 0, ganancia: 0 }
+      }
+
+      const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
+        ? Number(venta.costoBaseSnapshot) 
+        : (Number(venta.producto?.costoBase) || 0)
+      const ventaCosto = costoBaseUnit * Number(venta.cantidad || 1)
+      timelineMap[vDate].costo += ventaCosto
+
+      if (!venta.pagos || venta.pagos.length === 0) {
+        timelineMap[vDate].ingresos += Number(venta.montoPagado != null ? venta.montoPagado : venta.total)
       }
     })
-  }, [graficoEvolucion, rangoTemporal])
 
-  // Desglose de egresos
+    // B. Recaudaciones en fecha de pago
+    filteredVentas.forEach((venta: any) => {
+      if (Array.isArray(venta.pagos) && venta.pagos.length > 0) {
+        venta.pagos.forEach((pago: any) => {
+          const pDate = String(pago.fecha).split('T')[0]
+          if (isDateInRange(pDate, dateRange.from, dateRange.to)) {
+            if (!timelineMap[pDate]) {
+              timelineMap[pDate] = { ingresos: 0, costo: 0, ganancia: 0 }
+            }
+            timelineMap[pDate].ingresos += Number(pago.monto || 0)
+          }
+        })
+      }
+    })
+
+    return Object.entries(timelineMap)
+      .map(([fecha, vals]) => {
+        const ingresos = Number(vals.ingresos.toFixed(2))
+        const costo = Number(vals.costo.toFixed(2))
+        const ganancia = Number((ingresos - costo).toFixed(2))
+        return { fecha, ingresos, costo, ganancia }
+      })
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+  }, [filteredVentas, rawVentas, dateRange, initialGraficoEvolucion])
+
+  // 7. Distribución de gastos dinámico
+  const graficoInversionDinamico = useMemo(() => {
+    if (rawInversiones.length === 0) return initialGraficoInversion
+
+    const distribucion = filteredInversiones.reduce((acc: Record<string, number>, inv: any) => {
+      let catName = 'Insumos & Materiales'
+      if (inv.categoria === 'ACTIVO_FIJO') catName = 'Maquinaria & Equipos'
+      else if (inv.categoria === 'SERVICIO') catName = 'Servicios & Operativos'
+      else if (inv.categoria === 'APORTE_CAPITAL') catName = 'Aporte Capital'
+      
+      acc[catName] = (acc[catName] || 0) + Number(inv.costoTotal || 0)
+      return acc
+    }, {})
+
+    return Object.entries(distribucion).map(([name, value]) => ({ name, value: Number(value) }))
+  }, [filteredInversiones, rawInversiones, initialGraficoInversion])
+
   const totalEgresosCalculado = useMemo(() => {
-    return graficoInversion.reduce((sum, item) => sum + Number(item.value || 0), 0) || kpis.egresosTotales
-  }, [graficoInversion, kpis.egresosTotales])
+    return graficoInversionDinamico.reduce((sum, item) => sum + Number(item.value || 0), 0) || dynamicKpis.egresosTotales
+  }, [graficoInversionDinamico, dynamicKpis.egresosTotales])
+
+  // 8. Top 5 Clientes en valor en el período seleccionado
+  const topClientesDinamico = useMemo(() => {
+    if (rawVentas.length === 0) return initialTopClientes
+
+    const clientesMap: Record<string, {
+      cliente: string
+      totalComprado: number
+      totalPagado: number
+      saldoPendiente: number
+      pedidosCount: number
+      piezasCount: number
+      canales: Record<string, number>
+      ultimoPedidoFecha: string
+    }> = {}
+
+    filteredVentas.forEach((v: any) => {
+      const rawCliente = (v.cliente || 'Cliente sin nombre').trim()
+      const cKey = rawCliente.toLowerCase()
+
+      if (!clientesMap[cKey]) {
+        clientesMap[cKey] = {
+          cliente: rawCliente,
+          totalComprado: 0,
+          totalPagado: 0,
+          saldoPendiente: 0,
+          pedidosCount: 0,
+          piezasCount: 0,
+          canales: {},
+          ultimoPedidoFecha: String(v.fecha)
+        }
+      }
+
+      const c = clientesMap[cKey]
+      c.totalComprado += Number(v.total || 0)
+      c.totalPagado += Number(v.montoPagado || 0)
+      c.saldoPendiente += Number(v.saldoPendiente || 0)
+      c.pedidosCount += 1
+      c.piezasCount += Number(v.cantidad || 1)
+
+      if (v.canalVenta) {
+        c.canales[v.canalVenta] = (c.canales[v.canalVenta] || 0) + 1
+      }
+
+      const vFecha = String(v.fecha)
+      if (new Date(vFecha).getTime() > new Date(c.ultimoPedidoFecha).getTime()) {
+        c.ultimoPedidoFecha = vFecha
+      }
+    })
+
+    const ingresosTotal = dynamicKpis.ingresosVentas
+
+    return Object.values(clientesMap)
+      .sort((a, b) => b.totalComprado - a.totalComprado || b.pedidosCount - a.pedidosCount)
+      .slice(0, 5)
+      .map((c) => {
+        let canalPreferido: string | null = null
+        let maxCount = 0
+        Object.entries(c.canales).forEach(([canal, count]) => {
+          if (count > maxCount) {
+            maxCount = count
+            canalPreferido = canal
+          }
+        })
+
+        return {
+          cliente: c.cliente,
+          totalComprado: Number(c.totalComprado.toFixed(2)),
+          totalPagado: Number(c.totalPagado.toFixed(2)),
+          saldoPendiente: Number(c.saldoPendiente.toFixed(2)),
+          pedidosCount: c.pedidosCount,
+          piezasCount: c.piezasCount,
+          porcentajeDelTotal: ingresosTotal > 0 ? Number(((c.totalComprado / ingresosTotal) * 100).toFixed(1)) : 0,
+          canalPreferido,
+          ultimoPedidoFecha: c.ultimoPedidoFecha
+        }
+      })
+  }, [filteredVentas, rawVentas, dynamicKpis.ingresosVentas, initialTopClientes])
+
+  // 9. Top 5 Artículos más vendidos en el período seleccionado
+  const topArticulosDinamico = useMemo(() => {
+    if (rawVentas.length === 0) return initialTopArticulos
+
+    const articulosMap: Record<string, {
+      id: string
+      nombreModelo: string
+      lineaCategoria: string
+      unidadesVendidas: number
+      totalFacturado: number
+      pedidosCount: number
+    }> = {}
+
+    let totalUnidades = 0
+
+    filteredVentas.forEach((v: any) => {
+      const nombre = v.nombreProductoSnapshot || v.producto?.nombreModelo || 'Artículo'
+      const artKey = (v.productoId || nombre).trim().toLowerCase()
+      const categoria = v.producto?.lineaCategoria || 'General'
+      const cant = Number(v.cantidad || 1)
+      const sub = Number(v.total || 0)
+
+      if (!articulosMap[artKey]) {
+        articulosMap[artKey] = {
+          id: v.productoId || artKey,
+          nombreModelo: nombre,
+          lineaCategoria: categoria,
+          unidadesVendidas: 0,
+          totalFacturado: 0,
+          pedidosCount: 0
+        }
+      }
+
+      articulosMap[artKey].unidadesVendidas += cant
+      articulosMap[artKey].totalFacturado += sub
+      articulosMap[artKey].pedidosCount += 1
+      totalUnidades += cant
+    })
+
+    const ingresosTotal = dynamicKpis.ingresosVentas
+
+    return Object.values(articulosMap)
+      .sort((a, b) => b.unidadesVendidas - a.unidadesVendidas || b.totalFacturado - a.totalFacturado)
+      .slice(0, 5)
+      .map((art) => ({
+        id: art.id,
+        nombreModelo: art.nombreModelo,
+        lineaCategoria: art.lineaCategoria,
+        unidadesVendidas: art.unidadesVendidas,
+        totalFacturado: Number(art.totalFacturado.toFixed(2)),
+        pedidosCount: art.pedidosCount,
+        precioPromedio: art.unidadesVendidas > 0 ? Number((art.totalFacturado / art.unidadesVendidas).toFixed(2)) : 0,
+        porcentajeUnidades: totalUnidades > 0 ? Number(((art.unidadesVendidas / totalUnidades) * 100).toFixed(1)) : 0,
+        porcentajeFacturacion: ingresosTotal > 0 ? Number(((art.totalFacturado / ingresosTotal) * 100).toFixed(1)) : 0
+      }))
+  }, [filteredVentas, rawVentas, dynamicKpis.ingresosVentas, initialTopArticulos])
 
   const handleManualRefresh = () => {
     setIsRefreshing(true)
@@ -259,7 +504,7 @@ export function DashboardClient({
   return (
     <div className="space-y-5 animate-in fade-in duration-300 pb-10 max-w-7xl mx-auto">
       {/* ========================================================================= */}
-      {/* 1. HEADER MINIMALISTA                                                     */}
+      {/* 1. HEADER MINIMALISTA CON FILTRO DE PERÍODO (MES ACTUAL POR DEFECTO)      */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div>
@@ -267,11 +512,19 @@ export function DashboardClient({
             Dashboard
           </h1>
           <p className="text-xs text-[#6B7280] mt-0.5">
-            Resumen de rendimiento comercial, tesorería y analítica operativa.
+            Rendimiento comercial y tesorería del período seleccionado.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Selector de Período / Fecha */}
+          <DateFilterControl 
+            value={dateRange} 
+            onChange={setDateRange} 
+            label="Período del Dashboard" 
+            align="right" 
+          />
+
           <button
             onClick={handleManualRefresh}
             title="Refrescar datos"
@@ -291,29 +544,29 @@ export function DashboardClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. GRID DE 4 TARJETAS DE KPIS MINIMALISTAS                                */}
+      {/* 2. GRID DE 4 TARJETAS DE KPIS DINÁMICOS                                   */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
         {/* KPI 1: Facturación & Utilidad */}
         <div className="bg-white border border-[#E5DCD3] rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#6B7280]">Facturación Total</span>
+            <span className="text-xs font-semibold text-[#6B7280]">Facturación del Período</span>
             <div className="p-1.5 rounded-lg bg-[#FAF7F4] text-[#7C5835]">
               <TrendingUp className="h-4 w-4" />
             </div>
           </div>
           <div>
             <div className="text-2xl font-black font-mono text-[#1F2937] tracking-tight tabular-nums">
-              {formatCurrency(kpis.ingresosVentas)}
+              {formatCurrency(dynamicKpis.ingresosVentas)}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
               <span className="font-semibold text-[#059669]">
-                +{kpis.margenPorcentaje.toFixed(1)}% margen
+                +{dynamicKpis.margenPorcentaje.toFixed(1)}% margen
               </span>
               <span className="text-[#6B7280]">•</span>
               <span className="text-[#6B7280] truncate">
-                +{formatCurrency(kpis.gananciaNeta)} util.
+                +{formatCurrency(dynamicKpis.gananciaNeta)} util.
               </span>
             </div>
           </div>
@@ -349,12 +602,12 @@ export function DashboardClient({
           </div>
           <div>
             <div className="text-2xl font-black font-mono text-[#1F2937] tracking-tight tabular-nums">
-              {formatCurrency(kpis.totalCobradoVentas)}
+              {formatCurrency(dynamicKpis.totalCobradoVentas)}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-[#6B7280] truncate">
-              {kpis.saldoPorCobrar > 0 ? (
+              {dynamicKpis.saldoPorCobrar > 0 ? (
                 <span className="text-[#92400E] font-medium">
-                  Por cobrar: {formatCurrency(kpis.saldoPorCobrar)}
+                  Por cobrar: {formatCurrency(dynamicKpis.saldoPorCobrar)}
                 </span>
               ) : (
                 <span className="text-[#059669] font-medium">
@@ -375,10 +628,10 @@ export function DashboardClient({
           </div>
           <div>
             <div className="text-2xl font-black font-mono text-[#1F2937] tracking-tight tabular-nums">
-              {formatCurrency(kpis.ticketPromedio)}
+              {formatCurrency(dynamicKpis.ticketPromedio)}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-[#6B7280] truncate">
-              <span>Costo prod: {formatCurrency(kpis.costoFabricacionTotal)}</span>
+              <span>Costo prod: {formatCurrency(dynamicKpis.costoFabricacionTotal)}</span>
             </div>
           </div>
         </div>
@@ -402,80 +655,69 @@ export function DashboardClient({
                   Utilidad neta diaria y volumen de facturación
                 </CardDescription>
               </div>
-
-              {/* Selector temporal minimalista */}
-              <div className="flex items-center bg-[#FAF7F4] p-1 rounded-xl border border-[#E5DCD3] self-start sm:self-auto">
-                {(['15D', '30D', 'MES', 'TODO'] as RangoTemporal[]).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setRangoTemporal(r)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      rangoTemporal === r
-                        ? 'bg-white text-[#1F2937] shadow-xs'
-                        : 'text-[#6B7280] hover:text-[#1F2937]'
-                    }`}
-                  >
-                    {r === '15D' ? '15D' : r === '30D' ? '30D' : r === 'MES' ? 'Mes' : 'Todo'}
-                  </button>
-                ))}
-              </div>
             </div>
           </CardHeader>
 
           <CardContent className="p-3 sm:p-5 pt-0">
             <div className="h-[280px] sm:h-[320px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={graficoFiltrado} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
-                  
-                  <XAxis 
-                    dataKey="fecha" 
-                    stroke="#6B7280" 
-                    fontSize={11} 
-                    tickLine={false} 
-                    axisLine={{ stroke: '#E5DCD3' }}
-                    tickFormatter={(val) => formatFechaEvolucion(val, false)}
-                    dy={4}
-                  />
-                  
-                  <YAxis 
-                    stroke="#6B7280" 
-                    fontSize={11} 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickFormatter={(val) => val === 0 ? '0' : val < 0 ? `-${Math.abs(val)}` : `${val}`}
-                  />
-                  
-                  <Tooltip content={<CustomEvolucionTooltip />} />
-                  <Legend content={<CustomEvolutionLegend />} verticalAlign="top" />
+              {graficoFiltrado.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-xs text-[#6B7280] italic">
+                  No hay movimientos registrados en el período seleccionado.
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={graficoFiltrado} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
+                    
+                    <XAxis 
+                      dataKey="fecha" 
+                      stroke="#6B7280" 
+                      fontSize={11} 
+                      tickLine={false} 
+                      axisLine={{ stroke: '#E5DCD3' }}
+                      tickFormatter={(val) => formatFechaEvolucion(val, false)}
+                      dy={4}
+                    />
+                    
+                    <YAxis 
+                      stroke="#6B7280" 
+                      fontSize={11} 
+                      tickLine={false} 
+                      axisLine={false} 
+                      tickFormatter={(val) => val === 0 ? '0' : val < 0 ? `-${Math.abs(val)}` : `${val}`}
+                    />
+                    
+                    <Tooltip content={<CustomEvolucionTooltip />} />
+                    <Legend content={<CustomEvolutionLegend />} verticalAlign="top" />
 
-                  <ReferenceLine y={0} stroke="#D1D5DB" strokeWidth={1} />
+                    <ReferenceLine y={0} stroke="#D1D5DB" strokeWidth={1} />
 
-                  <Bar 
-                    dataKey="ganancia" 
-                    name="Resultado Neto" 
-                    radius={[3, 3, 3, 3]}
-                    maxBarSize={28}
-                  >
-                    {graficoFiltrado.map((entry, index) => (
-                      <Cell 
-                        key={`bar-cell-${index}`} 
-                        fill={entry.ganancia >= 0 ? '#059669' : '#DC2626'} 
-                      />
-                    ))}
-                  </Bar>
+                    <Bar 
+                      dataKey="ganancia" 
+                      name="Resultado Neto" 
+                      radius={[3, 3, 3, 3]}
+                      maxBarSize={28}
+                    >
+                      {graficoFiltrado.map((entry, index) => (
+                        <Cell 
+                          key={`bar-cell-${index}`} 
+                          fill={entry.ganancia >= 0 ? '#059669' : '#DC2626'} 
+                        />
+                      ))}
+                    </Bar>
 
-                  <Line 
-                    type="monotone" 
-                    dataKey="ingresos" 
-                    name="Facturación"
-                    stroke="#7C5835" 
-                    strokeWidth={2} 
-                    dot={{ r: 3, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-                    activeDot={{ r: 5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 2 }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+                    <Line 
+                      type="monotone" 
+                      dataKey="ingresos" 
+                      name="Facturación"
+                      stroke="#7C5835" 
+                      strokeWidth={2} 
+                      dot={{ r: 3, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+                      activeDot={{ r: 5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 2 }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -494,41 +736,49 @@ export function DashboardClient({
           <CardContent className="p-4 pt-0 space-y-3">
             {/* Gráfico Donut */}
             <div className="h-[180px] w-full flex items-center justify-center relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={graficoInversion}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={54}
-                    outerRadius={78}
-                    paddingAngle={3}
-                    dataKey="value"
-                    stroke="#FFFFFF"
-                    strokeWidth={2}
-                  >
-                    {graficoInversion.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5DCD3', borderRadius: '12px', fontSize: '11px' }}
-                    formatter={(val: any) => [`S/ ${Number(val).toFixed(2)}`, 'Gasto']}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              {graficoInversionDinamico.length === 0 ? (
+                <div className="text-xs text-[#6B7280] italic text-center">
+                  Sin egresos en el período seleccionado.
+                </div>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={graficoInversionDinamico}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={54}
+                        outerRadius={78}
+                        paddingAngle={3}
+                        dataKey="value"
+                        stroke="#FFFFFF"
+                        strokeWidth={2}
+                      >
+                        {graficoInversionDinamico.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5DCD3', borderRadius: '12px', fontSize: '11px' }}
+                        formatter={(val: any) => [`S/ ${Number(val).toFixed(2)}`, 'Gasto']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
 
-              <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                <span className="text-[10px] text-[#6B7280] uppercase font-bold">Total</span>
-                <span className="text-sm sm:text-base font-black text-[#1F2937] font-mono tabular-nums">
-                  {formatCurrency(totalEgresosCalculado)}
-                </span>
-              </div>
+                  <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                    <span className="text-[10px] text-[#6B7280] uppercase font-bold">Total</span>
+                    <span className="text-sm sm:text-base font-black text-[#1F2937] font-mono tabular-nums">
+                      {formatCurrency(totalEgresosCalculado)}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Lista minimalista de categorías */}
             <div className="space-y-1.5 pt-2 border-t border-[#F5EFEB]">
-              {graficoInversion.map((item, idx) => {
+              {graficoInversionDinamico.map((item, idx) => {
                 const pct = totalEgresosCalculado > 0 ? ((item.value / totalEgresosCalculado) * 100).toFixed(0) : '0'
                 const color = DONUT_COLORS[idx % DONUT_COLORS.length]
 
@@ -580,13 +830,13 @@ export function DashboardClient({
           </CardHeader>
 
           <CardContent className="p-0 flex-1 divide-y divide-[#F5EFEB]">
-            {topClientes.length === 0 ? (
+            {topClientesDinamico.length === 0 ? (
               <div className="py-8 text-center text-xs text-[#6B7280] space-y-2">
                 <Users className="h-6 w-6 text-[#B8A99A] mx-auto opacity-50" />
-                <p>No hay compras registradas aún.</p>
+                <p>No hay compras registradas en este período.</p>
               </div>
             ) : (
-              topClientes.map((c, index) => (
+              topClientesDinamico.map((c, index) => (
                 <div 
                   key={`${c.cliente}-${index}`}
                   className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3 hover:bg-[#FAF7F4]/50 transition-colors"
@@ -654,13 +904,13 @@ export function DashboardClient({
           </CardHeader>
 
           <CardContent className="p-0 flex-1 divide-y divide-[#F5EFEB]">
-            {topArticulos.length === 0 ? (
+            {topArticulosDinamico.length === 0 ? (
               <div className="py-8 text-center text-xs text-[#6B7280] space-y-2">
                 <Package className="h-6 w-6 text-[#B8A99A] mx-auto opacity-50" />
-                <p>No hay artículos despachados aún.</p>
+                <p>No hay artículos despachados en este período.</p>
               </div>
             ) : (
-              topArticulos.map((art, index) => (
+              topArticulosDinamico.map((art, index) => (
                 <div 
                   key={`${art.id}-${index}`}
                   className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3 hover:bg-[#FAF7F4]/50 transition-colors"
@@ -702,3 +952,4 @@ export function DashboardClient({
     </div>
   )
 }
+

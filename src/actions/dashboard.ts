@@ -404,6 +404,32 @@ export async function getDashboardData(negocio?: TipoNegocio) {
   const gananciaProyectadaMes = pedidosProyectadosMes * margenUnitarioPromedio
   const gastoDisponibleProyectado = Math.max(0, (saldoActualCaja + gananciaProyectadaMes) - totalBlindadoMes)
 
+  const serializedInversiones = inversiones.map((inv: any) => ({
+    id: inv.id,
+    fecha: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : String(inv.createdAt),
+    categoria: inv.categoria,
+    costoTotal: Number(inv.costoTotal),
+    itemConcepto: inv.itemConcepto,
+    persona: inv.persona
+  }))
+
+  const serializedIngresosDirectos = ingresosDirectos.map((ing: any) => ({
+    id: ing.id,
+    fecha: ing.fecha instanceof Date ? ing.fecha.toISOString() : String(ing.fecha),
+    monto: Number(ing.monto),
+    categoria: ing.categoria,
+    concepto: ing.concepto,
+    cliente: ing.cliente
+  }))
+
+  const serializedFilamentos = filamentos.map((f: any) => ({
+    id: f.id,
+    nombreColor: f.nombreColor,
+    codigoHex: f.codigoHex || '#18181B',
+    stockGramos: Number(f.stockGramos || 0),
+    alertaCritica: Boolean(f.alertaCritica || (f.stockGramos && Number(f.stockGramos) < 300))
+  }))
+
   return {
     kpis: {
       ingresosVentas,
@@ -432,7 +458,11 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     cuentasPorCobrar,
     topColores,
     topClientes,
-    topArticulos
+    topArticulos,
+    rawVentas: ventas,
+    rawInversiones: serializedInversiones,
+    rawIngresosDirectos: serializedIngresosDirectos,
+    rawFilamentos: serializedFilamentos
   }
 }
 

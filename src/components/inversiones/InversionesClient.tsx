@@ -12,6 +12,8 @@ import { deleteInversion, createInversion } from '@/actions/inversiones'
 import { toast } from 'sonner'
 import { CategoriaInversion } from '@prisma/client'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
+import { DateFilterControl } from '@/components/ui/DateFilterControl'
 
 interface InversionesClientProps {
   inversiones: any[]
@@ -22,13 +24,14 @@ const ITEMS_PER_PAGE = 5
 export function InversionesClient({ inversiones }: InversionesClientProps) {
   const [search, setSearch] = useState('')
   const [categoriaFilter, setCategoriaFilter] = useState<string>('TODOS')
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, categoriaFilter])
+  }, [search, categoriaFilter, dateRange])
 
   // Form states
   const [formCategoria, setFormCategoria] = useState<CategoriaInversion>('INSUMO')
@@ -36,6 +39,9 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
   const filtered = useMemo(() => {
     return inversiones
       .filter(inv => {
+        const matchDate = isDateInRange(inv.createdAt, dateRange.from, dateRange.to)
+        if (!matchDate) return false
+
         const matchSearch = inv.itemConcepto.toLowerCase().includes(search.toLowerCase()) 
           || (inv.especificacionColor && inv.especificacionColor.toLowerCase().includes(search.toLowerCase()))
           || (inv.persona && inv.persona.toLowerCase().includes(search.toLowerCase()))
@@ -43,7 +49,7 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
         return matchSearch && matchCat
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [inversiones, search, categoriaFilter])
+  }, [inversiones, dateRange, search, categoriaFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
   const paginatedInversiones = useMemo(() => {
@@ -101,13 +107,22 @@ export function InversionesClient({ inversiones }: InversionesClientProps) {
           Inversiones & Capital
         </h1>
         
-        <Button 
-          onClick={() => setOpen(true)}
-          className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer h-10 px-4 text-xs"
-        >
-          <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
-          Nueva Inversión
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <DateFilterControl
+            value={dateRange}
+            onChange={(newRange) => {
+              setDateRange(newRange)
+              setCurrentPage(1)
+            }}
+          />
+          <Button 
+            onClick={() => setOpen(true)}
+            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer h-10 px-4 text-xs"
+          >
+            <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
+            Nueva Inversión
+          </Button>
+        </div>
       </div>
 
       {/* Modal Nueva Inversión */}

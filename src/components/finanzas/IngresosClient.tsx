@@ -35,6 +35,8 @@ import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { SearchableCombobox } from '@/components/ui/SearchableCombobox'
+import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
+import { DateFilterControl } from '@/components/ui/DateFilterControl'
 import { VentaItem, IngresoDirectoItem } from './FlujoCajaClient'
 
 interface IngresosClientProps {
@@ -55,6 +57,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
 
   const [search, setSearch] = useState('')
   const [tipoFilter, setTipoFilter] = useState<'TODOS' | 'VENTAS' | 'DIRECTOS'>('TODOS')
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
   const [openModal, setOpenModal] = useState(false)
   const [openEditModal, setOpenEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<IngresoDirectoItem | null>(null)
@@ -72,31 +75,44 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
   const [formMetodoPago, setFormMetodoPago] = useState('YAPE')
   const [formNotas, setFormNotas] = useState('')
 
-  // Quick stats
+  // Quick stats filtered by active date range
+  const pedidosEnRango = useMemo(() => {
+    if (!pedidos) return []
+    return pedidos.filter(p => isDateInRange(p.fecha, dateRange.from, dateRange.to))
+  }, [pedidos, dateRange])
+
+  const ventasEnRango = useMemo(() => {
+    return ventas.filter(v => isDateInRange(v.fecha, dateRange.from, dateRange.to))
+  }, [ventas, dateRange])
+
+  const directosEnRango = useMemo(() => {
+    return directos.filter(i => isDateInRange(i.fecha, dateRange.from, dateRange.to))
+  }, [directos, dateRange])
+
   const totalCobradoCatalogo = useMemo(() => {
-    if (pedidos && pedidos.length > 0) {
-      return pedidos.reduce((acc, p) => acc + (p.montoPagado || 0), 0)
+    if (pedidosEnRango && pedidosEnRango.length > 0) {
+      return pedidosEnRango.reduce((acc, p) => acc + (p.montoPagado || 0), 0)
     }
-    return ventas.reduce((acc, v) => acc + (v.montoPagado || 0), 0)
-  }, [ventas, pedidos])
+    return ventasEnRango.reduce((acc, v) => acc + (v.montoPagado || 0), 0)
+  }, [ventasEnRango, pedidosEnRango])
 
   const totalDirectos = useMemo(() => {
-    return directos.reduce((acc, i) => acc + i.monto, 0)
-  }, [directos])
+    return directosEnRango.reduce((acc, i) => acc + i.monto, 0)
+  }, [directosEnRango])
 
   const totalSaldoPendiente = useMemo(() => {
-    if (pedidos && pedidos.length > 0) {
-      return pedidos.reduce((acc, p) => acc + (p.saldoPendiente || 0), 0)
+    if (pedidosEnRango && pedidosEnRango.length > 0) {
+      return pedidosEnRango.reduce((acc, p) => acc + (p.saldoPendiente || 0), 0)
     }
-    return ventas.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0)
-  }, [ventas, pedidos])
+    return ventasEnRango.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0)
+  }, [ventasEnRango, pedidosEnRango])
 
   const totalFacturadoVentas = useMemo(() => {
-    if (pedidos && pedidos.length > 0) {
-      return pedidos.reduce((acc, p) => acc + (p.total || 0), 0)
+    if (pedidosEnRango && pedidosEnRango.length > 0) {
+      return pedidosEnRango.reduce((acc, p) => acc + (p.total || 0), 0)
     }
-    return ventas.reduce((acc, v) => acc + (v.total || 0), 0)
-  }, [ventas, pedidos])
+    return ventasEnRango.reduce((acc, v) => acc + (v.total || 0), 0)
+  }, [ventasEnRango, pedidosEnRango])
 
   const totalSaldosPorCobrar = totalSaldoPendiente
   const totalIngresosCobrados = totalCobradoCatalogo + totalDirectos
@@ -266,6 +282,9 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
   // Filtered List
   const filteredIngresos = useMemo(() => {
     return unifiedIngresos.filter(item => {
+      const matchDate = isDateInRange(item.fecha, dateRange.from, dateRange.to)
+      if (!matchDate) return false
+
       const matchSearch = 
         item.cliente.toLowerCase().includes(search.toLowerCase()) ||
         item.concepto.toLowerCase().includes(search.toLowerCase()) ||
@@ -277,7 +296,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
 
       return matchSearch && matchTipo
     })
-  }, [unifiedIngresos, search, tipoFilter])
+  }, [unifiedIngresos, dateRange, search, tipoFilter])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredIngresos.length / ITEMS_PER_PAGE))
@@ -429,13 +448,23 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
           </p>
         </div>
 
-        <Button 
-          onClick={handleOpenCreate}
-          className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold rounded-xl shadow-xs transition-all cursor-pointer h-9 px-3.5 text-xs active:scale-[0.98] self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
-          Registrar Ingreso Directo
-        </Button>
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          <DateFilterControl
+            value={dateRange}
+            onChange={(newRange) => {
+              setDateRange(newRange)
+              setCurrentPage(1)
+            }}
+          />
+
+          <Button 
+            onClick={handleOpenCreate}
+            className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold rounded-xl shadow-xs transition-all cursor-pointer h-9 px-3.5 text-xs active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
+            Registrar Ingreso Directo
+          </Button>
+        </div>
       </div>
 
       {/* KPI Overview Minimalista */}

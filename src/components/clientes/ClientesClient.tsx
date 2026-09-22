@@ -40,6 +40,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { useBusiness } from '@/context/BusinessContext'
+import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
+import { DateFilterControl } from '@/components/ui/DateFilterControl'
 import { 
   ClienteItem, 
   ClienteDetalleView, 
@@ -65,6 +67,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
   const [search, setSearch] = useState('')
   const [filtroPago, setFiltroPago] = useState<FiltroPago>('TODOS')
   const [canalFilter, setCanalFilter] = useState<string>('TODOS')
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
 
   // Modales
   const [modalFormOpen, setModalFormOpen] = useState(false)
@@ -98,30 +101,40 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
     return `https://wa.me/${clean}?text=${text}`
   }
 
-  // KPIs
-  const totalClientes = clientes.length
-  const clientesRecurrentes = useMemo(() => clientes.filter(c => c.pedidosCount > 1).length, [clientes])
+  // Clientes filtrados por período activo
+  const clientesEnRango = useMemo(() => {
+    if (dateRange.preset === 'TODO') return clientes
+    return clientes.filter(c => {
+      const matchUltimo = c.ultimoPedidoFecha ? isDateInRange(c.ultimoPedidoFecha, dateRange.from, dateRange.to) : false
+      const matchRegistro = c.createdAt ? isDateInRange(c.createdAt, dateRange.from, dateRange.to) : false
+      return matchUltimo || matchRegistro
+    })
+  }, [clientes, dateRange])
+
+  // KPIs calculados sobre el período activo
+  const totalClientes = clientesEnRango.length
+  const clientesRecurrentes = useMemo(() => clientesEnRango.filter(c => c.pedidosCount > 1).length, [clientesEnRango])
   const tasaRecurrencia = totalClientes > 0 ? Math.round((clientesRecurrentes / totalClientes) * 100) : 0
   
-  const totalDeudaAcumulada = useMemo(() => clientes.reduce((acc, c) => acc + c.saldoPendiente, 0), [clientes])
-  const clientesConDeudaCount = useMemo(() => clientes.filter(c => c.saldoPendiente > 0).length, [clientes])
+  const totalDeudaAcumulada = useMemo(() => clientesEnRango.reduce((acc, c) => acc + c.saldoPendiente, 0), [clientesEnRango])
+  const clientesConDeudaCount = useMemo(() => clientesEnRango.filter(c => c.saldoPendiente > 0).length, [clientesEnRango])
 
-  const totalFacturadoTotal = useMemo(() => clientes.reduce((acc, c) => acc + c.totalComprado, 0), [clientes])
+  const totalFacturadoTotal = useMemo(() => clientesEnRango.reduce((acc, c) => acc + c.totalComprado, 0), [clientesEnRango])
   const ticketPromedio = totalClientes > 0 ? totalFacturadoTotal / totalClientes : 0
 
   // Canales disponibles para filtro
   const canalesList = useMemo(() => {
     const set = new Set<string>()
-    clientes.forEach(c => {
+    clientesEnRango.forEach(c => {
       if (c.canalOrigen) set.add(c.canalOrigen)
       if (c.canalPreferido) set.add(c.canalPreferido)
     })
     return Array.from(set).sort()
-  }, [clientes])
+  }, [clientesEnRango])
 
   // Filtrado de clientes
   const filteredClientes = useMemo(() => {
-    return clientes.filter(c => {
+    return clientesEnRango.filter(c => {
       // Filtro de búsqueda
       const q = search.trim().toLowerCase()
       const matchSearch = !q || 
@@ -147,7 +160,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
 
       return matchSearch && matchPago && matchCanal
     })
-  }, [clientes, search, filtroPago, canalFilter])
+  }, [clientesEnRango, search, filtroPago, canalFilter])
 
   // Open Create Modal
   const handleOpenCreate = () => {
@@ -297,7 +310,12 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <DateFilterControl
+            value={dateRange}
+            onChange={setDateRange}
+          />
+
           <Link
             href="/pedidos"
             className="h-9 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F8F6F2] text-[#241C15] font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"

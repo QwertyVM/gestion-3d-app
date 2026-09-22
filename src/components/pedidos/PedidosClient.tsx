@@ -45,6 +45,8 @@ import {
   ArrowUp,
   ArrowDown
 } from 'lucide-react'
+import { DateFilterControl } from '@/components/ui/DateFilterControl'
+import { DateRange, getPresetDateRange, isDateInRange } from '@/lib/date-utils'
 import { EstadoPedido, TipoPrecio } from '@prisma/client'
 import { createPedido, updateEstadoPedido, updatePedido, addPagoPedido, deletePedido } from '@/actions/pedidos'
 import { formatDate } from '@/lib/utils'
@@ -240,6 +242,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('ESTE_MES'))
 
   // =========================================================================
   // ESTADO DEL FORMULARIO MULTIPRODUCTO
@@ -662,6 +665,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   // =========================================================================
   const filteredPedidos = useMemo(() => {
     return pedidos.filter(p => {
+      if (!isDateInRange(p.fecha, dateRange.from, dateRange.to)) return false
+
       const matchSearch = p.cliente.toLowerCase().includes(search.toLowerCase()) ||
         p.codigo.toLowerCase().includes(search.toLowerCase()) ||
         (p.telefono && p.telefono.includes(search)) ||
@@ -678,7 +683,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
 
       return true
     })
-  }, [pedidos, search, selectedEstadoFilter, selectedPagoFilter])
+  }, [pedidos, search, selectedEstadoFilter, selectedPagoFilter, dateRange])
 
   const handleSort = (field: 'fecha' | 'codigo' | 'cliente' | 'cantidad' | 'total' | 'saldoPendiente' | 'estado') => {
     if (sortField === field) {
@@ -720,16 +725,17 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   }, [sortedPedidos, currentPage, itemsPerPage])
 
   const kpis = useMemo(() => {
-    const totalPedidos = pedidos.length
-    const enProduccion = pedidos.filter(p => p.estado === 'EN_PRODUCCION').length
-    const pendientes = pedidos.filter(p => p.estado === 'PENDIENTE').length
-    const listos = pedidos.filter(p => p.estado === 'LISTO_ENTREGA').length
-    const entregados = pedidos.filter(p => p.estado === 'ENTREGADO').length
+    const pedidosEnRango = pedidos.filter(p => isDateInRange(p.fecha, dateRange.from, dateRange.to))
+    const totalPedidos = pedidosEnRango.length
+    const enProduccion = pedidosEnRango.filter(p => p.estado === 'EN_PRODUCCION').length
+    const pendientes = pedidosEnRango.filter(p => p.estado === 'PENDIENTE').length
+    const listos = pedidosEnRango.filter(p => p.estado === 'LISTO_ENTREGA').length
+    const entregados = pedidosEnRango.filter(p => p.estado === 'ENTREGADO').length
 
-    const totalFacturado = pedidos.filter(p => p.estado !== 'CANCELADO').reduce((s, p) => s + p.total, 0)
-    const totalCobrado = pedidos.reduce((s, p) => s + p.montoPagado, 0)
-    const saldoPorCobrar = pedidos.filter(p => p.estado !== 'CANCELADO').reduce((s, p) => s + p.saldoPendiente, 0)
-    const totalPiezas = pedidos.reduce((s, p) => s + p.totalItemsCount, 0)
+    const totalFacturado = pedidosEnRango.filter(p => p.estado !== 'CANCELADO').reduce((s, p) => s + p.total, 0)
+    const totalCobrado = pedidosEnRango.reduce((s, p) => s + p.montoPagado, 0)
+    const saldoPorCobrar = pedidosEnRango.filter(p => p.estado !== 'CANCELADO').reduce((s, p) => s + p.saldoPendiente, 0)
+    const totalPiezas = pedidosEnRango.reduce((s, p) => s + p.totalItemsCount, 0)
 
     return {
       totalPedidos,
@@ -742,7 +748,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       saldoPorCobrar,
       totalPiezas
     }
-  }, [pedidos])
+  }, [pedidos, dateRange])
 
   return (
     <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
@@ -887,6 +893,17 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
 
           {/* Grupo de Filtros Compactos a la Derecha */}
           <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between sm:justify-end shrink-0">
+            {/* Filtro de Fecha */}
+            <DateFilterControl
+              value={dateRange}
+              onChange={(range) => {
+                setDateRange(range)
+                setCurrentPage(1)
+              }}
+              label="Filtrar Pedidos"
+              align="right"
+            />
+
             {/* Filtro de Estado (Dropdown) */}
             <select
               value={selectedEstadoFilter}

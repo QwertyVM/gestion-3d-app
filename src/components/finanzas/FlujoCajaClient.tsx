@@ -35,6 +35,8 @@ import {
   Legend 
 } from 'recharts'
 import { formatDate } from '@/lib/utils'
+import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
+import { DateFilterControl } from '@/components/ui/DateFilterControl'
 
 export interface EgresoItem {
   id: string
@@ -177,43 +179,56 @@ export function FlujoCajaClient({
 }: FlujoCajaClientProps) {
   const [search, setSearch] = useState('')
   const [tipoFilter, setTipoFilter] = useState<'TODOS' | 'INGRESOS' | 'EGRESOS'>('TODOS')
-  const [periodFilter, setPeriodFilter] = useState<'HISTORICO' | '30_DIAS' | 'ESTE_MES'>('HISTORICO')
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
   const [currentPage, setCurrentPage] = useState(1)
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // Financial Metrics Calculation
+  // Filter raw collections by selected date range
+  const ventasEnRango = useMemo(() => {
+    return ventas.filter(v => isDateInRange(v.fecha, dateRange.from, dateRange.to))
+  }, [ventas, dateRange])
+
+  const ingresosDirectosEnRango = useMemo(() => {
+    return ingresosDirectos.filter(i => isDateInRange(i.fecha, dateRange.from, dateRange.to))
+  }, [ingresosDirectos, dateRange])
+
+  const egresosEnRango = useMemo(() => {
+    return egresos.filter(e => isDateInRange(e.createdAt, dateRange.from, dateRange.to))
+  }, [egresos, dateRange])
+
+  // Financial Metrics Calculation over active date range
   const totalIngresosVentas = useMemo(() => {
-    return ventas.reduce((acc, v) => acc + (v.montoPagado || 0), 0)
-  }, [ventas])
+    return ventasEnRango.reduce((acc, v) => acc + (v.montoPagado || 0), 0)
+  }, [ventasEnRango])
 
   const totalIngresosDirectos = useMemo(() => {
-    return ingresosDirectos.reduce((acc, i) => acc + (i.monto || 0), 0)
-  }, [ingresosDirectos])
+    return ingresosDirectosEnRango.reduce((acc, i) => acc + (i.monto || 0), 0)
+  }, [ingresosDirectosEnRango])
 
   const totalIngresosTotales = totalIngresosVentas + totalIngresosDirectos
 
   const totalSaldosPorCobrar = useMemo(() => {
-    return ventas.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0)
-  }, [ventas])
+    return ventasEnRango.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0)
+  }, [ventasEnRango])
 
   const totalEgresosMaquinaria = useMemo(() => {
-    return egresos
+    return egresosEnRango
       .filter(e => e.categoria === 'ACTIVO_FIJO')
       .reduce((acc, e) => acc + e.costoTotal, 0)
-  }, [egresos])
+  }, [egresosEnRango])
 
   const totalEgresosInsumos = useMemo(() => {
-    return egresos
+    return egresosEnRango
       .filter(e => e.categoria === 'INSUMO')
       .reduce((acc, e) => acc + e.costoTotal, 0)
-  }, [egresos])
+  }, [egresosEnRango])
 
   const totalEgresosServicios = useMemo(() => {
-    return egresos
+    return egresosEnRango
       .filter(e => e.categoria === 'SERVICIO')
       .reduce((acc, e) => acc + e.costoTotal, 0)
-  }, [egresos])
+  }, [egresosEnRango])
 
   const totalEgresosTotales = totalEgresosMaquinaria + totalEgresosInsumos + totalEgresosServicios
   const saldoNetoCaja = totalIngresosTotales - totalEgresosTotales
@@ -286,17 +301,13 @@ export function FlujoCajaClient({
       }
     })
 
-    // Filter by period
-    if (periodFilter === '30_DIAS') {
-      return points.slice(-30)
-    }
-    if (periodFilter === 'ESTE_MES') {
-      const currentYearMonth = new Date().toISOString().slice(0, 7)
-      const filtered = points.filter(p => p.rawDate.startsWith(currentYearMonth))
+    // Filter by date range
+    if (dateRange.preset !== 'TODO') {
+      const filtered = points.filter(p => isDateInRange(p.rawDate, dateRange.from, dateRange.to))
       return filtered.length > 0 ? filtered : points
     }
     return points
-  }, [ventas, ingresosDirectos, egresos, periodFilter])
+  }, [ventas, ingresosDirectos, egresos, dateRange])
 
   // Unified Chronological Movements (Libro de Caja Diario)
   const allMovements = useMemo(() => {
@@ -408,6 +419,9 @@ export function FlujoCajaClient({
   // Filtered movements
   const filteredMovements = useMemo(() => {
     return allMovements.filter(m => {
+      const matchDate = isDateInRange(m.fecha, dateRange.from, dateRange.to)
+      if (!matchDate) return false
+
       const matchSearch = 
         m.concepto.toLowerCase().includes(search.toLowerCase()) ||
         m.entidad.toLowerCase().includes(search.toLowerCase()) ||
@@ -419,7 +433,7 @@ export function FlujoCajaClient({
 
       return matchSearch && matchTipo
     })
-  }, [allMovements, search, tipoFilter])
+  }, [allMovements, dateRange, search, tipoFilter])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredMovements.length / ITEMS_PER_PAGE))
@@ -446,7 +460,15 @@ export function FlujoCajaClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <DateFilterControl
+            value={dateRange}
+            onChange={(newRange) => {
+              setDateRange(newRange)
+              setCurrentPage(1)
+            }}
+          />
+
           <button
             type="button"
             onClick={() => setShowChart(!showChart)}
@@ -490,7 +512,7 @@ export function FlujoCajaClient({
         {/* Ingresos Cobrados */}
         <div className="bg-white border border-[#E2D9CC] shadow-xs rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-[11px] font-semibold">Total Ingresos</span>
+            <span className="text-[11px] font-semibold">Ingresos Cobrados</span>
             <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
               <ArrowUpRight className="h-3.5 w-3.5" />
             </div>
@@ -508,17 +530,17 @@ export function FlujoCajaClient({
         {/* Egresos Totales */}
         <div className="bg-white border border-[#E2D9CC] shadow-xs rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-[11px] font-semibold">Total Egresos</span>
+            <span className="text-[11px] font-semibold">Egresos Totales</span>
             <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
               <ArrowDownRight className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="mt-1">
-            <div className="text-lg sm:text-xl font-black font-mono tabular-nums text-[#241C15]">
+            <div className="text-lg sm:text-xl font-black font-mono tabular-nums text-[#A36F4C]">
               {formatCurrency(totalEgresosTotales)}
             </div>
             <span className="text-[10px] text-[#75695D] mt-0.5 block truncate">
-              Maquinaria + Insumos
+              Insumos + Máquinas + Servicios
             </span>
           </div>
         </div>
@@ -556,43 +578,6 @@ export function FlujoCajaClient({
               <p className="text-[11px] text-[#75695D] mt-0.5">
                 Entradas (+), salidas (-) y saldo acumulado a través del tiempo.
               </p>
-            </div>
-
-            {/* Selector de Período */}
-            <div className="flex items-center gap-1 bg-[#F4EFEA] p-0.5 rounded-xl border border-[#E2D9CC] self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setPeriodFilter('HISTORICO')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  periodFilter === 'HISTORICO'
-                    ? 'bg-[#241C15] text-white shadow-2xs'
-                    : 'text-[#75695D] hover:text-[#241C15]'
-                }`}
-              >
-                Histórico
-              </button>
-              <button
-                type="button"
-                onClick={() => setPeriodFilter('30_DIAS')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  periodFilter === '30_DIAS'
-                    ? 'bg-[#241C15] text-white shadow-2xs'
-                    : 'text-[#75695D] hover:text-[#241C15]'
-                }`}
-              >
-                30 Días
-              </button>
-              <button
-                type="button"
-                onClick={() => setPeriodFilter('ESTE_MES')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  periodFilter === 'ESTE_MES'
-                    ? 'bg-[#241C15] text-white shadow-2xs'
-                    : 'text-[#75695D] hover:text-[#241C15]'
-                }`}
-              >
-                Este Mes
-              </button>
             </div>
           </div>
 

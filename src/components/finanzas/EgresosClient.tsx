@@ -38,6 +38,8 @@ import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { MultiTagInput } from '@/components/ui/MultiTagInput'
+import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
+import { DateFilterControl } from '@/components/ui/DateFilterControl'
 import { EgresoItem } from './FlujoCajaClient'
 
 interface EgresosClientProps {
@@ -114,6 +116,7 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
   const [search, setSearch] = useState('')
   const [categoriaFilter, setCategoriaFilter] = useState<'TODOS' | 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO'>('TODOS')
   const [tagFilter, setTagFilter] = useState<string>('TODOS')
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
   const [openModal, setOpenModal] = useState(false)
   const [openEditModal, setOpenEditModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -221,6 +224,9 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
   const filteredEgresos = useMemo(() => {
     return items
       .filter(eg => {
+        const matchDate = isDateInRange(eg.createdAt, dateRange.from, dateRange.to)
+        if (!matchDate) return false
+
         const matchSearch = 
           eg.itemConcepto.toLowerCase().includes(search.toLowerCase()) ||
           (eg.subcategoria && eg.subcategoria.toLowerCase().includes(search.toLowerCase())) ||
@@ -237,10 +243,10 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
         return matchSearch && matchCat && matchTag
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [items, search, categoriaFilter, tagFilter])
+  }, [items, dateRange, search, categoriaFilter, tagFilter])
 
   // Indicador de filtros activos
-  const isFiltered = search.trim() !== '' || categoriaFilter !== 'TODOS' || tagFilter !== 'TODOS'
+  const isFiltered = search.trim() !== '' || categoriaFilter !== 'TODOS' || tagFilter !== 'TODOS' || dateRange.preset !== 'ESTE_MES'
 
   // Dynamic Financial KPIs based on filtered items
   const totalEgresosTotales = useMemo(() => {
@@ -486,7 +492,15 @@ export function EgresosClient({ egresos, tags = [] }: EgresosClientProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <DateFilterControl
+            value={dateRange}
+            onChange={(newRange) => {
+              setDateRange(newRange)
+              setCurrentPage(1)
+            }}
+          />
+
           <Link href="/finanzas/tags">
             <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-9 shadow-2xs font-medium px-3">
               <Tag className="h-3.5 w-3.5 mr-1.5 text-[#A36F4C]" />

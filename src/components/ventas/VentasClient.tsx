@@ -52,6 +52,8 @@ import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { MultiColorPicker } from '@/components/ui/MultiColorPicker'
+import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
+import { DateFilterControl } from '@/components/ui/DateFilterControl'
 
 export interface FilamentoOption {
   id: string
@@ -165,6 +167,7 @@ export function VentasClient({
   const [search, setSearch] = useState('')
   const [estadoFilter, setEstadoFilter] = useState<string>('TODOS')
   const [pagoFilter, setPagoFilter] = useState<'TODOS' | 'PENDIENTES_PAGO' | 'PAGADOS'>('TODOS')
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
   const [currentPage, setCurrentPage] = useState(1)
 
   // Modals state
@@ -244,16 +247,21 @@ export function VentasClient({
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // Financial KPIs
-  const totalPedidos = items.length
-  const totalCobrado = useMemo(() => items.reduce((acc, v) => acc + (v.montoPagado || 0), 0), [items])
-  const totalSaldoPendiente = useMemo(() => items.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0), [items])
-  const entregadosCount = useMemo(() => items.filter(v => v.estado === 'ENTREGADO').length, [items])
-  const enProduccionCount = useMemo(() => items.filter(v => v.estado === 'EN_PRODUCCION' || v.estado === 'PENDIENTE').length, [items])
+  // Items filtered by active Date Range
+  const itemsEnRango = useMemo(() => {
+    return items.filter(v => isDateInRange(v.fecha, dateRange.from, dateRange.to))
+  }, [items, dateRange])
+
+  // Financial KPIs (computed over selected date range)
+  const totalPedidos = itemsEnRango.length
+  const totalCobrado = useMemo(() => itemsEnRango.reduce((acc, v) => acc + (v.montoPagado || 0), 0), [itemsEnRango])
+  const totalSaldoPendiente = useMemo(() => itemsEnRango.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0), [itemsEnRango])
+  const entregadosCount = useMemo(() => itemsEnRango.filter(v => v.estado === 'ENTREGADO').length, [itemsEnRango])
+  const enProduccionCount = useMemo(() => itemsEnRango.filter(v => v.estado === 'EN_PRODUCCION' || v.estado === 'PENDIENTE').length, [itemsEnRango])
 
   // Filtered sales
   const filteredVentas = useMemo(() => {
-    return items.filter(v => {
+    return itemsEnRango.filter(v => {
       const matchSearch = 
         v.cliente.toLowerCase().includes(search.toLowerCase()) || 
         v.producto.nombreModelo.toLowerCase().includes(search.toLowerCase()) ||
@@ -268,7 +276,7 @@ export function VentasClient({
 
       return matchSearch && matchEstado && matchPago
     })
-  }, [items, search, estadoFilter, pagoFilter])
+  }, [itemsEnRango, search, estadoFilter, pagoFilter])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredVentas.length / ITEMS_PER_PAGE))
@@ -941,13 +949,22 @@ export function VentasClient({
           </p>
         </div>
 
-        <Button 
-          onClick={handleOpenCreate}
-          className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
-        >
-          <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
-          Nuevo Pedido
-        </Button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <DateFilterControl
+            value={dateRange}
+            onChange={(newRange) => {
+              setDateRange(newRange)
+              setCurrentPage(1)
+            }}
+          />
+          <Button 
+            onClick={handleOpenCreate}
+            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
+          >
+            <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
+            Nuevo Pedido
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards Light Mode */}
@@ -1033,7 +1050,7 @@ export function VentasClient({
                     : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
                 }`}
               >
-                Todos ({items.length})
+                Todos ({itemsEnRango.length})
               </button>
               <button
                 onClick={() => { setEstadoFilter('PENDIENTE'); setCurrentPage(1); }}
@@ -1043,7 +1060,7 @@ export function VentasClient({
                     : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
                 }`}
               >
-                Pendientes ({items.filter(v => v.estado === 'PENDIENTE').length})
+                Pendientes ({itemsEnRango.filter(v => v.estado === 'PENDIENTE').length})
               </button>
               <button
                 onClick={() => { setEstadoFilter('EN_PRODUCCION'); setCurrentPage(1); }}
@@ -1053,7 +1070,7 @@ export function VentasClient({
                     : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
                 }`}
               >
-                En Impresión ({items.filter(v => v.estado === 'EN_PRODUCCION').length})
+                En Impresión ({itemsEnRango.filter(v => v.estado === 'EN_PRODUCCION').length})
               </button>
               <button
                 onClick={() => { setEstadoFilter('ENTREGADO'); setCurrentPage(1); }}
@@ -1063,7 +1080,7 @@ export function VentasClient({
                     : 'bg-transparent text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15] font-medium'
                 }`}
               >
-                Entregados ({items.filter(v => v.estado === 'ENTREGADO').length})
+                Entregados ({itemsEnRango.filter(v => v.estado === 'ENTREGADO').length})
               </button>
             </div>
 
