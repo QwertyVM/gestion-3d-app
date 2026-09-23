@@ -1373,30 +1373,6 @@ export function CatalogoClient({
                 </div>
               </div>
 
-              {/* Puntos Clave (bullets que verán los clientes en la web) */}
-              <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-sm">
-                <div className="flex items-center gap-1.5 pb-2 border-b border-[#E2D9CC]/50">
-                  <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    📌 Puntos Clave del Producto
-                  </span>
-                  <span className="text-[10px] text-[#75695D] ml-auto">Aparecen como bullets en la web</span>
-                </div>
-                {[1, 2, 3, 4].map((n) => (
-                  <Input
-                    key={n}
-                    value={(formData as any)[`bulletPoint${n}`]}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [`bulletPoint${n}`]: e.target.value }))}
-                    placeholder={[
-                      'Ej: Para 2-4 jugadores | Duración: 45 min',
-                      'Ej: Incluye 120 cartas y dados especiales',
-                      'Ej: Idioma: Español. Fácil de aprender',
-                      'Ej: Recomendado por BoardGameGeek'
-                    ][n - 1]}
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                  />
-                ))}
-              </div>
-
               {/* Ficha Técnica BG (solo visible en modo Juegos de Mesa) */}
               {isBG && (
                 <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-sm">
