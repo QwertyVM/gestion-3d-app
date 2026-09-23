@@ -778,18 +778,16 @@ export function CatalogoClient({
             <col className="w-[28%]" />
             <col className="w-[14%]" />
             <col className="w-[12%]" />
-            <col className="w-[26%]" />
+            <col className="w-[10%]" />
             <col className="w-[10%]" />
             <col className="w-[10%]" />
           </colgroup>
           <thead>
             <tr className="bg-[#FAF8F5] border-b border-[#E2D9CC] text-[#75695D] text-[11px] font-semibold">
               <th className="py-3.5 px-4 font-bold text-left">Modelo & Familia</th>
-              <th className="py-3.5 px-4 font-bold text-center">Especificaciones</th>
               <th className="py-3.5 px-4 font-bold text-right">Costo Base</th>
               <th className="py-3.5 px-4 font-bold text-center">Precio de Venta (Mercado)</th>
               <th className="py-3.5 px-4 font-bold text-center">Estado</th>
-              <th className="py-3.5 px-4 font-bold text-right pr-4">Acciones</th>
             </tr>
           </thead>
             <tbody className="divide-y divide-[#E2D9CC]">
@@ -808,7 +806,8 @@ export function CatalogoClient({
                   return (
                     <tr 
                       key={p.id} 
-                      className={`h-16 transition-colors ${
+                      onClick={() => handleOpenEdit(p)}
+                      className={`h-16 transition-colors cursor-pointer ${
                         !p.activo ? 'bg-[#FAF8F5]/60 opacity-80' : 'hover:bg-[#FAF8F5]'
                       }`}
                     >
@@ -827,16 +826,6 @@ export function CatalogoClient({
                             </Badge>
                           </div>
                         </div>
-                      </td>
-
-                      {/* Columna 2: Especificaciones Técnicas */}
-                      <td className="py-3 px-4 text-center font-mono text-xs text-[#241C15] min-w-[110px]">
-                        <span className="font-bold block">
-                          {gramos > 0 ? `${gramos}g` : '—'}
-                        </span>
-                        <span className="text-[10px] text-[#75695D] block">
-                          {estimarTiempoImpresion(gramos)}
-                        </span>
                       </td>
 
                       {/* Columna 3: Costo Base */}
@@ -873,90 +862,6 @@ export function CatalogoClient({
                             <span>Archivado</span>
                           </span>
                         )}
-                      </td>
-
-                      {/* Columna 6: Acciones Rápidas (Extremo Derecho Visible) */}
-                      <td className="py-3 px-4 text-right pr-4 min-w-[120px]">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Botón Copiar Cotización */}
-                          <button
-                            type="button"
-                            onClick={() => handleCopiarCotizacion(p)}
-                            className="p-1.5 rounded-xl border border-[#E2D9CC] bg-white hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#A36F4C] transition-colors cursor-pointer shadow-2xs"
-                            title="Copiar cotización para WhatsApp"
-                          >
-                            {copiedId === p.id ? (
-                              <Check className="h-3.5 w-3.5 text-[#1E5E3A]" />
-                            ) : (
-                              <Share2 className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-
-                          {/* Botón Editar */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(p)}
-                            className="p-1.5 rounded-xl border border-[#E2D9CC] bg-white hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#A36F4C] transition-colors cursor-pointer shadow-2xs"
-                            title="Editar producto"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-
-                          {/* Menú de Tres Puntos */}
-                          <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
-                            <button
-                              type="button"
-                              onClick={() => setActiveMenuId(isMenuOpen ? null : p.id)}
-                              className="p-1.5 rounded-xl border border-[#E2D9CC] bg-white hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer shadow-2xs"
-                              title="Más opciones"
-                            >
-                              <MoreHorizontal className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* Dropdown contextual */}
-                            {isMenuOpen && (
-                              <div className="absolute right-0 mt-1 w-44 bg-white border border-[#E2D9CC] rounded-2xl shadow-xl p-1 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
-                                <button
-                                  type="button"
-                                  onClick={() => handleDuplicar(p)}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left rounded-xl hover:bg-[#F4EFEA] text-xs font-bold text-[#241C15] cursor-pointer"
-                                >
-                                  <CopyPlus className="h-3.5 w-3.5 text-[#A36F4C]" />
-                                  <span>Duplicar Modelo</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleEstado(p)}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left rounded-xl hover:bg-[#F4EFEA] text-xs font-bold text-[#241C15] cursor-pointer"
-                                >
-                                  {p.activo ? (
-                                    <>
-                                      <Archive className="h-3.5 w-3.5 text-[#75695D]" />
-                                      <span>Descontinuar</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <RotateCcw className="h-3.5 w-3.5 text-[#1E5E3A]" />
-                                      <span>Reactivar</span>
-                                    </>
-                                  )}
-                                </button>
-
-                                <div className="border-t border-[#E2D9CC]/60 my-0.5" />
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleDelete(p)}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-left rounded-xl hover:bg-red-50 text-xs font-bold text-[#DC2626] cursor-pointer"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                  <span>Eliminar / Archivar</span>
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
                       </td>
                     </tr>
                   )
@@ -1469,11 +1374,24 @@ export function CatalogoClient({
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-[#E2D9CC]">
+            <div className="flex justify-end gap-2 pt-4 mt-2 border-t border-[#E2D9CC]/50">
+              {editingId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const p = productos.find(x => x.id === editingId)
+                    if (p) handleDelete(p)
+                  }}
+                  className="bg-white border-[#DC2626] text-[#DC2626] hover:bg-red-50 text-xs rounded-xl cursor-pointer mr-auto"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  Eliminar
+                </Button>
+              )}
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
+                variant="outline"
                 onClick={() => setOpenModal(false)}
                 className="text-xs rounded-xl cursor-pointer text-[#75695D]"
               >
