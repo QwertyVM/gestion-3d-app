@@ -835,12 +835,10 @@ export function CatalogoClient({
       <div className="hidden lg:block w-full bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
         <table className="w-full text-left border-collapse table-fixed text-xs">
           <colgroup>
-            <col className="w-[28%]" />
-            <col className="w-[14%]" />
-            <col className="w-[12%]" />
-            <col className="w-[10%]" />
-            <col className="w-[10%]" />
-            <col className="w-[10%]" />
+            <col className="w-[45%]" />
+            <col className="w-[15%]" />
+            <col className="w-[20%]" />
+            <col className="w-[20%]" />
           </colgroup>
           <thead>
             <tr className="bg-[#FAF8F5] border-b border-[#E2D9CC] text-[#75695D] text-[11px] font-semibold">
@@ -853,7 +851,7 @@ export function CatalogoClient({
             <tbody className="divide-y divide-[#E2D9CC]">
               {filteredProductos.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-[#75695D] italic bg-[#FFFFFF]">
+                  <td colSpan={4} className="py-12 text-center text-[#75695D] italic bg-[#FFFFFF]">
                     No se encontraron productos con ese criterio de búsqueda
                   </td>
                 </tr>
