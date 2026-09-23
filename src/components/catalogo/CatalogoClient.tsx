@@ -787,7 +787,7 @@ export function CatalogoClient({
               <th className="py-3.5 px-4 font-bold text-left">Modelo & Familia</th>
               <th className="py-3.5 px-4 font-bold text-center">Especificaciones</th>
               <th className="py-3.5 px-4 font-bold text-right">Costo Base</th>
-              <th className="py-3.5 px-4 font-bold text-center">Precios de Venta (Amigos / Mercado)</th>
+              <th className="py-3.5 px-4 font-bold text-center">Precio de Venta (Mercado)</th>
               <th className="py-3.5 px-4 font-bold text-center">Estado</th>
               <th className="py-3.5 px-4 font-bold text-right pr-4">Acciones</th>
             </tr>
@@ -844,22 +844,11 @@ export function CatalogoClient({
                         {formatCurrency(costo)}
                       </td>
 
-                      {/* Columna 4: Niveles de Precios (2 Columnas) */}
-                      <td className="py-3 px-4 min-w-[220px]">
-                        <div className="grid grid-cols-2 gap-2 text-center font-mono text-xs tabular-nums">
-                          {/* Amigos */}
-                          <div className="p-1.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
-                            <span className="text-[9px] text-[#75695D] block font-sans">Amigos</span>
-                            <span className="font-semibold text-[#241C15] block">
-                              {formatCurrency(p.precioAmigos)}
-                            </span>
-                            <span className="text-[9px] text-[#1E5E3A] font-bold block">
-                              {calcMargen(p.precioAmigos, costo)}
-                            </span>
-                          </div>
-
+                      {/* Columna 4: Niveles de Precios (1 Columna) */}
+                      <td className="py-3 px-4 min-w-[120px]">
+                        <div className="flex justify-center text-center font-mono text-xs tabular-nums">
                           {/* Mercado */}
-                          <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#A36F4C]/40 shadow-2xs ring-1 ring-[#A36F4C]/10">
+                          <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#A36F4C]/40 shadow-2xs ring-1 ring-[#A36F4C]/10 w-full max-w-[100px]">
                             <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Mercado</span>
                             <span className="font-black text-[#A36F4C] block">
                               {formatCurrency(p.precioMercado)}
@@ -1038,15 +1027,9 @@ export function CatalogoClient({
                   </span>
                 </div>
 
-                {/* Fila 3: Precios de Venta (2 Cols) */}
-                <div className="grid grid-cols-2 gap-2 text-center font-mono text-xs tabular-nums">
-                  <div className="p-1.5 bg-[#FAF8F5] rounded-xl border border-[#E2D9CC]/70">
-                    <span className="text-[9px] text-[#75695D] block font-sans">Amigos</span>
-                    <span className="font-bold text-[#241C15] block">{formatCurrency(p.precioAmigos)}</span>
-                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioAmigos, costo)}</span>
-                  </div>
-
-                  <div className="p-1.5 bg-[#FFFFFF] rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10">
+                {/* Fila 3: Precio de Venta (1 Col) */}
+                <div className="flex justify-center text-center font-mono text-xs tabular-nums">
+                  <div className="p-1.5 bg-[#FFFFFF] rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10 w-full max-w-[120px]">
                     <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Mercado</span>
                     <span className="font-black text-[#A36F4C] block">{formatCurrency(p.precioMercado)}</span>
                     <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioMercado, costo)}</span>
@@ -1242,25 +1225,7 @@ export function CatalogoClient({
                   Precios de Venta (S/)
                 </Label>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Amigos */}
-                  <div className="space-y-1 p-2.5 bg-[#F8F6F2] rounded-xl border border-[#E2D9CC]">
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-bold text-[#75695D]">Amigos</span>
-                      <span className="font-mono font-bold text-[#1E5E3A]">
-                        {calcMargen(parseFloat(formData.precioAmigos) || 0, parseFloat(formData.costoBase) || 0)}
-                      </span>
-                    </div>
-                    <Input 
-                      type="number"
-                      step="0.5"
-                      value={formData.precioAmigos}
-                      onChange={(e) => setFormData(prev => ({ ...prev, precioAmigos: e.target.value }))}
-                      placeholder="18.00"
-                      className="bg-white border-[#E2D9CC] rounded-lg text-xs font-mono font-bold h-9"
-                    />
-                  </div>
-
+                <div className="grid grid-cols-1 gap-3">
                   {/* Mercado */}
                   <div className="space-y-1 p-2.5 bg-[#FAF8F5] rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10">
                     <div className="flex items-center justify-between text-[10px]">
