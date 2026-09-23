@@ -41,6 +41,8 @@ import {
   duplicarProducto, 
   deleteProducto 
 } from '@/actions/productos'
+import { updateBggStats } from '@/actions/bgg'
+import { XMLParser } from 'fast-xml-parser'
 
 export interface ProductoItem {
   id: string
@@ -137,6 +139,72 @@ export function CatalogoClient({
     bggId: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSyncingBgg, setIsSyncingBgg] = useState(false)
+
+  const handleSyncBgg = async () => {
+    // Filtrar los que tienen ID
+    const gamesWithBgg = productos.filter((p: any) => p.bggId)
+    if (gamesWithBgg.length === 0) {
+      toast.info('No hay juegos con BGG ID configurado')
+      return
+    }
+
+    setIsSyncingBgg(true)
+    toast.info(`Iniciando sincronización de ${gamesWithBgg.length} juegos...`)
+    
+    let successCount = 0
+    let failCount = 0
+
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: "@_"
+    })
+
+    for (const p of gamesWithBgg) {
+      try {
+        const bggId = (p as any).bggId
+        const url = `https://boardgamegeek.com/xmlapi2/thing?id=${bggId}&stats=1`
+        
+        // Fetch desde el cliente (tu navegador) saltándose Vercel/Cloudflare
+        const response = await fetch(url)
+        if (!response.ok) throw new Error('Network error')
+        
+        const xmlText = await response.text()
+        const result = parser.parse(xmlText)
+        let item = result.items?.item
+        
+        if (item) {
+          if (Array.isArray(item)) item = item[0]
+          
+          const rating = parseFloat(item.statistics?.ratings?.average?.['@_value']) || undefined
+          const weight = parseFloat(item.statistics?.ratings?.averageweight?.['@_value']) || undefined
+          const minPlayers = parseInt(item.minplayers?.['@_value'], 10) || undefined
+          const maxPlayers = parseInt(item.maxplayers?.['@_value'], 10) || undefined
+          const playtime = parseInt(item.playingtime?.['@_value'], 10) || undefined
+
+          await updateBggStats(p.id, {
+            bggRating: rating,
+            bggWeight: weight,
+            bggMinPlayers: minPlayers,
+            bggMaxPlayers: maxPlayers,
+            bggPlaytime: playtime
+          })
+          successCount++
+        } else {
+          failCount++
+        }
+      } catch (error) {
+        console.error(`Error sync bgg for ${p.nombreModelo}:`, error)
+        failCount++
+      }
+      
+      // Delay 500ms para no saturar BGG
+      await new Promise(r => setTimeout(r, 500))
+    }
+
+    setIsSyncingBgg(false)
+    toast.success(`Sincronización terminada. Éxito: ${successCount}, Fallos: ${failCount}`)
+  }
 
   // Close context menu on click outside
   useEffect(() => {
@@ -440,14 +508,16 @@ export function CatalogoClient({
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-            {/* Botón Inventario de Filamentos */}
-            <Link
-              href="/catalogo/inventario"
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] shadow-2xs transition-all cursor-pointer flex-1 sm:flex-initial justify-center h-10"
+            {/* Botón Sincronizar BGG */}
+            <Button
+              type="button"
+              onClick={handleSyncBgg}
+              disabled={isSyncingBgg}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] shadow-2xs transition-all cursor-pointer flex-1 sm:flex-initial justify-center h-10 disabled:opacity-50"
             >
-              <Palette className="h-4 w-4 text-[#A36F4C]" />
-              <span>Filamentos</span>
-            </Link>
+              <RotateCcw className={`h-4 w-4 text-[#A36F4C] ${isSyncingBgg ? 'animate-spin' : ''}`} />
+              <span>{isSyncingBgg ? 'Sincronizando...' : 'Actualizar BGG'}</span>
+            </Button>
 
             {/* Botón Gestionar Categorías */}
             <Link
