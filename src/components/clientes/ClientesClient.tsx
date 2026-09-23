@@ -501,7 +501,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
               <th className="py-3.5 px-4 font-bold text-left">Cliente & Canal</th>
               <th className="py-3.5 px-4 font-bold text-left">Contacto / WhatsApp</th>
               <th className="py-3.5 px-4 font-bold text-left">Ubicación</th>
-              <th className="py-3.5 px-4 font-bold text-right">LTV / Pedidos</th>
+              <th className="py-3.5 px-4 font-bold text-right">LTV / Puntos</th>
               <th className="py-3.5 px-4 font-bold text-center">Estado Pago</th>
               <th className="py-3.5 px-4 font-bold text-right pr-4">Acciones</th>
             </tr>
@@ -597,13 +597,13 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                       </div>
                     </td>
 
-                    {/* Col 4: LTV & Pedidos */}
+                    {/* Col 4: LTV & Pedidos & Puntos */}
                     <td className="py-3 px-4 text-right font-mono text-xs min-w-0 tabular-nums">
                       <span className="font-black text-[#241C15] block">
                         {formatCurrency(c.totalComprado)}
                       </span>
                       <span className="text-[10px] text-[#75695D] block font-sans">
-                        {c.pedidosCount} pedido{c.pedidosCount !== 1 ? 's' : ''} ({c.piezasCount} pzas)
+                        {c.puntos} pts • {c.pedidosCount} ped.
                       </span>
                     </td>
 
@@ -709,8 +709,8 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                     <span className="font-black text-[#241C15]">{formatCurrency(c.totalComprado)}</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] text-[#75695D] block font-sans">Pedidos Realizados</span>
-                    <span className="font-bold text-[#241C15]">{c.pedidosCount} ({c.piezasCount} pzas)</span>
+                    <span className="text-[10px] text-[#75695D] block font-sans">NovaPoints / Pedidos</span>
+                    <span className="font-bold text-[#241C15]">{c.puntos} pts ({c.pedidosCount})</span>
                   </div>
                 </div>
 

@@ -33,6 +33,7 @@ export interface ClienteItem {
   totalComprado: number
   totalPagado: number
   saldoPendiente: number
+  puntos: number
   pedidosCount: number
   piezasCount: number
   ultimoPedidoFecha?: string | null
@@ -97,6 +98,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
     totalComprado: number
     totalPagado: number
     saldoPendiente: number
+    puntos: number
     pedidosCount: number
     piezasCount: number
     ultimoPedidoFecha?: string | null
@@ -118,6 +120,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
         totalComprado: 0,
         totalPagado: 0,
         saldoPendiente: 0,
+        puntos: 0,
         pedidosCount: 0,
         piezasCount: 0,
         ultimoPedidoFecha: null,
@@ -134,6 +137,10 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
     m.totalPagado += Number(p.montoPagado || 0)
     m.saldoPendiente += Number(p.saldoPendiente || 0)
     m.pedidosCount += 1
+    
+    if (p.estado === 'ENTREGADO') {
+      m.puntos += Number(p.total || 0)
+    }
 
     const cantItems = Array.isArray(p.items) && p.items.length > 0
       ? p.items.reduce((sum: number, it: any) => sum + (Number(it.cantidad) || 1), 0)
@@ -159,6 +166,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
       totalComprado: 0,
       totalPagado: 0,
       saldoPendiente: 0,
+      puntos: 0,
       pedidosCount: 0,
       piezasCount: 0,
       ultimoPedidoFecha: null,
@@ -192,6 +200,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
       totalComprado: Number(m.totalComprado.toFixed(2)),
       totalPagado: Number(m.totalPagado.toFixed(2)),
       saldoPendiente: Number(m.saldoPendiente.toFixed(2)),
+      puntos: Math.floor(m.puntos),
       pedidosCount: m.pedidosCount,
       piezasCount: m.piezasCount,
       ultimoPedidoFecha: m.ultimoPedidoFecha,
@@ -235,6 +244,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
         totalComprado: Number(m.totalComprado.toFixed(2)),
         totalPagado: Number(m.totalPagado.toFixed(2)),
         saldoPendiente: Number(m.saldoPendiente.toFixed(2)),
+        puntos: Math.floor(m.puntos),
         pedidosCount: m.pedidosCount,
         piezasCount: m.piezasCount,
         ultimoPedidoFecha: m.ultimoPedidoFecha,
