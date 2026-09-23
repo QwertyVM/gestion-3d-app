@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState, useTransition } from 'react'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { TipoNegocio, BusinessConfig, BUSINESSES, BUSINESS_COOKIE_NAME, DEFAULT_NEGOCIO } from '@/lib/business'
 
@@ -42,7 +42,7 @@ export function BusinessProvider({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [isPending, startTransition] = useTransition()
+  const [isPending, setIsPending] = useState(false)
   const [negocio, setNegocioState] = useState<TipoNegocio>(initialNegocio || DEFAULT_NEGOCIO)
 
   useEffect(() => {
@@ -55,6 +55,8 @@ export function BusinessProvider({
   const setNegocio = (nextNegocio: TipoNegocio) => {
     if (nextNegocio === negocio) return
 
+    setIsPending(true)
+
     // Set cookie (valid for 1 year)
     document.cookie = `${BUSINESS_COOKIE_NAME}=${nextNegocio}; path=/; max-age=31536000; SameSite=Lax`
     try {
@@ -63,14 +65,14 @@ export function BusinessProvider({
 
     setNegocioState(nextNegocio)
 
-    startTransition(() => {
+    if (typeof window !== 'undefined') {
       // If switching to BG and on 3D-specific routes like /taller or /inventario, redirect to orders or dashboard
       if (nextNegocio === 'BG' && (pathname?.startsWith('/taller') || pathname?.startsWith('/inventario') || pathname?.startsWith('/catalogo/inventario'))) {
-        router.push('/pedidos')
+        window.location.href = '/pedidos'
       } else {
-        router.refresh()
+        window.location.reload()
       }
-    })
+    }
   }
 
   const config = BUSINESSES[negocio] || BUSINESSES[DEFAULT_NEGOCIO]

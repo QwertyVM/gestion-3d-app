@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useBusiness } from '@/context/BusinessContext'
 import { TipoNegocio, BUSINESSES } from '@/lib/business'
-import { Box, Dices, Check, ChevronsUpDown, Sparkles } from 'lucide-react'
+import { Box, Dices, Check, ChevronsUpDown, Sparkles, Loader2 } from 'lucide-react'
 
 interface BusinessSwitcherProps {
   compact?: boolean
@@ -27,8 +27,12 @@ export function BusinessSwitcher({ compact = false, className = '' }: BusinessSw
   }, [])
 
   const selectNegocio = (next: TipoNegocio) => {
-    setNegocio(next)
+    if (next === negocio) {
+      setIsOpen(false)
+      return
+    }
     setIsOpen(false)
+    setNegocio(next)
   }
 
   const is3D = negocio === '3D'
@@ -38,12 +42,13 @@ export function BusinessSwitcher({ compact = false, className = '' }: BusinessSw
       {/* Trigger Button - Native Warm Theme Card */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        disabled={isPending}
+        onClick={() => !isPending && setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-label="Cambiar negocio activo"
         className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl bg-white border border-[#E2D9CC] shadow-2xs hover:bg-[#FAF7F4] hover:border-[#D4A373]/60 transition-all duration-150 text-left cursor-pointer ${
           isOpen ? 'ring-2 ring-[#A36F4C]/30 border-[#A36F4C] bg-[#FAF7F4]' : ''
-        } ${isPending ? 'opacity-60 cursor-wait' : ''}`}
+        } ${isPending ? 'opacity-70 cursor-wait pointer-events-none' : ''}`}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {/* Brand Avatar */}
@@ -81,18 +86,22 @@ export function BusinessSwitcher({ compact = false, className = '' }: BusinessSw
             </div>
             {!compact && (
               <p className="text-[10px] text-[#75695D] font-medium truncate leading-tight mt-0.5">
-                {config.subname}
+                {isPending ? 'Cambiando...' : config.subname}
               </p>
             )}
           </div>
         </div>
 
-        {/* Chevron */}
-        <ChevronsUpDown
-          className={`w-4 h-4 text-[#75695D] shrink-0 transition-transform duration-200 ${
-            isOpen ? 'text-[#241C15]' : ''
-          }`}
-        />
+        {/* Chevron or Loader */}
+        {isPending ? (
+          <Loader2 className="w-4 h-4 text-[#75695D] animate-spin shrink-0" />
+        ) : (
+          <ChevronsUpDown
+            className={`w-4 h-4 text-[#75695D] shrink-0 transition-transform duration-200 ${
+              isOpen ? 'text-[#241C15]' : ''
+            }`}
+          />
+        )}
       </button>
 
       {/* Dropdown Menu - Native Warm Palette */}
