@@ -61,6 +61,17 @@ export async function createProducto(data: {
   imagenUrl?: string | null
   descripcionWeb?: string | null
   destacadoWeb?: boolean
+  bulletPoint1?: string | null
+  bulletPoint2?: string | null
+  bulletPoint3?: string | null
+  bulletPoint4?: string | null
+  numJugadores?: string | null
+  edadMinima?: number | null
+  duracionMinutos?: number | null
+  idioma?: string | null
+  editorialMarca?: string | null
+  mecanicas?: string | null
+  bggId?: number | null
 }) {
   const targetNegocio = data.negocio || await getActiveNegocioServer()
 
@@ -81,7 +92,18 @@ export async function createProducto(data: {
       precioOferta: data.precioOferta ?? null,
       imagenUrl: data.imagenUrl ?? null,
       descripcionWeb: data.descripcionWeb ?? null,
-      destacadoWeb: data.destacadoWeb ?? false
+      destacadoWeb: data.destacadoWeb ?? false,
+      bulletPoint1: data.bulletPoint1 ?? null,
+      bulletPoint2: data.bulletPoint2 ?? null,
+      bulletPoint3: data.bulletPoint3 ?? null,
+      bulletPoint4: data.bulletPoint4 ?? null,
+      numJugadores: data.numJugadores ?? null,
+      edadMinima: data.edadMinima ?? null,
+      duracionMinutos: data.duracionMinutos ?? null,
+      idioma: data.idioma ?? null,
+      editorialMarca: data.editorialMarca ?? null,
+      mecanicas: data.mecanicas ?? null,
+      bggId: data.bggId ?? null
     }
   })
 
@@ -115,6 +137,17 @@ export async function updateProducto(id: string, data: {
   imagenUrl?: string | null
   descripcionWeb?: string | null
   destacadoWeb?: boolean
+  bulletPoint1?: string | null
+  bulletPoint2?: string | null
+  bulletPoint3?: string | null
+  bulletPoint4?: string | null
+  numJugadores?: string | null
+  edadMinima?: number | null
+  duracionMinutos?: number | null
+  idioma?: string | null
+  editorialMarca?: string | null
+  mecanicas?: string | null
+  bggId?: number | null
 }) {
   const current = await prisma.producto.findUnique({ where: { id } })
   const prevPesoGramos = current?.pesoGramos != null ? Number(current.pesoGramos) : 0
@@ -137,7 +170,18 @@ export async function updateProducto(id: string, data: {
       ...(data.precioOferta !== undefined ? { precioOferta: data.precioOferta } : {}),
       ...(data.imagenUrl !== undefined ? { imagenUrl: data.imagenUrl } : {}),
       ...(data.descripcionWeb !== undefined ? { descripcionWeb: data.descripcionWeb } : {}),
-      ...(data.destacadoWeb !== undefined ? { destacadoWeb: data.destacadoWeb } : {})
+      ...(data.destacadoWeb !== undefined ? { destacadoWeb: data.destacadoWeb } : {}),
+      ...(data.bulletPoint1 !== undefined ? { bulletPoint1: data.bulletPoint1 } : {}),
+      ...(data.bulletPoint2 !== undefined ? { bulletPoint2: data.bulletPoint2 } : {}),
+      ...(data.bulletPoint3 !== undefined ? { bulletPoint3: data.bulletPoint3 } : {}),
+      ...(data.bulletPoint4 !== undefined ? { bulletPoint4: data.bulletPoint4 } : {}),
+      ...(data.numJugadores !== undefined ? { numJugadores: data.numJugadores } : {}),
+      ...(data.edadMinima !== undefined ? { edadMinima: data.edadMinima } : {}),
+      ...(data.duracionMinutos !== undefined ? { duracionMinutos: data.duracionMinutos } : {}),
+      ...(data.idioma !== undefined ? { idioma: data.idioma } : {}),
+      ...(data.editorialMarca !== undefined ? { editorialMarca: data.editorialMarca } : {}),
+      ...(data.mecanicas !== undefined ? { mecanicas: data.mecanicas } : {}),
+      ...(data.bggId !== undefined ? { bggId: data.bggId } : {})
     }
   })
 

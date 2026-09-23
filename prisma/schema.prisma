@@ -167,14 +167,47 @@ model Producto {
   destacadoWeb        Boolean      @default(false)
   imagenUrl           String?
   descripcionWeb      String?
-  
+
+  // Puntos Clave — aparecen como bullets en la web ("Lo que tienes que saber")
+  bulletPoint1        String?
+  bulletPoint2        String?
+  bulletPoint3        String?
+  bulletPoint4        String?
+
+  // Ficha Técnica BG (solo para negocio=BG)
+  numJugadores        String?      // ej: "2-4"
+  edadMinima          Int?         // ej: 8
+  duracionMinutos     Int?         // ej: 45
+  idioma              String?      // ej: "Español"
+  editorialMarca      String?      // ej: "Devir"
+  mecanicas           String?      // ej: "Deducción, Velocidad"
+
+  // BoardGameGeek Integration
+  bggId               Int?         // ID del juego en BoardGameGeek
+  bggRating           Decimal?     @db.Decimal(4, 2) // Rating promedio de BGG (0-10)
+  bggRatingCount      Int?         // Número de votos en BGG
+  bggRatingUpdatedAt  DateTime?    // Última vez que se actualizó el rating
+
   activo              Boolean      @default(true)
   ventas              Venta[]
   itemPedidos         ItemPedido[]
+  comentarios         ComentarioProducto[]
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
   @@unique([nombreModelo, negocio])
+}
+
+model ComentarioProducto {
+  id           String   @id @default(uuid())
+  productoId   String
+  producto     Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  autor        String
+  texto        String
+  calificacion Int      @default(5) // 1-5 estrellas
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Venta {

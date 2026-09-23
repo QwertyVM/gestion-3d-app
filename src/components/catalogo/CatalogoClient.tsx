@@ -123,7 +123,18 @@ export function CatalogoClient({
     precioOferta: '',
     imagenUrl: '',
     descripcionWeb: '',
-    destacadoWeb: false
+    destacadoWeb: false,
+    bulletPoint1: '',
+    bulletPoint2: '',
+    bulletPoint3: '',
+    bulletPoint4: '',
+    numJugadores: '',
+    edadMinima: '',
+    duracionMinutos: '',
+    idioma: '',
+    editorialMarca: '',
+    mecanicas: '',
+    bggId: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -279,7 +290,18 @@ export function CatalogoClient({
       precioOferta: '',
       imagenUrl: '',
       descripcionWeb: '',
-      destacadoWeb: false
+      destacadoWeb: false,
+      bulletPoint1: '',
+      bulletPoint2: '',
+      bulletPoint3: '',
+      bulletPoint4: '',
+      numJugadores: '',
+      edadMinima: '',
+      duracionMinutos: '',
+      idioma: '',
+      editorialMarca: '',
+      mecanicas: '',
+      bggId: ''
     })
     setOpenModal(true)
   }
@@ -303,7 +325,18 @@ export function CatalogoClient({
       precioOferta: p.precioOferta ? p.precioOferta.toString() : '',
       imagenUrl: p.imagenUrl || '',
       descripcionWeb: p.descripcionWeb || '',
-      destacadoWeb: p.destacadoWeb || false
+      destacadoWeb: p.destacadoWeb || false,
+      bulletPoint1: (p as any).bulletPoint1 || '',
+      bulletPoint2: (p as any).bulletPoint2 || '',
+      bulletPoint3: (p as any).bulletPoint3 || '',
+      bulletPoint4: (p as any).bulletPoint4 || '',
+      numJugadores: (p as any).numJugadores || '',
+      edadMinima: (p as any).edadMinima?.toString() || '',
+      duracionMinutos: (p as any).duracionMinutos?.toString() || '',
+      idioma: (p as any).idioma || '',
+      editorialMarca: (p as any).editorialMarca || '',
+      mecanicas: (p as any).mecanicas || '',
+      bggId: (p as any).bggId?.toString() || ''
     })
     setOpenModal(true)
   }
@@ -344,7 +377,18 @@ export function CatalogoClient({
       precioOferta: formData.precioOferta ? parseFloat(formData.precioOferta) : null,
       imagenUrl: formData.imagenUrl.trim() || null,
       descripcionWeb: formData.descripcionWeb.trim() || null,
-      destacadoWeb: formData.destacadoWeb
+      destacadoWeb: formData.destacadoWeb,
+      bulletPoint1: formData.bulletPoint1.trim() || null,
+      bulletPoint2: formData.bulletPoint2.trim() || null,
+      bulletPoint3: formData.bulletPoint3.trim() || null,
+      bulletPoint4: formData.bulletPoint4.trim() || null,
+      numJugadores: formData.numJugadores.trim() || null,
+      edadMinima: formData.edadMinima ? parseInt(formData.edadMinima) : null,
+      duracionMinutos: formData.duracionMinutos ? parseInt(formData.duracionMinutos) : null,
+      idioma: formData.idioma.trim() || null,
+      editorialMarca: formData.editorialMarca.trim() || null,
+      mecanicas: formData.mecanicas.trim() || null,
+      bggId: formData.bggId ? parseInt(formData.bggId) : null
     }
 
     setIsSubmitting(true)
@@ -1293,6 +1337,124 @@ export function CatalogoClient({
                   />
                 </div>
               </div>
+
+              {/* Puntos Clave (bullets que verán los clientes en la web) */}
+              <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-sm">
+                <div className="flex items-center gap-1.5 pb-2 border-b border-[#E2D9CC]/50">
+                  <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                    📌 Puntos Clave del Producto
+                  </span>
+                  <span className="text-[10px] text-[#75695D] ml-auto">Aparecen como bullets en la web</span>
+                </div>
+                {[1, 2, 3, 4].map((n) => (
+                  <Input
+                    key={n}
+                    value={(formData as any)[`bulletPoint${n}`]}
+                    onChange={(e) => setFormData(prev => ({ ...prev, [`bulletPoint${n}`]: e.target.value }))}
+                    placeholder={[
+                      'Ej: Para 2-4 jugadores | Duración: 45 min',
+                      'Ej: Incluye 120 cartas y dados especiales',
+                      'Ej: Idioma: Español. Fácil de aprender',
+                      'Ej: Recomendado por BoardGameGeek'
+                    ][n - 1]}
+                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                  />
+                ))}
+              </div>
+
+              {/* Ficha Técnica BG (solo visible en modo Juegos de Mesa) */}
+              {isBG && (
+                <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-sm">
+                  <div className="flex items-center gap-1.5 pb-2 border-b border-[#E2D9CC]/50">
+                    <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                      🎲 Ficha Técnica del Juego
+                    </span>
+                    <span className="text-[10px] text-[#75695D] ml-auto">Tabla de características en la web</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-[#75695D]">Número de Jugadores</Label>
+                      <Input
+                        value={formData.numJugadores}
+                        onChange={(e) => setFormData(prev => ({ ...prev, numJugadores: e.target.value }))}
+                        placeholder="Ej: 2-4"
+                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-[#75695D]">Edad Mínima (años)</Label>
+                      <Input
+                        type="number"
+                        value={formData.edadMinima}
+                        onChange={(e) => setFormData(prev => ({ ...prev, edadMinima: e.target.value }))}
+                        placeholder="Ej: 8"
+                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-[#75695D]">Duración (minutos)</Label>
+                      <Input
+                        type="number"
+                        value={formData.duracionMinutos}
+                        onChange={(e) => setFormData(prev => ({ ...prev, duracionMinutos: e.target.value }))}
+                        placeholder="Ej: 45"
+                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-[#75695D]">Editorial / Marca</Label>
+                      <Input
+                        value={formData.editorialMarca}
+                        onChange={(e) => setFormData(prev => ({ ...prev, editorialMarca: e.target.value }))}
+                        placeholder="Ej: Devir"
+                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-[#75695D]">Idioma</Label>
+                      <Input
+                        value={formData.idioma}
+                        onChange={(e) => setFormData(prev => ({ ...prev, idioma: e.target.value }))}
+                        placeholder="Ej: Español"
+                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-bold text-[#75695D]">Mecánicas</Label>
+                      <Input
+                        value={formData.mecanicas}
+                        onChange={(e) => setFormData(prev => ({ ...prev, mecanicas: e.target.value }))}
+                        placeholder="Ej: Deducción, Velocidad"
+                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                      />
+                    </div>
+                  </div>
+
+                  {/* BGG ID */}
+                  <div className="pt-2 border-t border-[#E2D9CC]/50 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] font-bold text-[#75695D]">BGG ID (BoardGameGeek)</Label>
+                      <a
+                        href={formData.bggId ? `https://boardgamegeek.com/boardgame/${formData.bggId}` : 'https://boardgamegeek.com'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-[#1E5E3A] hover:underline"
+                      >
+                        Buscar en BGG ↗
+                      </a>
+                    </div>
+                    <Input
+                      type="number"
+                      value={formData.bggId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bggId: e.target.value }))}
+                      placeholder="Ej: 8057 (Ticket to Ride)"
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                    />
+                    <p className="text-[10px] text-[#75695D]">Al guardar, la web mostrará el rating real de BGG automáticamente.</p>
+                  </div>
+                </div>
+              )}
+
             </div>
 
             {/* Footer */}
