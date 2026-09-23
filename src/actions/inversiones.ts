@@ -264,3 +264,25 @@ export async function swapInversionOrder(id1: string, id2: string) {
   safeRevalidate()
   return { success: true }
 }
+
+export async function getProductosCatalog(negocio?: TipoNegocio) {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+  const productos = await prisma.producto.findMany({
+    where: { negocio: targetNegocio, activo: true },
+    select: {
+      id: true,
+      nombreModelo: true,
+      lineaCategoria: true,
+      costoBase: true,
+      stock: true,
+    },
+    orderBy: { nombreModelo: 'asc' }
+  })
+  return productos.map(p => ({
+    id: p.id,
+    nombreModelo: p.nombreModelo,
+    lineaCategoria: p.lineaCategoria,
+    costoBase: Number(p.costoBase),
+    stock: p.stock
+  }))
+}

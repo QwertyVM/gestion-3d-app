@@ -131,7 +131,7 @@ export async function getDatosPreCierre(mesInput?: number, anioInput?: number, n
   const totalIngresos = totalVentasCobrado + totalIngresosDirectos
 
   const totalEgresosInsumos = egresos
-    .filter(e => e.categoria === 'INSUMO')
+    .filter(e => e.categoria === 'INSUMO' || e.categoria === 'MERCADERIA')
     .reduce((acc, e) => acc + (e.costoTotal || 0), 0)
 
   const totalEgresosMaquinaria = egresos
@@ -142,7 +142,7 @@ export async function getDatosPreCierre(mesInput?: number, anioInput?: number, n
     .filter(e => e.categoria === 'SERVICIO')
     .reduce((acc, e) => acc + (e.costoTotal || 0), 0)
 
-  const totalEgresos = totalEgresosInsumos + totalEgresosMaquinaria + totalEgresosServicios
+  const totalEgresos = egresos.reduce((acc, e) => acc + (e.costoTotal || 0), 0)
   const flujoNetoMes = totalIngresos - totalEgresos
   const saldoSistemaCaja = flujoNetoMes
 

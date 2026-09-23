@@ -37,11 +37,12 @@ import {
 import { formatDate } from '@/lib/utils'
 import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
 import { DateFilterControl } from '@/components/ui/DateFilterControl'
+import { useBusiness } from '@/context/BusinessContext'
 
 export interface EgresoItem {
   id: string
   persona: string
-  categoria: 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO' | 'APORTE_CAPITAL'
+  categoria: 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO' | 'APORTE_CAPITAL' | 'MERCADERIA' | 'FINANCIERO'
   subcategoria?: string | null
   itemConcepto: string
   especificacionColor?: string | null
@@ -177,6 +178,7 @@ export function FlujoCajaClient({
   ventas, 
   ingresosDirectos = [] 
 }: FlujoCajaClientProps) {
+  const { isBG } = useBusiness()
   const [search, setSearch] = useState('')
   const [tipoFilter, setTipoFilter] = useState<'TODOS' | 'INGRESOS' | 'EGRESOS'>('TODOS')
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
@@ -220,7 +222,7 @@ export function FlujoCajaClient({
 
   const totalEgresosInsumos = useMemo(() => {
     return egresosEnRango
-      .filter(e => e.categoria === 'INSUMO')
+      .filter(e => e.categoria === 'INSUMO' || e.categoria === 'MERCADERIA')
       .reduce((acc, e) => acc + e.costoTotal, 0)
   }, [egresosEnRango])
 
@@ -230,7 +232,13 @@ export function FlujoCajaClient({
       .reduce((acc, e) => acc + e.costoTotal, 0)
   }, [egresosEnRango])
 
-  const totalEgresosTotales = totalEgresosMaquinaria + totalEgresosInsumos + totalEgresosServicios
+  const totalEgresosFinancieros = useMemo(() => {
+    return egresosEnRango
+      .filter(e => e.categoria === 'FINANCIERO')
+      .reduce((acc, e) => acc + e.costoTotal, 0)
+  }, [egresosEnRango])
+
+  const totalEgresosTotales = egresosEnRango.reduce((acc, e) => acc + e.costoTotal, 0)
   const saldoNetoCaja = totalIngresosTotales - totalEgresosTotales
 
   // Evolution Chart Timeline Data Calculation
@@ -381,10 +389,32 @@ export function FlujoCajaClient({
           id: `eg-${e.id}`,
           fecha: e.createdAt,
           tipo: 'EGRESO_MAQUINARIA',
-          concepto: `Maquinaria/Equipo: ${e.itemConcepto}`,
+          concepto: `${isBG ? 'Equipamiento' : 'Maquinaria/Equipo'}: ${e.itemConcepto}`,
           entidad: e.persona || 'Víctor',
           monto: e.costoTotal,
-          detalle: e.presentacion || 'Activo / Equipo 3D',
+          detalle: e.presentacion || (isBG ? 'Activo / Equipamiento' : 'Activo / Equipo 3D'),
+          isPositive: false,
+        })
+      } else if (e.categoria === 'MERCADERIA' || (isBG && e.categoria === 'INSUMO')) {
+        movements.push({
+          id: `eg-${e.id}`,
+          fecha: e.createdAt,
+          tipo: 'EGRESO_INSUMO',
+          concepto: isBG ? `Compra Juegos: ${e.itemConcepto}` : `Insumo: ${e.itemConcepto}`,
+          entidad: e.persona || 'Víctor',
+          monto: e.costoTotal,
+          detalle: e.subcategoria ? `Tags: ${e.subcategoria}` : (isBG ? 'Stock Juegos de Mesa' : 'Material'),
+          isPositive: false,
+        })
+      } else if (e.categoria === 'FINANCIERO') {
+        movements.push({
+          id: `eg-${e.id}`,
+          fecha: e.createdAt,
+          tipo: 'EGRESO_SERVICIO',
+          concepto: `Bancario / ITF: ${e.itemConcepto}`,
+          entidad: e.persona || 'Víctor',
+          monto: e.costoTotal,
+          detalle: e.subcategoria ? `Banco: ${e.subcategoria}` : 'ITF / Comisión Bancaria',
           isPositive: false,
         })
       } else if (e.categoria === 'INSUMO') {
@@ -406,7 +436,7 @@ export function FlujoCajaClient({
           concepto: `Gasto Operativo: ${e.itemConcepto}`,
           entidad: e.persona || 'Víctor',
           monto: e.costoTotal,
-          detalle: 'Servicio / Flete / Operativo',
+          detalle: e.subcategoria || 'Servicio / Flete / Operativo',
           isPositive: false,
         })
       }

@@ -451,6 +451,8 @@ enum CategoriaInversion {
   INSUMO
   SERVICIO
   APORTE_CAPITAL
+  MERCADERIA
+  FINANCIERO
 }
 
 enum EstadoVenta {

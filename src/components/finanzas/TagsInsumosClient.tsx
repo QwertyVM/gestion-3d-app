@@ -29,6 +29,8 @@ import {
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { createTagInsumo, updateTagInsumo, deleteTagInsumo, TagInsumoItem, CategoriaTag } from '@/actions/tagsInsumos'
 import { toast } from 'sonner'
+import { useBusiness } from '@/context/BusinessContext'
+import { Dice5, Landmark, Store } from 'lucide-react'
 
 interface TagsInsumosClientProps {
   tags: TagInsumoItem[]
@@ -36,10 +38,17 @@ interface TagsInsumosClientProps {
 
 const ITEMS_PER_PAGE = 10
 
-const CATEGORIAS_TAG: { id: CategoriaTag; label: string; icon: any; desc: string }[] = [
+const CATEGORIAS_TAG_3D: { id: CategoriaTag; label: string; icon: any; desc: string }[] = [
   { id: 'INSUMO', label: 'Insumos & Materiales', icon: ShoppingBag, desc: 'Filamentos, Packaging, Consumibles' },
   { id: 'ACTIVO_FIJO', label: 'Activo Fijo / Equipos', icon: Wrench, desc: 'Impresoras 3D, Herramientas' },
   { id: 'SERVICIO', label: 'Servicios & Operativos', icon: Truck, desc: 'Fletes, Publicidad, Cuotas' },
+]
+
+const CATEGORIAS_TAG_BG: { id: CategoriaTag; label: string; icon: any; desc: string }[] = [
+  { id: 'MERCADERIA', label: 'Juegos & Stock', icon: Dice5, desc: 'Distribuidores, Editoriales: Devir, Asmodee' },
+  { id: 'FINANCIERO', label: 'Gastos Bancarios & ITF', icon: Landmark, desc: 'BCP, Interbank, BBVA, etc.' },
+  { id: 'SERVICIO', label: 'Servicios & Operativos', icon: Truck, desc: 'Envíos, Courier, Sleeves, Publicidad' },
+  { id: 'ACTIVO_FIJO', label: 'Activos & Equipamiento', icon: Store, desc: 'Mesas de juego, estanterías, demos' },
 ]
 
 const COLOR_OPTIONS = [
@@ -53,6 +62,7 @@ const COLOR_OPTIONS = [
 
 export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
   const router = useRouter()
+  const { isBG } = useBusiness()
   const [items, setItems] = useState<TagInsumoItem[]>(tags)
   const [search, setSearch] = useState('')
   const [categoriaFilter, setCategoriaFilter] = useState<'TODOS' | CategoriaTag>('TODOS')
@@ -60,15 +70,25 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
   const [editingTag, setEditingTag] = useState<TagInsumoItem | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
 
+  const CATEGORIAS_TAG = isBG ? CATEGORIAS_TAG_BG : CATEGORIAS_TAG_3D
+
   // Form states
   const [formNombre, setFormNombre] = useState('')
   const [formDescripcion, setFormDescripcion] = useState('')
   const [formColor, setFormColor] = useState('amber')
-  const [formCategoria, setFormCategoria] = useState<CategoriaTag>('INSUMO')
+  const [formCategoria, setFormCategoria] = useState<CategoriaTag>(isBG ? 'MERCADERIA' : 'INSUMO')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const formatCurrency = (val: number) => 
     `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  const getCategoryLabel = (cat: string) => {
+    if (cat === 'MERCADERIA') return 'Juegos & Stock'
+    if (cat === 'FINANCIERO') return 'Gastos Bancarios & ITF'
+    if (cat === 'ACTIVO_FIJO') return isBG ? 'Equipamiento' : 'Maquinaria & Equipos'
+    if (cat === 'INSUMO') return isBG ? 'Juegos & Stock' : 'Insumos & Materiales'
+    return 'Servicios & Operativos'
+  }
 
   // Reset page when filters change
   useEffect(() => {
@@ -77,9 +97,11 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
   // Categorías order mapping
   const CATEGORIA_SORT_ORDER: Record<string, number> = {
+    MERCADERIA: 1,
     INSUMO: 1,
-    ACTIVO_FIJO: 2,
+    FINANCIERO: 2,
     SERVICIO: 3,
+    ACTIVO_FIJO: 4,
   }
 
   // Filtered and sorted tags
@@ -322,39 +344,24 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
             >
               Todos ({items.length})
             </button>
-            <button
-              onClick={() => { setCategoriaFilter('INSUMO'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                categoriaFilter === 'INSUMO'
-                  ? 'bg-[#8C6D1F] text-white shadow-2xs'
-                  : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-              }`}
-            >
-              <ShoppingBag className="h-3 w-3" />
-              Insumos
-            </button>
-            <button
-              onClick={() => { setCategoriaFilter('ACTIVO_FIJO'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                categoriaFilter === 'ACTIVO_FIJO'
-                  ? 'bg-[#633E20] text-white shadow-2xs'
-                  : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-              }`}
-            >
-              <Wrench className="h-3 w-3" />
-              Activos Fijos
-            </button>
-            <button
-              onClick={() => { setCategoriaFilter('SERVICIO'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
-                categoriaFilter === 'SERVICIO'
-                  ? 'bg-[#1E5E3A] text-white shadow-2xs'
-                  : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-              }`}
-            >
-              <Truck className="h-3 w-3" />
-              Servicios
-            </button>
+            {CATEGORIAS_TAG.map(cat => {
+              const Icon = cat.icon
+              const count = items.filter(t => t.categoria === cat.id).length
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => { setCategoriaFilter(cat.id); setCurrentPage(1); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                    categoriaFilter === cat.id
+                      ? 'bg-[#A36F4C] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {cat.label} ({count})
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -378,7 +385,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                       {tag.nombre}
                     </Badge>
                     <span className="text-[10px] text-[#75695D] block">
-                      {tag.categoria === 'ACTIVO_FIJO' ? 'Maquinaria & Equipos' : tag.categoria === 'SERVICIO' ? 'Servicios & Operativos' : 'Insumos & Materiales'}
+                      {getCategoryLabel(tag.categoria)}
                     </span>
                     {tag.descripcion && (
                       <p className="text-xs text-[#75695D] line-clamp-1">
@@ -445,7 +452,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                           {tag.nombre}
                         </Badge>
                         <span className="text-[10px] text-[#75695D] block truncate">
-                          {tag.categoria === 'ACTIVO_FIJO' ? 'Maquinaria' : tag.categoria === 'SERVICIO' ? 'Servicios' : 'Insumos'}
+                          {getCategoryLabel(tag.categoria)}
                         </span>
                       </div>
                     </TableCell>
@@ -587,7 +594,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                 <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
                   Categoría Principal *
                 </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className={`grid gap-2 ${CATEGORIAS_TAG.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
                   {CATEGORIAS_TAG.map(c => {
                     const isSelected = formCategoria === c.id
                     const Icon = c.icon

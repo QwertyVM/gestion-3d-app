@@ -26,7 +26,8 @@ import {
   ExternalLink,
   ChevronDown,
   Globe,
-  Dices
+  Dices,
+  FileDown
 } from 'lucide-react'
 import { useBusiness } from '@/context/BusinessContext'
 import { Badge } from '@/components/ui/badge'
@@ -65,6 +66,23 @@ export interface ProductoItem {
   destacadoWeb?: boolean
   createdAt?: string
   updatedAt?: string
+  negocio?: string
+  bggId?: number | null
+  bggRating?: any
+  bggWeight?: any
+  bggMinPlayers?: number | null
+  bggMaxPlayers?: number | null
+  bggPlaytime?: number | null
+  editorialMarca?: string | null
+  mecanicas?: string | null
+  edadMinima?: number | null
+  duracionMinutos?: number | null
+  idioma?: string | null
+  numJugadores?: string | null
+  bulletPoint1?: string | null
+  bulletPoint2?: string | null
+  bulletPoint3?: string | null
+  bulletPoint4?: string | null
 }
 
 export interface CategoriaItem {
@@ -143,10 +161,63 @@ export function CatalogoClient({
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSyncingBgg, setIsSyncingBgg] = useState(false)
+  const [isExportOpen, setIsExportOpen] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
+
+  const bggCount = useMemo(() => {
+    return productos.filter(p => p.bggId != null && Number(p.bggId) > 0).length
+  }, [productos])
+
+  const handleExportBggCsv = (onlyWithBgg: boolean = true) => {
+    const targetProducts = onlyWithBgg 
+      ? productos.filter(p => p.bggId != null && Number(p.bggId) > 0)
+      : productos
+
+    if (targetProducts.length === 0) {
+      toast.info('No hay productos con código BGG registrado para exportar')
+      return
+    }
+
+    const headers = ['id', 'bggId', 'nombreModelo', 'negocio']
+    const rows = targetProducts.map(p => [
+      p.id,
+      p.bggId ?? '',
+      p.nombreModelo,
+      p.negocio || (isBG ? 'BG' : '3D')
+    ])
+
+    const escapeCsv = (val: string | number | null | undefined) => {
+      if (val === null || val === undefined) return ''
+      const str = String(val)
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.map(escapeCsv).join(','))
+    ].join('\r\n')
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    const dateStr = new Date().toISOString().split('T')[0]
+    const fileSuffix = onlyWithBgg ? 'bgg' : 'catalogo'
+    link.href = url
+    link.download = `productos_${fileSuffix}_${(isBG ? 'bg' : '3d')}_${dateStr}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    toast.success(`Exportados ${targetProducts.length} productos (.csv)`)
+  }
 
   const handleSyncBgg = async () => {
     // Filtrar los que tienen ID
-    const gamesWithBgg = productos.filter((p: any) => p.bggId)
+    const gamesWithBgg = productos.filter((p) => p.bggId)
     if (gamesWithBgg.length === 0) {
       toast.info('No hay juegos con BGG ID configurado')
       return
@@ -165,7 +236,7 @@ export function CatalogoClient({
 
     for (const p of gamesWithBgg) {
       try {
-        const bggId = (p as any).bggId
+        const bggId = p.bggId
         const url = `https://boardgamegeek.com/xmlapi2/thing?id=${bggId}&stats=1`
         
         // Fetch desde el cliente (tu navegador) saltándose Vercel/Cloudflare
@@ -214,6 +285,9 @@ export function CatalogoClient({
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setActiveMenuId(null)
+      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -569,6 +643,65 @@ export function CatalogoClient({
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+            {/* Dropdown / Botón Exportar BGG CSV */}
+            <div className="relative flex-1 sm:flex-initial" ref={exportMenuRef}>
+              <Button
+                type="button"
+                onClick={() => setIsExportOpen(prev => !prev)}
+                className="w-full sm:w-auto inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] shadow-2xs transition-all cursor-pointer justify-center h-10"
+                title="Exportar archivo CSV con ID de negocio y código BGG"
+              >
+                <FileDown className="h-4 w-4 text-[#A36F4C]" />
+                <span>Exportar BGG (.csv)</span>
+                {bggCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-[#EADDD0] text-[#754E31] text-[10px] font-bold">
+                    {bggCount}
+                  </span>
+                )}
+                <ChevronDown className={`h-3.5 w-3.5 text-[#75695D] transition-transform ${isExportOpen ? 'rotate-180' : ''}`} />
+              </Button>
+
+              {isExportOpen && (
+                <div className="absolute right-0 mt-1.5 w-64 bg-white border border-[#E2D9CC] rounded-2xl shadow-xl p-1.5 z-50 animate-in fade-in duration-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportBggCsv(true)
+                      setIsExportOpen(false)
+                    }}
+                    className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#FAF8F5] transition-colors flex items-center justify-between text-xs font-semibold text-[#241C15] cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span>Solo vinculados a BGG</span>
+                      <span className="text-[10px] text-[#75695D] font-normal">Con código BGG activo</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-[#EADDD0] text-[#754E31] text-[10px] font-bold">
+                      {bggCount}
+                    </span>
+                  </button>
+
+                  <div className="h-px bg-[#E2D9CC]/60 my-1" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportBggCsv(false)
+                      setIsExportOpen(false)
+                    }}
+                    className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#FAF8F5] transition-colors flex items-center justify-between text-xs font-semibold text-[#241C15] cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span>Catálogo completo ({isBG ? 'BG' : '3D'})</span>
+                      <span className="text-[10px] text-[#75695D] font-normal">Todos los productos con columna BGG</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] text-[10px] font-bold">
+                      {productos.length}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Botón Sincronizar BGG */}
             <Button
               type="button"
