@@ -278,6 +278,7 @@ model Pedido {
   destinoEnvio        String?
   diaEntregaPrometida String?
   notas               String?
+  metodoPago          String?      @default("YAPE")
   estado              EstadoPedido @default(PENDIENTE)
   costoEnvio          Decimal      @default(0.00) @db.Decimal(10, 2)
   subtotal            Decimal      @default(0.00) @db.Decimal(10, 2)

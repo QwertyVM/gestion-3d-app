@@ -13,7 +13,6 @@ import {
   ArrowDownLeft, 
   Tag, 
   TrendingUp, 
-  Package, 
   PackageSearch, 
   Layers, 
   CircleDot, 
@@ -21,7 +20,8 @@ import {
   X,
   Hammer,
   Users,
-  Globe
+  Globe,
+  Store
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getNavLiveMetrics } from '@/actions/nav'
@@ -35,7 +35,7 @@ interface SidebarProps {
 
 export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const { negocio, is3D, isBG, config } = useBusiness()
+  const { negocio, is3D, config } = useBusiness()
 
   // Dynamic live counters
   const [metrics, setMetrics] = useState<{ pedidosPendientes: number; filamentosCriticos: number; piezasTallerPendientes?: number }>({
@@ -46,18 +46,19 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
 
   // Active section matchers
   const isDashboard = pathname === '/'
-  const isTaller = pathname.startsWith('/taller')
   const isPedidos = pathname.startsWith('/pedidos') || pathname.startsWith('/ventas')
+  const isTaller = pathname.startsWith('/taller')
+  
+  const isHistorico = pathname.startsWith('/historico-mensual') || pathname.startsWith('/flujo-mensual')
+  const isFinanzasSection = pathname.startsWith('/finanzas') || pathname.startsWith('/inversiones') || isHistorico
+  
   const isClientes = pathname.startsWith('/clientes')
   const isTiendaWeb = pathname.startsWith('/tienda-web')
-  const isHistorico = pathname.startsWith('/historico-mensual') || pathname.startsWith('/flujo-mensual')
-  
-  const isFinanzasSection = pathname.startsWith('/finanzas') || pathname.startsWith('/inversiones')
-  const isCatalogoSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario')
+  const isTiendaSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario') || isClientes || isTiendaWeb
 
   // Collapsible Accordion states
+  const [tiendaOpen, setTiendaOpen] = useState(true)
   const [finanzasOpen, setFinanzasOpen] = useState(true)
-  const [catalogoOpen, setCatalogoOpen] = useState(true)
 
   // Fetch live metrics on mount and when pathname or negocio changes
   useEffect(() => {
@@ -115,9 +116,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. LISTA DE NAVEGACIÓN APLANADA                                           */}
+      {/* 2. LISTA DE NAVEGACIÓN REESTRUCTURADA                                      */}
       {/* ========================================================================= */}
       <div className="flex-1 overflow-y-auto py-3 px-3 space-y-1 bg-[#F8F6F2] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        
+        {/* ======================================================================= */}
+        {/* PRIMERA JERARQUÍA: DASHBOARD Y PEDIDOS                                  */}
+        {/* ======================================================================= */}
         
         {/* DASHBOARD PRINCIPAL */}
         <Link
@@ -132,6 +137,27 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         >
           <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboard ? (is3D ? 'text-amber-600' : 'text-indigo-600') : 'text-[#75695D]')} />
           <span>Dashboard</span>
+        </Link>
+
+        {/* PEDIDOS */}
+        <Link
+          href="/pedidos"
+          onClick={handleLinkClick}
+          className={cn(
+            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
+            isPedidos
+              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
+              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+          )}
+        >
+          <ShoppingBag className={cn('h-4 w-4 shrink-0', isPedidos ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
+          <span>Pedidos</span>
+
+          {metrics.pedidosPendientes > 0 && (
+            <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
+              {metrics.pedidosPendientes}
+            </span>
+          )}
         </Link>
 
         {/* TALLER DE PRODUCCIÓN (3D EXCLUSIVO) */}
@@ -157,77 +183,128 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           </Link>
         )}
 
-        {/* PEDIDOS */}
-        <Link
-          href="/pedidos"
-          onClick={handleLinkClick}
-          className={cn(
-            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
-            isPedidos
-              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
-              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-          )}
-        >
-          <ShoppingBag className={cn('h-4 w-4 shrink-0', isPedidos ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
-          <span>Pedidos</span>
+        {/* ======================================================================= */}
+        {/* SECCIÓN TIENDA: PRODUCTOS, CATEGORÍAS, CLIENTES, CONFIGURACIÓN          */}
+        {/* ======================================================================= */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => setTiendaOpen(!tiendaOpen)}
+            className={cn(
+              'w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 cursor-pointer min-h-[36px]',
+              isTiendaSection
+                ? 'text-[#241C15] font-black'
+                : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              <Store className={cn('h-4 w-4 shrink-0', isTiendaSection ? (is3D ? 'text-amber-600' : 'text-indigo-600') : 'text-[#75695D]')} />
+              <span>Tienda</span>
+            </div>
+            <ChevronDown 
+              className={cn(
+                'h-3.5 w-3.5 transition-transform duration-200 text-[#75695D]',
+                tiendaOpen ? 'rotate-0' : '-rotate-90'
+              )} 
+            />
+          </button>
 
-          {metrics.pedidosPendientes > 0 && (
-            <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
-              {metrics.pedidosPendientes}
-            </span>
-          )}
-        </Link>
+          {tiendaOpen && (
+            <div className="pl-3 space-y-0.5 my-1 border-l border-[#E2D9CC] ml-3 transition-all">
+              {/* PRODUCTOS */}
+              <Link
+                href="/catalogo"
+                onClick={handleLinkClick}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  pathname === '/catalogo'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                )}
+              >
+                <PackageSearch className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
+                <span>{is3D ? 'Productos 3D' : 'Juegos de Mesa'}</span>
+              </Link>
 
-        {/* CLIENTES */}
-        <Link
-          href="/clientes"
-          onClick={handleLinkClick}
-          className={cn(
-            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
-            isClientes
-              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
-              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-          )}
-        >
-          <Users className={cn('h-4 w-4 shrink-0', isClientes ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
-          <span>Clientes</span>
-        </Link>
+              {/* CATEGORÍAS */}
+              <Link
+                href="/catalogo/categorias"
+                onClick={handleLinkClick}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  pathname === '/catalogo/categorias'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                )}
+              >
+                <Layers className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
+                <span>Categorías</span>
+              </Link>
 
-        {/* TIENDA ONLINE / WEB */}
-        <Link
-          href="/tienda-web"
-          onClick={handleLinkClick}
-          className={cn(
-            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
-            isTiendaWeb
-              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
-              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-          )}
-        >
-          <Globe className={cn('h-4 w-4 shrink-0', isTiendaWeb ? (is3D ? 'text-amber-600' : 'text-indigo-600') : 'text-[#75695D]')} />
-          <span>Tienda Online / Web</span>
-          <span className="ml-auto text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-            Live
-          </span>
-        </Link>
+              {/* CLIENTES */}
+              <Link
+                href="/clientes"
+                onClick={handleLinkClick}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  isClientes
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                )}
+              >
+                <Users className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                <span>Clientes</span>
+              </Link>
 
-        {/* HISTÓRICO MENSUAL */}
-        <Link
-          href="/historico-mensual"
-          onClick={handleLinkClick}
-          className={cn(
-            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
-            isHistorico
-              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
-              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+              {/* CONFIGURACIÓN DE LA TIENDA WEB */}
+              <Link
+                href="/tienda-web"
+                onClick={handleLinkClick}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  isTiendaWeb
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                )}
+              >
+                <Globe className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
+                <span>Configuración</span>
+                <span className="ml-auto text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                  Live
+                </span>
+              </Link>
+
+              {/* INVENTARIO FILAMENTOS (3D) */}
+              {is3D && (
+                <Link
+                  href="/catalogo/inventario"
+                  onClick={handleLinkClick}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                    pathname === '/catalogo/inventario' || pathname === '/inventario'
+                      ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                      : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                  )}
+                >
+                  <CircleDot className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                  <span>Inventario Filamentos</span>
+
+                  {metrics.filamentosCriticos > 0 && (
+                    <span 
+                      className="ml-auto text-[10px] font-mono font-bold text-[#854D0E] bg-[#FEF3C7] border border-[#FDE68A] px-1.5 py-0.5 rounded-md"
+                      title={`${metrics.filamentosCriticos} bobinas críticas`}
+                    >
+                      {metrics.filamentosCriticos}
+                    </span>
+                  )}
+                </Link>
+              )}
+            </div>
           )}
-        >
-          <History className={cn('h-4 w-4 shrink-0', isHistorico ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
-          <span>Histórico Mensual</span>
-        </Link>
+        </div>
 
         {/* ======================================================================= */}
-        {/* GRUPO FINANZAS                                                          */}
+        {/* SECCIÓN FINANZAS: CON HISTÓRICO MENSUAL DENTRO                           */}
         {/* ======================================================================= */}
         <div className="pt-2">
           <button
@@ -254,6 +331,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
 
           {finanzasOpen && (
             <div className="pl-3 space-y-0.5 my-1 border-l border-[#E2D9CC] ml-3 transition-all">
+              {/* FLUJO DE CAJA */}
               <Link
                 href="/finanzas/flujo-caja"
                 onClick={handleLinkClick}
@@ -268,6 +346,22 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Flujo de Caja</span>
               </Link>
 
+              {/* HISTÓRICO MENSUAL (AHORA DENTRO DE FINANZAS) */}
+              <Link
+                href="/historico-mensual"
+                onClick={handleLinkClick}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  isHistorico
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                )}
+              >
+                <History className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                <span>Histórico Mensual</span>
+              </Link>
+
+              {/* INGRESOS */}
               <Link
                 href="/finanzas/ingresos"
                 onClick={handleLinkClick}
@@ -282,6 +376,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Ingresos</span>
               </Link>
 
+              {/* EGRESOS */}
               <Link
                 href="/finanzas/egresos"
                 onClick={handleLinkClick}
@@ -296,6 +391,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Egresos</span>
               </Link>
 
+              {/* TAGS DE GASTO */}
               <Link
                 href="/finanzas/tags"
                 onClick={handleLinkClick}
@@ -310,6 +406,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <span>Tags de Gasto</span>
               </Link>
 
+              {/* PROYECCIONES */}
               <Link
                 href="/finanzas/proyecciones"
                 onClick={handleLinkClick}
@@ -323,90 +420,6 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 <TrendingUp className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
                 <span>Proyecciones & Presupuesto</span>
               </Link>
-            </div>
-          )}
-        </div>
-
-        {/* ======================================================================= */}
-        {/* GRUPO CATÁLOGO & TALLER                                                 */}
-        {/* ======================================================================= */}
-        <div className="pt-2">
-          <button
-            type="button"
-            onClick={() => setCatalogoOpen(!catalogoOpen)}
-            className={cn(
-              'w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 cursor-pointer min-h-[36px]',
-              isCatalogoSection
-                ? 'text-[#241C15] font-black'
-                : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-            )}
-          >
-            <div className="flex items-center gap-2.5">
-              <Package className={cn('h-4 w-4 shrink-0', isCatalogoSection ? (is3D ? 'text-amber-600' : 'text-indigo-600') : 'text-[#75695D]')} />
-              <span>{is3D ? 'Catálogo & Taller' : 'Catálogo & Stock'}</span>
-            </div>
-            <ChevronDown 
-              className={cn(
-                'h-3.5 w-3.5 transition-transform duration-200 text-[#75695D]',
-                catalogoOpen ? 'rotate-0' : '-rotate-90'
-              )} 
-            />
-          </button>
-
-          {catalogoOpen && (
-            <div className="pl-3 space-y-0.5 my-1 border-l border-[#E2D9CC] ml-3 transition-all">
-              <Link
-                href="/catalogo"
-                onClick={handleLinkClick}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
-                  pathname === '/catalogo'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-                )}
-              >
-                <PackageSearch className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
-                <span>{is3D ? 'Productos 3D' : 'Juegos de Mesa'}</span>
-              </Link>
-
-              <Link
-                href="/catalogo/categorias"
-                onClick={handleLinkClick}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
-                  pathname === '/catalogo/categorias'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-                )}
-              >
-                <Layers className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
-                <span>Categorías</span>
-              </Link>
-
-              {is3D && (
-                <Link
-                  href="/catalogo/inventario"
-                  onClick={handleLinkClick}
-                  className={cn(
-                    'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
-                    pathname === '/catalogo/inventario' || pathname === '/inventario'
-                      ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                      : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-                  )}
-                >
-                  <CircleDot className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
-                  <span>Inventario Filamentos</span>
-
-                  {metrics.filamentosCriticos > 0 && (
-                    <span 
-                      className="ml-auto text-[10px] font-mono font-bold text-[#854D0E] bg-[#FEF3C7] border border-[#FDE68A] px-1.5 py-0.5 rounded-md"
-                      title={`${metrics.filamentosCriticos} bobinas críticas`}
-                    >
-                      {metrics.filamentosCriticos}
-                    </span>
-                  )}
-                </Link>
-              )}
             </div>
           )}
         </div>

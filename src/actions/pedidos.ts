@@ -162,6 +162,15 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
     destinoEnvio: p.destinoEnvio || null,
     diaEntregaPrometida: p.diaEntregaPrometida || null,
     notas: p.notas || null,
+    metodoPago: (() => {
+      if (p.metodoPago) return p.metodoPago
+      if (p.notas) {
+        const match = p.notas.match(/M[eé]todo de pago:\s*([A-Za-z0-9_\-]+)/i)
+        if (match) return match[1]
+      }
+      if (pagos.length > 0 && pagos[0].metodoPago) return pagos[0].metodoPago
+      return 'YAPE'
+    })(),
     estado: p.estado as EstadoPedido,
     costoEnvio: Number(p.costoEnvio || 0),
     subtotal: Number(p.subtotal || 0),
@@ -333,6 +342,7 @@ export async function createPedido(data: CreatePedidoInput) {
           destinoEnvio: data.destinoEnvio?.trim() || null,
           diaEntregaPrometida: data.diaEntregaPrometida?.trim() || null,
           notas: data.notas?.trim() || null,
+          metodoPago: data.metodoPago || 'YAPE',
           estado: 'PENDIENTE',
           costoEnvio: costoEnvioNum,
           subtotal: subtotalCalculado,

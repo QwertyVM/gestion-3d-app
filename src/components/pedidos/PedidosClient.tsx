@@ -113,6 +113,7 @@ export interface PedidoView {
   destinoEnvio: string | null
   diaEntregaPrometida: string | null
   notas: string | null
+  metodoPago?: string | null
   estado: EstadoPedido
   costoEnvio: number
   subtotal: number
@@ -651,6 +652,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       `📅 *Fecha:* ${formatDate(p.fecha)}\n` +
       (p.diaEntregaPrometida ? `📦 *Entrega Pactada:* ${p.diaEntregaPrometida}\n` : '') +
       `\n*PRODUCTOS:* \n${itemsText}${envioText}\n\n` +
+      `💳 *Medio de Pago:* ${p.metodoPago || (p.pagos?.[0]?.metodoPago) || 'YAPE'}\n` +
       `💰 *Total Pedido:* S/ ${p.total.toFixed(2)}\n` +
       `💳 *Abonado:* S/ ${p.montoPagado.toFixed(2)}${saldoText}\n\n` +
       `_¡Gracias por tu pedido en NOVA 3D!_`
@@ -1677,8 +1679,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                 </div>
               )}
 
-              {/* Grid Info Cliente, Fecha & Despacho */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E2D9CC] text-xs">
+              {/* Grid Info Cliente, Fecha, Pago & Despacho */}
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5 p-3.5 bg-[#FAF8F5] rounded-2xl border border-[#E2D9CC] text-xs">
                 <div>
                   <span className="text-[10px] text-[#75695D] block">Cliente:</span>
                   <strong className="text-[#241C15] font-extrabold">{selectedPedidoDetail.cliente}</strong>
@@ -1695,6 +1697,13 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                   <strong className="text-[#241C15]">{selectedPedidoDetail.telefono || '—'}</strong>
                 </div>
                 <div>
+                  <span className="text-[10px] text-[#75695D] block">Medio de Pago:</span>
+                  <strong className="text-[#1E5E3A] flex items-center gap-1 font-black">
+                    <CreditCard className="h-3 w-3 text-[#1E5E3A]" />
+                    {selectedPedidoDetail.metodoPago || (selectedPedidoDetail.pagos?.[0]?.metodoPago) || 'YAPE'}
+                  </strong>
+                </div>
+                <div>
                   <span className="text-[10px] text-[#75695D] block">Entrega Pactada:</span>
                   <strong className="text-[#241C15]">{selectedPedidoDetail.diaEntregaPrometida || '—'}</strong>
                 </div>
@@ -1703,6 +1712,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                   <strong className="text-[#241C15]">{selectedPedidoDetail.destinoEnvio || 'Taller'}</strong>
                 </div>
               </div>
+
+              {/* Notas del Pedido si existen */}
+              {selectedPedidoDetail.notas && (
+                <div className="p-3 bg-[#FAF8F5] rounded-xl border border-[#E2D9CC] text-xs flex items-start gap-2">
+                  <span className="font-bold text-[#633E20] shrink-0">Notas / Instrucciones:</span>
+                  <span className="text-[#241C15]">{selectedPedidoDetail.notas}</span>
+                </div>
+              )}
 
               {/* Lista Detallada de Productos */}
               <div className="space-y-2.5">
