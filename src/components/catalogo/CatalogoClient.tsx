@@ -24,8 +24,10 @@ import {
   MoreHorizontal,
   Trash2,
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  Globe
 } from 'lucide-react'
+import { useBusiness } from '@/context/BusinessContext'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,6 +52,13 @@ export interface ProductoItem {
   precioComunidad?: number
   pesoGramos?: number
   activo: boolean
+  stock?: number
+  controlarStock?: boolean
+  enOferta?: boolean
+  precioOferta?: number | null
+  imagenUrl?: string | null
+  descripcionWeb?: string | null
+  destacadoWeb?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -74,6 +83,7 @@ export function CatalogoClient({
   productos: initialProductos, 
   categoriasIniciales = [] 
 }: CatalogoClientProps) {
+  const { is3D, isBG } = useBusiness()
   const [productos, setProductos] = useState<ProductoItem[]>(initialProductos)
   const [categorias, setCategorias] = useState<CategoriaItem[]>(categoriasIniciales)
   
@@ -97,7 +107,14 @@ export function CatalogoClient({
     costoBase: '',
     precioAmigos: '',
     precioMercado: '',
-    activo: true
+    activo: true,
+    stock: '0',
+    controlarStock: false,
+    enOferta: false,
+    precioOferta: '',
+    imagenUrl: '',
+    descripcionWeb: '',
+    destacadoWeb: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -241,12 +258,19 @@ export function CatalogoClient({
     setFormData({
       nombreModelo: '',
       lineaCategoria: categoryNamesList[0] || 'General',
-      pesoGramos: '150',
-      tiempoHoras: '4.5',
-      costoBase: '9.75',
-      precioAmigos: '18.00',
-      precioMercado: '30.00',
-      activo: true
+      pesoGramos: is3D ? '150' : '0',
+      tiempoHoras: is3D ? '4.5' : '0',
+      costoBase: is3D ? '9.75' : '0',
+      precioAmigos: is3D ? '18.00' : '0',
+      precioMercado: is3D ? '30.00' : '0',
+      activo: true,
+      stock: '0',
+      controlarStock: false,
+      enOferta: false,
+      precioOferta: '',
+      imagenUrl: '',
+      descripcionWeb: '',
+      destacadoWeb: false
     })
     setOpenModal(true)
   }
@@ -263,7 +287,14 @@ export function CatalogoClient({
       costoBase: p.costoBase.toString(),
       precioAmigos: p.precioAmigos.toString(),
       precioMercado: p.precioMercado.toString(),
-      activo: p.activo
+      activo: p.activo,
+      stock: p.stock?.toString() || '0',
+      controlarStock: p.controlarStock || false,
+      enOferta: p.enOferta || false,
+      precioOferta: p.precioOferta ? p.precioOferta.toString() : '',
+      imagenUrl: p.imagenUrl || '',
+      descripcionWeb: p.descripcionWeb || '',
+      destacadoWeb: p.destacadoWeb || false
     })
     setOpenModal(true)
   }
@@ -297,7 +328,14 @@ export function CatalogoClient({
       costoBase: parseFloat(formData.costoBase) || 0,
       precioAmigos: parseFloat(formData.precioAmigos) || 0,
       precioMercado: parseFloat(formData.precioMercado) || 0,
-      activo: formData.activo
+      activo: formData.activo,
+      stock: parseInt(formData.stock) || 0,
+      controlarStock: formData.controlarStock,
+      enOferta: formData.enOferta,
+      precioOferta: formData.precioOferta ? parseFloat(formData.precioOferta) : null,
+      imagenUrl: formData.imagenUrl.trim() || null,
+      descripcionWeb: formData.descripcionWeb.trim() || null,
+      destacadoWeb: formData.destacadoWeb
     }
 
     setIsSubmitting(true)
@@ -344,7 +382,7 @@ export function CatalogoClient({
               <span>Catálogo de Productos</span>
             </h1>
             <p className="text-xs sm:text-sm text-[#75695D] mt-1">
-              Modelos 3D disponibles con costos base, tiempos de impresión y precios escalonados.
+              {is3D ? 'Modelos 3D disponibles con costos base, tiempos de impresión y precios escalonados.' : 'Juegos de mesa disponibles para venta online y presencial.'}
             </p>
           </div>
 
@@ -962,10 +1000,10 @@ export function CatalogoClient({
                 </div>
                 <div>
                   <DialogTitle className="text-base sm:text-lg font-black text-[#241C15]">
-                    {editingId ? 'Editar Modelo 3D' : 'Registrar Nuevo Producto 3D'}
+                    {editingId ? (is3D ? 'Editar Modelo 3D' : 'Editar Juego de Mesa') : (is3D ? 'Registrar Nuevo Producto 3D' : 'Registrar Juego de Mesa')}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                    Define costos base, parámetros técnicos y precios escalonados
+                    {is3D ? 'Define costos base, parámetros técnicos y precios escalonados' : 'Define costos de compra, precios de venta y detalles para la web'}
                   </DialogDescription>
                 </div>
               </div>
@@ -1022,46 +1060,52 @@ export function CatalogoClient({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
                     <Calculator className="h-3.5 w-3.5 text-[#A36F4C]" />
-                    Parámetros de Taller & Costo
+                    {is3D ? 'Parámetros de Taller & Costo' : 'Costo de Compra'}
                   </span>
-                  <span className="text-[10px] text-[#75695D]">
-                    Auto-cálculo de costo sugerido
-                  </span>
+                  {is3D && (
+                    <span className="text-[10px] text-[#75695D]">
+                      Auto-cálculo de costo sugerido
+                    </span>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-2.5">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-bold text-[#75695D]">Peso (g)</Label>
-                    <Input 
-                      type="number"
-                      step="1"
-                      value={formData.pesoGramos}
-                      onChange={(e) => handleGramosChange(e.target.value)}
-                      placeholder="150"
-                      className="bg-white border-[#E2D9CC] rounded-xl text-xs font-mono font-bold h-9"
-                    />
-                  </div>
+                  {is3D && (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-bold text-[#75695D]">Peso (g)</Label>
+                        <Input 
+                          type="number"
+                          step="1"
+                          value={formData.pesoGramos}
+                          onChange={(e) => handleGramosChange(e.target.value)}
+                          placeholder="150"
+                          className="bg-white border-[#E2D9CC] rounded-xl text-xs font-mono font-bold h-9"
+                        />
+                      </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-bold text-[#75695D]">Tiempo (h)</Label>
-                    <Input 
-                      type="number"
-                      step="0.1"
-                      value={formData.tiempoHoras}
-                      onChange={(e) => setFormData(prev => ({ ...prev, tiempoHoras: e.target.value }))}
-                      placeholder="4.5"
-                      className="bg-white border-[#E2D9CC] rounded-xl text-xs font-mono font-bold h-9"
-                    />
-                  </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-bold text-[#75695D]">Tiempo (h)</Label>
+                        <Input 
+                          type="number"
+                          step="0.1"
+                          value={formData.tiempoHoras}
+                          onChange={(e) => setFormData(prev => ({ ...prev, tiempoHoras: e.target.value }))}
+                          placeholder="4.5"
+                          className="bg-white border-[#E2D9CC] rounded-xl text-xs font-mono font-bold h-9"
+                        />
+                      </div>
+                    </>
+                  )}
 
-                  <div className="space-y-1">
+                  <div className={`space-y-1 ${!is3D ? 'col-span-3' : ''}`}>
                     <Label className="text-[11px] font-bold text-[#1E5E3A]">Costo Base (S/)</Label>
                     <Input 
                       type="number"
                       step="0.01"
                       value={formData.costoBase}
                       onChange={(e) => setFormData(prev => ({ ...prev, costoBase: e.target.value }))}
-                      placeholder="9.75"
+                      placeholder={is3D ? "9.75" : "0.00"}
                       required
                       className="bg-white border-[#B4E3C0] text-[#1E5E3A] rounded-xl text-xs font-mono font-black h-9"
                     />
@@ -1142,6 +1186,102 @@ export function CatalogoClient({
                   >
                     📁 Descontinuado
                   </button>
+                </div>
+              </div>
+
+              {/* Nueva Fila 5: Configuración de Tienda Web */}
+              <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-4 shadow-sm">
+                <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/50">
+                  <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
+                    <Globe className="h-3.5 w-3.5 text-[#1E5E3A]" />
+                    Configuración Tienda Web
+                  </span>
+                </div>
+
+                {/* Stock y Oferta */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Bloque Stock */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] font-bold text-[#75695D]">Stock Actual</Label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.controlarStock}
+                          onChange={(e) => setFormData(prev => ({ ...prev, controlarStock: e.target.checked }))}
+                          className="rounded border-[#E2D9CC] text-[#A36F4C] focus:ring-[#A36F4C]"
+                        />
+                        <span className="text-[10px] text-[#75695D]">Controlar</span>
+                      </label>
+                    </div>
+                    <Input
+                      type="number"
+                      value={formData.stock}
+                      onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
+                      placeholder="0"
+                      disabled={!formData.controlarStock}
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 disabled:opacity-50"
+                    />
+                  </div>
+
+                  {/* Bloque Oferta */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] font-bold text-[#75695D]">Precio Oferta (S/)</Label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.enOferta}
+                          onChange={(e) => setFormData(prev => ({ ...prev, enOferta: e.target.checked }))}
+                          className="rounded border-[#E2D9CC] text-[#A36F4C] focus:ring-[#A36F4C]"
+                        />
+                        <span className="text-[10px] text-[#75695D]">Activar</span>
+                      </label>
+                    </div>
+                    <Input
+                      type="number"
+                      step="0.5"
+                      value={formData.precioOferta}
+                      onChange={(e) => setFormData(prev => ({ ...prev, precioOferta: e.target.value }))}
+                      placeholder="0.00"
+                      disabled={!formData.enOferta}
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                {/* Multimedia y Destacado */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px] font-bold text-[#75695D]">URL de Imagen Principal</Label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.destacadoWeb}
+                        onChange={(e) => setFormData(prev => ({ ...prev, destacadoWeb: e.target.checked }))}
+                        className="rounded border-[#E2D9CC] text-[#A36F4C] focus:ring-[#A36F4C]"
+                      />
+                      <span className="text-[10px] font-bold text-[#A36F4C]">Destacar en Inicio</span>
+                    </label>
+                  </div>
+                  <Input
+                    type="url"
+                    value={formData.imagenUrl}
+                    onChange={(e) => setFormData(prev => ({ ...prev, imagenUrl: e.target.value }))}
+                    placeholder="https://ejemplo.com/imagen.jpg"
+                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
+                  />
+                </div>
+
+                {/* Descripción */}
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-bold text-[#75695D]">Descripción para la Web</Label>
+                  <textarea
+                    value={formData.descripcionWeb}
+                    onChange={(e) => setFormData(prev => ({ ...prev, descripcionWeb: e.target.value }))}
+                    placeholder="Describe el producto para los clientes..."
+                    className="w-full bg-[#F8F6F2] border border-[#E2D9CC] rounded-xl text-xs p-2.5 min-h-[60px] focus:outline-none focus:ring-1 focus:ring-[#A36F4C] resize-none"
+                  />
                 </div>
               </div>
             </div>

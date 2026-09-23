@@ -38,6 +38,7 @@ export async function getProductos(negocio?: TipoNegocio) {
     precioMercado: Number(p.precioMercado),
     precioComunidad: Number(p.precioComunidad),
     pesoGramos: p.pesoGramos != null ? Number(p.pesoGramos) : 0,
+    precioOferta: p.precioOferta != null ? Number(p.precioOferta) : null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   }))
@@ -53,6 +54,13 @@ export async function createProducto(data: {
   precioComunidad?: number
   pesoGramos?: number
   activo?: boolean
+  stock?: number
+  controlarStock?: boolean
+  enOferta?: boolean
+  precioOferta?: number | null
+  imagenUrl?: string | null
+  descripcionWeb?: string | null
+  destacadoWeb?: boolean
 }) {
   const targetNegocio = data.negocio || await getActiveNegocioServer()
 
@@ -66,7 +74,14 @@ export async function createProducto(data: {
       precioMercado: data.precioMercado,
       precioComunidad: data.precioComunidad ?? data.precioMercado,
       pesoGramos: data.pesoGramos != null ? data.pesoGramos : 0,
-      activo: data.activo ?? true
+      activo: data.activo ?? true,
+      stock: data.stock ?? 0,
+      controlarStock: data.controlarStock ?? false,
+      enOferta: data.enOferta ?? false,
+      precioOferta: data.precioOferta ?? null,
+      imagenUrl: data.imagenUrl ?? null,
+      descripcionWeb: data.descripcionWeb ?? null,
+      destacadoWeb: data.destacadoWeb ?? false
     }
   })
 
@@ -78,6 +93,7 @@ export async function createProducto(data: {
     precioMercado: Number(producto.precioMercado),
     precioComunidad: Number(producto.precioComunidad),
     pesoGramos: producto.pesoGramos != null ? Number(producto.pesoGramos) : 0,
+    precioOferta: producto.precioOferta != null ? Number(producto.precioOferta) : null,
     createdAt: producto.createdAt.toISOString(),
     updatedAt: producto.updatedAt.toISOString(),
   }
@@ -92,6 +108,13 @@ export async function updateProducto(id: string, data: {
   precioComunidad?: number
   pesoGramos?: number
   activo?: boolean
+  stock?: number
+  controlarStock?: boolean
+  enOferta?: boolean
+  precioOferta?: number | null
+  imagenUrl?: string | null
+  descripcionWeb?: string | null
+  destacadoWeb?: boolean
 }) {
   const current = await prisma.producto.findUnique({ where: { id } })
   const prevPesoGramos = current?.pesoGramos != null ? Number(current.pesoGramos) : 0
@@ -107,7 +130,14 @@ export async function updateProducto(id: string, data: {
       precioMercado: data.precioMercado,
       precioComunidad: data.precioComunidad !== undefined ? data.precioComunidad : (current?.precioComunidad ?? data.precioMercado),
       ...(data.pesoGramos !== undefined ? { pesoGramos: data.pesoGramos } : {}),
-      ...(data.activo !== undefined ? { activo: data.activo } : {})
+      ...(data.activo !== undefined ? { activo: data.activo } : {}),
+      ...(data.stock !== undefined ? { stock: data.stock } : {}),
+      ...(data.controlarStock !== undefined ? { controlarStock: data.controlarStock } : {}),
+      ...(data.enOferta !== undefined ? { enOferta: data.enOferta } : {}),
+      ...(data.precioOferta !== undefined ? { precioOferta: data.precioOferta } : {}),
+      ...(data.imagenUrl !== undefined ? { imagenUrl: data.imagenUrl } : {}),
+      ...(data.descripcionWeb !== undefined ? { descripcionWeb: data.descripcionWeb } : {}),
+      ...(data.destacadoWeb !== undefined ? { destacadoWeb: data.destacadoWeb } : {})
     }
   })
 
@@ -147,6 +177,7 @@ export async function updateProducto(id: string, data: {
     precioMercado: Number(producto.precioMercado),
     precioComunidad: Number(producto.precioComunidad),
     pesoGramos: producto.pesoGramos != null ? Number(producto.pesoGramos) : 0,
+    precioOferta: producto.precioOferta != null ? Number(producto.precioOferta) : null,
     createdAt: producto.createdAt.toISOString(),
     updatedAt: producto.updatedAt.toISOString(),
   }
@@ -169,6 +200,7 @@ export async function toggleEstadoProducto(id: string) {
     precioMercado: Number(updated.precioMercado),
     precioComunidad: Number(updated.precioComunidad),
     pesoGramos: updated.pesoGramos != null ? Number(updated.pesoGramos) : 0,
+    precioOferta: updated.precioOferta != null ? Number(updated.precioOferta) : null,
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   }
@@ -195,7 +227,14 @@ export async function duplicarProducto(id: string) {
       precioMercado: current.precioMercado,
       precioComunidad: current.precioComunidad,
       pesoGramos: current.pesoGramos,
-      activo: true
+      activo: true,
+      stock: 0,
+      controlarStock: current.controlarStock,
+      enOferta: current.enOferta,
+      precioOferta: current.precioOferta,
+      imagenUrl: current.imagenUrl,
+      descripcionWeb: current.descripcionWeb,
+      destacadoWeb: current.destacadoWeb
     }
   })
 
@@ -207,6 +246,7 @@ export async function duplicarProducto(id: string) {
     precioMercado: Number(duplicado.precioMercado),
     precioComunidad: Number(duplicado.precioComunidad),
     pesoGramos: duplicado.pesoGramos != null ? Number(duplicado.pesoGramos) : 0,
+    precioOferta: duplicado.precioOferta != null ? Number(duplicado.precioOferta) : null,
     createdAt: duplicado.createdAt.toISOString(),
     updatedAt: duplicado.updatedAt.toISOString(),
   }
