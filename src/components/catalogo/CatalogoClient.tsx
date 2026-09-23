@@ -25,7 +25,8 @@ import {
   Trash2,
   ExternalLink,
   ChevronDown,
-  Globe
+  Globe,
+  Dices
 } from 'lucide-react'
 import { useBusiness } from '@/context/BusinessContext'
 import { Badge } from '@/components/ui/badge'
@@ -1092,12 +1093,12 @@ export function CatalogoClient({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    Nombre del Modelo *
+                    {is3D ? 'Nombre del Modelo *' : 'Nombre del Juego *'}
                   </Label>
                   <Input 
                     value={formData.nombreModelo}
                     onChange={(e) => setFormData(prev => ({ ...prev, nombreModelo: e.target.value }))}
-                    placeholder="Ej: Maceta Hexagonal XL"
+                    placeholder={is3D ? "Ej: Maceta Hexagonal XL" : "Ej: Catan, Fantasma Blitz..."}
                     required
                     autoFocus
                     className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
@@ -1111,7 +1112,7 @@ export function CatalogoClient({
                   <Input 
                     value={formData.lineaCategoria}
                     onChange={(e) => setFormData(prev => ({ ...prev, lineaCategoria: e.target.value }))}
-                    placeholder="Ej: Macetas & Jardín"
+                    placeholder={is3D ? "Ej: Macetas & Jardín" : "Ej: Juegos Familiares"}
                     required
                     list="categorias-list"
                     className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
@@ -1122,6 +1123,61 @@ export function CatalogoClient({
                     ))}
                   </datalist>
                 </div>
+
+                {/* BGG ID justo abajo del nombre (Modo Juegos de Mesa) */}
+                {!is3D && (
+                  <>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
+                          <Dices className="h-3.5 w-3.5 text-indigo-600" />
+                          BGG ID (BoardGameGeek)
+                        </Label>
+                        <a
+                          href={formData.bggId ? `https://boardgamegeek.com/boardgame/${formData.bggId}` : (formData.nombreModelo ? `https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=${encodeURIComponent(formData.nombreModelo)}` : 'https://boardgamegeek.com')}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-1"
+                        >
+                          Buscar en BGG ↗
+                        </a>
+                      </div>
+                      <Input
+                        type="number"
+                        value={formData.bggId}
+                        onChange={(e) => setFormData(prev => ({ ...prev, bggId: e.target.value }))}
+                        placeholder="Ej: 83195"
+                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-mono font-bold text-[#241C15] h-10"
+                      />
+                      <p className="text-[10px] text-[#75695D]">
+                        Al guardar, la web mostrará el rating real de BGG automáticamente.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center">
+                      <div className="w-full p-2.5 bg-[#FAF8F5] border border-[#E2D9CC] rounded-xl text-xs flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="font-bold text-[#241C15] block truncate">
+                            {formData.bggId ? `ID Vinculado: #${formData.bggId}` : 'Vincular con BGG'}
+                          </span>
+                          <span className="text-[10px] text-[#75695D] block truncate">
+                            {formData.bggId ? 'Calificación sincronizada con BoardGameGeek' : 'Busca el juego en BGG y copia su ID numérico'}
+                          </span>
+                        </div>
+                        {formData.bggId && (
+                          <a
+                            href={`https://boardgamegeek.com/boardgame/${formData.bggId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 px-2 py-1 bg-white border border-[#E2D9CC] rounded-lg text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 shadow-2xs"
+                          >
+                            Ver en BGG <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Fila 2: Parámetros Técnicos (Gramos, Tiempo, Costo Base) */}
@@ -1428,29 +1484,6 @@ export function CatalogoClient({
                         className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
                       />
                     </div>
-                  </div>
-
-                  {/* BGG ID */}
-                  <div className="pt-2 border-t border-[#E2D9CC]/50 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[11px] font-bold text-[#75695D]">BGG ID (BoardGameGeek)</Label>
-                      <a
-                        href={formData.bggId ? `https://boardgamegeek.com/boardgame/${formData.bggId}` : 'https://boardgamegeek.com'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-[#1E5E3A] hover:underline"
-                      >
-                        Buscar en BGG ↗
-                      </a>
-                    </div>
-                    <Input
-                      type="number"
-                      value={formData.bggId}
-                      onChange={(e) => setFormData(prev => ({ ...prev, bggId: e.target.value }))}
-                      placeholder="Ej: 8057 (Ticket to Ride)"
-                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                    />
-                    <p className="text-[10px] text-[#75695D]">Al guardar, la web mostrará el rating real de BGG automáticamente.</p>
                   </div>
                 </div>
               )}
