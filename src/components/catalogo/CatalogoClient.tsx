@@ -86,6 +86,15 @@ export function CatalogoClient({
   const { is3D, isBG } = useBusiness()
   const [productos, setProductos] = useState<ProductoItem[]>(initialProductos)
   const [categorias, setCategorias] = useState<CategoriaItem[]>(categoriasIniciales)
+
+  // Sync state with props when business context changes and server refetches
+  useEffect(() => {
+    setProductos(initialProductos)
+  }, [initialProductos])
+
+  useEffect(() => {
+    setCategorias(categoriasIniciales)
+  }, [categoriasIniciales])
   
   // Toolbar and Filters
   const [search, setSearch] = useState('')
