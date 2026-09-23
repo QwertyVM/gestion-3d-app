@@ -186,6 +186,13 @@ const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; col
     colorBorder: 'border-[#E8D49B]',
     icon: Clock
   },
+  PAGO_VALIDADO: {
+    label: 'Pago Validado',
+    colorBg: 'bg-[#ECFDF5]',
+    colorText: 'text-[#065F46]',
+    colorBorder: 'border-[#A7F3D0]',
+    icon: CheckCircle2
+  },
   EN_PRODUCCION: {
     label: 'Preparando',
     colorBg: 'bg-[#EBF3FB]',
@@ -729,6 +736,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   const kpis = useMemo(() => {
     const pedidosEnRango = pedidos.filter(p => isDateInRange(p.fecha, dateRange.from, dateRange.to))
     const totalPedidos = pedidosEnRango.length
+    const pagoValidados = pedidosEnRango.filter(p => p.estado === 'PAGO_VALIDADO').length
     const enProduccion = pedidosEnRango.filter(p => p.estado === 'EN_PRODUCCION').length
     const pendientes = pedidosEnRango.filter(p => p.estado === 'PENDIENTE').length
     const listos = pedidosEnRango.filter(p => p.estado === 'LISTO_ENTREGA').length
@@ -741,6 +749,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
 
     return {
       totalPedidos,
+      pagoValidados,
       enProduccion,
       pendientes,
       listos,
@@ -1120,6 +1129,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             className={`text-xs font-bold rounded-xl px-2.5 py-1 border cursor-pointer focus:outline-none transition-all ${
                               p.estado === 'PENDIENTE'
                                 ? 'bg-[#FEF9C3]/70 text-[#854D0E] border-[#FDE047]'
+                                : p.estado === 'PAGO_VALIDADO'
+                                ? 'bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0]'
                                 : p.estado === 'EN_PRODUCCION'
                                 ? 'bg-[#DBEAFE]/70 text-[#1D4ED8] border-[#93C5FD]'
                                 : p.estado === 'LISTO_ENTREGA'

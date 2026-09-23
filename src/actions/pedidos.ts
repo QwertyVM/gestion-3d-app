@@ -421,6 +421,70 @@ export async function createPedido(data: CreatePedidoInput) {
 export async function updateEstadoPedido(id: string, nuevoEstado: EstadoPedido) {
   try {
     const pedido = await prisma.$transaction(async (tx) => {
+      const pedidoActual = await tx.pedido.findUnique({
+        where: { id },
+        include: { items: true, pagos: true }
+      })
+
+      if (!pedidoActual) {
+        throw new Error('Pedido no encontrado')
+      }
+
+      // Si cambia a PAGO_VALIDADO y antes no lo estaba
+      if (nuevoEstado === 'PAGO_VALIDADO' && pedidoActual.estado !== 'PAGO_VALIDADO') {
+        // Disminuir stock de los productos asociados
+        for (const it of pedidoActual.items) {
+          if (it.productoId) {
+            await tx.producto.update({
+              where: { id: it.productoId },
+              data: {
+                stock: {
+                  decrement: it.cantidad
+                }
+              }
+            })
+          }
+        }
+
+        // Si aún tiene saldo pendiente, marcar como pagado registrando el abono
+        const saldo = Number(pedidoActual.saldoPendiente)
+        if (saldo > 0) {
+          await tx.pagoPedido.create({
+            data: {
+              pedidoId: id,
+              monto: saldo,
+              metodoPago: pedidoActual.metodoPago || 'TRANSFERENCIA',
+              tipo: 'LIQUIDACION',
+              notas: 'Pago validado manualmente desde pedidos'
+            }
+          })
+
+          await tx.pedido.update({
+            where: { id },
+            data: {
+              montoPagado: Number(pedidoActual.total),
+              saldoPendiente: 0
+            }
+          })
+        }
+      }
+
+      // Si se cancela un pedido que ya tenía PAGO_VALIDADO, restaurar stock
+      if (pedidoActual.estado === 'PAGO_VALIDADO' && nuevoEstado === 'CANCELADO') {
+        for (const it of pedidoActual.items) {
+          if (it.productoId) {
+            await tx.producto.update({
+              where: { id: it.productoId },
+              data: {
+                stock: {
+                  increment: it.cantidad
+                }
+              }
+            })
+          }
+        }
+      }
+
       await tx.itemPedido.updateMany({
         where: { pedidoId: id },
         data: { estado: nuevoEstado }
@@ -615,6 +679,30 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
     const fechaPedido = parseDateInput(data.fecha || current.fecha)
 
     const updated = await prisma.$transaction(async (tx) => {
+      // Si cambia a PAGO_VALIDADO y antes no lo estaba
+      if (data.estado === 'PAGO_VALIDADO' && current.estado !== 'PAGO_VALIDADO') {
+        for (const it of processedItems) {
+          if (it.productoId) {
+            await tx.producto.update({
+              where: { id: it.productoId },
+              data: { stock: { decrement: it.cantidad } }
+            })
+          }
+        }
+      }
+
+      // Si se cancela un pedido que tenía PAGO_VALIDADO
+      if (current.estado === 'PAGO_VALIDADO' && data.estado === 'CANCELADO') {
+        for (const it of processedItems) {
+          if (it.productoId) {
+            await tx.producto.update({
+              where: { id: it.productoId },
+              data: { stock: { increment: it.cantidad } }
+            })
+          }
+        }
+      }
+
       // Delete old items
       await tx.itemPedido.deleteMany({ where: { pedidoId: id } })
 

@@ -358,6 +358,11 @@ model ConfiguracionTienda {
   updatedAt          DateTime @updatedAt
   habilitarSeccion3d Boolean  @default(true)
   habilitarSeccionBg Boolean  @default(true)
+  yapeNumero         String?  @default("945398747")
+  yapeTitular        String?  @default("Víctor Monzon Anglas")
+  bcpNumeroCuenta    String?
+  bcpCci             String?
+  bcpTitular         String?
 }
 
 model BannerTienda {
@@ -464,6 +469,7 @@ enum EstadoVenta {
 
 enum EstadoPedido {
   PENDIENTE
+  PAGO_VALIDADO
   EN_PRODUCCION
   LISTO_ENTREGA
   ENTREGADO

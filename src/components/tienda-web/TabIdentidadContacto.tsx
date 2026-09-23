@@ -24,6 +24,8 @@ import {
   Dice5,
   Eye,
   EyeOff,
+  Landmark,
+  CreditCard,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -420,7 +422,98 @@ export function TabIdentidadContacto({
         </div>
       </div>
 
-      {/* 4. BENEFICIOS, ENVÍOS & POLÍTICAS */}
+      {/* 4. CUENTAS BANCARIAS & MÉTODOS DE PAGO (YAPE / BCP) */}
+      <div className="bg-white rounded-2xl border border-[#E2D9CC] p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-2.5 border-b border-[#E2D9CC] pb-3.5">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 flex items-center justify-center border border-indigo-200">
+            <Landmark className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-[#241C15]">Cuentas Bancarias & Cobro Web (Yape y BCP)</h3>
+            <p className="text-xs text-[#75695D]">
+              Datos mostrados al cliente en la pantalla de pago tras confirmar su pedido en la tienda web
+            </p>
+          </div>
+        </div>
+
+        {/* Yape */}
+        <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-lg bg-[#732282] text-white text-[10px] font-black tracking-wide uppercase">
+              Yape
+            </span>
+            <span className="text-xs font-bold text-[#241C15]">Datos de Cobro por Yape</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[#241C15]">Número de Teléfono / Yape</label>
+              <input
+                type="text"
+                value={formData.yapeNumero}
+                onChange={(e) => handleChange('yapeNumero', e.target.value)}
+                placeholder="945398747"
+                className="w-full text-xs font-mono font-bold px-3 py-2 rounded-xl border border-[#E2D9CC] bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[#241C15]">Titular de la Cuenta Yape</label>
+              <input
+                type="text"
+                value={formData.yapeTitular}
+                onChange={(e) => handleChange('yapeTitular', e.target.value)}
+                placeholder="Víctor Monzon Anglas"
+                className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* BCP */}
+        <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded-lg bg-[#002A8F] text-[#FF7800] text-[10px] font-black tracking-wide uppercase">
+              BCP
+            </span>
+            <span className="text-xs font-bold text-[#241C15]">Transferencia Bancaria BCP</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[#241C15]">Número de Cuenta BCP</label>
+              <input
+                type="text"
+                value={formData.bcpNumeroCuenta}
+                onChange={(e) => handleChange('bcpNumeroCuenta', e.target.value)}
+                placeholder="Ej: 191-XXXXXXXX-0-XX"
+                className="w-full text-xs font-mono px-3 py-2 rounded-xl border border-[#E2D9CC] bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[#241C15]">Código Interbancario (CCI)</label>
+              <input
+                type="text"
+                value={formData.bcpCci}
+                onChange={(e) => handleChange('bcpCci', e.target.value)}
+                placeholder="Ej: 002-191-XXXXXXXXXXXX-XX"
+                className="w-full text-xs font-mono px-3 py-2 rounded-xl border border-[#E2D9CC] bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-[#241C15]">Titular de la Cuenta BCP</label>
+              <input
+                type="text"
+                value={formData.bcpTitular}
+                onChange={(e) => handleChange('bcpTitular', e.target.value)}
+                placeholder="Víctor Monzon Anglas"
+                className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. BENEFICIOS, ENVÍOS & POLÍTICAS */}
       <div className="bg-white rounded-2xl border border-[#E2D9CC] p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2.5 border-b border-[#E2D9CC] pb-3.5">
           <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center border border-purple-200">

@@ -43,6 +43,11 @@ export interface ConfiguracionTiendaData {
   envioGratisMinimo: number
   diasGarantia: number
   politicaEnvios: string
+  yapeNumero: string
+  yapeTitular: string
+  bcpNumeroCuenta: string
+  bcpCci: string
+  bcpTitular: string
 }
 
 export async function getConfiguracionTienda(negocio?: TipoNegocio): Promise<ConfiguracionTiendaData> {
@@ -60,7 +65,7 @@ export async function getConfiguracionTienda(negocio?: TipoNegocio): Promise<Con
         nombreTienda: is3D ? 'NOVA 3D Studio' : 'NOVA Board Games',
         ruc: '20608934512',
         razonSocial: is3D ? 'NOVA 3D IMPRESIONES S.A.C.' : 'NOVA JUEGOS Y ACCESORIOS S.A.C.',
-        telefonoContacto: '+51 924 812 345',
+        telefonoContacto: is3D ? '+51 924 812 345' : '+51 945398747',
         emailContacto: is3D ? 'contacto@nova3d.pe' : 'contacto@novabg.pe',
         direccionFisica: 'Taller Central - Lima, Perú',
         horarioAtencion: 'Lunes a Sábado: 9:00 AM - 8:00 PM',
@@ -84,6 +89,11 @@ export async function getConfiguracionTienda(negocio?: TipoNegocio): Promise<Con
         envioGratisMinimo: 150.0,
         diasGarantia: 30,
         politicaEnvios: 'Despacho express a Lima Metropolitana en 24h y envíos certificados a provincias vía Olva Courier o Shalom.',
+        yapeNumero: '945398747',
+        yapeTitular: 'Víctor Monzon Anglas',
+        bcpNumeroCuenta: '',
+        bcpCci: '',
+        bcpTitular: 'Víctor Monzon Anglas',
       },
     })
   }
@@ -112,6 +122,11 @@ export async function getConfiguracionTienda(negocio?: TipoNegocio): Promise<Con
     envioGratisMinimo: config.envioGratisMinimo ? Number(config.envioGratisMinimo) : 150,
     diasGarantia: config.diasGarantia ?? 30,
     politicaEnvios: config.politicaEnvios || '',
+    yapeNumero: config.yapeNumero || '945398747',
+    yapeTitular: config.yapeTitular || 'Víctor Monzon Anglas',
+    bcpNumeroCuenta: config.bcpNumeroCuenta || '',
+    bcpCci: config.bcpCci || '',
+    bcpTitular: config.bcpTitular || 'Víctor Monzon Anglas',
   }
 }
 
@@ -142,6 +157,11 @@ export async function updateConfiguracionTienda(negocio: TipoNegocio, data: Part
       envioGratisMinimo: data.envioGratisMinimo !== undefined ? Number(data.envioGratisMinimo) : current.envioGratisMinimo,
       diasGarantia: data.diasGarantia !== undefined ? Number(data.diasGarantia) : current.diasGarantia,
       politicaEnvios: data.politicaEnvios !== undefined ? data.politicaEnvios.trim() : current.politicaEnvios,
+      yapeNumero: data.yapeNumero !== undefined ? data.yapeNumero.trim() : current.yapeNumero,
+      yapeTitular: data.yapeTitular !== undefined ? data.yapeTitular.trim() : current.yapeTitular,
+      bcpNumeroCuenta: data.bcpNumeroCuenta !== undefined ? data.bcpNumeroCuenta.trim() : current.bcpNumeroCuenta,
+      bcpCci: data.bcpCci !== undefined ? data.bcpCci.trim() : current.bcpCci,
+      bcpTitular: data.bcpTitular !== undefined ? data.bcpTitular.trim() : current.bcpTitular,
     },
     create: {
       negocio,
@@ -166,6 +186,11 @@ export async function updateConfiguracionTienda(negocio: TipoNegocio, data: Part
       envioGratisMinimo: data.envioGratisMinimo ? Number(data.envioGratisMinimo) : 150,
       diasGarantia: data.diasGarantia ? Number(data.diasGarantia) : 30,
       politicaEnvios: data.politicaEnvios?.trim() || '',
+      yapeNumero: data.yapeNumero?.trim() || '945398747',
+      yapeTitular: data.yapeTitular?.trim() || 'Víctor Monzon Anglas',
+      bcpNumeroCuenta: data.bcpNumeroCuenta?.trim() || '',
+      bcpCci: data.bcpCci?.trim() || '',
+      bcpTitular: data.bcpTitular?.trim() || 'Víctor Monzon Anglas',
     },
   })
 
