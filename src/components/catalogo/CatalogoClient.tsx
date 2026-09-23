@@ -58,6 +58,7 @@ export interface ProductoItem {
   controlarStock?: boolean
   enOferta?: boolean
   precioOferta?: number | null
+  porcentajeDescuento?: number | null
   imagenUrl?: string | null
   descripcionWeb?: string | null
   destacadoWeb?: boolean
@@ -123,6 +124,7 @@ export function CatalogoClient({
     controlarStock: false,
     enOferta: false,
     precioOferta: '',
+    porcentajeDescuento: '',
     imagenUrl: '',
     descripcionWeb: '',
     destacadoWeb: false,
@@ -356,6 +358,7 @@ export function CatalogoClient({
       controlarStock: false,
       enOferta: false,
       precioOferta: '',
+      porcentajeDescuento: '',
       imagenUrl: '',
       descripcionWeb: '',
       destacadoWeb: false,
@@ -391,6 +394,7 @@ export function CatalogoClient({
       controlarStock: p.controlarStock || false,
       enOferta: p.enOferta || false,
       precioOferta: p.precioOferta ? p.precioOferta.toString() : '',
+      porcentajeDescuento: (p as any).porcentajeDescuento ? (p as any).porcentajeDescuento.toString() : '',
       imagenUrl: p.imagenUrl || '',
       descripcionWeb: p.descripcionWeb || '',
       destacadoWeb: p.destacadoWeb || false,
@@ -423,6 +427,54 @@ export function CatalogoClient({
     }))
   }
 
+  // Oferta Handlers
+  const handleDescuentoChange = (val: string) => {
+    const pMercado = parseFloat(formData.precioMercado) || 0
+    const costoBase = parseFloat(formData.costoBase) || 0
+    let descuento = parseFloat(val) || 0
+
+    if (descuento < 0) descuento = 0
+    if (descuento > 100) descuento = 100
+
+    let nuevoPrecio = pMercado - (pMercado * descuento / 100)
+    
+    // Ensure new price is not less than base cost
+    if (nuevoPrecio < costoBase && costoBase > 0) {
+      nuevoPrecio = costoBase
+      descuento = Math.round(((pMercado - nuevoPrecio) / pMercado) * 100)
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      porcentajeDescuento: descuento.toString(),
+      precioOferta: nuevoPrecio.toFixed(2)
+    }))
+  }
+
+  const handlePrecioOfertaChange = (val: string) => {
+    const pMercado = parseFloat(formData.precioMercado) || 0
+    const costoBase = parseFloat(formData.costoBase) || 0
+    let nuevoPrecio = parseFloat(val) || 0
+
+    if (nuevoPrecio < 0) nuevoPrecio = 0
+    
+    // Ensure new price is not less than base cost
+    if (nuevoPrecio < costoBase && costoBase > 0) {
+      nuevoPrecio = costoBase
+    }
+
+    let descuento = 0
+    if (pMercado > 0 && nuevoPrecio < pMercado) {
+      descuento = Math.round(((pMercado - nuevoPrecio) / pMercado) * 100)
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      precioOferta: nuevoPrecio.toString(),
+      porcentajeDescuento: descuento.toString()
+    }))
+  }
+
   // Submit Modal
   const handleSubmitModal = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -431,18 +483,26 @@ export function CatalogoClient({
       return
     }
 
+    const costoBase = parseFloat(formData.costoBase) || 0
+    const precioOferta = formData.precioOferta ? parseFloat(formData.precioOferta) : 0
+    if (formData.enOferta && precioOferta > 0 && precioOferta < costoBase) {
+      toast.error('El precio de oferta no puede ser menor al costo base')
+      return
+    }
+
     const payload = {
       nombreModelo: formData.nombreModelo.trim(),
       lineaCategoria: formData.lineaCategoria.trim() || 'General',
       pesoGramos: formData.pesoGramos ? parseFloat(formData.pesoGramos) : 0,
-      costoBase: parseFloat(formData.costoBase) || 0,
+      costoBase: costoBase,
       precioAmigos: parseFloat(formData.precioAmigos) || 0,
       precioMercado: parseFloat(formData.precioMercado) || 0,
       activo: formData.activo,
       stock: parseInt(formData.stock) || 0,
       controlarStock: formData.controlarStock,
       enOferta: formData.enOferta,
-      precioOferta: formData.precioOferta ? parseFloat(formData.precioOferta) : null,
+      precioOferta: formData.enOferta ? (parseFloat(formData.precioOferta) || null) : null,
+      porcentajeDescuento: formData.enOferta ? (parseInt(formData.porcentajeDescuento) || 0) : 0,
       imagenUrl: formData.imagenUrl.trim() || null,
       descripcionWeb: formData.descripcionWeb.trim() || null,
       destacadoWeb: formData.destacadoWeb,
@@ -1218,9 +1278,11 @@ export function CatalogoClient({
                   </div>
 
                   {/* Bloque Oferta */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[11px] font-bold text-[#75695D]">Precio Oferta (S/)</Label>
+                  <div className="col-span-2 p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-sm">
+                    <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/50">
+                      <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
+                        🏷️ Configurar Oferta
+                      </Label>
                       <label className="flex items-center gap-1.5 cursor-pointer">
                         <input
                           type="checkbox"
@@ -1228,18 +1290,42 @@ export function CatalogoClient({
                           onChange={(e) => setFormData(prev => ({ ...prev, enOferta: e.target.checked }))}
                           className="rounded border-[#E2D9CC] text-[#A36F4C] focus:ring-[#A36F4C]"
                         />
-                        <span className="text-[10px] text-[#75695D]">Activar</span>
+                        <span className="text-[10px] text-[#75695D] font-bold">Activar Oferta</span>
                       </label>
                     </div>
-                    <Input
-                      type="number"
-                      step="0.5"
-                      value={formData.precioOferta}
-                      onChange={(e) => setFormData(prev => ({ ...prev, precioOferta: e.target.value }))}
-                      placeholder="0.00"
-                      disabled={!formData.enOferta}
-                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 disabled:opacity-50"
-                    />
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold text-[#75695D]">Descuento (%)</Label>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            value={formData.porcentajeDescuento}
+                            onChange={(e) => handleDescuentoChange(e.target.value)}
+                            placeholder="Ej: 15"
+                            disabled={!formData.enOferta}
+                            className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 pr-6 disabled:opacity-50"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#A36F4C] font-bold">%</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold text-[#75695D]">Nuevo Precio (S/)</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[#A36F4C] font-bold">S/</span>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            value={formData.precioOferta}
+                            onChange={(e) => handlePrecioOfertaChange(e.target.value)}
+                            placeholder="0.00"
+                            disabled={!formData.enOferta}
+                            className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 pl-7 disabled:opacity-50 font-bold text-[#DC2626]"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
