@@ -253,6 +253,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
           totalComprado: 0,
           totalPagado: 0,
           saldoPendiente: 0,
+          puntos: 0,
           pedidosCount: 0,
           piezasCount: 0,
           ultimoPedidoFecha: null,

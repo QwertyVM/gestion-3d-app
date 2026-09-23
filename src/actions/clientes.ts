@@ -297,6 +297,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
   const saldoPendiente = pedidos.reduce((acc: number, p: any) => acc + Number(p.saldoPendiente), 0)
   const pedidosCount = pedidos.length
   const piezasCount = pedidos.reduce((acc: number, p: any) => acc + p.items.reduce((s: number, it: any) => s + Number(it.cantidad), 0), 0)
+  const puntos = pedidos.filter((p: any) => p.estado === 'ENTREGADO').reduce((acc: number, p: any) => acc + Number(p.total), 0)
   const ultimoPedidoFecha = pedidos[0]?.fecha.toISOString() || null
 
   return {
@@ -315,6 +316,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
     totalComprado: Number(totalComprado.toFixed(2)),
     totalPagado: Number(totalPagado.toFixed(2)),
     saldoPendiente: Number(saldoPendiente.toFixed(2)),
+    puntos: Math.floor(puntos),
     pedidosCount,
     piezasCount,
     ultimoPedidoFecha,
