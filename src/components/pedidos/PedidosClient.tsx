@@ -186,11 +186,11 @@ const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; col
     icon: Clock
   },
   EN_PRODUCCION: {
-    label: 'En Impresión',
+    label: 'Preparando',
     colorBg: 'bg-[#EBF3FB]',
     colorText: 'text-[#2B6CB0]',
     colorBorder: 'border-[#BEE3F8]',
-    icon: Layers
+    icon: Package
   },
   LISTO_ENTREGA: {
     label: 'Por Entregar',
@@ -766,7 +766,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
             </span>
           </div>
           <p className="text-xs text-[#75695D] mt-0.5">
-            Registro, control de producción, anticipos de pago y despacho por cliente.
+            Registro, control de pagos y envíos por cliente.
           </p>
         </div>
 
@@ -803,9 +803,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         {/* KPI 2: En Producción */}
         <div className="rounded-2xl border border-[#E2D9CC] bg-white p-3.5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-[#75695D] mb-1">
-            <span className="text-xs font-semibold text-[#6B7280]">En Impresión</span>
+            <span className="text-xs font-semibold text-[#6B7280]">Preparando</span>
             <div className="p-1 rounded-md bg-[#FAF7F4] text-[#2B6CB0]">
-              <Layers className="h-3.5 w-3.5" />
+              <Package className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="flex items-baseline gap-1.5 flex-wrap">
@@ -1088,36 +1088,6 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             </div>
                             <div className="text-xs text-[#75695D] truncate max-w-[240px]">
                               {p.items.map(it => `${it.nombreProductoSnapshot} (x${it.cantidad})`).join(', ')}
-                            </div>
-                            {/* Badges de Colores por Ítem sin desbordamiento */}
-                            <div className="flex flex-wrap items-center gap-1 pt-0.5 max-w-[280px]">
-                              {p.items.map((it, itIdx) => {
-                                const itemColores = (it.colores && it.colores.length > 0)
-                                  ? it.colores
-                                  : (it.colorFilamento ? [it.colorFilamento] : [])
-                                if (itemColores.length === 0) return null
-
-                                return (
-                                  <div
-                                    key={itIdx}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] text-[10px] text-[#241C15] shadow-2xs"
-                                    title={`Colores de ${it.nombreProductoSnapshot}: ${itemColores.map(c => c.nombreColor).join(', ')}`}
-                                  >
-                                    <div className="flex -space-x-1 shrink-0">
-                                      {itemColores.map((c, cIdx) => (
-                                        <span
-                                          key={cIdx}
-                                          className="w-2 h-2 rounded-full border border-black/20 shadow-2xs"
-                                          style={{ backgroundColor: c.codigoHex || '#1E1E1E' }}
-                                        />
-                                      ))}
-                                    </div>
-                                    <span className="truncate max-w-[90px] font-medium text-[#633E20]">
-                                      {itemColores.map(c => c.nombreColor).join(', ')}
-                                    </span>
-                                  </div>
-                                )
-                              })}
                             </div>
                           </div>
                         </TableCell>
@@ -1745,7 +1715,6 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                     <TableHeader className="bg-[#FAF8F5]">
                       <TableRow className="border-[#E2D9CC]">
                         <TableHead className="text-xs font-extrabold text-[#241C15]">Modelo / Producto</TableHead>
-                        <TableHead className="text-xs font-extrabold text-[#241C15]">Color</TableHead>
                         <TableHead className="text-xs font-extrabold text-[#241C15] text-center">Cant.</TableHead>
                         <TableHead className="text-xs font-extrabold text-[#241C15] text-right">P. Unit</TableHead>
                         <TableHead className="text-xs font-extrabold text-[#241C15] text-right">Subtotal</TableHead>
@@ -1761,34 +1730,6 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                                 Nota: {it.personalizacion}
                               </span>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            {(() => {
-                              const itemColores = (it.colores && it.colores.length > 0)
-                                ? it.colores
-                                : (it.colorFilamento ? [it.colorFilamento] : [])
-
-                              if (itemColores.length === 0) {
-                                return <span className="text-[#A89F91] italic text-xs">Sin asignar</span>
-                              }
-
-                              return (
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  {itemColores.map((col, cIdx) => (
-                                    <span
-                                      key={cIdx}
-                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] text-xs font-semibold text-[#241C15]"
-                                    >
-                                      <span
-                                        className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
-                                        style={{ backgroundColor: col.codigoHex || '#1E1E1E' }}
-                                      />
-                                      <span>{col.nombreColor}</span>
-                                    </span>
-                                  ))}
-                                </div>
-                              )
-                            })()}
                           </TableCell>
                           <TableCell className="text-center font-bold">{it.cantidad}</TableCell>
                           <TableCell className="text-right font-mono">{formatCurrency(it.precioUnitario)}</TableCell>
