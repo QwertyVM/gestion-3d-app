@@ -66,7 +66,7 @@ function CustomEvolucionTooltip({ active, payload, label }: any) {
 
         <div className="space-y-1.5 text-[#6B7280]">
           <div className="flex justify-between items-center">
-            <span>Facturación:</span>
+            <span>Cobranza en caja:</span>
             <span className="font-mono font-semibold text-[#1F2937]">S/ {ingresos.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
@@ -100,7 +100,7 @@ function CustomEvolutionLegend() {
       </div>
       <div className="flex items-center gap-1.5 font-medium text-[#7C5835]">
         <span className="w-3.5 h-0.5 bg-[#7C5835] rounded-full inline-block" />
-        <span>Facturación</span>
+        <span>Cobranza en Caja</span>
       </div>
     </div>
   )
@@ -652,7 +652,7 @@ export function DashboardClient({
                   Evolución Financiera
                 </CardTitle>
                 <CardDescription className="text-xs text-[#6B7280]">
-                  Utilidad neta diaria y volumen de facturación
+                  Utilidad neta diaria y cobranza en caja
                 </CardDescription>
               </div>
             </div>
@@ -709,7 +709,7 @@ export function DashboardClient({
                     <Line 
                       type="monotone" 
                       dataKey="ingresos" 
-                      name="Facturación"
+                      name="Cobranza en Caja"
                       stroke="#7C5835" 
                       strokeWidth={2} 
                       dot={{ r: 3, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
