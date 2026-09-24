@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Calendar, ChevronDown, Check, RotateCcw } from 'lucide-react'
-import { DatePreset, DateRange, getPresetDateRange, MESES_ES } from '@/lib/date-utils'
+import { DatePreset, DateRange, getPresetDateRange, MESES_ES, formatFechaEvolucion } from '@/lib/date-utils'
 
 interface DateFilterControlProps {
   value: DateRange
@@ -51,16 +51,33 @@ export function DateFilterControl({
       const now = new Date()
       return `${MESES_ES[now.getMonth()]} ${now.getFullYear()} (Mes Actual)`
     }
+    if (value.preset === 'ESTA_SEMANA') {
+      if (value.from && value.to) {
+        return `Esta Semana (${formatFechaEvolucion(value.from)} - ${formatFechaEvolucion(value.to)})`
+      }
+      return 'Esta Semana (Lun - Dom)'
+    }
+    if (value.preset === 'SEMANA_ANTERIOR') {
+      if (value.from && value.to) {
+        return `Semana Pasada (${formatFechaEvolucion(value.from)} - ${formatFechaEvolucion(value.to)})`
+      }
+      return 'Semana Pasada (Lun - Dom)'
+    }
     if (value.preset === 'ULTIMOS_3_MESES') {
       return 'Hace 3 meses'
     }
     if (value.preset === 'TODO') {
       return 'Histórico'
     }
+    if (value.from && value.to) {
+      return `${formatFechaEvolucion(value.from)} - ${formatFechaEvolucion(value.to)}`
+    }
     return 'Histórico'
   }
 
   const isAllActive = value.preset === 'TODO'
+  const estaSemanaRange = getPresetDateRange('ESTA_SEMANA')
+  const semanaAnteriorRange = getPresetDateRange('SEMANA_ANTERIOR')
 
   return (
     <div className={`relative inline-block text-left ${className}`} ref={dropdownRef}>
@@ -75,7 +92,7 @@ export function DateFilterControl({
         }`}
       >
         <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-        <span className="truncate max-w-[190px] sm:max-w-[240px]">{getDisplayLabel()}</span>
+        <span className="truncate max-w-[210px] sm:max-w-[280px]">{getDisplayLabel()}</span>
         <ChevronDown className="h-3 w-3 text-[#75695D] shrink-0" />
       </button>
 
@@ -130,8 +147,44 @@ export function DateFilterControl({
                   : 'bg-[#F8F6F2] text-[#241C15] hover:bg-[#EFE5D8]'
               }`}
             >
-              <span>📅 Mes Actual</span>
+              <span>📅 Mes Actual ({MESES_ES[new Date().getMonth()]})</span>
               {value.preset === 'ESTE_MES' && <Check className="h-3.5 w-3.5" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('ESTA_SEMANA')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer ${
+                value.preset === 'ESTA_SEMANA'
+                  ? 'bg-[#A36F4C] text-white shadow-2xs'
+                  : 'bg-[#F8F6F2] text-[#241C15] hover:bg-[#EFE5D8]'
+              }`}
+            >
+              <div className="flex flex-col">
+                <span>📆 Esta Semana (Lun - Dom)</span>
+                <span className={`text-[10px] font-normal ${value.preset === 'ESTA_SEMANA' ? 'text-white/80' : 'text-[#75695D]'}`}>
+                  {formatFechaEvolucion(estaSemanaRange.from!)} - {formatFechaEvolucion(estaSemanaRange.to!)}
+                </span>
+              </div>
+              {value.preset === 'ESTA_SEMANA' && <Check className="h-3.5 w-3.5 shrink-0" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('SEMANA_ANTERIOR')}
+              className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer ${
+                value.preset === 'SEMANA_ANTERIOR'
+                  ? 'bg-[#A36F4C] text-white shadow-2xs'
+                  : 'bg-[#F8F6F2] text-[#241C15] hover:bg-[#EFE5D8]'
+              }`}
+            >
+              <div className="flex flex-col">
+                <span>⏪ Semana Pasada (Última semana)</span>
+                <span className={`text-[10px] font-normal ${value.preset === 'SEMANA_ANTERIOR' ? 'text-white/80' : 'text-[#75695D]'}`}>
+                  {formatFechaEvolucion(semanaAnteriorRange.from!)} - {formatFechaEvolucion(semanaAnteriorRange.to!)}
+                </span>
+              </div>
+              {value.preset === 'SEMANA_ANTERIOR' && <Check className="h-3.5 w-3.5 shrink-0" />}
             </button>
 
             <button
