@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { 
   Plus, 
   Search, 
@@ -43,7 +44,7 @@ import {
   duplicarProducto, 
   deleteProducto 
 } from '@/actions/productos'
-import { updateBggStats } from '@/actions/bgg'
+import { updateBggStats, bulkUpdateBggStats, BggStatUpdateItem } from '@/actions/bgg'
 import { XMLParser } from 'fast-xml-parser'
 
 export interface ProductoItem {
@@ -105,6 +106,7 @@ export function CatalogoClient({
   productos: initialProductos, 
   categoriasIniciales = [] 
 }: CatalogoClientProps) {
+  const router = useRouter()
   const { is3D, isBG } = useBusiness()
   const [productos, setProductos] = useState<ProductoItem[]>(initialProductos)
   const [categorias, setCategorias] = useState<CategoriaItem[]>(categoriasIniciales)
@@ -216,68 +218,99 @@ export function CatalogoClient({
   }
 
   const handleSyncBgg = async () => {
-    // Filtrar los que tienen ID
-    const gamesWithBgg = productos.filter((p) => p.bggId)
+    // Filtrar los que tienen ID válido
+    const gamesWithBgg = productos.filter((p) => p.bggId && Number(p.bggId) > 0)
     if (gamesWithBgg.length === 0) {
       toast.info('No hay juegos con BGG ID configurado')
       return
     }
 
     setIsSyncingBgg(true)
-    toast.info(`Iniciando sincronización de ${gamesWithBgg.length} juegos...`)
-    
-    let successCount = 0
-    let failCount = 0
+    toast.info(`Consultando ${gamesWithBgg.length} juegos en BGG en 1 sola llamada...`)
 
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: "@_"
+    const token = 'f7ad4bda-0a75-4d1c-9ee0-bb8417ea409f'
+    const bggIdMap = new Map<number, (typeof gamesWithBgg)[0]>()
+    gamesWithBgg.forEach((p) => {
+      bggIdMap.set(Number(p.bggId), p)
     })
 
-    for (const p of gamesWithBgg) {
-      try {
-        const bggId = p.bggId
-        const url = `https://boardgamegeek.com/xmlapi2/thing?id=${bggId}&stats=1`
-        
-        // Fetch desde el cliente (tu navegador) saltándose Vercel/Cloudflare
-        const response = await fetch(url)
-        if (!response.ok) throw new Error('Network error')
-        
-        const xmlText = await response.text()
-        const result = parser.parse(xmlText)
-        let item = result.items?.item
-        
-        if (item) {
-          if (Array.isArray(item)) item = item[0]
-          
-          const rating = parseFloat(item.statistics?.ratings?.average?.['@_value']) || undefined
-          const weight = parseFloat(item.statistics?.ratings?.averageweight?.['@_value']) || undefined
-          const minPlayers = parseInt(item.minplayers?.['@_value'], 10) || undefined
-          const maxPlayers = parseInt(item.maxplayers?.['@_value'], 10) || undefined
-          const playtime = parseInt(item.playingtime?.['@_value'], 10) || undefined
+    const idsParam = Array.from(bggIdMap.keys()).join(',')
+    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${idsParam}&stats=1`
 
-          await updateBggStats(p.id, {
-            bggRating: rating,
-            bggWeight: weight,
-            bggMinPlayers: minPlayers,
-            bggMaxPlayers: maxPlayers,
-            bggPlaytime: playtime
-          })
-          successCount++
-        } else {
-          failCount++
-        }
-      } catch (error) {
-        console.error(`Error sync bgg for ${p.nombreModelo}:`, error)
-        failCount++
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'User-Agent': 'BGG-Personal-Collection-Tracker/1.0 (hobby project)',
+          Accept: 'application/xml,text/xml,*/*',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error BGG API (${response.status}): ${response.statusText}`)
       }
-      
-      // Delay 500ms para no saturar BGG
-      await new Promise(r => setTimeout(r, 500))
-    }
 
-    setIsSyncingBgg(false)
-    toast.success(`Sincronización terminada. Éxito: ${successCount}, Fallos: ${failCount}`)
+      const xmlText = await response.text()
+      const parser = new XMLParser({
+        ignoreAttributes: false,
+        attributeNamePrefix: '@_',
+      })
+      const result = parser.parse(xmlText)
+      const rawItems = result.items?.item
+      const items = Array.isArray(rawItems) ? rawItems : rawItems ? [rawItems] : []
+
+      const updates: BggStatUpdateItem[] = []
+
+      for (const item of items) {
+        const id = parseInt(item['@_id'], 10)
+        if (!id) continue
+        const prod = bggIdMap.get(id)
+        if (!prod) continue
+
+        const rating = parseFloat(item.statistics?.ratings?.average?.['@_value']) || undefined
+        const weight = parseFloat(item.statistics?.ratings?.averageweight?.['@_value']) || undefined
+        const minPlayers = parseInt(item.minplayers?.['@_value'], 10) || undefined
+        const maxPlayers = parseInt(item.maxplayers?.['@_value'], 10) || undefined
+        const playtime = parseInt(item.playingtime?.['@_value'], 10) || undefined
+
+        updates.push({
+          id: prod.id,
+          bggRating: rating ? parseFloat(rating.toFixed(2)) : null,
+          bggWeight: weight ? parseFloat(weight.toFixed(2)) : null,
+          bggMinPlayers: minPlayers || null,
+          bggMaxPlayers: maxPlayers || null,
+          bggPlaytime: playtime || null,
+        })
+      }
+
+      if (updates.length > 0) {
+        await bulkUpdateBggStats(updates)
+        const updateMap = new Map(updates.map((u) => [u.id, u]))
+        setProductos((prev) =>
+          prev.map((p) => {
+            const upd = updateMap.get(p.id)
+            if (!upd) return p
+            return {
+              ...p,
+              bggRating: upd.bggRating,
+              bggWeight: upd.bggWeight,
+              bggMinPlayers: upd.bggMinPlayers,
+              bggMaxPlayers: upd.bggMaxPlayers,
+              bggPlaytime: upd.bggPlaytime,
+            }
+          })
+        )
+        toast.success(`¡Éxito! ${updates.length} juegos actualizados en 1 sola llamada a BGG.`)
+        router.refresh()
+      } else {
+        toast.warning('No se encontraron estadísticas para los IDs consultados en BGG.')
+      }
+    } catch (error: any) {
+      console.error('Error en sincronización masiva BGG:', error)
+      toast.error('Error al consultar BGG: ' + (error.message || 'Verifica tu conexión'))
+    } finally {
+      setIsSyncingBgg(false)
+    }
   }
 
   // Close context menu on click outside
