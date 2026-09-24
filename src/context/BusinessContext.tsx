@@ -16,21 +16,7 @@ interface BusinessContextType {
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined)
 
 function getInitialNegocio(): TipoNegocio {
-  if (typeof window === 'undefined') return DEFAULT_NEGOCIO
-
-  // 1. Try reading from cookie
-  const match = document.cookie.match(new RegExp('(^|;\\s*)' + BUSINESS_COOKIE_NAME + '=([^;]*)'))
-  if (match && (match[2] === '3D' || match[2] === 'BG')) {
-    return match[2] as TipoNegocio
-  }
-
-  // 2. Try reading from localStorage
-  const saved = localStorage.getItem('nova_business')
-  if (saved === '3D' || saved === 'BG') {
-    return saved as TipoNegocio
-  }
-
-  return DEFAULT_NEGOCIO
+  return '3D'
 }
 
 export function BusinessProvider({
