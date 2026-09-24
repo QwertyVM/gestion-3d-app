@@ -503,8 +503,11 @@ export async function updateEstadoPedido(id: string, nuevoEstado: EstadoPedido) 
       return p
     })
 
+    const allFilamentos = await prisma.inventarioFilamento.findMany()
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+
     safeRevalidate()
-    return { success: true, pedido: serializePedido(pedido) }
+    return { success: true, pedido: serializePedido(pedido, filMap) }
   } catch (error: any) {
     console.error('Error updating estado pedido:', error)
     return { success: false, error: error.message || 'Error al actualizar estado del pedido' }
@@ -575,8 +578,11 @@ export async function addPagoPedido(pedidoId: string, data: {
       return pActualizado
     })
 
+    const allFilamentos = await prisma.inventarioFilamento.findMany()
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+
     safeRevalidate()
-    return { success: true, pedido: serializePedido(updated) }
+    return { success: true, pedido: serializePedido(updated, filMap) }
   } catch (error: any) {
     console.error('Error adding pago pedido:', error)
     return { success: false, error: error.message || 'Error al registrar abono' }

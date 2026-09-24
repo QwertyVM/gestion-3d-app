@@ -178,6 +178,26 @@ function getDefaultFilamentoId(fils: FilamentoOption[]): string {
   return fils[0]?.id || ''
 }
 
+function getItemColors(it: ItemPedidoView, allFilamentos?: FilamentoOption[]): FilamentoOption[] {
+  if (Array.isArray(it.colores) && it.colores.length > 0) {
+    return it.colores
+  }
+  if (it.colorFilamento) {
+    return [it.colorFilamento]
+  }
+  const rawIds = Array.isArray(it.coloresIds) && it.coloresIds.length > 0
+    ? it.coloresIds
+    : (it.colorFilamentoId ? [it.colorFilamentoId] : [])
+
+  if (rawIds.length > 0 && Array.isArray(allFilamentos)) {
+    const resolved = rawIds
+      .map(id => allFilamentos.find(f => f.id === id))
+      .filter(Boolean) as FilamentoOption[]
+    if (resolved.length > 0) return resolved
+  }
+  return []
+}
+
 const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; colorText: string; colorBorder: string; icon: any }> = {
   PENDIENTE: {
     label: 'Pendiente',
@@ -639,9 +659,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   // =========================================================================
   const copyWhatsAppTicket = (p: PedidoView) => {
     const itemsText = p.items.map((it, idx) => {
-      const itemColores = (it.colores && it.colores.length > 0)
-        ? it.colores
-        : (it.colorFilamento ? [it.colorFilamento] : [])
+      const itemColores = getItemColors(it, filamentos)
       const colorText = itemColores.length > 1
         ? ` (Colores: ${itemColores.map(c => c.nombreColor).join(' + ')})`
         : itemColores.length === 1
@@ -680,7 +698,11 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         p.codigo.toLowerCase().includes(search.toLowerCase()) ||
         (p.telefono && p.telefono.includes(search)) ||
         (p.destinoEnvio && p.destinoEnvio.toLowerCase().includes(search.toLowerCase())) ||
-        p.items.some(i => i.nombreProductoSnapshot.toLowerCase().includes(search.toLowerCase()))
+        p.items.some(i => {
+          if (i.nombreProductoSnapshot.toLowerCase().includes(search.toLowerCase())) return true
+          const cols = getItemColors(i, filamentos)
+          return cols.some(c => c.nombreColor.toLowerCase().includes(search.toLowerCase()))
+        })
 
       if (!matchSearch) return false
 
@@ -1002,7 +1024,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                         onClick={() => handleSort('cantidad')}
                         className="flex items-center gap-1 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer"
                       >
-                        <span>Productos</span>
+                        <span>Productos & Colores</span>
                         {sortField === 'cantidad' ? (
                           sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-[#A36F4C]" /> : <ArrowDown className="h-3 w-3 text-[#A36F4C]" />
                         ) : (
@@ -1084,21 +1106,65 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                           </div>
                         </TableCell>
 
-                        {/* 2. Productos */}
-                        <TableCell className="px-3 py-3 align-middle">
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-xs text-[#241C15]">
-                                {p.totalItemsCount} {p.totalItemsCount === 1 ? 'pieza' : 'piezas'}
-                              </span>
-                              {p.items.length > 1 && (
-                                <span className="text-xs text-[#75695D]">
-                                  ({p.items.length} modelos)
+                        {/* 2. Productos y Colores Asignados */}
+                        <TableCell className="px-3 py-3 align-middle min-w-0">
+                          <div className="space-y-1.5 max-w-[320px]">
+                            {/* Resumen si hay más de 1 modelo */}
+                            {p.items.length > 1 && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-[#75695D]">
+                                <span className="font-bold text-[#241C15]">
+                                  {p.totalItemsCount} {p.totalItemsCount === 1 ? 'pieza' : 'piezas'}
+                                </span>
+                                <span className="text-[#D4BEA7]">•</span>
+                                <span>{p.items.length} modelos</span>
+                              </div>
+                            )}
+
+                            {/* Desglose de piezas y sus colores */}
+                            <div className="space-y-1.5">
+                              {p.items.slice(0, 3).map((it, idx) => {
+                                const itemColores = getItemColors(it, filamentos)
+                                return (
+                                  <div key={it.id || idx} className="text-xs">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-semibold text-[#241C15] truncate max-w-[210px]" title={it.nombreProductoSnapshot}>
+                                        {it.nombreProductoSnapshot}
+                                      </span>
+                                      <span className="font-mono font-bold text-[#A36F4C] text-[11px] shrink-0">
+                                        x{it.cantidad}
+                                      </span>
+                                    </div>
+
+                                    {itemColores.length > 0 ? (
+                                      <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                                        {itemColores.map((col, cIdx) => (
+                                          <span
+                                            key={col.id || cIdx}
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] text-[10px] font-semibold text-[#241C15] shrink-0"
+                                            title={`${col.nombreColor}${col.tipoMaterial ? ` • ${col.tipoMaterial}` : ''}`}
+                                          >
+                                            <span
+                                              className="h-2 w-2 rounded-full border border-black/20 shrink-0 shadow-2xs"
+                                              style={{ backgroundColor: col.codigoHex || '#1E1E1E' }}
+                                            />
+                                            <span className="truncate max-w-[100px]">{col.nombreColor}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] text-[#A89F91] italic block">
+                                        Sin color asignado
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })}
+
+                              {p.items.length > 3 && (
+                                <span className="text-[10px] font-bold text-[#A36F4C] bg-[#FDF6E2] border border-[#E8D49B] px-1.5 py-0.5 rounded-md inline-block">
+                                  +{p.items.length - 3} modelos más
                                 </span>
                               )}
-                            </div>
-                            <div className="text-xs text-[#75695D] truncate max-w-[240px]">
-                              {p.items.map(it => `${it.nombreProductoSnapshot} (x${it.cantidad})`).join(', ')}
                             </div>
                           </div>
                         </TableCell>
@@ -1738,38 +1804,73 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                   Productos Asignados al Pedido ({selectedPedidoDetail.items.length})
                 </span>
 
-                <div className="border border-[#E2D9CC] rounded-2xl overflow-x-auto w-full">
-                  <Table className="min-w-[500px]">
+                <div className="border border-[#E2D9CC] rounded-2xl overflow-hidden w-full">
+                  <Table className="w-full">
                     <TableHeader className="bg-[#FAF8F5]">
                       <TableRow className="border-[#E2D9CC]">
-                        <TableHead className="text-xs font-extrabold text-[#241C15]">Modelo / Producto</TableHead>
-                        <TableHead className="text-xs font-extrabold text-[#241C15] text-center">Cant.</TableHead>
-                        <TableHead className="text-xs font-extrabold text-[#241C15] text-right">P. Unit</TableHead>
-                        <TableHead className="text-xs font-extrabold text-[#241C15] text-right">Subtotal</TableHead>
+                        <TableHead className="text-xs font-extrabold text-[#241C15]">Modelo / Producto & Colores</TableHead>
+                        <TableHead className="text-xs font-extrabold text-[#241C15] text-center w-16">Cant.</TableHead>
+                        <TableHead className="text-xs font-extrabold text-[#241C15] text-right w-24">P. Unit</TableHead>
+                        <TableHead className="text-xs font-extrabold text-[#241C15] text-right w-24">Subtotal</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className="text-xs">
-                      {selectedPedidoDetail.items.map((it) => (
-                        <TableRow key={it.id} className="border-[#E2D9CC]">
-                          <TableCell className="font-bold text-[#241C15]">
-                            {it.nombreProductoSnapshot}
-                            {it.personalizacion && (
-                              <span className="text-[10px] text-[#75695D] block font-normal italic">
-                                Nota: {it.personalizacion}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center font-bold">{it.cantidad}</TableCell>
-                          <TableCell className="text-right font-mono">{formatCurrency(it.precioUnitario)}</TableCell>
-                          <TableCell className="text-right font-mono font-extrabold text-[#241C15]">
-                            {formatCurrency(it.subtotal)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {selectedPedidoDetail.items.map((it) => {
+                        const itemColores = getItemColors(it, filamentos)
+                        return (
+                          <TableRow key={it.id} className="border-[#E2D9CC]">
+                            <TableCell className="font-bold text-[#241C15] align-top py-3">
+                              <div className="space-y-1.5">
+                                <div className="text-xs sm:text-sm font-extrabold text-[#241C15]">
+                                  {it.nombreProductoSnapshot}
+                                </div>
+
+                                {/* Colores de Filamento Asignados */}
+                                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                  {itemColores.length > 0 ? (
+                                    itemColores.map((col, cIdx) => (
+                                      <span
+                                        key={col.id || cIdx}
+                                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-xs font-semibold text-[#241C15]"
+                                      >
+                                        <span
+                                          className="h-2.5 w-2.5 rounded-full border border-black/20 shrink-0 shadow-2xs"
+                                          style={{ backgroundColor: col.codigoHex || '#1E1E1E' }}
+                                        />
+                                        <span>{col.nombreColor}</span>
+                                        {col.tipoMaterial && (
+                                          <span className="text-[10px] text-[#75695D] font-mono font-normal">
+                                            ({col.tipoMaterial})
+                                          </span>
+                                        )}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-[11px] text-[#A89F91] italic font-normal">
+                                      Sin color de filamento asignado
+                                    </span>
+                                  )}
+                                </div>
+
+                                {it.personalizacion && (
+                                  <span className="text-[10px] sm:text-[11px] text-[#854D0E] block font-medium italic">
+                                    Nota: {it.personalizacion}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center font-bold align-top py-3">{it.cantidad}</TableCell>
+                            <TableCell className="text-right font-mono align-top py-3">{formatCurrency(it.precioUnitario)}</TableCell>
+                            <TableCell className="text-right font-mono font-extrabold text-[#241C15] align-top py-3">
+                              {formatCurrency(it.subtotal)}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
 
                       {selectedPedidoDetail.costoEnvio > 0 && (
                         <TableRow className="border-[#E2D9CC] bg-[#FAF8F5]/40 font-semibold">
-                          <TableCell colSpan={4} className="text-right text-[#75695D]">
+                          <TableCell colSpan={3} className="text-right text-[#75695D]">
                             Costo de Envío / Flete:
                           </TableCell>
                           <TableCell className="text-right font-mono">
@@ -1779,7 +1880,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       )}
 
                       <TableRow className="bg-[#FAF8F5] border-t-2 border-[#E2D9CC] font-black text-sm">
-                        <TableCell colSpan={4} className="text-right text-[#241C15]">
+                        <TableCell colSpan={3} className="text-right text-[#241C15]">
                           TOTAL PEDIDO:
                         </TableCell>
                         <TableCell className="text-right font-mono text-[#1E5E3A]">
