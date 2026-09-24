@@ -1,4 +1,4 @@
-export type DatePreset = 'ESTE_MES' | 'MES_ANTERIOR' | 'ULTIMOS_30_DIAS' | 'ESTE_ANIO' | 'TODO' | 'PERSONALIZADO'
+export type DatePreset = 'ESTE_MES' | 'MES_ANTERIOR' | 'ULTIMOS_30_DIAS' | 'ULTIMOS_3_MESES' | 'ESTE_ANIO' | 'TODO' | 'PERSONALIZADO'
 
 export interface DateRange {
   from: string | null // Formato YYYY-MM-DD
@@ -50,6 +50,15 @@ export function getPresetDateRange(preset: DatePreset, referenceDate: Date = new
         from: formatToYMD(past30),
         to: formatToYMD(now),
         preset: 'ULTIMOS_30_DIAS'
+      }
+    }
+    case 'ULTIMOS_3_MESES': {
+      const past3Months = new Date(now)
+      past3Months.setMonth(past3Months.getMonth() - 3)
+      return {
+        from: formatToYMD(past3Months),
+        to: formatToYMD(now),
+        preset: 'ULTIMOS_3_MESES'
       }
     }
     case 'ESTE_ANIO': {

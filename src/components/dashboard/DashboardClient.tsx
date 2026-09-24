@@ -193,7 +193,7 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const router = useRouter()
   // Default to Mes Actual
-  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('ESTE_MES'))
+  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('TODO'))
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
