@@ -27,22 +27,28 @@ export async function getNavLiveMetrics(negocio?: TipoNegocio) {
           ]
         }
       }) : Promise.resolve(0),
-      prisma.itemPedido.findMany({
+      targetNegocio === '3D' ? prisma.itemPedido.findMany({
         where: {
           pedido: {
-            negocio: targetNegocio,
+            negocio: '3D',
             estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] }
+          },
+          producto: {
+            negocio: '3D'
           }
         },
         select: { cantidad: true }
-      }),
-      prisma.venta.findMany({
+      }) : Promise.resolve([]),
+      targetNegocio === '3D' ? prisma.venta.findMany({
         where: {
-          negocio: targetNegocio,
-          estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] }
+          negocio: '3D',
+          estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] },
+          producto: {
+            negocio: '3D'
+          }
         },
         select: { cantidad: true }
-      })
+      }) : Promise.resolve([])
     ])
 
     const totalPiezasTaller = 

@@ -160,6 +160,7 @@ model Producto {
   comentarios         ComentarioProducto[]
   itemPedidos         ItemPedido[]
   ventas              Venta[]
+  favoritos           Favorito[]
 
   @@unique([nombreModelo, negocio])
 }
@@ -174,6 +175,23 @@ model ComentarioProducto {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   producto     Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+}
+
+model Favorito {
+  id              String   @id @default(uuid())
+  productoId      String
+  usuarioId       String?
+  clienteNombre   String?
+  clienteTelefono String?
+  clienteEmail    String?
+  deseaAvisoStock Boolean  @default(false)
+  avisado         Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  producto        Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+
+  @@index([productoId])
+  @@index([clienteEmail])
 }
 
 model Venta {

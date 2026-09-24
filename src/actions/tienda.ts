@@ -628,3 +628,136 @@ export async function bulkUpdateStockOfertas(
   safeRevalidateStore()
   return { success: true }
 }
+
+// =========================================================================
+// 5. FAVORITOS & DEMANDA WEB (TOMA DE DECISIONES DE COMPRA/REABASTECIMIENTO)
+// =========================================================================
+
+export interface FavoritoClienteItem {
+  id: string
+  clienteNombre: string | null
+  clienteTelefono: string | null
+  clienteEmail: string | null
+  deseaAvisoStock: boolean
+  avisado: boolean
+  createdAt: string
+}
+
+export interface ProductoDemandaFavoritosItem {
+  id: string
+  nombreModelo: string
+  lineaCategoria: string
+  negocio: TipoNegocio
+  stock: number
+  controlarStock: boolean
+  precioMercado: number
+  precioOferta: number | null
+  enOferta: boolean
+  imagenUrl: string | null
+  activo: boolean
+  totalFavoritos: number
+  totalAvisosPendientes: number
+  totalAvisosEnviados: number
+  clientesAviso: FavoritoClienteItem[]
+  prioridad: 'CRITICA' | 'ALTA' | 'MEDIA' | 'ESTABLE'
+}
+
+export async function getFavoritosDemanda(
+  negocio?: TipoNegocio
+): Promise<ProductoDemandaFavoritosItem[]> {
+  const targetNegocio = negocio || (await getActiveNegocioServer())
+
+  const productos = await prisma.producto.findMany({
+    where: {
+      negocio: targetNegocio,
+      favoritos: {
+        some: {},
+      },
+    },
+    include: {
+      favoritos: {
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+  })
+
+  const results: ProductoDemandaFavoritosItem[] = productos.map((p) => {
+    const totalFavoritos = p.favoritos.length
+    const totalAvisosPendientes = p.favoritos.filter(
+      (f) => f.deseaAvisoStock && !f.avisado
+    ).length
+    const totalAvisosEnviados = p.favoritos.filter(
+      (f) => f.deseaAvisoStock && f.avisado
+    ).length
+
+    const isOutOfStock = p.controlarStock && p.stock <= 0
+    const isLowStock = p.controlarStock && p.stock > 0 && p.stock <= 2
+
+    let prioridad: 'CRITICA' | 'ALTA' | 'MEDIA' | 'ESTABLE' = 'ESTABLE'
+    if (isOutOfStock && totalAvisosPendientes > 0) {
+      prioridad = 'CRITICA'
+    } else if (isOutOfStock && totalFavoritos > 0) {
+      prioridad = 'ALTA'
+    } else if (isLowStock && totalFavoritos > 0) {
+      prioridad = 'MEDIA'
+    }
+
+    return {
+      id: p.id,
+      nombreModelo: p.nombreModelo,
+      lineaCategoria: p.lineaCategoria,
+      negocio: p.negocio as TipoNegocio,
+      stock: p.stock,
+      controlarStock: p.controlarStock,
+      precioMercado: Number(p.precioMercado),
+      precioOferta: p.precioOferta ? Number(p.precioOferta) : null,
+      enOferta: p.enOferta ?? false,
+      imagenUrl: p.imagenUrl || null,
+      activo: p.activo ?? true,
+      totalFavoritos,
+      totalAvisosPendientes,
+      totalAvisosEnviados,
+      clientesAviso: p.favoritos
+        .filter((f) => f.deseaAvisoStock || f.clienteNombre || f.clienteTelefono)
+        .map((f) => ({
+          id: f.id,
+          clienteNombre: f.clienteNombre,
+          clienteTelefono: f.clienteTelefono,
+          clienteEmail: f.clienteEmail,
+          deseaAvisoStock: f.deseaAvisoStock,
+          avisado: f.avisado,
+          createdAt: f.createdAt.toISOString(),
+        })),
+      prioridad,
+    }
+  })
+
+  const prioridadOrder = { CRITICA: 0, ALTA: 1, MEDIA: 2, ESTABLE: 3 }
+  return results.sort((a, b) => {
+    const pDiff = prioridadOrder[a.prioridad] - prioridadOrder[b.prioridad]
+    if (pDiff !== 0) return pDiff
+    return b.totalFavoritos - a.totalFavoritos
+  })
+}
+
+export async function toggleAvisoFavorito(favoritoId: string, avisado: boolean) {
+  const updated = await prisma.favorito.update({
+    where: { id: favoritoId },
+    data: { avisado },
+  })
+  safeRevalidateStore()
+  return { success: true, favorito: updated }
+}
+
+export async function marcarTodosAvisosProducto(productoId: string, avisado: boolean) {
+  await prisma.favorito.updateMany({
+    where: {
+      productoId,
+      deseaAvisoStock: true,
+    },
+    data: { avisado },
+  })
+  safeRevalidateStore()
+  return { success: true }
+}
+

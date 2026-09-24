@@ -125,6 +125,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
     const [pedidos, ventas, filamentos] = await Promise.all([
       prisma.pedido.findMany({
         where: {
+          negocio: '3D',
           estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'LISTO_ENTREGA'] }
         },
         include: {
@@ -139,6 +140,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       }),
       prisma.venta.findMany({
         where: {
+          negocio: '3D',
           estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] }
         },
         include: {
@@ -163,6 +165,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
     pedidos.forEach((ped) => {
       const rawFecha = ped.fecha instanceof Date ? ped.fecha.toISOString() : String(ped.fecha)
       ped.items.forEach((item) => {
+        // Taller 3D es exclusivamente para fabricación 3D, no juegos de mesa (BG)
+        if (item.producto && item.producto.negocio !== '3D') return
         const pesoUnit = item.producto?.pesoGramos != null && Number(item.producto.pesoGramos) > 0
           ? Number(item.producto.pesoGramos)
           : (item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0 
@@ -236,6 +240,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
 
     // 2. Procesar Ventas individuales
     ventas.forEach((v) => {
+      // Taller 3D es exclusivamente para fabricación 3D, no juegos de mesa (BG)
+      if (v.producto && v.producto.negocio !== '3D') return
       const rawFecha = v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha)
       const pesoUnit = v.producto?.pesoGramos != null && Number(v.producto.pesoGramos) > 0
         ? Number(v.producto.pesoGramos)

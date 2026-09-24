@@ -5,6 +5,7 @@ import {
   getBannersTienda,
   getCuponesTienda,
   getProductosStoreConfig,
+  getFavoritosDemanda,
 } from '@/actions/tienda'
 import { GestionTiendaClient } from '@/components/tienda-web/GestionTiendaClient'
 
@@ -18,11 +19,12 @@ export const metadata = {
 export default async function TiendaWebPage() {
   const activeNegocio = await getActiveNegocioServer()
 
-  const [config, banners, cupones, productos] = await Promise.all([
+  const [config, banners, cupones, productos, favoritos] = await Promise.all([
     getConfiguracionTienda(activeNegocio),
     getBannersTienda(activeNegocio),
     getCuponesTienda(activeNegocio),
     getProductosStoreConfig(activeNegocio),
+    getFavoritosDemanda(activeNegocio),
   ])
 
   return (
@@ -32,6 +34,7 @@ export default async function TiendaWebPage() {
         initialBanners={banners}
         initialCupones={cupones}
         initialProductos={productos}
+        initialFavoritos={favoritos}
       />
     </div>
   )

@@ -7,12 +7,14 @@ import {
   BannerTiendaItem,
   CuponDescuentoItem,
   ProductoStoreConfigItem,
+  ProductoDemandaFavoritosItem,
 } from '@/actions/tienda'
 import { useBusiness } from '@/context/BusinessContext'
 import { TabIdentidadContacto } from './TabIdentidadContacto'
 import { TabBannersHero } from './TabBannersHero'
 import { TabOfertasCupones } from './TabOfertasCupones'
 import { TabStockCatalogo } from './TabStockCatalogo'
+import { TabFavoritosDemanda } from './TabFavoritosDemanda'
 import {
   Globe,
   Sliders,
@@ -25,6 +27,7 @@ import {
   Store,
   Layers,
   ShoppingBag,
+  Heart,
 } from 'lucide-react'
 
 interface GestionTiendaClientProps {
@@ -32,15 +35,17 @@ interface GestionTiendaClientProps {
   initialBanners: BannerTiendaItem[]
   initialCupones: CuponDescuentoItem[]
   initialProductos: ProductoStoreConfigItem[]
+  initialFavoritos: ProductoDemandaFavoritosItem[]
 }
 
-type TabType = 'identidad' | 'banners' | 'cupones' | 'stock'
+type TabType = 'identidad' | 'banners' | 'cupones' | 'stock' | 'favoritos'
 
 export function GestionTiendaClient({
   initialConfig,
   initialBanners,
   initialCupones,
   initialProductos,
+  initialFavoritos,
 }: GestionTiendaClientProps) {
   const router = useRouter()
   const { negocio, setNegocio, is3D, isBG, config } = useBusiness()
@@ -183,6 +188,23 @@ export function GestionTiendaClient({
             </span>
           )}
         </button>
+
+        <button
+          onClick={() => setActiveTab('favoritos')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer shrink-0 border ${
+            activeTab === 'favoritos'
+              ? 'bg-[#241C15] text-white border-[#241C15] shadow-xs'
+              : 'bg-white text-[#75695D] border-[#E2D9CC] hover:bg-[#F8F6F2] hover:text-[#241C15]'
+          }`}
+        >
+          <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+          <span>Favoritos & Demanda ({initialFavoritos.length})</span>
+          {initialFavoritos.filter((p) => p.totalAvisosPendientes > 0).length > 0 && (
+            <span className="bg-rose-100 text-rose-800 text-[10px] px-1.5 py-0.2 rounded-md font-bold">
+              {initialFavoritos.filter((p) => p.totalAvisosPendientes > 0).length} con avisos
+            </span>
+          )}
+        </button>
       </div>
 
       {/* 3. ACTIVE TAB CONTENT */}
@@ -214,6 +236,14 @@ export function GestionTiendaClient({
         <TabStockCatalogo
           negocio={negocio}
           productos={initialProductos}
+          onRefresh={handleRefresh}
+        />
+      )}
+
+      {activeTab === 'favoritos' && (
+        <TabFavoritosDemanda
+          negocio={negocio}
+          favoritos={initialFavoritos}
           onRefresh={handleRefresh}
         />
       )}
