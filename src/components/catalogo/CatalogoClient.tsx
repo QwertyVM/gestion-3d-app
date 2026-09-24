@@ -269,9 +269,56 @@ export function CatalogoClient({
 
         const rating = parseFloat(item.statistics?.ratings?.average?.['@_value']) || undefined
         const weight = parseFloat(item.statistics?.ratings?.averageweight?.['@_value']) || undefined
+        const ratingCount = parseInt(item.statistics?.ratings?.usersrated?.['@_value'], 10) || undefined
         const minPlayers = parseInt(item.minplayers?.['@_value'], 10) || undefined
         const maxPlayers = parseInt(item.maxplayers?.['@_value'], 10) || undefined
         const playtime = parseInt(item.playingtime?.['@_value'], 10) || undefined
+        const minAgeVal = parseInt(item.minage?.['@_value'], 10) || undefined
+        const edadMinima = minAgeVal && minAgeVal > 0 ? minAgeVal : undefined
+        const duracionMinutos = playtime && playtime > 0 ? playtime : undefined
+
+        let numJugadores: string | undefined = undefined
+        if (minPlayers && maxPlayers) {
+          numJugadores =
+            minPlayers === maxPlayers
+              ? `${minPlayers} jugadores`
+              : `${minPlayers} - ${maxPlayers} jugadores`
+        } else if (minPlayers) {
+          numJugadores = `${minPlayers}+ jugadores`
+        }
+
+        const links = Array.isArray(item.link) ? item.link : item.link ? [item.link] : []
+        const publishers: string[] = links
+          .filter((l: any) => l?.['@_type'] === 'boardgamepublisher')
+          .map((l: any) => l?.['@_value'])
+          .filter(Boolean)
+        const editorialMarca = publishers[0] || undefined
+
+        const mechanics: string[] = links
+          .filter((l: any) => l?.['@_type'] === 'boardgamemechanic')
+          .map((l: any) => l?.['@_value'])
+          .filter(Boolean)
+
+        const mechanicMap: Record<string, string> = {
+          'Hidden Roles': 'Roles Ocultos',
+          'Player Elimination': 'Eliminación de Jugadores',
+          'Voting': 'Votación',
+          'Variable Player Powers': 'Poderes Variables',
+          'Deduction': 'Deducción',
+          'Bluffing': 'Faroleo / Engaño',
+          'Hand Management': 'Gestión de Mano',
+          'Set Collection': 'Colección de Sets',
+          'Drafting': 'Drafting de Cartas',
+          'Card Drafting': 'Drafting de Cartas',
+          'Dice Rolling': 'Tirada de Dados',
+          'Worker Placement': 'Colocación de Trabajadores',
+          'Tile Placement': 'Colocación de Losetas',
+          'Cooperative Game': 'Cooperativo',
+          'Pattern Recognition': 'Reconocimiento de Patrones',
+          'Speed Matching': 'Velocidad y Reflejos',
+        }
+        const translatedMechanics = mechanics.slice(0, 4).map((m) => mechanicMap[m] || m)
+        const mecanicas = translatedMechanics.length > 0 ? translatedMechanics.join(', ') : undefined
 
         updates.push({
           id: prod.id,
@@ -280,6 +327,13 @@ export function CatalogoClient({
           bggMinPlayers: minPlayers || null,
           bggMaxPlayers: maxPlayers || null,
           bggPlaytime: playtime || null,
+          bggRatingCount: ratingCount || null,
+          numJugadores: numJugadores || null,
+          edadMinima: edadMinima || null,
+          duracionMinutos: duracionMinutos || null,
+          editorialMarca: editorialMarca || null,
+          mecanicas: mecanicas || null,
+          idioma: 'Español',
         })
       }
 

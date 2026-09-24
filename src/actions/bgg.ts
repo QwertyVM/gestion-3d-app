@@ -10,6 +10,13 @@ export interface BggStatUpdateItem {
   bggMinPlayers?: number | null
   bggMaxPlayers?: number | null
   bggPlaytime?: number | null
+  bggRatingCount?: number | null
+  numJugadores?: string | null
+  edadMinima?: number | null
+  duracionMinutos?: number | null
+  editorialMarca?: string | null
+  mecanicas?: string | null
+  idioma?: string | null
 }
 
 export async function updateBggStats(
@@ -44,7 +51,7 @@ export async function updateBggStats(
 }
 
 /**
- * Actualiza masivamente las estadísticas BGG de múltiples productos en una sola transacción.
+ * Actualiza masivamente las estadísticas BGG y la Ficha Técnica de múltiples productos en una sola transacción.
  */
 export async function bulkUpdateBggStats(updates: BggStatUpdateItem[]) {
   if (updates.length === 0) return { success: true, count: 0 }
@@ -61,6 +68,13 @@ export async function bulkUpdateBggStats(updates: BggStatUpdateItem[]) {
             bggMinPlayers: item.bggMinPlayers !== undefined ? item.bggMinPlayers : undefined,
             bggMaxPlayers: item.bggMaxPlayers !== undefined ? item.bggMaxPlayers : undefined,
             bggPlaytime: item.bggPlaytime !== undefined ? item.bggPlaytime : undefined,
+            bggRatingCount: item.bggRatingCount !== undefined ? item.bggRatingCount : undefined,
+            numJugadores: item.numJugadores !== undefined ? item.numJugadores : undefined,
+            edadMinima: item.edadMinima !== undefined ? item.edadMinima : undefined,
+            duracionMinutos: item.duracionMinutos !== undefined ? item.duracionMinutos : undefined,
+            editorialMarca: item.editorialMarca !== undefined ? item.editorialMarca : undefined,
+            mecanicas: item.mecanicas !== undefined ? item.mecanicas : undefined,
+            idioma: item.idioma !== undefined ? item.idioma : undefined,
             bggRatingUpdatedAt: now,
           },
         })
@@ -71,6 +85,6 @@ export async function bulkUpdateBggStats(updates: BggStatUpdateItem[]) {
     return { success: true, count: updates.length }
   } catch (error: any) {
     console.error('Error in bulkUpdateBggStats:', error)
-    throw new Error('No se pudo actualizar masivamente las estadísticas de BGG')
+    throw new Error('No se pudo actualizar masivamente las estadísticas de BGG y la ficha técnica')
   }
 }
