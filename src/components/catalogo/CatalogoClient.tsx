@@ -26,9 +26,7 @@ import {
   Trash2,
   ExternalLink,
   ChevronDown,
-  Globe,
-  Dices,
-  FileDown
+  Dices
 } from 'lucide-react'
 import { useBusiness } from '@/context/BusinessContext'
 import { Badge } from '@/components/ui/badge'
@@ -44,8 +42,6 @@ import {
   duplicarProducto, 
   deleteProducto 
 } from '@/actions/productos'
-import { updateBggStats, bulkUpdateBggStats, BggStatUpdateItem } from '@/actions/bgg'
-import { XMLParser } from 'fast-xml-parser'
 
 export interface ProductoItem {
   id: string
@@ -162,219 +158,12 @@ export function CatalogoClient({
     bggId: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSyncingBgg, setIsSyncingBgg] = useState(false)
-  const [isExportOpen, setIsExportOpen] = useState(false)
-  const exportMenuRef = useRef<HTMLDivElement>(null)
-
-  const bggCount = useMemo(() => {
-    return productos.filter(p => p.bggId != null && Number(p.bggId) > 0).length
-  }, [productos])
-
-  const handleExportBggCsv = (onlyWithBgg: boolean = true) => {
-    const targetProducts = onlyWithBgg 
-      ? productos.filter(p => p.bggId != null && Number(p.bggId) > 0)
-      : productos
-
-    if (targetProducts.length === 0) {
-      toast.info('No hay productos con código BGG registrado para exportar')
-      return
-    }
-
-    const headers = ['id', 'bggId', 'nombreModelo', 'negocio']
-    const rows = targetProducts.map(p => [
-      p.id,
-      p.bggId ?? '',
-      p.nombreModelo,
-      p.negocio || (isBG ? 'BG' : '3D')
-    ])
-
-    const escapeCsv = (val: string | number | null | undefined) => {
-      if (val === null || val === undefined) return ''
-      const str = String(val)
-      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(r => r.map(escapeCsv).join(','))
-    ].join('\r\n')
-
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    const dateStr = new Date().toISOString().split('T')[0]
-    const fileSuffix = onlyWithBgg ? 'bgg' : 'catalogo'
-    link.href = url
-    link.download = `productos_${fileSuffix}_${(isBG ? 'bg' : '3d')}_${dateStr}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-
-    toast.success(`Exportados ${targetProducts.length} productos (.csv)`)
-  }
-
-  const handleSyncBgg = async () => {
-    // Filtrar los que tienen ID válido
-    const gamesWithBgg = productos.filter((p) => p.bggId && Number(p.bggId) > 0)
-    if (gamesWithBgg.length === 0) {
-      toast.info('No hay juegos con BGG ID configurado')
-      return
-    }
-
-    setIsSyncingBgg(true)
-    toast.info(`Consultando ${gamesWithBgg.length} juegos en BGG en 1 sola llamada...`)
-
-    const token = 'f7ad4bda-0a75-4d1c-9ee0-bb8417ea409f'
-    const bggIdMap = new Map<number, (typeof gamesWithBgg)[0]>()
-    gamesWithBgg.forEach((p) => {
-      bggIdMap.set(Number(p.bggId), p)
-    })
-
-    const idsParam = Array.from(bggIdMap.keys()).join(',')
-    const url = `https://boardgamegeek.com/xmlapi2/thing?id=${idsParam}&stats=1`
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'User-Agent': 'BGG-Personal-Collection-Tracker/1.0 (hobby project)',
-          Accept: 'application/xml,text/xml,*/*',
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error(`Error BGG API (${response.status}): ${response.statusText}`)
-      }
-
-      const xmlText = await response.text()
-      const parser = new XMLParser({
-        ignoreAttributes: false,
-        attributeNamePrefix: '@_',
-      })
-      const result = parser.parse(xmlText)
-      const rawItems = result.items?.item
-      const items = Array.isArray(rawItems) ? rawItems : rawItems ? [rawItems] : []
-
-      const updates: BggStatUpdateItem[] = []
-
-      for (const item of items) {
-        const id = parseInt(item['@_id'], 10)
-        if (!id) continue
-        const prod = bggIdMap.get(id)
-        if (!prod) continue
-
-        const rating = parseFloat(item.statistics?.ratings?.average?.['@_value']) || undefined
-        const weight = parseFloat(item.statistics?.ratings?.averageweight?.['@_value']) || undefined
-        const ratingCount = parseInt(item.statistics?.ratings?.usersrated?.['@_value'], 10) || undefined
-        const minPlayers = parseInt(item.minplayers?.['@_value'], 10) || undefined
-        const maxPlayers = parseInt(item.maxplayers?.['@_value'], 10) || undefined
-        const playtime = parseInt(item.playingtime?.['@_value'], 10) || undefined
-        const minAgeVal = parseInt(item.minage?.['@_value'], 10) || undefined
-        const edadMinima = minAgeVal && minAgeVal > 0 ? minAgeVal : undefined
-        const duracionMinutos = playtime && playtime > 0 ? playtime : undefined
-
-        let numJugadores: string | undefined = undefined
-        if (minPlayers && maxPlayers) {
-          numJugadores =
-            minPlayers === maxPlayers
-              ? `${minPlayers} jugadores`
-              : `${minPlayers} - ${maxPlayers} jugadores`
-        } else if (minPlayers) {
-          numJugadores = `${minPlayers}+ jugadores`
-        }
-
-        const links = Array.isArray(item.link) ? item.link : item.link ? [item.link] : []
-        const publishers: string[] = links
-          .filter((l: any) => l?.['@_type'] === 'boardgamepublisher')
-          .map((l: any) => l?.['@_value'])
-          .filter(Boolean)
-        const editorialMarca = publishers[0] || undefined
-
-        const mechanics: string[] = links
-          .filter((l: any) => l?.['@_type'] === 'boardgamemechanic')
-          .map((l: any) => l?.['@_value'])
-          .filter(Boolean)
-
-        const mechanicMap: Record<string, string> = {
-          'Hidden Roles': 'Roles Ocultos',
-          'Player Elimination': 'Eliminación de Jugadores',
-          'Voting': 'Votación',
-          'Variable Player Powers': 'Poderes Variables',
-          'Deduction': 'Deducción',
-          'Bluffing': 'Faroleo / Engaño',
-          'Hand Management': 'Gestión de Mano',
-          'Set Collection': 'Colección de Sets',
-          'Drafting': 'Drafting de Cartas',
-          'Card Drafting': 'Drafting de Cartas',
-          'Dice Rolling': 'Tirada de Dados',
-          'Worker Placement': 'Colocación de Trabajadores',
-          'Tile Placement': 'Colocación de Losetas',
-          'Cooperative Game': 'Cooperativo',
-          'Pattern Recognition': 'Reconocimiento de Patrones',
-          'Speed Matching': 'Velocidad y Reflejos',
-        }
-        const translatedMechanics = mechanics.slice(0, 4).map((m) => mechanicMap[m] || m)
-        const mecanicas = translatedMechanics.length > 0 ? translatedMechanics.join(', ') : undefined
-
-        updates.push({
-          id: prod.id,
-          bggRating: rating ? parseFloat(rating.toFixed(2)) : null,
-          bggWeight: weight ? parseFloat(weight.toFixed(2)) : null,
-          bggMinPlayers: minPlayers || null,
-          bggMaxPlayers: maxPlayers || null,
-          bggPlaytime: playtime || null,
-          bggRatingCount: ratingCount || null,
-          numJugadores: numJugadores || null,
-          edadMinima: edadMinima || null,
-          duracionMinutos: duracionMinutos || null,
-          editorialMarca: editorialMarca || null,
-          mecanicas: mecanicas || null,
-          idioma: 'Español',
-        })
-      }
-
-      if (updates.length > 0) {
-        await bulkUpdateBggStats(updates)
-        const updateMap = new Map(updates.map((u) => [u.id, u]))
-        setProductos((prev) =>
-          prev.map((p) => {
-            const upd = updateMap.get(p.id)
-            if (!upd) return p
-            return {
-              ...p,
-              bggRating: upd.bggRating,
-              bggWeight: upd.bggWeight,
-              bggMinPlayers: upd.bggMinPlayers,
-              bggMaxPlayers: upd.bggMaxPlayers,
-              bggPlaytime: upd.bggPlaytime,
-            }
-          })
-        )
-        toast.success(`¡Éxito! ${updates.length} juegos actualizados en 1 sola llamada a BGG.`)
-        router.refresh()
-      } else {
-        toast.warning('No se encontraron estadísticas para los IDs consultados en BGG.')
-      }
-    } catch (error: any) {
-      console.error('Error en sincronización masiva BGG:', error)
-      toast.error('Error al consultar BGG: ' + (error.message || 'Verifica tu conexión'))
-    } finally {
-      setIsSyncingBgg(false)
-    }
-  }
 
   // Close context menu on click outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setActiveMenuId(null)
-      }
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
-        setIsExportOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -589,53 +378,7 @@ export function CatalogoClient({
     }))
   }
 
-  // Oferta Handlers
-  const handleDescuentoChange = (val: string) => {
-    const pMercado = parseFloat(formData.precioMercado) || 0
-    const costoBase = parseFloat(formData.costoBase) || 0
-    let descuento = parseFloat(val) || 0
 
-    if (descuento < 0) descuento = 0
-    if (descuento > 100) descuento = 100
-
-    let nuevoPrecio = pMercado - (pMercado * descuento / 100)
-    
-    // Ensure new price is not less than base cost
-    if (nuevoPrecio < costoBase && costoBase > 0) {
-      nuevoPrecio = costoBase
-      descuento = Math.round(((pMercado - nuevoPrecio) / pMercado) * 100)
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      porcentajeDescuento: descuento.toString(),
-      precioOferta: nuevoPrecio.toFixed(2)
-    }))
-  }
-
-  const handlePrecioOfertaChange = (val: string) => {
-    const pMercado = parseFloat(formData.precioMercado) || 0
-    const costoBase = parseFloat(formData.costoBase) || 0
-    let nuevoPrecio = parseFloat(val) || 0
-
-    if (nuevoPrecio < 0) nuevoPrecio = 0
-    
-    // Ensure new price is not less than base cost
-    if (nuevoPrecio < costoBase && costoBase > 0) {
-      nuevoPrecio = costoBase
-    }
-
-    let descuento = 0
-    if (pMercado > 0 && nuevoPrecio < pMercado) {
-      descuento = Math.round(((pMercado - nuevoPrecio) / pMercado) * 100)
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      precioOferta: nuevoPrecio.toString(),
-      porcentajeDescuento: descuento.toString()
-    }))
-  }
 
   // Submit Modal
   const handleSubmitModal = async (e: React.FormEvent) => {
@@ -730,75 +473,7 @@ export function CatalogoClient({
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-            {/* Dropdown / Botón Exportar BGG CSV */}
-            <div className="relative flex-1 sm:flex-initial" ref={exportMenuRef}>
-              <Button
-                type="button"
-                onClick={() => setIsExportOpen(prev => !prev)}
-                className="w-full sm:w-auto inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] shadow-2xs transition-all cursor-pointer justify-center h-10"
-                title="Exportar archivo CSV con ID de negocio y código BGG"
-              >
-                <FileDown className="h-4 w-4 text-[#A36F4C]" />
-                <span>Exportar BGG (.csv)</span>
-                {bggCount > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-[#EADDD0] text-[#754E31] text-[10px] font-bold">
-                    {bggCount}
-                  </span>
-                )}
-                <ChevronDown className={`h-3.5 w-3.5 text-[#75695D] transition-transform ${isExportOpen ? 'rotate-180' : ''}`} />
-              </Button>
 
-              {isExportOpen && (
-                <div className="absolute right-0 mt-1.5 w-64 bg-white border border-[#E2D9CC] rounded-2xl shadow-xl p-1.5 z-50 animate-in fade-in duration-100">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleExportBggCsv(true)
-                      setIsExportOpen(false)
-                    }}
-                    className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#FAF8F5] transition-colors flex items-center justify-between text-xs font-semibold text-[#241C15] cursor-pointer"
-                  >
-                    <div className="flex flex-col">
-                      <span>Solo vinculados a BGG</span>
-                      <span className="text-[10px] text-[#75695D] font-normal">Con código BGG activo</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-[#EADDD0] text-[#754E31] text-[10px] font-bold">
-                      {bggCount}
-                    </span>
-                  </button>
-
-                  <div className="h-px bg-[#E2D9CC]/60 my-1" />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleExportBggCsv(false)
-                      setIsExportOpen(false)
-                    }}
-                    className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#FAF8F5] transition-colors flex items-center justify-between text-xs font-semibold text-[#241C15] cursor-pointer"
-                  >
-                    <div className="flex flex-col">
-                      <span>Catálogo completo ({isBG ? 'BG' : '3D'})</span>
-                      <span className="text-[10px] text-[#75695D] font-normal">Todos los productos con columna BGG</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] text-[10px] font-bold">
-                      {productos.length}
-                    </span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Botón Sincronizar BGG */}
-            <Button
-              type="button"
-              onClick={handleSyncBgg}
-              disabled={isSyncingBgg}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] shadow-2xs transition-all cursor-pointer flex-1 sm:flex-initial justify-center h-10 disabled:opacity-50"
-            >
-              <RotateCcw className={`h-4 w-4 text-[#A36F4C] ${isSyncingBgg ? 'animate-spin' : ''}`} />
-              <span>{isSyncingBgg ? 'Sincronizando...' : 'Actualizar BGG'}</span>
-            </Button>
 
             {/* Botón Gestionar Categorías */}
             <Link
@@ -1516,127 +1191,7 @@ export function CatalogoClient({
                 </div>
               </div>
 
-              {/* Nueva Fila 5: Configuración de Tienda Web */}
-              <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-4 shadow-sm">
-                <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/50">
-                  <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
-                    <Globe className="h-3.5 w-3.5 text-[#1E5E3A]" />
-                    Configuración Tienda Web
-                  </span>
-                </div>
 
-                {/* Stock y Oferta */}
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Bloque Stock */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[11px] font-bold text-[#75695D]">Stock Actual</Label>
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.controlarStock}
-                          onChange={(e) => setFormData(prev => ({ ...prev, controlarStock: e.target.checked }))}
-                          className="rounded border-[#E2D9CC] text-[#A36F4C] focus:ring-[#A36F4C]"
-                        />
-                        <span className="text-[10px] text-[#75695D]">Controlar</span>
-                      </label>
-                    </div>
-                    <Input
-                      type="number"
-                      value={formData.stock}
-                      onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
-                      placeholder="0"
-                      disabled={!formData.controlarStock}
-                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 disabled:opacity-50"
-                    />
-                  </div>
-
-                  {/* Bloque Oferta */}
-                  <div className="col-span-2 p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-sm">
-                    <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/50">
-                      <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
-                        🏷️ Configurar Oferta
-                      </Label>
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.enOferta}
-                          onChange={(e) => setFormData(prev => ({ ...prev, enOferta: e.target.checked }))}
-                          className="rounded border-[#E2D9CC] text-[#A36F4C] focus:ring-[#A36F4C]"
-                        />
-                        <span className="text-[10px] text-[#75695D] font-bold">Activar Oferta</span>
-                      </label>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-[#75695D]">Descuento (%)</Label>
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            value={formData.porcentajeDescuento}
-                            onChange={(e) => handleDescuentoChange(e.target.value)}
-                            placeholder="Ej: 15"
-                            disabled={!formData.enOferta}
-                            className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 pr-6 disabled:opacity-50"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#A36F4C] font-bold">%</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold text-[#75695D]">Nuevo Precio (S/)</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] text-[#A36F4C] font-bold">S/</span>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            value={formData.precioOferta}
-                            onChange={(e) => handlePrecioOfertaChange(e.target.value)}
-                            placeholder="0.00"
-                            disabled={!formData.enOferta}
-                            className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 pl-7 disabled:opacity-50 font-bold text-[#DC2626]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Multimedia y Destacado */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[11px] font-bold text-[#75695D]">URL de Imagen Principal</Label>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.destacadoWeb}
-                        onChange={(e) => setFormData(prev => ({ ...prev, destacadoWeb: e.target.checked }))}
-                        className="rounded border-[#E2D9CC] text-[#A36F4C] focus:ring-[#A36F4C]"
-                      />
-                      <span className="text-[10px] font-bold text-[#A36F4C]">Destacar en Inicio</span>
-                    </label>
-                  </div>
-                  <Input
-                    type="url"
-                    value={formData.imagenUrl}
-                    onChange={(e) => setFormData(prev => ({ ...prev, imagenUrl: e.target.value }))}
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                  />
-                </div>
-
-                {/* Descripción */}
-                <div className="space-y-2">
-                  <Label className="text-[11px] font-bold text-[#75695D]">Descripción para la Web</Label>
-                  <textarea
-                    value={formData.descripcionWeb}
-                    onChange={(e) => setFormData(prev => ({ ...prev, descripcionWeb: e.target.value }))}
-                    placeholder="Describe el producto para los clientes..."
-                    className="w-full bg-[#F8F6F2] border border-[#E2D9CC] rounded-xl text-xs p-2.5 min-h-[60px] focus:outline-none focus:ring-1 focus:ring-[#A36F4C] resize-none"
-                  />
-                </div>
-              </div>
 
               {/* Ficha Técnica BG (solo visible en modo Juegos de Mesa) */}
               {isBG && (
