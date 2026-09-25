@@ -255,6 +255,9 @@ export interface TopArticuloItem {
   precioPromedio: number
   porcentajeUnidades: number
   porcentajeFacturacion: number
+  costoProduccionTotal?: number
+  gananciaNeta?: number
+  margenPorcentaje?: number
 }
 
 export interface CapacidadGastoData {
@@ -313,6 +316,7 @@ export function DashboardClient({
   const [distribucionMode, setDistribucionMode] = useState<'VS' | 'CATEGORIAS'>('VS')
   const [evolucionTab, setEvolucionTab] = useState<'MARGEN' | 'FLUJO' | 'ACUMULADO' | 'TODOS'>('MARGEN')
   const [soloDiasConVentas, setSoloDiasConVentas] = useState(true)
+  const [rankingArticulosMode, setRankingArticulosMode] = useState<'RENTABILIDAD' | 'VOLUMEN'>('RENTABILIDAD')
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -719,6 +723,7 @@ export function DashboardClient({
       lineaCategoria: string
       unidadesVendidas: number
       totalFacturado: number
+      costoProduccionTotal: number
       pedidosCount: number
     }> = {}
 
@@ -731,6 +736,11 @@ export function DashboardClient({
       const cant = Number(v.cantidad || 1)
       const sub = Number(v.total || 0)
 
+      const costoBaseUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
+        ? Number(v.costoBaseSnapshot) 
+        : (Number(v.producto?.costoBase) || 0)
+      const costoProd = costoBaseUnit * cant
+
       if (!articulosMap[artKey]) {
         articulosMap[artKey] = {
           id: v.productoId || artKey,
@@ -738,12 +748,14 @@ export function DashboardClient({
           lineaCategoria: categoria,
           unidadesVendidas: 0,
           totalFacturado: 0,
+          costoProduccionTotal: 0,
           pedidosCount: 0
         }
       }
 
       articulosMap[artKey].unidadesVendidas += cant
       articulosMap[artKey].totalFacturado += sub
+      articulosMap[artKey].costoProduccionTotal += costoProd
       articulosMap[artKey].pedidosCount += 1
       totalUnidades += cant
     })
@@ -751,20 +763,35 @@ export function DashboardClient({
     const ingresosTotal = dynamicKpis.ingresosVentas
 
     return Object.values(articulosMap)
-      .sort((a, b) => b.unidadesVendidas - a.unidadesVendidas || b.totalFacturado - a.totalFacturado)
+      .map((art) => {
+        const gananciaNeta = Number((art.totalFacturado - art.costoProduccionTotal).toFixed(2))
+        const margenPorcentaje = art.totalFacturado > 0 
+          ? Number(((gananciaNeta / art.totalFacturado) * 100).toFixed(1)) 
+          : 0
+
+        return {
+          id: art.id,
+          nombreModelo: art.nombreModelo,
+          lineaCategoria: art.lineaCategoria,
+          unidadesVendidas: art.unidadesVendidas,
+          totalFacturado: Number(art.totalFacturado.toFixed(2)),
+          costoProduccionTotal: Number(art.costoProduccionTotal.toFixed(2)),
+          gananciaNeta,
+          margenPorcentaje,
+          pedidosCount: art.pedidosCount,
+          precioPromedio: art.unidadesVendidas > 0 ? Number((art.totalFacturado / art.unidadesVendidas).toFixed(2)) : 0,
+          porcentajeUnidades: totalUnidades > 0 ? Number(((art.unidadesVendidas / totalUnidades) * 100).toFixed(1)) : 0,
+          porcentajeFacturacion: ingresosTotal > 0 ? Number(((art.totalFacturado / ingresosTotal) * 100).toFixed(1)) : 0
+        }
+      })
+      .sort((a, b) => {
+        if (rankingArticulosMode === 'RENTABILIDAD') {
+          return b.gananciaNeta - a.gananciaNeta || b.totalFacturado - a.totalFacturado
+        }
+        return b.unidadesVendidas - a.unidadesVendidas || b.totalFacturado - a.totalFacturado
+      })
       .slice(0, 5)
-      .map((art) => ({
-        id: art.id,
-        nombreModelo: art.nombreModelo,
-        lineaCategoria: art.lineaCategoria,
-        unidadesVendidas: art.unidadesVendidas,
-        totalFacturado: Number(art.totalFacturado.toFixed(2)),
-        pedidosCount: art.pedidosCount,
-        precioPromedio: art.unidadesVendidas > 0 ? Number((art.totalFacturado / art.unidadesVendidas).toFixed(2)) : 0,
-        porcentajeUnidades: totalUnidades > 0 ? Number(((art.unidadesVendidas / totalUnidades) * 100).toFixed(1)) : 0,
-        porcentajeFacturacion: ingresosTotal > 0 ? Number(((art.totalFacturado / ingresosTotal) * 100).toFixed(1)) : 0
-      }))
-  }, [filteredVentas, rawVentas, dynamicKpis.ingresosVentas, initialTopArticulos])
+  }, [filteredVentas, rawVentas, dynamicKpis.ingresosVentas, initialTopArticulos, rankingArticulosMode])
 
   // Funciones de renderizado para los 3 gráficos
   const renderMargenChart = (data: any[], heightClass: string = 'h-full') => {
@@ -782,7 +809,8 @@ export function DashboardClient({
               fontSize={11} 
               tickLine={false} 
               axisLine={{ stroke: '#E5DCD3' }}
-              interval={0}
+              interval={chartData.length <= 10 ? 0 : 'preserveStartEnd'}
+              minTickGap={32}
               tickFormatter={(val) => formatFechaEvolucion(val, false)}
               dy={4}
             />
@@ -855,6 +883,8 @@ export function DashboardClient({
             fontSize={11} 
             tickLine={false} 
             axisLine={{ stroke: '#E5DCD3' }}
+            interval={data.length <= 10 ? 0 : 'preserveStartEnd'}
+            minTickGap={32}
             tickFormatter={(val) => formatFechaEvolucion(val, false)}
             dy={4}
           />
@@ -935,6 +965,8 @@ export function DashboardClient({
             fontSize={11} 
             tickLine={false} 
             axisLine={{ stroke: '#E5DCD3' }}
+            interval={data.length <= 10 ? 0 : 'preserveStartEnd'}
+            minTickGap={32}
             tickFormatter={(val) => formatFechaEvolucion(val, false)}
             dy={4}
           />
@@ -1559,23 +1591,52 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        {/* TOP 5 ARTÍCULOS MÁS VENDIDOS */}
+        {/* TOP 5 ARTÍCULOS MÁS RENTABLES / MÁS VENDIDOS */}
         <Card className="bg-white border-[#E5DCD3] shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
           <CardHeader className="p-4 sm:p-5 pb-3 border-b border-[#F5EFEB]">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Package className="h-4 w-4 text-[#7C5835]" />
                 <CardTitle className="text-sm sm:text-base font-black text-[#1F2937]">
-                  Top Artículos Vendidos
+                  {rankingArticulosMode === 'RENTABILIDAD' ? 'Top Artículos Más Rentables' : 'Top Artículos Más Vendidos'}
                 </CardTitle>
               </div>
-              <Link
-                href="/catalogo"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#7C5835] hover:text-[#5E4328] hover:underline"
-              >
-                <span>Ver catálogo</span>
-                <ArrowUpRight className="h-3 w-3" />
-              </Link>
+
+              {/* Selector de ordenamiento: Rentabilidad vs Volumen */}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center p-0.5 rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setRankingArticulosMode('RENTABILIDAD')}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                      rankingArticulosMode === 'RENTABILIDAD'
+                        ? 'bg-[#059669] text-white shadow-2xs'
+                        : 'text-[#75695D] hover:text-[#241C15]'
+                    }`}
+                  >
+                    💰 Ganancia
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRankingArticulosMode('VOLUMEN')}
+                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                      rankingArticulosMode === 'VOLUMEN'
+                        ? 'bg-[#A36F4C] text-white shadow-2xs'
+                        : 'text-[#75695D] hover:text-[#241C15]'
+                    }`}
+                  >
+                    📦 Unidades
+                  </button>
+                </div>
+
+                <Link
+                  href="/catalogo"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#7C5835] hover:text-[#5E4328] hover:underline shrink-0"
+                >
+                  <span>Catálogo</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
           </CardHeader>
 
@@ -1596,8 +1657,8 @@ export function DashboardClient({
                       {index + 1}
                     </span>
 
-                    <div className="w-7 h-7 rounded-lg bg-[#FAF7F4] border border-[#E5DCD3] text-[#7C5835] flex items-center justify-center shrink-0">
-                      <Package className="h-3.5 w-3.5" />
+                    <div className="w-8 h-8 rounded-lg bg-[#FAF7F4] border border-[#E5DCD3] text-[#7C5835] flex items-center justify-center shrink-0">
+                      <Package className="h-4 w-4" />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -1605,17 +1666,19 @@ export function DashboardClient({
                         {art.nombreModelo}
                       </h4>
                       <p className="text-[11px] text-[#6B7280] truncate">
-                        {art.lineaCategoria || 'General'} • en {art.pedidosCount} {art.pedidosCount === 1 ? 'pedido' : 'pedidos'}
+                        {art.unidadesVendidas} {art.unidadesVendidas === 1 ? 'unidad' : 'unidades'} • en {art.pedidosCount} {art.pedidosCount === 1 ? 'pedido' : 'pedidos'}
+                        <span className="mx-1">•</span>
+                        <span>Ventas: {formatCurrency(art.totalFacturado)}</span>
                       </p>
                     </div>
                   </div>
 
                   <div className="text-right shrink-0">
-                    <div className="text-xs sm:text-sm font-mono font-bold text-[#1F2937] tabular-nums">
-                      {art.unidadesVendidas} <span className="font-sans text-[10px] text-[#6B7280] font-normal">unds.</span>
+                    <div className="text-xs sm:text-sm font-mono font-black text-[#059669] tabular-nums">
+                      +{formatCurrency(art.gananciaNeta || 0)}
                     </div>
-                    <div className="text-[10px] font-mono text-[#059669]">
-                      {formatCurrency(art.totalFacturado)}
+                    <div className="text-[10px] font-medium text-[#6B7280]">
+                      {art.margenPorcentaje != null ? `${art.margenPorcentaje.toFixed(0)}% margen` : ''}
                     </div>
                   </div>
                 </div>
