@@ -234,16 +234,17 @@ export function DashboardClient({
     const gananciaNeta = ingresosVentas - costoFabricacionTotal
     const margenPorcentaje = costoFabricacionTotal > 0 ? (gananciaNeta / costoFabricacionTotal) * 100 : 0
 
-    // Cobranzas efectivas dentro del período
-    const totalCobradoVentas = filteredVentas.reduce((sum: number, v: any) => {
+    // Cobranzas efectivas dentro del período (considera abonos recibidos en el período de cualquier pedido)
+    const totalCobradoVentas = rawVentas.reduce((sum: number, v: any) => {
       if (Array.isArray(v.pagos) && v.pagos.length > 0) {
         const pagosEnRango = v.pagos.filter((p: any) => isDateInRange(p.fecha, dateRange.from, dateRange.to))
-        if (pagosEnRango.length > 0) {
-          return sum + pagosEnRango.reduce((pSum: number, p: any) => pSum + Number(p.monto || 0), 0)
-        }
+        return sum + pagosEnRango.reduce((pSum: number, p: any) => pSum + Number(p.monto || 0), 0)
       }
       // Fallback si no hay array de pagos pero la fecha de venta está en rango
-      return sum + Number(v.montoPagado || 0)
+      if (isDateInRange(v.fecha, dateRange.from, dateRange.to)) {
+        return sum + Number(v.montoPagado || 0)
+      }
+      return sum
     }, 0)
 
     const saldoPorCobrar = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.saldoPendiente || 0), 0)
@@ -296,6 +297,25 @@ export function DashboardClient({
 
     const timelineMap: Record<string, { ingresos: number; costo: number; ganancia: number }> = {}
 
+    // Inicializar todos los días del período para rangos definidos (ej. semana o mes de hasta 35 días)
+    if (dateRange.from && dateRange.to) {
+      const [startYear, startMonth, startDay] = dateRange.from.split('-').map(Number)
+      const [endYear, endMonth, endDay] = dateRange.to.split('-').map(Number)
+      const curr = new Date(startYear, startMonth - 1, startDay)
+      const end = new Date(endYear, endMonth - 1, endDay)
+
+      const diffDays = Math.round((end.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24))
+      if (diffDays >= 0 && diffDays <= 35) {
+        while (curr <= end) {
+          const y = curr.getFullYear()
+          const m = String(curr.getMonth() + 1).padStart(2, '0')
+          const d = String(curr.getDate()).padStart(2, '0')
+          timelineMap[`${y}-${m}-${d}`] = { ingresos: 0, costo: 0, ganancia: 0 }
+          curr.setDate(curr.getDate() + 1)
+        }
+      }
+    }
+
     // A. Costos y ventas base
     filteredVentas.forEach((venta: any) => {
       const vDate = String(venta.fecha).split('T')[0]
@@ -314,8 +334,8 @@ export function DashboardClient({
       }
     })
 
-    // B. Recaudaciones en fecha de pago
-    filteredVentas.forEach((venta: any) => {
+    // B. Recaudaciones en fecha de pago (de todas las ventas que tuvieron abonos en este rango)
+    rawVentas.forEach((venta: any) => {
       if (Array.isArray(venta.pagos) && venta.pagos.length > 0) {
         venta.pagos.forEach((pago: any) => {
           const pDate = String(pago.fecha).split('T')[0]
