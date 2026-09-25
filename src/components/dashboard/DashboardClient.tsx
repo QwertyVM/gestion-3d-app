@@ -8,6 +8,7 @@ import {
   ComposedChart, 
   Bar, 
   Line,
+  Area,
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -46,37 +47,108 @@ function getInitials(name: string) {
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }
 
-// Custom Tooltip limpio y minimalista
-function CustomEvolucionTooltip({ active, payload, label }: any) {
+// Configuración de los 3 gráficos analíticos
+const EVOLUCION_CONFIG = {
+  MARGEN: {
+    title: 'Margen Real por Pedido',
+    description: 'Facturación vendida vs. costo de producción por día'
+  },
+  FLUJO: {
+    title: 'Flujo Diario de Caja',
+    description: 'Cobranzas recibidas vs. gastos del taller por fecha real'
+  },
+  ACUMULADO: {
+    title: 'Curva Acumulativa del Período',
+    description: 'Tendencia acumulada de cobranzas vs. egresos a la fecha'
+  },
+  TODOS: {
+    title: 'Análisis Financiero Completo (3 Gráficos)',
+    description: 'Margen de producción, flujo de caja y curva acumulada'
+  }
+}
+
+// Tooltip 1: Margen por Pedido
+function MargenTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const data = payload[0]?.payload || {}
-    const ingresos = Number(data.ingresos || 0)
-    const costo = Number(data.costo || 0)
-    const ganancia = Number(data.ganancia != null ? data.ganancia : (ingresos - costo))
-    const isNegative = ganancia < 0
+    const venta = Number(data.ventaTotal || 0)
+    const costo = Number(data.costoProduccion || 0)
+    const utilidad = Number(data.utilidad || 0)
+    const margenPct = data.margenPct || 0
 
     return (
-      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[200px] text-xs font-sans">
+      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[210px] text-xs font-sans">
         <div className="flex items-center justify-between border-b border-[#F5EFEB] pb-1.5 mb-2">
           <span className="font-bold text-[#1F2937]">{formatFechaEvolucion(label, true)}</span>
-          <span className={`text-[10px] font-semibold ${isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
-            {isNegative ? 'Pérdida' : 'Utilidad'}
+          <span className="text-[10px] font-semibold text-[#059669] bg-[#ECFDF5] px-1.5 py-0.5 rounded">
+            {margenPct}% margen
           </span>
         </div>
-
         <div className="space-y-1.5 text-[#6B7280]">
           <div className="flex justify-between items-center">
-            <span>Cobranza en caja:</span>
-            <span className="font-mono font-semibold text-[#1F2937]">S/ {ingresos.toFixed(2)}</span>
+            <span>Venta Total:</span>
+            <span className="font-mono font-bold text-[#1F2937]">S/ {venta.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span>Costo producción:</span>
-            <span className="font-mono font-semibold text-[#1F2937]">S/ {costo.toFixed(2)}</span>
+            <span>Costo Producción:</span>
+            <span className="font-mono font-medium text-[#75695D]">S/ {costo.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center pt-1.5 border-t border-[#F5EFEB] font-bold">
-            <span className={isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}>Resultado neto:</span>
+            <span className="text-[#059669]">Utilidad Neta:</span>
+            <span className="font-mono text-sm text-[#059669]">
+              +S/ {utilidad.toFixed(2)}
+            </span>
+          </div>
+          {data.pedidosCount > 0 && (
+            <div className="text-[10px] text-[#9CA3AF] text-right pt-0.5">
+              {data.pedidosCount} {data.pedidosCount === 1 ? 'pedido registrado' : 'pedidos registrados'}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+  return null
+}
+
+// Tooltip 2: Flujo Diario de Caja
+function FlujoCajaTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    const data = payload[0]?.payload || {}
+    const entradas = Number(data.entradas || 0)
+    const salidas = Number(data.salidas || 0)
+    const balanceNeto = Number(data.balanceNeto || 0)
+    const isNegative = balanceNeto < 0
+
+    return (
+      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[210px] text-xs font-sans">
+        <div className="flex items-center justify-between border-b border-[#F5EFEB] pb-1.5 mb-2">
+          <span className="font-bold text-[#1F2937]">{formatFechaEvolucion(label, true)}</span>
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+            isNegative ? 'text-[#DC2626] bg-[#FEF2F2]' : 'text-[#059669] bg-[#ECFDF5]'
+          }`}>
+            {isNegative ? 'Déficit Día' : 'Superávit Día'}
+          </span>
+        </div>
+        <div className="space-y-1.5 text-[#6B7280]">
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#059669]" />
+              Cobranzas (Entradas):
+            </span>
+            <span className="font-mono font-bold text-[#059669]">S/ {entradas.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
+              Gastos Taller (Salidas):
+            </span>
+            <span className="font-mono font-bold text-[#DC2626]">S/ {salidas.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center pt-1.5 border-t border-[#F5EFEB] font-bold">
+            <span className={isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}>Balance Neto:</span>
             <span className={`font-mono text-sm ${isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
-              {isNegative ? `-S/ ${Math.abs(ganancia).toFixed(2)}` : `+S/ ${ganancia.toFixed(2)}`}
+              {isNegative ? `-S/ ${Math.abs(balanceNeto).toFixed(2)}` : `+S/ ${balanceNeto.toFixed(2)}`}
             </span>
           </div>
         </div>
@@ -86,24 +158,51 @@ function CustomEvolucionTooltip({ active, payload, label }: any) {
   return null
 }
 
-// Leyenda minimalista
-function CustomEvolutionLegend() {
-  return (
-    <div className="flex items-center justify-end gap-4 text-xs pb-2 text-[#6B7280]">
-      <div className="flex items-center gap-1.5 font-medium">
-        <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
-        <span>Utilidad Neta</span>
+// Tooltip 3: Curva Acumulada
+function CurvaAcumuladaTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    const data = payload[0]?.payload || {}
+    const cobranza = Number(data.ingresosAcum || 0)
+    const gastos = Number(data.egresosAcum || 0)
+    const balance = Number(data.balanceAcum || 0)
+    const isNegative = balance < 0
+
+    return (
+      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[220px] text-xs font-sans">
+        <div className="flex items-center justify-between border-b border-[#F5EFEB] pb-1.5 mb-2">
+          <span className="font-bold text-[#1F2937]">{formatFechaEvolucion(label, true)}</span>
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+            isNegative ? 'text-[#DC2626] bg-[#FEF2F2]' : 'text-[#059669] bg-[#ECFDF5]'
+          }`}>
+            {isNegative ? 'Déficit Acumulado' : 'Superávit Acumulado'}
+          </span>
+        </div>
+        <div className="space-y-1.5 text-[#6B7280]">
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#059669]" />
+              Cobranza Acumulada:
+            </span>
+            <span className="font-mono font-bold text-[#059669]">S/ {cobranza.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
+              Gastos Acumulados:
+            </span>
+            <span className="font-mono font-bold text-[#DC2626]">S/ {gastos.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center pt-1.5 border-t border-[#F5EFEB] font-bold">
+            <span className={isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}>Balance a la Fecha:</span>
+            <span className={`font-mono text-sm ${isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
+              {isNegative ? `-S/ ${Math.abs(balance).toFixed(2)}` : `+S/ ${balance.toFixed(2)}`}
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-1.5 font-medium">
-        <span className="w-2.5 h-2.5 bg-[#DC2626] rounded-xs inline-block" />
-        <span>Pérdida / Costo</span>
-      </div>
-      <div className="flex items-center gap-1.5 font-medium text-[#7C5835]">
-        <span className="w-3.5 h-0.5 bg-[#7C5835] rounded-full inline-block" />
-        <span>Cobranza en Caja</span>
-      </div>
-    </div>
-  )
+    )
+  }
+  return null
 }
 
 export interface TopColorItem {
@@ -196,6 +295,7 @@ export function DashboardClient({
   const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('TODO'))
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [distribucionMode, setDistribucionMode] = useState<'VS' | 'CATEGORIAS'>('VS')
+  const [evolucionTab, setEvolucionTab] = useState<'MARGEN' | 'FLUJO' | 'ACUMULADO' | 'TODOS'>('MARGEN')
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -292,13 +392,18 @@ export function DashboardClient({
     }
   }, [dynamicKpis, filteredVentas.length])
 
-  // 6. Gráfico de evolución diario dinámico
-  const graficoFiltrado = useMemo(() => {
-    if (rawVentas.length === 0) return initialGraficoEvolucion
+  // 6. Métricas y datos para los 3 gráficos financieros
+  const metricasEvolucion = useMemo(() => {
+    const timelineMap: Record<string, {
+      ventaTotal: number
+      costoProduccion: number
+      utilidad: number
+      entradas: number
+      salidas: number
+      pedidosCount: number
+    }> = {}
 
-    const timelineMap: Record<string, { ingresos: number; costo: number; ganancia: number }> = {}
-
-    // Inicializar todos los días del período para rangos definidos (ej. semana o mes de hasta 35 días)
+    // A. Inicializar todos los días del período para rangos continuos (ej. semana o mes de hasta 60 días)
     if (dateRange.from && dateRange.to) {
       const [startYear, startMonth, startDay] = dateRange.from.split('-').map(Number)
       const [endYear, endMonth, endDay] = dateRange.to.split('-').map(Number)
@@ -306,59 +411,149 @@ export function DashboardClient({
       const end = new Date(endYear, endMonth - 1, endDay)
 
       const diffDays = Math.round((end.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24))
-      if (diffDays >= 0 && diffDays <= 35) {
+      if (diffDays >= 0 && diffDays <= 60) {
         while (curr <= end) {
           const y = curr.getFullYear()
           const m = String(curr.getMonth() + 1).padStart(2, '0')
           const d = String(curr.getDate()).padStart(2, '0')
-          timelineMap[`${y}-${m}-${d}`] = { ingresos: 0, costo: 0, ganancia: 0 }
+          timelineMap[`${y}-${m}-${d}`] = {
+            ventaTotal: 0,
+            costoProduccion: 0,
+            utilidad: 0,
+            entradas: 0,
+            salidas: 0,
+            pedidosCount: 0
+          }
           curr.setDate(curr.getDate() + 1)
         }
       }
     }
 
-    // A. Costos y ventas base
+    // B. Mapear ventas y costos de producción (por fecha del pedido - Gráfico 1: Margen de Pedidos)
     filteredVentas.forEach((venta: any) => {
       const vDate = String(venta.fecha).split('T')[0]
       if (!timelineMap[vDate]) {
-        timelineMap[vDate] = { ingresos: 0, costo: 0, ganancia: 0 }
+        timelineMap[vDate] = {
+          ventaTotal: 0,
+          costoProduccion: 0,
+          utilidad: 0,
+          entradas: 0,
+          salidas: 0,
+          pedidosCount: 0
+        }
       }
 
       const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
         ? Number(venta.costoBaseSnapshot) 
         : (Number(venta.producto?.costoBase) || 0)
       const ventaCosto = costoBaseUnit * Number(venta.cantidad || 1)
-      timelineMap[vDate].costo += ventaCosto
+      const ventaTotal = Number(venta.total || 0)
 
+      timelineMap[vDate].costoProduccion += ventaCosto
+      timelineMap[vDate].ventaTotal += ventaTotal
+      timelineMap[vDate].pedidosCount += 1
+
+      // Fallback si no hay array de pagos pero la fecha está en rango
       if (!venta.pagos || venta.pagos.length === 0) {
-        timelineMap[vDate].ingresos += Number(venta.montoPagado != null ? venta.montoPagado : venta.total)
+        timelineMap[vDate].entradas += Number(venta.montoPagado != null ? venta.montoPagado : venta.total)
       }
     })
 
-    // B. Recaudaciones en fecha de pago (de todas las ventas que tuvieron abonos en este rango)
+    // C. Mapear cobranzas reales por fecha de pago (Gráfico 2: Flujo de Caja)
     rawVentas.forEach((venta: any) => {
       if (Array.isArray(venta.pagos) && venta.pagos.length > 0) {
         venta.pagos.forEach((pago: any) => {
           const pDate = String(pago.fecha).split('T')[0]
           if (isDateInRange(pDate, dateRange.from, dateRange.to)) {
             if (!timelineMap[pDate]) {
-              timelineMap[pDate] = { ingresos: 0, costo: 0, ganancia: 0 }
+              timelineMap[pDate] = {
+                ventaTotal: 0,
+                costoProduccion: 0,
+                utilidad: 0,
+                entradas: 0,
+                salidas: 0,
+                pedidosCount: 0
+              }
             }
-            timelineMap[pDate].ingresos += Number(pago.monto || 0)
+            timelineMap[pDate].entradas += Number(pago.monto || 0)
           }
         })
       }
     })
 
-    return Object.entries(timelineMap)
-      .map(([fecha, vals]) => {
-        const ingresos = Number(vals.ingresos.toFixed(2))
-        const costo = Number(vals.costo.toFixed(2))
-        const ganancia = Number((ingresos - costo).toFixed(2))
-        return { fecha, ingresos, costo, ganancia }
-      })
-      .sort((a, b) => a.fecha.localeCompare(b.fecha))
-  }, [filteredVentas, rawVentas, dateRange, initialGraficoEvolucion])
+    // Sumar ingresos directos a las entradas
+    filteredIngresosDirectos.forEach((ing: any) => {
+      const iDate = String(ing.fecha).split('T')[0]
+      if (!timelineMap[iDate]) {
+        timelineMap[iDate] = {
+          ventaTotal: 0,
+          costoProduccion: 0,
+          utilidad: 0,
+          entradas: 0,
+          salidas: 0,
+          pedidosCount: 0
+        }
+      }
+      timelineMap[iDate].entradas += Number(ing.monto || 0)
+    })
+
+    // D. Mapear salidas / egresos del taller (Gráfico 2: Flujo de Caja)
+    filteredInversiones.forEach((inv: any) => {
+      const gDate = String(inv.fecha).split('T')[0]
+      if (!timelineMap[gDate]) {
+        timelineMap[gDate] = {
+          ventaTotal: 0,
+          costoProduccion: 0,
+          utilidad: 0,
+          entradas: 0,
+          salidas: 0,
+          pedidosCount: 0
+        }
+      }
+      timelineMap[gDate].salidas += Number(inv.costoTotal || 0)
+    })
+
+    // E. Generar listado cronológico y acumulados
+    const sortedEntries = Object.entries(timelineMap).sort((a, b) => a[0].localeCompare(b[0]))
+
+    let acumCobranza = 0
+    let acumGastos = 0
+    let acumVentas = 0
+
+    return sortedEntries.map(([fecha, vals]) => {
+      const ventaTotal = Number(vals.ventaTotal.toFixed(2))
+      const costoProduccion = Number(vals.costoProduccion.toFixed(2))
+      const utilidad = Number((ventaTotal - costoProduccion).toFixed(2))
+      const margenPct = ventaTotal > 0 ? Math.round((utilidad / ventaTotal) * 100) : 0
+
+      const entradas = Number(vals.entradas.toFixed(2))
+      const salidas = Number(vals.salidas.toFixed(2))
+      const balanceNeto = Number((entradas - salidas).toFixed(2))
+
+      acumCobranza += entradas
+      acumGastos += salidas
+      acumVentas += ventaTotal
+
+      return {
+        fecha,
+        // Gráfico 1: Margen de Pedidos
+        ventaTotal,
+        costoProduccion,
+        utilidad,
+        margenPct,
+        pedidosCount: vals.pedidosCount,
+        // Gráfico 2: Flujo de Caja
+        entradas,
+        salidas,
+        balanceNeto,
+        // Gráfico 3: Curva Acumulada
+        ingresosAcum: Number(acumCobranza.toFixed(2)),
+        egresosAcum: Number(acumGastos.toFixed(2)),
+        ventasAcum: Number(acumVentas.toFixed(2)),
+        balanceAcum: Number((acumCobranza - acumGastos).toFixed(2))
+      }
+    })
+  }, [filteredVentas, rawVentas, filteredIngresosDirectos, filteredInversiones, dateRange])
 
   // 7. Distribución de gastos dinámico
   const graficoInversionDinamico = useMemo(() => {
@@ -542,6 +737,229 @@ export function DashboardClient({
       }))
   }, [filteredVentas, rawVentas, dynamicKpis.ingresosVentas, initialTopArticulos])
 
+  // Funciones de renderizado para los 3 gráficos
+  const renderMargenChart = (data: any[], heightClass: string = 'h-full') => (
+    <div className={`${heightClass} w-full`}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
+          <XAxis 
+            dataKey="fecha" 
+            stroke="#6B7280" 
+            fontSize={11} 
+            tickLine={false} 
+            axisLine={{ stroke: '#E5DCD3' }}
+            tickFormatter={(val) => formatFechaEvolucion(val, false)}
+            dy={4}
+          />
+          <YAxis 
+            stroke="#6B7280" 
+            fontSize={11} 
+            tickLine={false} 
+            axisLine={false} 
+            tickFormatter={(val) => `${val}`}
+          />
+          <Tooltip content={<MargenTooltip />} />
+          <Legend 
+            verticalAlign="top"
+            content={() => (
+              <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] pb-2 text-[#6B7280]">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
+                  <span>Utilidad Neta</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 bg-[#D1C7BD] rounded-xs inline-block" />
+                  <span>Costo Producción</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium text-[#7C5835]">
+                  <span className="w-3.5 h-0.5 bg-[#7C5835] rounded-full inline-block" />
+                  <span>Venta Total</span>
+                </div>
+              </div>
+            )}
+          />
+          <Bar 
+            dataKey="costoProduccion" 
+            name="Costo Producción" 
+            stackId="venta" 
+            fill="#D1C7BD" 
+            radius={[0, 0, 0, 0]}
+            maxBarSize={28}
+          />
+          <Bar 
+            dataKey="utilidad" 
+            name="Utilidad Neta" 
+            stackId="venta" 
+            fill="#059669" 
+            radius={[4, 4, 0, 0]}
+            maxBarSize={28}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="ventaTotal" 
+            name="Venta Total" 
+            stroke="#7C5835" 
+            strokeWidth={2} 
+            dot={{ r: 3, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+            activeDot={{ r: 5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 2 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  )
+
+  const renderFlujoChart = (data: any[], heightClass: string = 'h-full') => (
+    <div className={`${heightClass} w-full`}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
+          <XAxis 
+            dataKey="fecha" 
+            stroke="#6B7280" 
+            fontSize={11} 
+            tickLine={false} 
+            axisLine={{ stroke: '#E5DCD3' }}
+            tickFormatter={(val) => formatFechaEvolucion(val, false)}
+            dy={4}
+          />
+          <YAxis 
+            stroke="#6B7280" 
+            fontSize={11} 
+            tickLine={false} 
+            axisLine={false} 
+            tickFormatter={(val) => `${val}`}
+          />
+          <Tooltip content={<FlujoCajaTooltip />} />
+          <Legend 
+            verticalAlign="top"
+            content={() => (
+              <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] pb-2 text-[#6B7280]">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
+                  <span>Entradas (Cobrado)</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 bg-[#DC2626] rounded-xs inline-block" />
+                  <span>Salidas (Gastos)</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium text-[#1F2937]">
+                  <span className="w-3.5 h-0.5 bg-[#1F2937] rounded-full inline-block" />
+                  <span>Balance Neto</span>
+                </div>
+              </div>
+            )}
+          />
+          <ReferenceLine y={0} stroke="#D1D5DB" strokeWidth={1} />
+          <Bar 
+            dataKey="entradas" 
+            name="Entradas" 
+            fill="#059669" 
+            radius={[3, 3, 0, 0]}
+            maxBarSize={22}
+          />
+          <Bar 
+            dataKey="salidas" 
+            name="Salidas" 
+            fill="#DC2626" 
+            radius={[3, 3, 0, 0]}
+            maxBarSize={22}
+          />
+          <Line 
+            type="monotone" 
+            dataKey="balanceNeto" 
+            name="Balance Diario" 
+            stroke="#1F2937" 
+            strokeWidth={2} 
+            dot={{ r: 3, fill: '#1F2937', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+            activeDot={{ r: 5, fill: '#1F2937', stroke: '#FFFFFF', strokeWidth: 2 }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  )
+
+  const renderAcumuladoChart = (data: any[], heightClass: string = 'h-full') => (
+    <div className={`${heightClass} w-full`}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorIngresosAcum" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#059669" stopOpacity={0.25}/>
+              <stop offset="95%" stopColor="#059669" stopOpacity={0.0}/>
+            </linearGradient>
+            <linearGradient id="colorGastosAcum" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#DC2626" stopOpacity={0.15}/>
+              <stop offset="95%" stopColor="#DC2626" stopOpacity={0.0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
+          <XAxis 
+            dataKey="fecha" 
+            stroke="#6B7280" 
+            fontSize={11} 
+            tickLine={false} 
+            axisLine={{ stroke: '#E5DCD3' }}
+            tickFormatter={(val) => formatFechaEvolucion(val, false)}
+            dy={4}
+          />
+          <YAxis 
+            stroke="#6B7280" 
+            fontSize={11} 
+            tickLine={false} 
+            axisLine={false} 
+            tickFormatter={(val) => `S/ ${val}`}
+          />
+          <Tooltip content={<CurvaAcumuladaTooltip />} />
+          <Legend 
+            verticalAlign="top"
+            content={() => (
+              <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] pb-2 text-[#6B7280]">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
+                  <span>Cobranza Acumulada</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <span className="w-2.5 h-2.5 bg-[#DC2626] rounded-xs inline-block" />
+                  <span>Gastos Acumulados</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium text-[#7C5835]">
+                  <span className="w-3.5 h-0.5 bg-[#7C5835] rounded-full inline-block" />
+                  <span>Balance a la Fecha</span>
+                </div>
+              </div>
+            )}
+          />
+          <Area 
+            type="monotone" 
+            dataKey="ingresosAcum" 
+            name="Cobranza Acumulada" 
+            stroke="#059669" 
+            strokeWidth={2.5}
+            fill="url(#colorIngresosAcum)" 
+          />
+          <Area 
+            type="monotone" 
+            dataKey="egresosAcum" 
+            name="Gastos Acumulados" 
+            stroke="#DC2626" 
+            strokeWidth={2}
+            fill="url(#colorGastosAcum)" 
+            strokeDasharray="4 4"
+          />
+          <Line 
+            type="monotone" 
+            dataKey="balanceAcum" 
+            name="Balance Acumulado" 
+            stroke="#7C5835" 
+            strokeWidth={2}
+            dot={false}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  )
+
   const handleManualRefresh = () => {
     setIsRefreshing(true)
     router.refresh()
@@ -690,82 +1108,119 @@ export function DashboardClient({
       {/* ========================================================================= */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-12">
         
-        {/* Gráfico de Evolución (8 cols) */}
+        {/* Gráfico de Evolución y Análisis Financiero (8 cols) */}
         <Card className="lg:col-span-8 bg-white border-[#E5DCD3] shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
           <CardHeader className="p-4 sm:p-5 pb-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <CardTitle className="text-[#1F2937] text-sm sm:text-base font-black">
-                  Evolución Financiera
+                  {EVOLUCION_CONFIG[evolucionTab].title}
                 </CardTitle>
                 <CardDescription className="text-xs text-[#6B7280]">
-                  Utilidad neta diaria y cobranza en caja
+                  {EVOLUCION_CONFIG[evolucionTab].description}
                 </CardDescription>
+              </div>
+
+              {/* Selector de los 3 gráficos */}
+              <div className="flex items-center p-0.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] shrink-0 overflow-x-auto max-w-full">
+                <button
+                  type="button"
+                  onClick={() => setEvolucionTab('MARGEN')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    evolucionTab === 'MARGEN'
+                      ? 'bg-[#A36F4C] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                >
+                  Margen Pedidos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEvolucionTab('FLUJO')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    evolucionTab === 'FLUJO'
+                      ? 'bg-[#A36F4C] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                >
+                  Flujo de Caja
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEvolucionTab('ACUMULADO')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    evolucionTab === 'ACUMULADO'
+                      ? 'bg-[#A36F4C] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                >
+                  Curva Acumulada
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEvolucionTab('TODOS')}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    evolucionTab === 'TODOS'
+                      ? 'bg-[#A36F4C] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                >
+                  Ver los 3
+                </button>
               </div>
             </div>
           </CardHeader>
 
           <CardContent className="p-3 sm:p-5 pt-0">
-            <div className="h-[280px] sm:h-[320px] w-full">
-              {graficoFiltrado.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-xs text-[#6B7280] italic">
-                  No hay movimientos registrados en el período seleccionado.
+            {metricasEvolucion.length === 0 ? (
+              <div className="h-[280px] flex items-center justify-center text-xs text-[#6B7280] italic">
+                No hay movimientos registrados en el período seleccionado.
+              </div>
+            ) : evolucionTab === 'MARGEN' ? (
+              <div className="h-[280px] sm:h-[320px] w-full">
+                {renderMargenChart(metricasEvolucion)}
+              </div>
+            ) : evolucionTab === 'FLUJO' ? (
+              <div className="h-[280px] sm:h-[320px] w-full">
+                {renderFlujoChart(metricasEvolucion)}
+              </div>
+            ) : evolucionTab === 'ACUMULADO' ? (
+              <div className="h-[280px] sm:h-[320px] w-full">
+                {renderAcumuladoChart(metricasEvolucion)}
+              </div>
+            ) : (
+              <div className="space-y-6 pt-2">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-[#1F2937]">1. Margen Comercial por Pedido</span>
+                    <span className="text-[10px] text-[#6B7280]">Rentabilidad directa de productos vendidos</span>
+                  </div>
+                  <div className="h-[230px] w-full">
+                    {renderMargenChart(metricasEvolucion)}
+                  </div>
                 </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={graficoFiltrado} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
-                    
-                    <XAxis 
-                      dataKey="fecha" 
-                      stroke="#6B7280" 
-                      fontSize={11} 
-                      tickLine={false} 
-                      axisLine={{ stroke: '#E5DCD3' }}
-                      tickFormatter={(val) => formatFechaEvolucion(val, false)}
-                      dy={4}
-                    />
-                    
-                    <YAxis 
-                      stroke="#6B7280" 
-                      fontSize={11} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      tickFormatter={(val) => val === 0 ? '0' : val < 0 ? `-${Math.abs(val)}` : `${val}`}
-                    />
-                    
-                    <Tooltip content={<CustomEvolucionTooltip />} />
-                    <Legend content={<CustomEvolutionLegend />} verticalAlign="top" />
 
-                    <ReferenceLine y={0} stroke="#D1D5DB" strokeWidth={1} />
+                <div className="border-t border-[#F5EFEB] pt-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-[#1F2937]">2. Flujo Diario de Caja Real</span>
+                    <span className="text-[10px] text-[#6B7280]">Cobranzas efectivas vs. gastos del taller</span>
+                  </div>
+                  <div className="h-[230px] w-full">
+                    {renderFlujoChart(metricasEvolucion)}
+                  </div>
+                </div>
 
-                    <Bar 
-                      dataKey="ganancia" 
-                      name="Resultado Neto" 
-                      radius={[3, 3, 3, 3]}
-                      maxBarSize={28}
-                    >
-                      {graficoFiltrado.map((entry, index) => (
-                        <Cell 
-                          key={`bar-cell-${index}`} 
-                          fill={entry.ganancia >= 0 ? '#059669' : '#DC2626'} 
-                        />
-                      ))}
-                    </Bar>
-
-                    <Line 
-                      type="monotone" 
-                      dataKey="ingresos" 
-                      name="Cobranza en Caja"
-                      stroke="#7C5835" 
-                      strokeWidth={2} 
-                      dot={{ r: 3, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-                      activeDot={{ r: 5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 2 }}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+                <div className="border-t border-[#F5EFEB] pt-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-[#1F2937]">3. Curva Acumulativa del Período</span>
+                    <span className="text-[10px] text-[#6B7280]">Crecimiento acumulado y punto de equilibrio</span>
+                  </div>
+                  <div className="h-[230px] w-full">
+                    {renderAcumuladoChart(metricasEvolucion)}
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
