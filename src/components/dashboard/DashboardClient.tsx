@@ -195,6 +195,7 @@ export function DashboardClient({
   // Default to Mes Actual
   const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('TODO'))
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [distribucionMode, setDistribucionMode] = useState<'VS' | 'CATEGORIAS'>('VS')
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -379,6 +380,32 @@ export function DashboardClient({
   const totalEgresosCalculado = useMemo(() => {
     return graficoInversionDinamico.reduce((sum, item) => sum + Number(item.value || 0), 0) || dynamicKpis.egresosTotales
   }, [graficoInversionDinamico, dynamicKpis.egresosTotales])
+
+  // Comparativa directa de Gastos vs Ingresos en el período seleccionado
+  const comparativaIngresosGastos = useMemo(() => {
+    const ingresos = dynamicKpis.totalCobradoVentas + dynamicKpis.totalIngresosDirectos
+    const egresos = totalEgresosCalculado
+    const balance = ingresos - egresos
+    const totalVolumen = ingresos + egresos
+
+    const dataDonut = [
+      { name: 'Ingresos Cobrados', value: Number(ingresos.toFixed(2)), color: '#059669' },
+      { name: 'Gastos & Egresos', value: Number(egresos.toFixed(2)), color: '#DC2626' }
+    ].filter(d => d.value > 0)
+
+    const ingresosPct = totalVolumen > 0 ? ((ingresos / totalVolumen) * 100).toFixed(0) : '0'
+    const egresosPct = totalVolumen > 0 ? ((egresos / totalVolumen) * 100).toFixed(0) : '0'
+
+    return {
+      ingresos,
+      egresos,
+      balance,
+      totalVolumen,
+      ingresosPct,
+      egresosPct,
+      dataDonut
+    }
+  }, [dynamicKpis, totalEgresosCalculado])
 
   // 8. Top 5 Clientes en valor en el período seleccionado
   const topClientesDinamico = useMemo(() => {
@@ -742,84 +769,211 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        {/* Donut de Gastos (4 cols) */}
+        {/* Donut de Gastos vs Ingresos / Categorías (4 cols) */}
         <Card className="lg:col-span-4 bg-white border-[#E5DCD3] shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
           <CardHeader className="p-4 sm:p-5 pb-0">
-            <CardTitle className="text-[#1F2937] text-sm sm:text-base font-black">
-              Distribución de Gastos
-            </CardTitle>
-            <CardDescription className="text-xs text-[#6B7280]">
-              Egresos e inversiones en el taller
-            </CardDescription>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-[#1F2937] text-sm sm:text-base font-black">
+                  {distribucionMode === 'VS' ? 'Gastos vs Ingresos' : 'Distribución de Gastos'}
+                </CardTitle>
+                <CardDescription className="text-xs text-[#6B7280]">
+                  {distribucionMode === 'VS' ? 'Relación de flujo y balance en caja' : 'Egresos e inversiones en el taller'}
+                </CardDescription>
+              </div>
+
+              {/* Selector de Modo */}
+              <div className="flex items-center p-0.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setDistribucionMode('VS')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    distribucionMode === 'VS'
+                      ? 'bg-[#A36F4C] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                >
+                  Vs Ingresos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDistribucionMode('CATEGORIAS')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    distribucionMode === 'CATEGORIAS'
+                      ? 'bg-[#A36F4C] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                >
+                  Categorías
+                </button>
+              </div>
+            </div>
           </CardHeader>
 
           <CardContent className="p-4 pt-0 space-y-3">
-            {/* Gráfico Donut */}
-            <div className="h-[180px] w-full flex items-center justify-center relative">
-              {graficoInversionDinamico.length === 0 ? (
-                <div className="text-xs text-[#6B7280] italic text-center">
-                  Sin egresos en el período seleccionado.
+            {distribucionMode === 'VS' ? (
+              <>
+                {/* Gráfico Donut: Gastos vs Ingresos */}
+                <div className="h-[180px] w-full flex items-center justify-center relative">
+                  {comparativaIngresosGastos.dataDonut.length === 0 ? (
+                    <div className="text-xs text-[#6B7280] italic text-center">
+                      Sin movimientos en el período seleccionado.
+                    </div>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={comparativaIngresosGastos.dataDonut}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={54}
+                            outerRadius={78}
+                            paddingAngle={3}
+                            dataKey="value"
+                            stroke="#FFFFFF"
+                            strokeWidth={2}
+                          >
+                            {comparativaIngresosGastos.dataDonut.map((entry, index) => (
+                              <Cell key={`cell-vs-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5DCD3', borderRadius: '12px', fontSize: '11px' }}
+                            formatter={(val: any, name: any) => [`S/ ${Number(val).toFixed(2)}`, name]}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+
+                      <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                        <span className="text-[10px] text-[#6B7280] uppercase font-bold tracking-wider">
+                          {comparativaIngresosGastos.balance >= 0 ? 'Superávit' : 'Déficit'}
+                        </span>
+                        <span className={`text-sm sm:text-base font-black font-mono tabular-nums ${
+                          comparativaIngresosGastos.balance >= 0 ? 'text-[#059669]' : 'text-[#DC2626]'
+                        }`}>
+                          {comparativaIngresosGastos.balance >= 0 ? '+' : ''}{formatCurrency(comparativaIngresosGastos.balance)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={graficoInversionDinamico}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={54}
-                        outerRadius={78}
-                        paddingAngle={3}
-                        dataKey="value"
-                        stroke="#FFFFFF"
-                        strokeWidth={2}
-                      >
-                        {graficoInversionDinamico.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5DCD3', borderRadius: '12px', fontSize: '11px' }}
-                        formatter={(val: any) => [`S/ ${Number(val).toFixed(2)}`, 'Gasto']}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
 
-                  <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
-                    <span className="text-[10px] text-[#6B7280] uppercase font-bold">Total</span>
-                    <span className="text-sm sm:text-base font-black text-[#1F2937] font-mono tabular-nums">
-                      {formatCurrency(totalEgresosCalculado)}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Lista minimalista de categorías */}
-            <div className="space-y-1.5 pt-2 border-t border-[#F5EFEB]">
-              {graficoInversionDinamico.map((item, idx) => {
-                const pct = totalEgresosCalculado > 0 ? ((item.value / totalEgresosCalculado) * 100).toFixed(0) : '0'
-                const color = DONUT_COLORS[idx % DONUT_COLORS.length]
-
-                return (
-                  <div key={item.name} className="flex items-center justify-between text-xs py-0.5">
+                {/* Desglose comparativo Ingresos vs Gastos */}
+                <div className="space-y-2 pt-2 border-t border-[#F5EFEB]">
+                  {/* Fila 1: Ingresos */}
+                  <div className="flex items-center justify-between text-xs py-0.5">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                      <span className="text-[#1F2937] truncate text-[11px] font-medium">{item.name}</span>
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#059669]" />
+                      <span className="text-[#1F2937] text-[11px] font-semibold">Ingresos Cobrados</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono font-semibold text-[#1F2937] tabular-nums text-[11px]">
-                        {formatCurrency(item.value)}
+                      <span className="font-mono font-bold text-[#059669] tabular-nums text-[11px]">
+                        {formatCurrency(comparativaIngresosGastos.ingresos)}
                       </span>
-                      <span className="text-[10px] text-[#6B7280] font-mono w-7 text-right">
-                        {pct}%
+                      <span className="text-[10px] text-[#6B7280] font-mono w-8 text-right font-medium">
+                        {comparativaIngresosGastos.ingresosPct}%
                       </span>
                     </div>
                   </div>
-                )
-              })}
-            </div>
+
+                  {/* Fila 2: Gastos */}
+                  <div className="flex items-center justify-between text-xs py-0.5">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-[#DC2626]" />
+                      <span className="text-[#1F2937] text-[11px] font-semibold">Gastos & Egresos</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-mono font-bold text-[#DC2626] tabular-nums text-[11px]">
+                        {formatCurrency(comparativaIngresosGastos.egresos)}
+                      </span>
+                      <span className="text-[10px] text-[#6B7280] font-mono w-8 text-right font-medium">
+                        {comparativaIngresosGastos.egresosPct}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Fila 3: Flujo Neto */}
+                  <div className="flex items-center justify-between text-xs pt-1.5 border-t border-[#F5EFEB]/80">
+                    <span className="text-[11px] text-[#75695D] font-medium">Flujo Neto en Caja</span>
+                    <span className={`font-mono font-black text-xs tabular-nums ${
+                      comparativaIngresosGastos.balance >= 0 ? 'text-[#059669]' : 'text-[#DC2626]'
+                    }`}>
+                      {comparativaIngresosGastos.balance >= 0 ? '+' : ''}{formatCurrency(comparativaIngresosGastos.balance)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Gráfico Donut: Por Categorías */}
+                <div className="h-[180px] w-full flex items-center justify-center relative">
+                  {graficoInversionDinamico.length === 0 ? (
+                    <div className="text-xs text-[#6B7280] italic text-center">
+                      Sin egresos en el período seleccionado.
+                    </div>
+                  ) : (
+                    <>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={graficoInversionDinamico}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={54}
+                            outerRadius={78}
+                            paddingAngle={3}
+                            dataKey="value"
+                            stroke="#FFFFFF"
+                            strokeWidth={2}
+                          >
+                            {graficoInversionDinamico.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={DONUT_COLORS[index % DONUT_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #E5DCD3', borderRadius: '12px', fontSize: '11px' }}
+                            formatter={(val: any) => [`S/ ${Number(val).toFixed(2)}`, 'Gasto']}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+
+                      <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
+                        <span className="text-[10px] text-[#6B7280] uppercase font-bold">Total Egresos</span>
+                        <span className="text-sm sm:text-base font-black text-[#1F2937] font-mono tabular-nums">
+                          {formatCurrency(totalEgresosCalculado)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Lista minimalista de categorías */}
+                <div className="space-y-1.5 pt-2 border-t border-[#F5EFEB]">
+                  {graficoInversionDinamico.map((item, idx) => {
+                    const pct = totalEgresosCalculado > 0 ? ((item.value / totalEgresosCalculado) * 100).toFixed(0) : '0'
+                    const color = DONUT_COLORS[idx % DONUT_COLORS.length]
+
+                    return (
+                      <div key={item.name} className="flex items-center justify-between text-xs py-0.5">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                          <span className="text-[#1F2937] truncate text-[11px] font-medium">{item.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-mono font-semibold text-[#1F2937] tabular-nums text-[11px]">
+                            {formatCurrency(item.value)}
+                          </span>
+                          <span className="text-[10px] text-[#6B7280] font-mono w-7 text-right">
+                            {pct}%
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
