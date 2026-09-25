@@ -75,9 +75,10 @@ function MargenTooltip({ active, payload, label }: any) {
     const costo = Number(data.costoProduccion || 0)
     const utilidad = Number(data.utilidad || 0)
     const margenPct = data.margenPct || 0
+    const pedidos = data.pedidosDetalle || []
 
     return (
-      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[210px] text-xs font-sans">
+      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[220px] max-w-[280px] text-xs font-sans">
         <div className="flex items-center justify-between border-b border-[#F5EFEB] pb-1.5 mb-2">
           <span className="font-bold text-[#1F2937]">{formatFechaEvolucion(label, true)}</span>
           <span className="text-[10px] font-semibold text-[#059669] bg-[#ECFDF5] px-1.5 py-0.5 rounded">
@@ -99,9 +100,24 @@ function MargenTooltip({ active, payload, label }: any) {
               +S/ {utilidad.toFixed(2)}
             </span>
           </div>
-          {data.pedidosCount > 0 && (
-            <div className="text-[10px] text-[#9CA3AF] text-right pt-0.5">
-              {data.pedidosCount} {data.pedidosCount === 1 ? 'pedido registrado' : 'pedidos registrados'}
+
+          {/* Desglose de pedidos del día con Cliente y Producto */}
+          {pedidos.length > 0 && (
+            <div className="pt-2 border-t border-[#F5EFEB] space-y-1">
+              <div className="text-[10px] uppercase font-bold text-[#9CA3AF] tracking-wider">
+                {pedidos.length === 1 ? 'Detalle del pedido' : `${pedidos.length} pedidos registrados`}:
+              </div>
+              {pedidos.map((p: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-start text-[11px] gap-2 py-0.5">
+                  <div className="truncate min-w-0 flex-1">
+                    <span className="font-semibold text-[#1F2937] block truncate">{p.cliente}</span>
+                    <span className="text-[#6B7280] block text-[10px] truncate">{p.producto}</span>
+                  </div>
+                  <span className="font-mono font-bold text-[#1F2937] shrink-0">
+                    S/ {Number(p.total).toFixed(2)}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -296,6 +312,7 @@ export function DashboardClient({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [distribucionMode, setDistribucionMode] = useState<'VS' | 'CATEGORIAS'>('VS')
   const [evolucionTab, setEvolucionTab] = useState<'MARGEN' | 'FLUJO' | 'ACUMULADO' | 'TODOS'>('MARGEN')
+  const [soloDiasConVentas, setSoloDiasConVentas] = useState(true)
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -401,6 +418,7 @@ export function DashboardClient({
       entradas: number
       salidas: number
       pedidosCount: number
+      pedidosDetalle?: { cliente: string; producto: string; total: number }[]
     }> = {}
 
     // A. Inicializar todos los días del período para rangos continuos (ej. semana o mes de hasta 60 días)
@@ -422,7 +440,8 @@ export function DashboardClient({
             utilidad: 0,
             entradas: 0,
             salidas: 0,
-            pedidosCount: 0
+            pedidosCount: 0,
+            pedidosDetalle: []
           }
           curr.setDate(curr.getDate() + 1)
         }
@@ -439,7 +458,8 @@ export function DashboardClient({
           utilidad: 0,
           entradas: 0,
           salidas: 0,
-          pedidosCount: 0
+          pedidosCount: 0,
+          pedidosDetalle: []
         }
       }
 
@@ -452,6 +472,14 @@ export function DashboardClient({
       timelineMap[vDate].costoProduccion += ventaCosto
       timelineMap[vDate].ventaTotal += ventaTotal
       timelineMap[vDate].pedidosCount += 1
+      if (!timelineMap[vDate].pedidosDetalle) {
+        timelineMap[vDate].pedidosDetalle = []
+      }
+      timelineMap[vDate].pedidosDetalle.push({
+        cliente: venta.cliente || 'Cliente sin nombre',
+        producto: venta.nombreProductoSnapshot || venta.producto?.nombreModelo || 'Producto',
+        total: ventaTotal
+      })
 
       // Fallback si no hay array de pagos pero la fecha está en rango
       if (!venta.pagos || venta.pagos.length === 0) {
@@ -542,6 +570,7 @@ export function DashboardClient({
         utilidad,
         margenPct,
         pedidosCount: vals.pedidosCount,
+        pedidosDetalle: vals.pedidosDetalle || [],
         // Gráfico 2: Flujo de Caja
         entradas,
         salidas,
@@ -738,76 +767,82 @@ export function DashboardClient({
   }, [filteredVentas, rawVentas, dynamicKpis.ingresosVentas, initialTopArticulos])
 
   // Funciones de renderizado para los 3 gráficos
-  const renderMargenChart = (data: any[], heightClass: string = 'h-full') => (
-    <div className={`${heightClass} w-full`}>
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
-          <XAxis 
-            dataKey="fecha" 
-            stroke="#6B7280" 
-            fontSize={11} 
-            tickLine={false} 
-            axisLine={{ stroke: '#E5DCD3' }}
-            tickFormatter={(val) => formatFechaEvolucion(val, false)}
-            dy={4}
-          />
-          <YAxis 
-            stroke="#6B7280" 
-            fontSize={11} 
-            tickLine={false} 
-            axisLine={false} 
-            tickFormatter={(val) => `${val}`}
-          />
-          <Tooltip content={<MargenTooltip />} />
-          <Legend 
-            verticalAlign="top"
-            content={() => (
-              <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] pb-2 text-[#6B7280]">
-                <div className="flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
-                  <span>Utilidad Neta</span>
+  const renderMargenChart = (data: any[], heightClass: string = 'h-full') => {
+    const displayData = soloDiasConVentas ? data.filter(d => d.ventaTotal > 0) : data
+    const chartData = displayData.length > 0 ? displayData : data
+
+    return (
+      <div className={`${heightClass} w-full`}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
+            <XAxis 
+              dataKey="fecha" 
+              stroke="#6B7280" 
+              fontSize={11} 
+              tickLine={false} 
+              axisLine={{ stroke: '#E5DCD3' }}
+              interval={0}
+              tickFormatter={(val) => formatFechaEvolucion(val, false)}
+              dy={4}
+            />
+            <YAxis 
+              stroke="#6B7280" 
+              fontSize={11} 
+              tickLine={false} 
+              axisLine={false} 
+              tickFormatter={(val) => `${val}`}
+            />
+            <Tooltip content={<MargenTooltip />} />
+            <Legend 
+              verticalAlign="top"
+              content={() => (
+                <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] pb-2 text-[#6B7280]">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
+                    <span>Utilidad Neta</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2.5 h-2.5 bg-[#D1C7BD] rounded-xs inline-block" />
+                    <span>Costo Producción</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-medium text-[#7C5835]">
+                    <span className="w-3.5 h-0.5 bg-[#7C5835] rounded-full inline-block" />
+                    <span>Venta Total</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 bg-[#D1C7BD] rounded-xs inline-block" />
-                  <span>Costo Producción</span>
-                </div>
-                <div className="flex items-center gap-1.5 font-medium text-[#7C5835]">
-                  <span className="w-3.5 h-0.5 bg-[#7C5835] rounded-full inline-block" />
-                  <span>Venta Total</span>
-                </div>
-              </div>
-            )}
-          />
-          <Bar 
-            dataKey="costoProduccion" 
-            name="Costo Producción" 
-            stackId="venta" 
-            fill="#D1C7BD" 
-            radius={[0, 0, 0, 0]}
-            maxBarSize={28}
-          />
-          <Bar 
-            dataKey="utilidad" 
-            name="Utilidad Neta" 
-            stackId="venta" 
-            fill="#059669" 
-            radius={[4, 4, 0, 0]}
-            maxBarSize={28}
-          />
-          <Line 
-            type="monotone" 
-            dataKey="ventaTotal" 
-            name="Venta Total" 
-            stroke="#7C5835" 
-            strokeWidth={2} 
-            dot={{ r: 3, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-            activeDot={{ r: 5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 2 }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-    </div>
-  )
+              )}
+            />
+            <Bar 
+              dataKey="costoProduccion" 
+              name="Costo Producción" 
+              stackId="venta" 
+              fill="#D1C7BD" 
+              radius={[0, 0, 0, 0]}
+              maxBarSize={32}
+            />
+            <Bar 
+              dataKey="utilidad" 
+              name="Utilidad Neta" 
+              stackId="venta" 
+              fill="#059669" 
+              radius={[4, 4, 0, 0]}
+              maxBarSize={32}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="ventaTotal" 
+              name="Venta Total" 
+              stroke="#7C5835" 
+              strokeWidth={2} 
+              dot={{ r: 3, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+              activeDot={{ r: 5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 2 }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    )
+  }
 
   const renderFlujoChart = (data: any[], heightClass: string = 'h-full') => (
     <div className={`${heightClass} w-full`}>
@@ -1113,9 +1148,21 @@ export function DashboardClient({
           <CardHeader className="p-4 sm:p-5 pb-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <CardTitle className="text-[#1F2937] text-sm sm:text-base font-black">
-                  {EVOLUCION_CONFIG[evolucionTab].title}
-                </CardTitle>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-[#1F2937] text-sm sm:text-base font-black">
+                    {EVOLUCION_CONFIG[evolucionTab].title}
+                  </CardTitle>
+                  {evolucionTab === 'MARGEN' && (
+                    <button
+                      type="button"
+                      onClick={() => setSoloDiasConVentas(!soloDiasConVentas)}
+                      className="text-[10px] text-[#7C5835] hover:text-[#5B4026] bg-[#FAF7F4] hover:bg-[#F2ECE4] border border-[#E5DCD3] px-2 py-0.5 rounded-md font-semibold cursor-pointer transition-colors"
+                      title="Alternar entre ver solo días con ventas o todo el calendario"
+                    >
+                      {soloDiasConVentas ? '⚡ Solo días con ventas' : '📅 Todo el calendario'}
+                    </button>
+                  )}
+                </div>
                 <CardDescription className="text-xs text-[#6B7280]">
                   {EVOLUCION_CONFIG[evolucionTab].description}
                 </CardDescription>
