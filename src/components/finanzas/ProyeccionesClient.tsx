@@ -70,7 +70,7 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
 
   const [fondoColchonEmergencia, setFondoColchonEmergencia] = useState<number>(350.00)
   const [apartarCuotaPrestamo, setApartarCuotaPrestamo] = useState<boolean>(true)
-  const [cuotaPrestamoMonto, setCuotaPrestamoMonto] = useState<number>(datos.cuotaPrestamoMensual || 368.88)
+  const [cuotaPrestamoMonto, setCuotaPrestamoMonto] = useState<number>(datos.cuotaPrestamoMensual || 388.68)
   const [gastosFijosOperativos, setGastosFijosOperativos] = useState<number>(datos.gastosFijosEstimadosMensual || 250.00)
 
   // 3. Variables de proyección mensual (igual al dashboard)
@@ -159,7 +159,7 @@ export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
     setFondoReservaApartado(800.00)
     setFondoColchonEmergencia(350.00)
     setApartarCuotaPrestamo(true)
-    setCuotaPrestamoMonto(datos.cuotaPrestamoMensual || 368.88)
+    setCuotaPrestamoMonto(datos.cuotaPrestamoMensual || 388.68)
     setGastosFijosOperativos(datos.gastosFijosEstimadosMensual || 250.00)
     setPedidosMensuales(18)
     setTicketPromedio(datos.ticketPromedioVenta || 135.00)

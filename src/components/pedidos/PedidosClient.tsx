@@ -46,9 +46,9 @@ import {
   ArrowDown
 } from 'lucide-react'
 import { DateFilterControl } from '@/components/ui/DateFilterControl'
-import { DateRange, getPresetDateRange, isDateInRange } from '@/lib/date-utils'
+import { DateRange, getPresetDateRange, isDateInRange, formatToYMD } from '@/lib/date-utils'
 import { EstadoPedido, TipoPrecio } from '@prisma/client'
-import { createPedido, updateEstadoPedido, updatePedido, addPagoPedido, deletePedido } from '@/actions/pedidos'
+import { createPedido, updateEstadoPedido, updatePedido, addPagoPedido, updatePagoPedido, deletePagoPedido, deletePedido } from '@/actions/pedidos'
 import { formatDate } from '@/lib/utils'
 import { MultiColorPicker } from '@/components/ui/MultiColorPicker'
 
@@ -258,7 +258,21 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   const [abonoMetodo, setAbonoMetodo] = useState('YAPE')
   const [abonoTipo, setAbonoTipo] = useState('SALDO_ENTREGA')
   const [abonoNotas, setAbonoNotas] = useState('')
+  const [abonoFecha, setAbonoFecha] = useState(() => formatToYMD(new Date()))
   const [isSubmittingAbono, setIsSubmittingAbono] = useState(false)
+
+  // Estado para Edición de Abono
+  const [isEditPagoModalOpen, setIsEditPagoModalOpen] = useState(false)
+  const [editingPago, setEditingPago] = useState<{
+    id: string
+    fecha: string
+    monto: string
+    metodoPago: string
+    tipo: string
+    notas: string
+    pedidoId: string
+  } | null>(null)
+  const [isSubmittingEditPago, setIsSubmittingEditPago] = useState(false)
 
   // Estado para Edición / Mantenimiento de Pedido
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -618,7 +632,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         monto,
         metodoPago: abonoMetodo,
         tipo: abonoTipo,
-        notas: abonoNotas.trim() || undefined
+        notas: abonoNotas.trim() || undefined,
+        fecha: abonoFecha || undefined
       })
 
       if (res.success && res.pedido) {
@@ -626,6 +641,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         setSelectedPedidoDetail(res.pedido as any)
         setAbonoMonto('')
         setAbonoNotas('')
+        setAbonoFecha(formatToYMD(new Date()))
       } else {
         alert(res.error || 'No se pudo registrar el abono')
       }
@@ -633,6 +649,77 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       alert(err.message || 'Error al registrar abono')
     } finally {
       setIsSubmittingAbono(false)
+    }
+  }
+
+  // =========================================================================
+  // GESTIÓN DE ABONOS (EDITAR / ELIMINAR)
+  // =========================================================================
+  const handleOpenEditPago = (pago: PagoPedidoView) => {
+    const rawF = pago.fecha ? String(pago.fecha) : ''
+    const formattedFecha = rawF.includes('T') ? rawF.split('T')[0] : (rawF || formatToYMD(new Date()))
+    setEditingPago({
+      id: pago.id,
+      fecha: formattedFecha,
+      monto: String(pago.monto || ''),
+      metodoPago: pago.metodoPago || 'YAPE',
+      tipo: pago.tipo || 'ABONO',
+      notas: pago.notas || '',
+      pedidoId: pago.pedidoId
+    })
+    setIsEditPagoModalOpen(true)
+  }
+
+  const handleEditPagoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingPago) return
+    const monto = parseFloat(editingPago.monto)
+    if (isNaN(monto) || monto < 0) {
+      alert('Ingresa un monto válido mayor o igual a 0.')
+      return
+    }
+
+    setIsSubmittingEditPago(true)
+    try {
+      const res = await updatePagoPedido(editingPago.id, {
+        fecha: editingPago.fecha,
+        monto,
+        metodoPago: editingPago.metodoPago,
+        tipo: editingPago.tipo,
+        notas: editingPago.notas.trim() || undefined
+      })
+
+      if (res.success && res.pedido) {
+        setPedidos(prev => prev.map(p => p.id === editingPago.pedidoId ? (res.pedido as any) : p))
+        if (selectedPedidoDetail && selectedPedidoDetail.id === editingPago.pedidoId) {
+          setSelectedPedidoDetail(res.pedido as any)
+        }
+        setIsEditPagoModalOpen(false)
+        setEditingPago(null)
+      } else {
+        alert(res.error || 'No se pudo actualizar el abono')
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al actualizar abono')
+    } finally {
+      setIsSubmittingEditPago(false)
+    }
+  }
+
+  const handleDeletePago = async (pagoId: string, pedidoId: string) => {
+    if (!confirm('¿Estás seguro de eliminar este registro de abono? Esta acción recalculará el saldo del pedido.')) return
+    try {
+      const res = await deletePagoPedido(pagoId)
+      if (res.success && res.pedido) {
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
+          setSelectedPedidoDetail(res.pedido as any)
+        }
+      } else {
+        alert(res.error || 'No se pudo eliminar el abono')
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar el abono')
     }
   }
 
@@ -1912,7 +1999,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                         key={pg.id}
                         className="p-3 rounded-xl bg-[#EBF7EE]/40 border border-[#B4E3C0] flex items-center justify-between text-xs gap-2"
                       >
-                        <div>
+                        <div className="flex-1 min-w-0 pr-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-extrabold text-[#1E5E3A]">Abono #{idx + 1}</span>
                             <Badge variant="outline" className="text-[9px] bg-white border-[#B4E3C0] text-[#1E5E3A]">
@@ -1923,9 +2010,27 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                             {formatDate(pg.fecha)} {pg.notas ? `• ${pg.notas}` : ''}
                           </span>
                         </div>
-                        <span className="font-mono font-black text-sm text-[#1E5E3A] flex-shrink-0">
-                          +{formatCurrency(pg.monto)}
-                        </span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="font-mono font-black text-sm text-[#1E5E3A]">
+                            +{formatCurrency(pg.monto)}
+                          </span>
+                          <button
+                            type="button"
+                            title="Editar fecha, monto o detalles de este abono"
+                            onClick={() => handleOpenEditPago(pg)}
+                            className="p-1.5 rounded-lg border border-[#B4E3C0] bg-white hover:bg-[#EBF7EE] text-[#1E5E3A] hover:text-[#16462B] transition-colors cursor-pointer"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Eliminar este abono"
+                            onClick={() => handleDeletePago(pg.id, selectedPedidoDetail.id)}
+                            className="p-1.5 rounded-lg border border-[#FCA5A5]/60 bg-white hover:bg-[#FEF2F2] text-[#DC2626] transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1940,7 +2045,18 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       + Registrar Nuevo Abono a este Pedido
                     </span>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-[#75695D] font-bold">Fecha del Abono *</Label>
+                        <Input
+                          type="date"
+                          required
+                          value={abonoFecha}
+                          onChange={(e) => setAbonoFecha(e.target.value)}
+                          className="h-8 bg-[#FFFFFF] border-[#E2D9CC] text-xs font-mono font-bold"
+                        />
+                      </div>
+
                       <div className="space-y-1">
                         <Label className="text-[10px] text-[#75695D] font-bold">Monto (S/) *</Label>
                         <Input
@@ -2015,6 +2131,156 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                 Cerrar
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 6.5. MODAL: EDITAR FECHA / MONTO DE ABONO                                 */}
+      {/* ========================================================================= */}
+      {isEditPagoModalOpen && editingPago && (
+        <div className="fixed inset-0 isolate z-[60] bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div className="bg-[#FFFFFF] border border-[#D4BEA7] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="bg-[#FAF8F5] border-b border-[#E2D9CC] p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] flex items-center justify-center text-[#1E5E3A] shadow-xs">
+                  <DollarSign className="h-5 w-5 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#241C15]">Editar Registro de Abono</h3>
+                  <p className="text-xs text-[#75695D]">Ajusta la fecha contable, monto o método de este abono.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditPagoModalOpen(false)
+                  setEditingPago(null)
+                }}
+                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleEditPagoSubmit} className="p-5 sm:p-6 space-y-4">
+              {/* Fecha */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-[#1E5E3A]" />
+                  Fecha Real de Cobranza *
+                </Label>
+                <Input
+                  type="date"
+                  value={editingPago.fecha}
+                  onChange={(e) => setEditingPago(prev => prev ? { ...prev, fecha: e.target.value } : null)}
+                  required
+                  className="bg-[#FAF8F5] border-[#DCD3C6] text-[#241C15] font-mono text-sm font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                />
+                <p className="text-[10px] text-[#75695D]">
+                  Esta fecha se reflejará exactamente en el Flujo de Caja e ingresos de ese día.
+                </p>
+              </div>
+
+              {/* Monto */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                  Monto Cobrado (S/) *
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[#75695D]">S/</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editingPago.monto}
+                    onChange={(e) => setEditingPago(prev => prev ? { ...prev, monto: e.target.value } : null)}
+                    required
+                    placeholder="0.00"
+                    className="pl-9 bg-[#FAF8F5] border-[#DCD3C6] text-[#1E5E3A] font-mono text-base font-bold rounded-xl focus:border-[#1E5E3A] focus:bg-[#FFFFFF]"
+                  />
+                </div>
+              </div>
+
+              {/* Método de Pago */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                  Método de Pago *
+                </Label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {['YAPE', 'PLIN', 'BCP', 'EFECTIVO'].map(metodo => {
+                    const isSel = editingPago.metodoPago === metodo
+                    return (
+                      <button
+                        key={metodo}
+                        type="button"
+                        onClick={() => setEditingPago(prev => prev ? { ...prev, metodoPago: metodo } : null)}
+                        className={`py-2 px-1 text-center rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          isSel 
+                            ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs' 
+                            : 'bg-[#FAF8F5] border-[#DCD3C6] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                        }`}
+                      >
+                        {metodo}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Tipo de Abono */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                  Tipo de Abono *
+                </Label>
+                <select
+                  value={editingPago.tipo}
+                  onChange={(e) => setEditingPago(prev => prev ? { ...prev, tipo: e.target.value } : null)}
+                  className="w-full h-9 rounded-xl border border-[#DCD3C6] bg-[#FAF8F5] px-3 text-xs font-bold text-[#241C15]"
+                >
+                  <option value="ANTICIPO">Anticipo / Adelanto</option>
+                  <option value="SALDO_ENTREGA">Liquidación / Saldo Final</option>
+                  <option value="ABONO">Abono Parcial</option>
+                </select>
+              </div>
+
+              {/* Notas */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                  Notas o N° de Operación (Opcional)
+                </Label>
+                <Input
+                  value={editingPago.notas}
+                  onChange={(e) => setEditingPago(prev => prev ? { ...prev, notas: e.target.value } : null)}
+                  placeholder="Ej: Operación 481920..."
+                  className="bg-[#FAF8F5] border-[#DCD3C6] text-[#241C15] text-xs rounded-xl"
+                />
+              </div>
+
+              {/* Botones de acción */}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditPagoModalOpen(false)
+                    setEditingPago(null)
+                  }}
+                  className="px-4 h-9 text-xs font-bold border-[#E2D9CC] bg-white hover:bg-[#FAF8F5] text-[#75695D] rounded-xl cursor-pointer"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isSubmittingEditPago}
+                  className="px-5 h-9 bg-[#1E5E3A] hover:bg-[#16462B] text-white font-extrabold text-xs rounded-xl cursor-pointer"
+                >
+                  {isSubmittingEditPago ? 'Guardando...' : 'Guardar Cambios'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

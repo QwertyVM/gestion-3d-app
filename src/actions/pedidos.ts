@@ -261,9 +261,7 @@ function parseDateInput(fecha?: string | Date) {
     if (fecha.includes('T')) return new Date(fecha)
     const [year, month, day] = fecha.split('-').map(Number)
     if (year && month && day) {
-      const target = new Date()
-      target.setFullYear(year, month - 1, day)
-      return target
+      return new Date(year, month - 1, day, 12, 0, 0)
     }
     return new Date(fecha)
   }
@@ -586,6 +584,139 @@ export async function addPagoPedido(pedidoId: string, data: {
   } catch (error: any) {
     console.error('Error adding pago pedido:', error)
     return { success: false, error: error.message || 'Error al registrar abono' }
+  }
+}
+
+export async function updatePagoPedido(pagoId: string, data: {
+  fecha?: string | Date
+  monto?: number
+  metodoPago?: string
+  tipo?: string
+  notas?: string | null
+}) {
+  try {
+    const existingPago = await prisma.pagoPedido.findUnique({
+      where: { id: pagoId },
+      include: { pedido: true }
+    })
+
+    if (!existingPago) {
+      return { success: false, error: 'Abono no encontrado' }
+    }
+
+    const pedidoId = existingPago.pedidoId
+    const fechaPago = data.fecha ? parseDateInput(data.fecha) : existingPago.fecha
+    const newMonto = data.monto !== undefined ? Number(data.monto) : Number(existingPago.monto)
+
+    if (newMonto < 0) {
+      return { success: false, error: 'El monto no puede ser negativo' }
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1. Actualizar el pago
+      await tx.pagoPedido.update({
+        where: { id: pagoId },
+        data: {
+          fecha: fechaPago,
+          monto: newMonto,
+          metodoPago: data.metodoPago !== undefined ? data.metodoPago : existingPago.metodoPago,
+          tipo: data.tipo !== undefined ? data.tipo : existingPago.tipo,
+          notas: data.notas !== undefined ? (data.notas?.trim() || null) : existingPago.notas
+        }
+      })
+
+      // 2. Recalcular total pagado y saldo
+      const allPagos = await tx.pagoPedido.findMany({
+        where: { pedidoId }
+      })
+      const totalPagado = allPagos.reduce((sum, p) => sum + Number(p.monto), 0)
+      const totalPedido = Number(existingPago.pedido.total)
+      const nuevoSaldo = Math.max(0, Number((totalPedido - totalPagado).toFixed(2)))
+
+      const pActualizado = await tx.pedido.update({
+        where: { id: pedidoId },
+        data: {
+          montoPagado: totalPagado,
+          saldoPendiente: nuevoSaldo
+        },
+        include: {
+          items: {
+            include: { producto: true, colorFilamento: true }
+          },
+          pagos: {
+            orderBy: { fecha: 'asc' }
+          }
+        }
+      })
+
+      return pActualizado
+    })
+
+    const allFilamentos = await prisma.inventarioFilamento.findMany()
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+
+    safeRevalidate()
+    return { success: true, pedido: serializePedido(updated, filMap) }
+  } catch (error: any) {
+    console.error('Error updating pago pedido:', error)
+    return { success: false, error: error.message || 'Error al actualizar abono' }
+  }
+}
+
+export async function deletePagoPedido(pagoId: string) {
+  try {
+    const existingPago = await prisma.pagoPedido.findUnique({
+      where: { id: pagoId },
+      include: { pedido: true }
+    })
+
+    if (!existingPago) {
+      return { success: false, error: 'Abono no encontrado' }
+    }
+
+    const pedidoId = existingPago.pedidoId
+
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1. Eliminar el pago
+      await tx.pagoPedido.delete({
+        where: { id: pagoId }
+      })
+
+      // 2. Recalcular total pagado y saldo
+      const allPagos = await tx.pagoPedido.findMany({
+        where: { pedidoId }
+      })
+      const totalPagado = allPagos.reduce((sum, p) => sum + Number(p.monto), 0)
+      const totalPedido = Number(existingPago.pedido.total)
+      const nuevoSaldo = Math.max(0, Number((totalPedido - totalPagado).toFixed(2)))
+
+      const pActualizado = await tx.pedido.update({
+        where: { id: pedidoId },
+        data: {
+          montoPagado: totalPagado,
+          saldoPendiente: nuevoSaldo
+        },
+        include: {
+          items: {
+            include: { producto: true, colorFilamento: true }
+          },
+          pagos: {
+            orderBy: { fecha: 'asc' }
+          }
+        }
+      })
+
+      return pActualizado
+    })
+
+    const allFilamentos = await prisma.inventarioFilamento.findMany()
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+
+    safeRevalidate()
+    return { success: true, pedido: serializePedido(updated, filMap) }
+  } catch (error: any) {
+    console.error('Error deleting pago pedido:', error)
+    return { success: false, error: error.message || 'Error al eliminar abono' }
   }
 }
 

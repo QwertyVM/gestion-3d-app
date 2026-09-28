@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { ajustarStockBobina } from '@/actions/inventario'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
+import { updatePagoPedido, deletePagoPedido } from '@/actions/pedidos'
 
 function safeRevalidate() {
   try {
@@ -804,6 +805,12 @@ export async function deletePagoVenta(pagoId: string, ventaIdFallback?: string) 
   if (pago) {
     ventaId = pago.ventaId
     await prisma.pagoVenta.delete({ where: { id: pagoId } })
+  } else {
+    // Verificar si es un pago perteneciente a un Pedido
+    const pagoPed = await prisma.pagoPedido.findUnique({ where: { id: pagoId } })
+    if (pagoPed) {
+      return await deletePagoPedido(pagoId)
+    }
   }
 
   if (ventaId) {
@@ -877,17 +884,31 @@ export async function updatePagoVenta(pagoId: string, data: {
           notas
         }
       })
-    } else if (ventaId && newMonto > 0) {
-      await prisma.pagoVenta.create({
-        data: {
-          ventaId,
-          fecha: fechaPago,
+    } else {
+      // Verificar si es un pago perteneciente a un Pedido
+      const existingPagoPedido = await prisma.pagoPedido.findUnique({ where: { id: pagoId } })
+      if (existingPagoPedido) {
+        return await updatePagoPedido(pagoId, {
+          fecha: data.fecha,
           monto: newMonto,
           metodoPago,
           tipo,
           notas
-        }
-      })
+        })
+      }
+
+      if (ventaId && newMonto > 0) {
+        await prisma.pagoVenta.create({
+          data: {
+            ventaId,
+            fecha: fechaPago,
+            monto: newMonto,
+            metodoPago,
+            tipo,
+            notas
+          }
+        })
+      }
     }
   }
 

@@ -397,10 +397,23 @@ export async function getDashboardData(negocio?: TipoNegocio) {
 
   // 14. Indicador de Capacidad de Gasto del Mes Actual (Lo que tengo vs Lo Blindado vs Lo Proyectado)
   const saldoActualCaja = Math.max(0, (totalCobradoVentas + totalIngresosDirectos) - egresosTotales)
-  const cuotaPrestamoMensual = 368.88
+  const cuotaPrestamoMensual = 388.68
   const reservaCapexMensual = 878.00
   const gastosFijosTaller = 111.00
-  const totalBlindadoMes = cuotaPrestamoMensual + reservaCapexMensual + gastosFijosTaller
+
+  // Verificar si la cuota del préstamo ya fue pagada en este ciclo (no restar dos veces del disponible)
+  const totalPagadoPrestamoMes = inversiones
+    .filter((inv: any) => 
+      inv.categoria === 'FINANCIERO' && 
+      (inv.itemConcepto?.toLowerCase().includes('préstamo') || 
+       inv.itemConcepto?.toLowerCase().includes('prestamo') || 
+       inv.itemConcepto?.toLowerCase().includes('cuota') ||
+       (inv.subcategoria && inv.subcategoria.toLowerCase().includes('bcp')))
+    )
+    .reduce((acc: number, inv: any) => acc + Number(inv.costoTotal || 0), 0)
+
+  const cuotaPrestamoPendiente = Math.max(0, cuotaPrestamoMensual - totalPagadoPrestamoMes)
+  const totalBlindadoMes = cuotaPrestamoPendiente + reservaCapexMensual + gastosFijosTaller
   const gastoDisponibleHoy = Math.max(0, saldoActualCaja - totalBlindadoMes)
   const margenUnitarioPromedio = ticketPromedio > 0 ? (gananciaNeta / Math.max(1, ventas.length)) : 97.00
   const pedidosProyectadosMes = Math.max(8, Math.min(30, Math.round(ventas.length / Math.max(1, 2)) || 18))

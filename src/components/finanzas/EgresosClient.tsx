@@ -86,6 +86,12 @@ const CATEGORIAS_CONFIG_3D = [
     label: 'Servicios & Operativos',
     desc: 'Publicidad, Fletes',
     icon: Truck,
+  },
+  {
+    id: 'FINANCIERO',
+    label: 'Financiero & Préstamos',
+    desc: 'Cuotas de crédito, ITF, bancos',
+    icon: Landmark,
   }
 ] as const
 
@@ -912,11 +918,21 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                     onClick={() => { setCategoriaFilter('SERVICIO'); setTagFilter('TODOS'); setCurrentPage(1); }}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                       categoriaFilter === 'SERVICIO'
-                        ? 'bg-[#1E5E3A] text-white shadow-2xs'
+                        ? 'bg-[#A36F4C] text-white shadow-2xs'
                         : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
                     }`}
                   >
                     Servicios
+                  </button>
+                  <button
+                    onClick={() => { setCategoriaFilter('FINANCIERO'); setTagFilter('TODOS'); setCurrentPage(1); }}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      categoriaFilter === 'FINANCIERO'
+                        ? 'bg-[#1E5E3A] text-white shadow-2xs'
+                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+                    }`}
+                  >
+                    Financiero ({items.filter(e => e.categoria === 'FINANCIERO').length})
                   </button>
                 </>
               )}
@@ -1438,7 +1454,18 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
                   {/* Pills de conceptos rápidos para banco */}
                   {formCategoria === 'FINANCIERO' && (
-                    <div className="flex items-center gap-1 text-[10px]">
+                    <div className="flex items-center gap-1 text-[10px] flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormConcepto('Pago Cuota 1/24 - Préstamo BCP')
+                          setFormCostoUnitario('388.68')
+                          setFormSubcategoria('BCP')
+                        }}
+                        className="px-2 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer font-bold transition-colors"
+                      >
+                        Cuota Préstamo BCP
+                      </button>
                       <button
                         type="button"
                         onClick={() => setFormConcepto('ITF')}

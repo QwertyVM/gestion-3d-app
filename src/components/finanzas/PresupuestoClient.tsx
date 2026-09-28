@@ -23,6 +23,7 @@ import {
   Target,
   LifeBuoy,
   CreditCard,
+  Landmark,
   Cpu,
   ArrowRight,
   RotateCcw,
@@ -54,6 +55,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DatosPresupuestoTranquilidad } from '@/actions/presupuesto'
+import { pagarCuotaPrestamo } from '@/actions/inversiones'
 
 interface PresupuestoClientProps {
   datos: DatosPresupuestoTranquilidad
@@ -141,10 +143,10 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
       concepto: 'Cuota Mensual de Préstamo',
       subconcepto: 'Amortización de capital financiero (BCP S/ 8,000)',
       montoAgostoReal: 0.00, // Desembolsado a fin de Agosto
-      montoSeptiembreReal: 0.00,
-      monto: 368.88,
+      montoSeptiembreReal: datos.prestamoInfo?.pagadaEnPeriodo ? (datos.prestamoInfo?.cuotaMensual || 388.68) : 0.00,
+      monto: datos.prestamoInfo?.cuotaMensual || 388.68,
       esBlindado: true,
-      pagado: false,
+      pagado: Boolean(datos.prestamoInfo?.pagadaEnPeriodo),
     },
     {
       id: 'gasto-reserva-capex',
@@ -328,6 +330,14 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
     return itemsPlan.filter(i => i.esBlindado).reduce((sum, item) => sum + item.monto, 0)
   }, [itemsPlan])
 
+  const totalBlindadosPendientes = useMemo(() => {
+    return itemsPlan.filter(i => i.esBlindado && !i.pagado).reduce((sum, item) => sum + item.monto, 0)
+  }, [itemsPlan])
+
+  const totalBlindadosPagados = useMemo(() => {
+    return itemsPlan.filter(i => i.esBlindado && i.pagado).reduce((sum, item) => sum + item.monto, 0)
+  }, [itemsPlan])
+
   const totalFlexibles = useMemo(() => {
     return itemsPlan.filter(i => !i.esBlindado).reduce((sum, item) => sum + item.monto, 0)
   }, [itemsPlan])
@@ -345,11 +355,52 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
     ? Math.min(100, (totalGastadoSeptiembre / totalPlanificado) * 100) 
     : 0
 
-  // Gasto Libre Disponible Hoy = Saldo en Caja - Fondos Blindados (Intocables)
-  const gastoLibreDisponibleHoy = Math.max(0, datos.saldoActualCaja - totalBlindados)
+  // Gasto Libre Disponible Hoy = Saldo en Caja - Fondos Blindados PENDIENTES
+  // (Si ya se pagó con egreso, ya salió físicamente de caja y no se descuenta dos veces)
+  const gastoLibreDisponibleHoy = Math.max(0, datos.saldoActualCaja - totalBlindadosPendientes)
 
   // Ratio de Blindaje = Porcentaje del presupuesto que es deuda/reserva
   const ratioBlindaje = totalPlanificado > 0 ? ((totalBlindados / totalPlanificado) * 100).toFixed(1) : '0.0'
+
+  // Control de Pago de Cuota de Préstamo
+  const [isPayingCuota, setIsPayingCuota] = useState(false)
+  const cuotaPrestamoItem = itemsPlan.find(i => i.id === 'gasto-cuota-prestamo')
+  const estaCuotaPagada = cuotaPrestamoItem ? cuotaPrestamoItem.pagado : Boolean(datos.prestamoInfo?.pagadaEnPeriodo)
+
+  const handlePagarCuotaDirecto = async () => {
+    const cuotaActual = datos.prestamoInfo?.cuotaActual || 1
+    const cuotaMonto = datos.prestamoInfo?.cuotaMensual || 388.68
+    if (!confirm(`¿Confirmas el registro del pago de la Cuota ${cuotaActual}/24 por S/ ${cuotaMonto.toFixed(2)}?\n\nSe registrará automáticamente en Egresos como FINANCIERO y se consumirá el fondo blindado de este período sin afectar tu Gasto Libre Disponible.`)) {
+      return
+    }
+
+    setIsPayingCuota(true)
+    try {
+      await pagarCuotaPrestamo({
+        monto: cuotaMonto,
+        numeroCuota: cuotaActual,
+        persona: 'Víctor',
+        negocio: '3D'
+      })
+
+      setItemsPlan(prev => prev.map(item => {
+        if (item.id === 'gasto-cuota-prestamo') {
+          return {
+            ...item,
+            pagado: true,
+            montoSeptiembreReal: cuotaMonto
+          }
+        }
+        return item
+      }))
+
+      toast.success(`Cuota ${cuotaActual}/24 por S/ ${cuotaMonto.toFixed(2)} registrada exitosamente en Egresos`)
+    } catch (err: any) {
+      toast.error(err.message || 'Error al registrar el pago de la cuota')
+    } finally {
+      setIsPayingCuota(false)
+    }
+  }
 
   // Filtrado de items
   const itemsFiltrados = useMemo(() => {
@@ -422,14 +473,16 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
           {/* 2. Lo Blindado (Intocable) */}
           <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] space-y-1.5 shadow-2xs">
             <div className="flex items-center justify-between text-[#75695D]">
-              <span className="font-bold text-[10px] uppercase tracking-wider">2. Fondos Blindados</span>
+              <span className="font-bold text-[10px] uppercase tracking-wider">2. Fondos Blindados Pendientes</span>
               <Lock className="h-4 w-4 text-[#A36F4C]" />
             </div>
             <div className="text-xl sm:text-2xl font-black font-mono text-[#A36F4C]">
-              {formatCurrency(totalBlindados)}
+              {formatCurrency(totalBlindadosPendientes)}
             </div>
-            <span className="text-[11px] text-[#75695D] block">
-              Cuota BCP ({formatCurrency(368.88)}) + Reserva A2L ({formatCurrency(878)}) + Luz
+            <span className="text-[11px] text-[#75695D] block truncate">
+              {totalBlindadosPagados > 0 
+                ? `${formatCurrency(totalBlindadosPagados)} pagados del blindado • Total: ${formatCurrency(totalBlindados)}`
+                : `Cuota BCP (${formatCurrency(datos.prestamoInfo?.cuotaMensual || 388.68)}) + Reserva A2L + Luz`}
             </span>
           </div>
 
@@ -444,7 +497,7 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
             }`}>
               {formatCurrency(gastoLibreDisponibleHoy)}
             </div>
-            <span className="text-[11px] text-[#1E5E3A] font-semibold block">
+            <span className="text-[11px] text-[#1E5E3A] font-semibold block truncate">
               🟢 Dinero disponible para compras sin tocar cuotas
             </span>
           </div>
@@ -482,6 +535,119 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
               className="bg-gradient-to-r from-[#1E5E3A] to-[#A36F4C] h-full rounded-full transition-all duration-500"
               style={{ width: `${Math.max(5, porcentajeEjecucionGeneral)}%` }}
             />
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* SECCIÓN ESPECIAL: CONTROL DE PRÉSTAMO CAPITAL & CRONOGRAMA DE 24 CUOTAS     */}
+      {/* ========================================================================= */}
+      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E2D9CC]/60">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[#1E5E3A] shadow-xs">
+              <Landmark className="h-6 w-6 stroke-[2.2]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-black text-[#241C15] tracking-tight">
+                  Préstamo Capital de Trabajo (BCP)
+                </h2>
+                <Badge variant="outline" className="bg-[#FAF8F5] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold">
+                  24 Cuotas • TEA 8.70%
+                </Badge>
+                {estaCuotaPagada ? (
+                  <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Cuota {datos.prestamoInfo?.cuotaActual || 1}/24 Pagada este Ciclo
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-[#FEF3C7] text-[#92400E] border-[#FDE68A] text-[10px] font-bold flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Cuota {datos.prestamoInfo?.cuotaActual || 1}/24 Pendiente
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-[#75695D] mt-0.5">
+                Desembolso original: <strong>{formatCurrency(datos.prestamoInfo?.totalPrestamo || 8000)}</strong> • Próximo recálculo de blindados: <strong className="text-[#241C15]">{datos.prestamoInfo?.fechaCorteRecalculo || '15 de Octubre 2026'}</strong>
+              </p>
+            </div>
+          </div>
+
+          {/* Botón de Pago directo */}
+          <div className="flex items-center gap-2">
+            {!estaCuotaPagada ? (
+              <Button
+                onClick={handlePagarCuotaDirecto}
+                disabled={isPayingCuota}
+                className="bg-[#1E5E3A] hover:bg-[#16482C] text-white rounded-xl px-4 py-2.5 text-xs font-bold shadow-xs cursor-pointer flex items-center gap-2 transition-all active:scale-[0.98]"
+              >
+                <CreditCard className="h-4 w-4" />
+                {isPayingCuota ? 'Registrando Pago...' : `Pagar Cuota ${datos.prestamoInfo?.cuotaActual || 1} (${formatCurrency(datos.prestamoInfo?.cuotaMensual || 388.68)})`}
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#1E5E3A] bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Blindado Consumido (Cuota {datos.prestamoInfo?.cuotaActual || 1} al día)</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 4 KPIs de la Deuda */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1">
+            <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider block">Progreso de Cuotas</span>
+            <div className="text-base sm:text-lg font-black font-mono text-[#241C15]">
+              {datos.prestamoInfo?.cuotasPagadas || (estaCuotaPagada ? 1 : 0)} / {datos.prestamoInfo?.totalCuotas || 24}
+            </div>
+            <span className="text-[10px] text-[#75695D] block">
+              Quedan {Math.max(0, (datos.prestamoInfo?.totalCuotas || 24) - (datos.prestamoInfo?.cuotasPagadas || (estaCuotaPagada ? 1 : 0)))} cuotas
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1">
+            <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider block">Cuota Mensual</span>
+            <div className="text-base sm:text-lg font-black font-mono text-[#1E5E3A]">
+              {formatCurrency(datos.prestamoInfo?.cuotaMensual || 388.68)}
+            </div>
+            <span className="text-[10px] text-[#75695D] block">
+              Monto fijo amortización
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1">
+            <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider block">Capital Restante</span>
+            <div className="text-base sm:text-lg font-black font-mono text-[#A36F4C]">
+              {formatCurrency(datos.prestamoInfo?.saldoCapitalRestante || 7611.32)}
+            </div>
+            <span className="text-[10px] text-[#75695D] block">
+              De S/ 8,000.00 prestados
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-1">
+            <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider block">Próximo Recálculo</span>
+            <div className="text-base sm:text-lg font-black font-mono text-[#241C15]">
+              15 Octubre
+            </div>
+            <span className="text-[10px] text-[#75695D] block">
+              Apertura de Cuota 2
+            </span>
+          </div>
+        </div>
+
+        {/* Nota explicativa de protección de liquidez */}
+        <div className="p-3 rounded-xl bg-[#FAF7F4] border border-[#D4BEA7] text-xs text-[#633E20] flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-[#1E5E3A] flex-shrink-0" />
+            <span>
+              {estaCuotaPagada ? (
+                <>La <strong>Cuota {datos.prestamoInfo?.cuotaActual || 1}</strong> ya fue pagada. El sistema consumió el fondo blindado correspondiente sin afectar tu <strong>Gasto Libre Disponible</strong> ({formatCurrency(gastoLibreDisponibleHoy)}). El 15 de Octubre se recalculará automáticamente la Cuota 2.</>
+              ) : (
+                <>El monto de <strong>{formatCurrency(datos.prestamoInfo?.cuotaMensual || 388.68)}</strong> se encuentra blindado. Al registrar el pago aquí, pasará a Egresos y absorberá este blindaje sin alterar tu saldo libre.</>
+              )}
+            </span>
           </div>
         </div>
       </div>

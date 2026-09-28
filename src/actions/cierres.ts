@@ -164,7 +164,7 @@ export async function getDatosPreCierre(mesInput?: number, anioInput?: number, n
     saldoSistemaCaja: Number(saldoSistemaCaja.toFixed(2)),
     cuentasPorCobrar: Number(cuentasPorCobrar.toFixed(2)),
     totalPedidos,
-    cuotaPrestamoSugerida: 368.88,
+    cuotaPrestamoSugerida: 388.68,
     reservaSugerida: 800.00,
     colchonSugerido: 350.00
   }

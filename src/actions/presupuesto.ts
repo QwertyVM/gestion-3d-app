@@ -10,6 +10,18 @@ export interface ColorRestockItem {
   nota?: string | null
 }
 
+export interface PrestamoCapitalInfo {
+  totalPrestamo: number
+  cuotaMensual: number
+  totalCuotas: number
+  cuotasPagadas: number
+  cuotaActual: number
+  pagadaEnPeriodo: boolean
+  fechaCorteRecalculo: string
+  saldoCapitalRestante: number
+  montoPagadoTotal: number
+}
+
 export interface DatosPresupuestoTranquilidad {
   // 1. Diagnóstico de Partida (Lo que tengo hoy)
   saldoActualCaja: number
@@ -36,6 +48,9 @@ export interface DatosPresupuestoTranquilidad {
   cuotaPrestamoSugerida: number
   reservaCapexSugerida: number
   packagingPromedioPorPedido: number
+
+  // 5. Estado y Control del Préstamo Capital
+  prestamoInfo: PrestamoCapitalInfo
 }
 
 export async function getDatosPresupuestoTranquilidad(): Promise<DatosPresupuestoTranquilidad> {
@@ -103,9 +118,47 @@ export async function getDatosPresupuestoTranquilidad(): Promise<DatosPresupuest
     .reduce((sum, e) => sum + Number(e.costoTotal || 0), 0)
 
   const gastosFijosTallerEstimado = gastosFijosServicios > 0 ? Math.round(gastosFijosServicios / Math.max(1, 3)) : 250.00
-  const cuotaPrestamoSugerida = 368.88 // Cuota estimada de crédito capital
+  const cuotaPrestamoSugerida = 388.68 // Cuota confirmada del préstamo de capital BCP (24 cuotas)
   const reservaCapexSugerida = 878.00  // Cuota mensual de llegada de nueva impresora
   const packagingPromedioPorPedido = 8.50 // Costo estimado de packaging por envío
+
+  // 5. Análisis del Préstamo de Capital BCP
+  const totalPrestamo = 8000.00
+  const cuotaMensual = 388.68
+  const totalCuotas = 24
+  
+  // Pagos registrados de cuotas de préstamo
+  const pagosPrestamo = inversiones.filter(e => 
+    e.categoria === 'FINANCIERO' && 
+    (e.itemConcepto?.toLowerCase().includes('préstamo') || 
+     e.itemConcepto?.toLowerCase().includes('prestamo') || 
+     e.itemConcepto?.toLowerCase().includes('cuota') ||
+     (e.subcategoria && e.subcategoria.toLowerCase().includes('bcp')))
+  )
+
+  const cuotasPagadas = pagosPrestamo.length
+  const montoPagadoTotal = pagosPrestamo.reduce((acc, p) => acc + Number(p.costoTotal || 0), 0)
+  const cuotaActual = Math.min(totalCuotas, cuotasPagadas + 1)
+  
+  // Verificar si se pagó en el ciclo actual (últimos 30 días o este mes)
+  const ahora = new Date()
+  const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
+  const pagadaEnPeriodo = pagosPrestamo.some(p => new Date(p.createdAt) >= inicioMes)
+  
+  const saldoCapitalRestante = Math.max(0, totalPrestamo - montoPagadoTotal)
+  const fechaCorteRecalculo = '15 de Octubre 2026'
+
+  const prestamoInfo: PrestamoCapitalInfo = {
+    totalPrestamo,
+    cuotaMensual,
+    totalCuotas,
+    cuotasPagadas,
+    cuotaActual,
+    pagadaEnPeriodo,
+    fechaCorteRecalculo,
+    saldoCapitalRestante: Number(saldoCapitalRestante.toFixed(2)),
+    montoPagadoTotal: Number(montoPagadoTotal.toFixed(2))
+  }
 
   return {
     saldoActualCaja,
@@ -125,6 +178,7 @@ export async function getDatosPresupuestoTranquilidad(): Promise<DatosPresupuest
     gastosFijosTallerEstimado,
     cuotaPrestamoSugerida,
     reservaCapexSugerida,
-    packagingPromedioPorPedido
+    packagingPromedioPorPedido,
+    prestamoInfo
   }
 }

@@ -286,3 +286,31 @@ export async function getProductosCatalog(negocio?: TipoNegocio) {
     stock: p.stock
   }))
 }
+
+export async function pagarCuotaPrestamo(data?: {
+  monto?: number
+  concepto?: string
+  numeroCuota?: number
+  fecha?: string | Date
+  persona?: string
+  negocio?: TipoNegocio
+}) {
+  const targetNegocio = data?.negocio || await getActiveNegocioServer()
+  const cuotaNum = data?.numeroCuota || 1
+  const monto = data?.monto !== undefined && data?.monto > 0 ? data.monto : 388.68
+  const concepto = data?.concepto?.trim() || `Pago Cuota ${cuotaNum}/24 - Préstamo BCP Capital de Trabajo`
+
+  return await createInversion({
+    negocio: targetNegocio,
+    persona: data?.persona || 'Víctor',
+    categoria: 'FINANCIERO',
+    subcategoria: 'BCP',
+    itemConcepto: concepto,
+    cantidad: 1,
+    costoUnitario: monto,
+    costoEnvio: 0,
+    numeroCuotas: 24,
+    fecha: data?.fecha || new Date()
+  })
+}
+
