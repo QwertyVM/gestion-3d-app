@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -109,6 +110,7 @@ const CATEGORIA_CONFIG: Record<CategoriaGastoPlan, { label: string; badgeColor: 
 }
 
 export function PresupuestoClient({ datos }: PresupuestoClientProps) {
+  const router = useRouter()
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // =========================================================================

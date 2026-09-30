@@ -407,14 +407,17 @@ export function FlujoCajaClient({
           isPositive: false,
         })
       } else if (e.categoria === 'FINANCIERO') {
+        const isPrestamo = e.itemConcepto?.toLowerCase().includes('préstamo') || 
+                           e.itemConcepto?.toLowerCase().includes('prestamo') || 
+                           e.itemConcepto?.toLowerCase().includes('cuota')
         movements.push({
           id: `eg-${e.id}`,
           fecha: e.createdAt,
           tipo: 'EGRESO_SERVICIO',
-          concepto: `Bancario / ITF: ${e.itemConcepto}`,
+          concepto: isPrestamo ? `Préstamo / Cuota: ${e.itemConcepto}` : `Bancario / ITF: ${e.itemConcepto}`,
           entidad: e.persona || 'Víctor',
           monto: e.costoTotal,
-          detalle: e.subcategoria ? `Banco: ${e.subcategoria}` : 'ITF / Comisión Bancaria',
+          detalle: e.subcategoria ? `Banco: ${e.subcategoria}` : (isPrestamo ? 'Amortización Préstamo BCP' : 'ITF / Comisión Bancaria'),
           isPositive: false,
         })
       } else if (e.categoria === 'INSUMO') {
