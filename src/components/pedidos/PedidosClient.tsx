@@ -45,7 +45,8 @@ import {
   ArrowUp,
   ArrowDown,
   MessageCircle,
-  AtSign
+  AtSign,
+  MapPin
 } from 'lucide-react'
 import { DateFilterControl } from '@/components/ui/DateFilterControl'
 import { DateRange, getPresetDateRange, isDateInRange, formatToYMD } from '@/lib/date-utils'
@@ -1150,8 +1151,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       {/* 3. PANEL MAESTRO: FILTROS + TABLA / TARJETAS EN UN SOLO CONTENEDOR        */}
       {/* ========================================================================= */}
       <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl shadow-xs overflow-hidden">
-        {/* Toolbar Integrada en 1 Fila (Opción 1: Buscador Principal + Selectores Dropdown) */}
-        <div className="p-2.5 sm:p-3 bg-[#FFFFFF] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+        {/* Toolbar Integrada en 1 Fila (Buscador Principal + Selectores Dropdown) */}
+        <div className="p-2.5 sm:p-3 bg-[#FFFFFF] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
           {/* Buscador Amplio */}
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#75695D]" />
@@ -1179,7 +1180,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
           </div>
 
           {/* Grupo de Filtros Compactos a la Derecha */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between sm:justify-end shrink-0">
+          <div className="flex items-center gap-2 flex-wrap justify-between md:justify-end shrink-0">
             {/* Filtro de Fecha */}
             <DateFilterControl
               value={dateRange}
@@ -1200,7 +1201,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
               }}
               className="h-8.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2.5 text-xs font-semibold text-[#241C15] cursor-pointer focus:outline-none"
             >
-              <option value="TODOS">Todos los estados ({pedidos.length})</option>
+              <option value="TODOS">Estados: Todos ({pedidos.length})</option>
               {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => {
                 const count = pedidos.filter(p => p.estado === stKey).length
                 return (
@@ -1220,7 +1221,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
               }}
               className="h-8.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2.5 text-xs font-semibold text-[#241C15] cursor-pointer focus:outline-none"
             >
-              <option value="TODOS">Todos los pagos</option>
+              <option value="TODOS">Pagos: Todos</option>
               <option value="PAGADO">100% Pagado</option>
               <option value="PENDIENTE">Con Saldo</option>
             </select>
@@ -1235,8 +1236,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
               className="h-8.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2.5 text-xs font-semibold text-[#241C15] cursor-pointer focus:outline-none"
             >
               <option value="TODOS">Postventa: Todos</option>
-              <option value="PENDIENTE">Postventa Pendiente ({pedidos.filter(p => !p.seguimientoPostventa && p.estado !== 'CANCELADO').length})</option>
-              <option value="REALIZADO">Postventa Realizada ({pedidos.filter(p => p.seguimientoPostventa).length})</option>
+              <option value="PENDIENTE">Postventa Pend. ({pedidos.filter(p => !p.seguimientoPostventa && p.estado !== 'CANCELADO').length})</option>
+              <option value="REALIZADO">Postventa Realiz. ({pedidos.filter(p => p.seguimientoPostventa).length})</option>
             </select>
 
             {/* Selector de Filas */}
@@ -1248,9 +1249,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
               }}
               className="h-8.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2.5 text-xs font-semibold text-[#241C15] cursor-pointer focus:outline-none"
             >
-              <option value={10}>10 pedidos</option>
-              <option value={20}>20 pedidos</option>
-              <option value={50}>50 pedidos</option>
+              <option value={10}>10 por pág.</option>
+              <option value={20}>20 por pág.</option>
+              <option value={50}>50 por pág.</option>
               <option value={9999}>Todos ({filteredPedidos.length})</option>
             </select>
           </div>
@@ -1270,10 +1271,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         ) : (
           <div className="border-t border-[#E2D9CC]">
             <div className="w-full">
-              <Table className="w-full">
+              <Table className="w-full table-fixed">
                 <TableHeader className="bg-[#FAF8F5]/80 border-b border-[#E2D9CC]">
                   <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-                    <TableHead className="px-4 py-3 text-xs font-bold text-[#75695D]">
+                    <TableHead className="w-[28%] px-4 py-3 text-xs font-bold text-[#75695D]">
                       <button
                         onClick={() => handleSort('fecha')}
                         className="flex items-center gap-1.5 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer"
@@ -1287,7 +1288,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                       </button>
                     </TableHead>
 
-                    <TableHead className="px-3 py-3 text-xs font-bold text-[#75695D]">
+                    <TableHead className="w-[30%] px-3 py-3 text-xs font-bold text-[#75695D]">
                       <button
                         onClick={() => handleSort('cantidad')}
                         className="flex items-center gap-1 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer"
@@ -1301,11 +1302,11 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                       </button>
                     </TableHead>
 
-                    <TableHead className="w-40 px-3 py-3 text-xs font-bold text-[#75695D]">
+                    <TableHead className="w-[14%] px-3 py-3 text-xs font-bold text-[#75695D]">
                       Entrega & Destino
                     </TableHead>
 
-                    <TableHead className="w-36 px-3 py-3 text-center text-xs font-bold text-[#75695D]">
+                    <TableHead className="w-[14%] px-3 py-3 text-center text-xs font-bold text-[#75695D]">
                       <button
                         onClick={() => handleSort('estado')}
                         className="flex items-center justify-center gap-1 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer mx-auto"
@@ -1319,7 +1320,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                       </button>
                     </TableHead>
 
-                    <TableHead className="w-40 px-4 py-3 text-right">
+                    <TableHead className="w-[14%] px-4 py-3 text-right">
                       <button
                         onClick={() => handleSort('total')}
                         className="flex items-center gap-1 text-xs font-bold text-[#75695D] hover:text-[#241C15] transition-colors cursor-pointer ml-auto"
@@ -1346,13 +1347,13 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                         className="border-b border-[#E2D9CC]/50 hover:bg-[#FAF8F5]/80 transition-colors cursor-pointer group"
                       >
                         {/* 1. Pedido & Cliente */}
-                        <TableCell className="px-4 py-3 align-middle">
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-sm text-[#241C15] group-hover:text-[#A36F4C] transition-colors truncate">
+                        <TableCell className="px-4 py-3 align-middle whitespace-normal min-w-0">
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-bold text-sm text-[#241C15] group-hover:text-[#A36F4C] transition-colors truncate" title={p.cliente}>
                                 {p.cliente}
                               </span>
-                              <span className="font-mono font-bold text-xs text-[#A36F4C]">
+                              <span className="font-mono font-bold text-[11px] px-1.5 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC] text-[#8C5D3D] shrink-0">
                                 {p.codigo}
                               </span>
                             </div>
@@ -1361,7 +1362,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                               {p.canalVenta && (
                                 <>
                                   <span className="text-[#D4BEA7]">•</span>
-                                  <span>{p.canalVenta}</span>
+                                  <span className="text-[10px] font-medium text-[#75695D]">{p.canalVenta}</span>
                                 </>
                               )}
                               {p.handleSocial && (
@@ -1401,8 +1402,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                         </TableCell>
 
                         {/* 2. Productos y Colores Asignados */}
-                        <TableCell className="px-3 py-3 align-middle min-w-0">
-                          <div className="space-y-1.5 max-w-[320px]">
+                        <TableCell className="px-3 py-3 align-middle whitespace-normal min-w-0">
+                          <div className="space-y-1.5 min-w-0">
                             {/* Resumen si hay más de 1 modelo */}
                             {p.items.length > 1 && (
                               <div className="flex items-center gap-1.5 text-[11px] text-[#75695D]">
@@ -1410,18 +1411,18 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                                   {p.totalItemsCount} {p.totalItemsCount === 1 ? 'pieza' : 'piezas'}
                                 </span>
                                 <span className="text-[#D4BEA7]">•</span>
-                                <span>{p.items.length} modelos</span>
+                                <span>{p.items.length} {p.items.length === 1 ? 'modelo' : 'modelos'}</span>
                               </div>
                             )}
 
                             {/* Desglose de piezas y sus colores */}
-                            <div className="space-y-1.5">
+                            <div className="space-y-1 min-w-0">
                               {p.items.slice(0, 3).map((it, idx) => {
                                 const itemColores = getItemColors(it, filamentos)
                                 return (
-                                  <div key={it.id || idx} className="text-xs">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <span className="font-semibold text-[#241C15] truncate max-w-[210px]" title={it.nombreProductoSnapshot}>
+                                  <div key={it.id || idx} className="text-xs min-w-0">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span className="font-semibold text-[#241C15] truncate" title={it.nombreProductoSnapshot}>
                                         {it.nombreProductoSnapshot}
                                       </span>
                                       <span className="font-mono font-bold text-[#A36F4C] text-[11px] shrink-0">
@@ -1429,7 +1430,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                                       </span>
                                     </div>
 
-                                    {itemColores.length > 0 ? (
+                                    {itemColores.length > 0 && (
                                       <div className="flex flex-wrap items-center gap-1 mt-0.5">
                                         {itemColores.map((col, cIdx) => (
                                           <span
@@ -1441,14 +1442,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                                               className="h-2 w-2 rounded-full border border-black/20 shrink-0 shadow-2xs"
                                               style={{ backgroundColor: col.codigoHex || '#1E1E1E' }}
                                             />
-                                            <span className="truncate max-w-[100px]">{col.nombreColor}</span>
+                                            <span className="truncate max-w-[110px]">{col.nombreColor}</span>
                                           </span>
                                         ))}
                                       </div>
-                                    ) : (
-                                      <span className="text-[10px] text-[#A89F91] italic block">
-                                        Sin color asignado
-                                      </span>
                                     )}
                                   </div>
                                 )
@@ -1464,92 +1461,100 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                         </TableCell>
 
                         {/* 3. Entrega & Destino */}
-                        <TableCell className="w-40 px-3 py-3 align-middle">
-                          <div className="space-y-0.5 text-xs">
+                        <TableCell className="px-3 py-3 align-middle whitespace-normal min-w-0">
+                          <div className="space-y-1 text-xs min-w-0">
                             {p.diaEntregaPrometida ? (
-                              <div className="font-medium text-[#241C15] truncate">
-                                {p.diaEntregaPrometida}
+                              <div className="font-semibold text-[#241C15] flex items-center gap-1.5 truncate" title={p.diaEntregaPrometida}>
+                                <Calendar className="h-3.5 w-3.5 text-[#A36F4C] shrink-0" />
+                                <span className="truncate">{p.diaEntregaPrometida}</span>
                               </div>
                             ) : (
-                              <div className="text-[#A89F91]">Sin fecha</div>
+                              <div className="text-[#A89F91] text-xs">Sin fecha</div>
                             )}
                             {p.destinoEnvio && (
-                              <div className="text-[11px] text-[#75695D] truncate">
-                                {p.destinoEnvio}
+                              <div className="text-[11px] text-[#75695D] flex items-center gap-1.5 truncate" title={p.destinoEnvio}>
+                                <MapPin className="h-3 w-3 text-[#75695D]/70 shrink-0" />
+                                <span className="truncate">{p.destinoEnvio}</span>
                               </div>
                             )}
                           </div>
                         </TableCell>
 
                         {/* 4. Estado con Selector Rápido & Postventa */}
-                        <TableCell className="w-36 px-3 py-3 align-middle text-center" onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={p.estado}
-                            onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
-                            className={`text-xs font-bold rounded-xl px-2.5 py-1 border cursor-pointer focus:outline-none transition-all w-full ${
-                              p.estado === 'PENDIENTE'
-                                ? 'bg-[#FEF9C3]/70 text-[#854D0E] border-[#FDE047]'
-                                : p.estado === 'PAGO_VALIDADO'
-                                ? 'bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0]'
-                                : p.estado === 'EN_PRODUCCION'
-                                ? 'bg-[#DBEAFE]/70 text-[#1D4ED8] border-[#93C5FD]'
-                                : p.estado === 'LISTO_ENTREGA'
-                                ? 'bg-[#F3E8FF] text-[#7E22CE] border-[#D8B4FE]'
-                                : p.estado === 'ENTREGADO'
-                                ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
-                                : 'bg-[#F3F4F6] text-[#6B7280] border-[#E5E7EB]'
-                            }`}
-                          >
-                            {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
-                              <option key={stKey} value={stKey}>
-                                {conf.label}
-                              </option>
-                            ))}
-                          </select>
+                        <TableCell className="px-3 py-3 align-middle text-center whitespace-normal min-w-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex flex-col items-center gap-1.5 w-full max-w-[136px] mx-auto min-w-0">
+                            <select
+                              value={p.estado}
+                              onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
+                              className={`text-[11px] font-bold rounded-xl px-2 py-1 border cursor-pointer focus:outline-none transition-all w-full text-center truncate shadow-2xs ${
+                                p.estado === 'PENDIENTE'
+                                  ? 'bg-[#FEF9C3]/70 text-[#854D0E] border-[#FDE047]'
+                                  : p.estado === 'PAGO_VALIDADO'
+                                  ? 'bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0]'
+                                  : p.estado === 'EN_PRODUCCION'
+                                  ? 'bg-[#DBEAFE]/70 text-[#1D4ED8] border-[#93C5FD]'
+                                  : p.estado === 'LISTO_ENTREGA'
+                                  ? 'bg-[#F3E8FF] text-[#7E22CE] border-[#D8B4FE]'
+                                  : p.estado === 'ENTREGADO'
+                                  ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]'
+                                  : 'bg-[#F3F4F6] text-[#6B7280] border-[#E5E7EB]'
+                              }`}
+                            >
+                              {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
+                                <option key={stKey} value={stKey}>
+                                  {conf.label}
+                                </option>
+                              ))}
+                            </select>
 
-                          <button
-                            type="button"
-                            onClick={(e) => handleTogglePostventa(p.id, !p.seguimientoPostventa, e)}
-                            className={`w-full mt-1.5 inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer shadow-2xs ${
-                              p.seguimientoPostventa
-                                ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] hover:bg-[#DCF4E3]'
-                                : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:bg-[#F4EFEA] hover:text-[#241C15]'
-                            }`}
-                            title={p.seguimientoPostventa ? `Postventa realizada ${p.fechaPostventa ? `(${formatDate(p.fechaPostventa)})` : ''}. Clic para cambiar` : 'Clic para marcar postventa como realizada'}
-                          >
-                            {p.seguimientoPostventa ? (
-                              <>
-                                <CheckCircle2 className="h-3 w-3 shrink-0 text-[#1E5E3A]" />
-                                <span>Postventa ✓</span>
-                              </>
-                            ) : (
-                              <>
-                                <Clock className="h-3 w-3 shrink-0 text-[#A36F4C]" />
-                                <span>Postventa pend.</span>
-                              </>
-                            )}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleTogglePostventa(p.id, !p.seguimientoPostventa, e)}
+                              className={`w-full inline-flex items-center justify-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer shadow-2xs ${
+                                p.seguimientoPostventa
+                                  ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] hover:bg-[#DCF4E3]'
+                                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+                              }`}
+                              title={p.seguimientoPostventa ? `Postventa realizada ${p.fechaPostventa ? `(${formatDate(p.fechaPostventa)})` : ''}. Clic para cambiar` : 'Clic para marcar postventa como realizada'}
+                            >
+                              {p.seguimientoPostventa ? (
+                                <>
+                                  <CheckCircle2 className="h-3 w-3 shrink-0 text-[#1E5E3A]" />
+                                  <span className="truncate">Postventa ✓</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="h-3 w-3 shrink-0 text-[#A36F4C]" />
+                                  <span className="truncate">Postventa pend.</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </TableCell>
 
                         {/* 5. Total & Liquidación */}
-                        <TableCell className="w-40 px-4 py-3 text-right align-middle">
-                          <div className="space-y-0.5">
-                            <div className="font-mono font-bold text-sm text-[#241C15]">
+                        <TableCell className="px-4 py-3 text-right align-middle whitespace-normal min-w-0">
+                          <div className="flex flex-col items-end gap-1 min-w-0">
+                            <div className="font-mono font-black text-sm text-[#241C15]">
                               {formatCurrency(p.total)}
                             </div>
-                            <div className="flex items-center justify-end gap-1.5 text-[11px]">
+                            <div className="flex flex-col items-end gap-0.5">
                               {isFullyPaid ? (
-                                <span className="font-semibold text-[#1E5E3A]">
-                                  100% Pagado
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#1E5E3A] bg-[#EBF7EE] border border-[#B4E3C0] px-1.5 py-0.5 rounded-md">
+                                  <CheckCircle2 className="h-2.5 w-2.5 shrink-0" />
+                                  <span>100% Pagado</span>
                                 </span>
                               ) : p.montoPagado > 0 ? (
                                 <>
-                                  <span className="font-mono text-[#1E5E3A]">+{formatCurrency(p.montoPagado)}</span>
-                                  <span className="text-[#D4BEA7]">•</span>
-                                  <span className="font-mono text-[#854D0E]">Resta {formatCurrency(p.saldoPendiente)}</span>
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold font-mono text-[#854D0E] bg-[#FEF9C3] border border-[#FDE047] px-1.5 py-0.2 rounded-md">
+                                    Resta {formatCurrency(p.saldoPendiente)}
+                                  </span>
+                                  <span className="text-[10px] font-mono text-[#1E5E3A]">
+                                    +{formatCurrency(p.montoPagado)}
+                                  </span>
                                 </>
                               ) : (
-                                <span className="text-[#DC2626] font-medium">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#DC2626] bg-[#FEE2E2] border border-[#FECACA] px-1.5 py-0.5 rounded-md">
                                   Sin anticipo
                                 </span>
                               )}
