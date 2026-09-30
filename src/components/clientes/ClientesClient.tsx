@@ -51,6 +51,24 @@ import {
   getClienteDetalle 
 } from '@/actions/clientes'
 
+function InstagramIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  )
+}
+
 interface ClientesClientProps {
   initialClientes: ClienteItem[]
 }
@@ -577,6 +595,21 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                           <span className="text-[#75695D] text-[11px] italic block">Sin teléfono</span>
                         )}
 
+                        {c.handleSocial && (
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={`https://instagram.com/${c.handleSocial.replace(/^@/, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[#FDF2F8] border border-[#FBCFE8] text-[#BE185D] hover:bg-[#FCE7F3] text-[11px] font-bold transition-colors cursor-pointer shadow-2xs"
+                              title="Abrir perfil de Instagram"
+                            >
+                              <InstagramIcon className="h-3 w-3 shrink-0" />
+                              <span className="font-mono">@{c.handleSocial.replace(/^@/, '')}</span>
+                            </a>
+                          </div>
+                        )}
+
                         {c.email && (
                           <div className="flex items-center gap-1 text-[11px] text-[#75695D] truncate" title={c.email}>
                             <Mail className="h-3 w-3 shrink-0 text-[#A36F4C]" />
@@ -716,16 +749,29 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                 </div>
 
                 {/* Fila 3: Acciones Móvil */}
-                <div className="flex items-center gap-2 pt-1 border-t border-[#E2D9CC]">
+                <div className="flex items-center gap-2 pt-1 border-t border-[#E2D9CC] flex-wrap">
                   {c.telefono ? (
                     <a
                       href={getWhatsAppUrl(c.telefono, c.nombre)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 h-8 px-3 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                      className="flex-1 min-w-[100px] h-8 px-2.5 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
                     >
                       <MessageCircle className="h-3.5 w-3.5 fill-[#1E5E3A]" />
                       <span>WhatsApp</span>
+                    </a>
+                  ) : null}
+
+                  {c.handleSocial ? (
+                    <a
+                      href={`https://instagram.com/${c.handleSocial.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[100px] h-8 px-2.5 rounded-xl bg-[#FDF2F8] border border-[#FBCFE8] text-[#BE185D] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                      title="Abrir Instagram"
+                    >
+                      <InstagramIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span>Instagram</span>
                     </a>
                   ) : null}
 
@@ -1040,22 +1086,34 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                 </div>
 
                 {/* Acciones de Contacto Rápido */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   {selectedDetalle.telefono && (
                     <a
                       href={getWhatsAppUrl(selectedDetalle.telefono, selectedDetalle.nombre)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 h-9 px-3 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs hover:bg-[#DCF4E3] transition-colors"
+                      className="flex-1 min-w-[140px] h-9 px-3 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs hover:bg-[#DCF4E3] transition-colors"
                     >
                       <MessageCircle className="h-4 w-4 fill-[#1E5E3A]" />
                       <span>Escribir por WhatsApp</span>
                     </a>
                   )}
 
+                  {selectedDetalle.handleSocial && (
+                    <a
+                      href={`https://ig.me/m/${selectedDetalle.handleSocial.replace(/^@/, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[140px] h-9 px-3 rounded-xl bg-[#FDF2F8] border border-[#FBCFE8] text-[#BE185D] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs hover:bg-[#FCE7F3] transition-colors"
+                    >
+                      <InstagramIcon className="h-4 w-4 shrink-0" />
+                      <span>Chat Instagram (@{selectedDetalle.handleSocial.replace(/^@/, '')})</span>
+                    </a>
+                  )}
+
                   <Link
                     href={`/pedidos`}
-                    className="flex-1 h-9 px-3 rounded-xl bg-[#A36F4C] hover:bg-[#8C5D3D] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                    className="flex-1 min-w-[140px] h-9 px-3 rounded-xl bg-[#A36F4C] hover:bg-[#8C5D3D] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Crear Nuevo Pedido</span>

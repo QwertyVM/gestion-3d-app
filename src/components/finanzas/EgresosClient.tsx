@@ -193,7 +193,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
   const [search, setSearch] = useState('')
   const [categoriaFilter, setCategoriaFilter] = useState<string>('TODOS')
   const [tagFilter, setTagFilter] = useState<string>('TODOS')
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('TODO'))
   const [openModal, setOpenModal] = useState(false)
   const [openEditModal, setOpenEditModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -43,14 +43,51 @@ import {
   Pencil,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  MessageCircle,
+  AtSign
 } from 'lucide-react'
 import { DateFilterControl } from '@/components/ui/DateFilterControl'
 import { DateRange, getPresetDateRange, isDateInRange, formatToYMD } from '@/lib/date-utils'
 import { EstadoPedido, TipoPrecio } from '@prisma/client'
-import { createPedido, updateEstadoPedido, updatePedido, addPagoPedido, updatePagoPedido, deletePagoPedido, deletePedido } from '@/actions/pedidos'
+import { createPedido, updateEstadoPedido, updatePedido, addPagoPedido, updatePagoPedido, deletePagoPedido, deletePedido, toggleSeguimientoPostventa } from '@/actions/pedidos'
 import { formatDate } from '@/lib/utils'
 import { MultiColorPicker } from '@/components/ui/MultiColorPicker'
+
+function InstagramIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
+    </svg>
+  )
+}
+
+function getInstagramUrl(handle: string) {
+  const clean = handle.replace(/^@/, '').trim()
+  return `https://instagram.com/${clean}`
+}
+
+function getInstagramDirectUrl(handle: string) {
+  const clean = handle.replace(/^@/, '').trim()
+  return `https://ig.me/m/${clean}`
+}
+
+function getWhatsAppPostventaUrl(phone: string, clientName: string, codigo: string) {
+  const cleanPhone = phone.replace(/\D/g, '')
+  const fullPhone = cleanPhone.length === 9 ? `51${cleanPhone}` : cleanPhone
+  const msg = encodeURIComponent(`¡Hola ${clientName}! 👋 Te escribimos de NOVA para saber cómo te fue con tu pedido ${codigo}. ¡Esperamos que todo haya quedado genial! Cuéntanos si todo llegó bien o si tienes alguna consulta.`)
+  return `https://wa.me/${fullPhone}?text=${msg}`
+}
 
 export interface ItemPedidoView {
   id: string
@@ -110,6 +147,7 @@ export interface PedidoView {
   dni?: string | null
   telefono: string | null
   canalVenta: string | null
+  handleSocial?: string | null
   destinoEnvio: string | null
   diaEntregaPrometida: string | null
   notas: string | null
@@ -120,6 +158,9 @@ export interface PedidoView {
   total: number
   montoPagado: number
   saldoPendiente: number
+  seguimientoPostventa: boolean
+  fechaPostventa?: string | null
+  notasPostventa?: string | null
   items: ItemPedidoView[]
   pagos: PagoPedidoView[]
   totalItemsCount: number
@@ -151,10 +192,23 @@ export interface FilamentoOption {
   estado?: string
 }
 
+export interface ClienteOption {
+  id: string
+  nombre: string
+  telefono?: string | null
+  canalOrigen?: string | null
+  canalPreferido?: string | null
+  handleSocial?: string | null
+  direccion?: string | null
+  distrito?: string | null
+  dni?: string | null
+}
+
 interface PedidosClientProps {
   pedidosIniciales: PedidoView[]
   productos: ProductoOption[]
   filamentos: FilamentoOption[]
+  clientesIniciales?: ClienteOption[]
 }
 
 interface FormItemState {
@@ -243,11 +297,12 @@ const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; col
   }
 }
 
-export function PedidosClient({ pedidosIniciales, productos, filamentos }: PedidosClientProps) {
+export function PedidosClient({ pedidosIniciales, productos, filamentos, clientesIniciales = [] }: PedidosClientProps) {
   const [pedidos, setPedidos] = useState<PedidoView[]>(pedidosIniciales)
   const [search, setSearch] = useState('')
   const [selectedEstadoFilter, setSelectedEstadoFilter] = useState<string>('TODOS')
   const [selectedPagoFilter, setSelectedPagoFilter] = useState<string>('TODOS')
+  const [selectedPostventaFilter, setSelectedPostventaFilter] = useState<'TODOS' | 'PENDIENTE' | 'REALIZADO'>('TODOS')
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false)
   const [selectedPedidoDetail, setSelectedPedidoDetail] = useState<PedidoView | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -278,6 +333,13 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingPedido, setEditingPedido] = useState<PedidoView | null>(null)
   const [editEstado, setEditEstado] = useState<EstadoPedido>('PENDIENTE')
+  const [editSeguimientoPostventa, setEditSeguimientoPostventa] = useState(false)
+  const [editFechaPostventa, setEditFechaPostventa] = useState<string | null>(null)
+  const [editNotasPostventa, setEditNotasPostventa] = useState('')
+
+  // Estado para notas y toggle de postventa en modal de detalle
+  const [detailPostventaNotas, setDetailPostventaNotas] = useState('')
+  const [isSavingPostventaNotas, setIsSavingPostventaNotas] = useState(false)
 
   // Estado para Vista de Tabla Interactiva y Paginación
   const [sortField, setSortField] = useState<'fecha' | 'codigo' | 'cliente' | 'cantidad' | 'total' | 'saldoPendiente' | 'estado'>('fecha')
@@ -293,6 +355,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   const [formCliente, setFormCliente] = useState('')
   const [formTelefono, setFormTelefono] = useState('')
   const [formCanal, setFormCanal] = useState('WhatsApp')
+  const [formHandleSocial, setFormHandleSocial] = useState('')
   const [formDestino, setFormDestino] = useState('')
   const [formDiaEntrega, setFormDiaEntrega] = useState('')
   const [formNotas, setFormNotas] = useState('')
@@ -301,6 +364,94 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
   const [formMetodoPago, setFormMetodoPago] = useState('YAPE')
   const [formNotasPago, setFormNotasPago] = useState('')
   const [formDescontarStock, setFormDescontarStock] = useState(true)
+
+  // Autocompletado de clientes existentes
+  const [clientSuggestions, setClientSuggestions] = useState<ClienteOption[]>([])
+  const [showClientSuggestions, setShowClientSuggestions] = useState(false)
+
+  // Sincronizar notas de postventa cuando se abre o cambia el detalle del pedido
+  useEffect(() => {
+    if (selectedPedidoDetail) {
+      setDetailPostventaNotas(selectedPedidoDetail.notasPostventa || '')
+    }
+  }, [selectedPedidoDetail?.id, selectedPedidoDetail?.notasPostventa])
+
+  const handleClienteChange = (val: string) => {
+    setFormCliente(val)
+    if (!val.trim()) {
+      setClientSuggestions([])
+      setShowClientSuggestions(false)
+      return
+    }
+    const q = val.toLowerCase()
+    const matches = (clientesIniciales || []).filter(c =>
+      c.nombre.toLowerCase().includes(q) ||
+      (c.handleSocial && c.handleSocial.toLowerCase().includes(q)) ||
+      (c.telefono && c.telefono.includes(q))
+    ).slice(0, 5)
+    setClientSuggestions(matches)
+    setShowClientSuggestions(matches.length > 0)
+  }
+
+  const handleSelectClient = (c: ClienteOption) => {
+    setFormCliente(c.nombre)
+    if (c.telefono) setFormTelefono(c.telefono)
+    if (c.handleSocial) setFormHandleSocial(c.handleSocial)
+    if (c.canalOrigen || c.canalPreferido) setFormCanal(c.canalOrigen || c.canalPreferido || 'WhatsApp')
+    if (c.direccion || c.distrito) setFormDestino(c.direccion || c.distrito || '')
+    setShowClientSuggestions(false)
+  }
+
+  const handleTogglePostventa = async (pedidoId: string, nuevoEstado: boolean, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const nowIso = new Date().toISOString()
+    // Actualización optimista inmediata
+    setPedidos(prev => prev.map(p => {
+      if (p.id === pedidoId) {
+        return {
+          ...p,
+          seguimientoPostventa: nuevoEstado,
+          fechaPostventa: nuevoEstado ? nowIso : null
+        }
+      }
+      return p
+    }))
+    if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
+      setSelectedPedidoDetail(prev => prev ? {
+        ...prev,
+        seguimientoPostventa: nuevoEstado,
+        fechaPostventa: nuevoEstado ? nowIso : null
+      } : null)
+    }
+
+    try {
+      const res = await toggleSeguimientoPostventa(pedidoId, nuevoEstado)
+      if (res.success && res.pedido) {
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
+          setSelectedPedidoDetail(res.pedido as any)
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling postventa:', err)
+    }
+  }
+
+  const handleSavePostventaNotas = async () => {
+    if (!selectedPedidoDetail) return
+    setIsSavingPostventaNotas(true)
+    try {
+      const res = await toggleSeguimientoPostventa(selectedPedidoDetail.id, selectedPedidoDetail.seguimientoPostventa, detailPostventaNotas)
+      if (res.success && res.pedido) {
+        setPedidos(prev => prev.map(p => p.id === selectedPedidoDetail.id ? (res.pedido as any) : p))
+        setSelectedPedidoDetail(res.pedido as any)
+      }
+    } catch (err) {
+      console.error('Error saving postventa notas:', err)
+    } finally {
+      setIsSavingPostventaNotas(false)
+    }
+  }
 
   // Lista dinámica de ítems
   const [formItems, setFormItems] = useState<FormItemState[]>(() => {
@@ -422,6 +573,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
     setFormCliente('')
     setFormTelefono('')
     setFormCanal('WhatsApp')
+    setFormHandleSocial('')
+    setClientSuggestions([])
+    setShowClientSuggestions(false)
     setFormDestino('')
     setFormDiaEntrega('')
     setFormNotas('')
@@ -469,6 +623,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         cliente: formCliente.trim(),
         telefono: formTelefono.trim() || undefined,
         canalVenta: formCanal,
+        handleSocial: formHandleSocial.trim() || undefined,
         destinoEnvio: formDestino.trim() || undefined,
         diaEntregaPrometida: formDiaEntrega.trim() || undefined,
         notas: formNotas.trim() || undefined,
@@ -514,11 +669,15 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
     setFormCliente(p.cliente)
     setFormTelefono(p.telefono || '')
     setFormCanal(p.canalVenta || 'WhatsApp')
+    setFormHandleSocial(p.handleSocial || '')
     setFormDestino(p.destinoEnvio || '')
     setFormDiaEntrega(p.diaEntregaPrometida || '')
     setFormNotas(p.notas || '')
     setFormCostoEnvio(p.costoEnvio ? p.costoEnvio.toString() : '')
     setEditEstado(p.estado)
+    setEditSeguimientoPostventa(p.seguimientoPostventa || false)
+    setEditFechaPostventa(p.fechaPostventa || null)
+    setEditNotasPostventa(p.notasPostventa || '')
     setFormItems(p.items.map((it, idx) => {
       const rawCols = it.coloresIds && it.coloresIds.length > 0
         ? it.coloresIds
@@ -559,10 +718,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
         cliente: formCliente.trim(),
         telefono: formTelefono.trim() || undefined,
         canalVenta: formCanal,
+        handleSocial: formHandleSocial.trim() || undefined,
         destinoEnvio: formDestino.trim() || undefined,
         diaEntregaPrometida: formDiaEntrega.trim() || undefined,
         notas: formNotas.trim() || undefined,
         estado: editEstado,
+        seguimientoPostventa: editSeguimientoPostventa,
+        fechaPostventa: editFechaPostventa,
+        notasPostventa: editNotasPostventa.trim() || undefined,
         costoEnvio: Number(formCostoEnvio) || 0,
         items: formItems.map(it => ({
           productoId: it.productoId,
@@ -784,6 +947,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       const matchSearch = p.cliente.toLowerCase().includes(search.toLowerCase()) ||
         p.codigo.toLowerCase().includes(search.toLowerCase()) ||
         (p.telefono && p.telefono.includes(search)) ||
+        (p.handleSocial && p.handleSocial.toLowerCase().includes(search.toLowerCase())) ||
         (p.destinoEnvio && p.destinoEnvio.toLowerCase().includes(search.toLowerCase())) ||
         p.items.some(i => {
           if (i.nombreProductoSnapshot.toLowerCase().includes(search.toLowerCase())) return true
@@ -799,9 +963,12 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
       if (selectedPagoFilter === 'PENDIENTE' && p.saldoPendiente <= 0) return false
       if (selectedPagoFilter === 'ANTICIPO' && (p.montoPagado <= 0 || p.saldoPendiente <= 0)) return false
 
+      if (selectedPostventaFilter === 'PENDIENTE' && p.seguimientoPostventa) return false
+      if (selectedPostventaFilter === 'REALIZADO' && !p.seguimientoPostventa) return false
+
       return true
     })
-  }, [pedidos, search, selectedEstadoFilter, selectedPagoFilter, dateRange])
+  }, [pedidos, search, selectedEstadoFilter, selectedPagoFilter, selectedPostventaFilter, dateRange])
 
   const handleSort = (field: 'fecha' | 'codigo' | 'cliente' | 'cantidad' | 'total' | 'saldoPendiente' | 'estado') => {
     if (sortField === field) {
@@ -1058,6 +1225,20 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
               <option value="PENDIENTE">Con Saldo</option>
             </select>
 
+            {/* Filtro de Postventa (Dropdown) */}
+            <select
+              value={selectedPostventaFilter}
+              onChange={(e) => {
+                setSelectedPostventaFilter(e.target.value as any)
+                setCurrentPage(1)
+              }}
+              className="h-8.5 rounded-xl border border-[#E2D9CC] bg-[#FAF8F5] px-2.5 text-xs font-semibold text-[#241C15] cursor-pointer focus:outline-none"
+            >
+              <option value="TODOS">Postventa: Todos</option>
+              <option value="PENDIENTE">Postventa Pendiente ({pedidos.filter(p => !p.seguimientoPostventa && p.estado !== 'CANCELADO').length})</option>
+              <option value="REALIZADO">Postventa Realizada ({pedidos.filter(p => p.seguimientoPostventa).length})</option>
+            </select>
+
             {/* Selector de Filas */}
             <select
               value={itemsPerPage}
@@ -1175,7 +1356,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                                 {p.codigo}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-xs text-[#75695D]">
+                            <div className="flex items-center gap-1.5 text-xs text-[#75695D] flex-wrap">
                               <span>{formatDate(p.fecha)}</span>
                               {p.canalVenta && (
                                 <>
@@ -1183,10 +1364,36 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                                   <span>{p.canalVenta}</span>
                                 </>
                               )}
+                              {p.handleSocial && (
+                                <>
+                                  <span className="text-[#D4BEA7]">•</span>
+                                  <a
+                                    href={getInstagramUrl(p.handleSocial)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#FDF2F8] border border-[#FBCFE8] text-[#BE185D] hover:bg-[#FCE7F3] text-[10px] font-bold transition-colors cursor-pointer shrink-0 shadow-2xs"
+                                    title="Abrir perfil de Instagram"
+                                  >
+                                    <InstagramIcon className="h-2.5 w-2.5 shrink-0" />
+                                    <span>@{p.handleSocial.replace(/^@/, '')}</span>
+                                  </a>
+                                </>
+                              )}
                               {p.telefono && (
                                 <>
                                   <span className="text-[#D4BEA7]">•</span>
-                                  <span className="font-mono">{p.telefono}</span>
+                                  <a
+                                    href={getWhatsAppPostventaUrl(p.telefono, p.cliente, p.codigo)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] hover:bg-[#DCF4E3] text-[10px] font-mono font-bold transition-colors cursor-pointer shrink-0 shadow-2xs"
+                                    title="Escribir por WhatsApp"
+                                  >
+                                    <MessageCircle className="h-2.5 w-2.5 shrink-0 fill-[#1E5E3A]" />
+                                    <span>{p.telefono}</span>
+                                  </a>
                                 </>
                               )}
                             </div>
@@ -1274,12 +1481,12 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                           </div>
                         </TableCell>
 
-                        {/* 4. Estado con Selector Rápido */}
+                        {/* 4. Estado con Selector Rápido & Postventa */}
                         <TableCell className="w-36 px-3 py-3 align-middle text-center" onClick={(e) => e.stopPropagation()}>
                           <select
                             value={p.estado}
                             onChange={(e) => handleCambiarEstado(p.id, e.target.value as EstadoPedido)}
-                            className={`text-xs font-bold rounded-xl px-2.5 py-1 border cursor-pointer focus:outline-none transition-all ${
+                            className={`text-xs font-bold rounded-xl px-2.5 py-1 border cursor-pointer focus:outline-none transition-all w-full ${
                               p.estado === 'PENDIENTE'
                                 ? 'bg-[#FEF9C3]/70 text-[#854D0E] border-[#FDE047]'
                                 : p.estado === 'PAGO_VALIDADO'
@@ -1299,6 +1506,29 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                               </option>
                             ))}
                           </select>
+
+                          <button
+                            type="button"
+                            onClick={(e) => handleTogglePostventa(p.id, !p.seguimientoPostventa, e)}
+                            className={`w-full mt-1.5 inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer shadow-2xs ${
+                              p.seguimientoPostventa
+                                ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] hover:bg-[#DCF4E3]'
+                                : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:bg-[#F4EFEA] hover:text-[#241C15]'
+                            }`}
+                            title={p.seguimientoPostventa ? `Postventa realizada ${p.fechaPostventa ? `(${formatDate(p.fechaPostventa)})` : ''}. Clic para cambiar` : 'Clic para marcar postventa como realizada'}
+                          >
+                            {p.seguimientoPostventa ? (
+                              <>
+                                <CheckCircle2 className="h-3 w-3 shrink-0 text-[#1E5E3A]" />
+                                <span>Postventa ✓</span>
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="h-3 w-3 shrink-0 text-[#A36F4C]" />
+                                <span>Postventa pend.</span>
+                              </>
+                            )}
+                          </button>
                         </TableCell>
 
                         {/* 5. Total & Liquidación */}
@@ -1438,14 +1668,58 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                     />
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 relative">
                     <Label className="text-xs text-[#241C15] font-bold">Cliente *</Label>
                     <Input
                       required
                       placeholder="Nombre del cliente..."
                       value={formCliente}
-                      onChange={(e) => setFormCliente(e.target.value)}
+                      onChange={(e) => handleClienteChange(e.target.value)}
+                      onFocus={() => {
+                        if (formCliente.trim()) {
+                          handleClienteChange(formCliente)
+                        }
+                      }}
                       className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
+                    />
+                    {showClientSuggestions && clientSuggestions.length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E2D9CC] rounded-xl shadow-lg z-50 overflow-hidden divide-y divide-[#E2D9CC]/50">
+                        {clientSuggestions.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => handleSelectClient(c)}
+                            className="w-full text-left p-2.5 hover:bg-[#FAF8F5] transition-colors cursor-pointer flex items-center justify-between gap-2"
+                          >
+                            <div>
+                              <span className="font-bold text-xs text-[#241C15] block">{c.nombre}</span>
+                              <span className="text-[10px] text-[#75695D]">
+                                {c.telefono || 'Sin telf.'} {c.handleSocial && `• @${c.handleSocial.replace(/^@/, '')}`}
+                              </span>
+                            </div>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] font-mono">
+                              {c.canalOrigen || c.canalPreferido || 'Directo'}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-[#241C15] font-bold flex items-center gap-1">
+                      <AtSign className="h-3 w-3 text-[#BE185D]" />
+                      <span>Usuario Instagram</span>
+                    </Label>
+                    <Input
+                      placeholder="@usuario"
+                      value={formHandleSocial}
+                      onChange={(e) => setFormHandleSocial(e.target.value)}
+                      className={`text-sm rounded-xl transition-colors ${
+                        formCanal === 'Instagram'
+                          ? 'bg-[#FDF2F8] border-[#FBCFE8] text-[#BE185D] focus:bg-white'
+                          : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15]'
+                      }`}
                     />
                   </div>
 
@@ -1458,7 +1732,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold">Canal de Venta</Label>
                     <select
@@ -1474,9 +1750,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       <option value="Directo">Directo / Taller</option>
                     </select>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold">Fecha / Hora Pactada de Entrega</Label>
                     <Input
@@ -1874,6 +2148,98 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                 <div>
                   <span className="text-[10px] text-[#75695D] block">Destino / Envío:</span>
                   <strong className="text-[#241C15]">{selectedPedidoDetail.destinoEnvio || 'Taller'}</strong>
+                </div>
+              </div>
+
+              {/* SECCIÓN DESTACADA: SEGUIMIENTO POSTVENTA Y CONTACTO CON EL CLIENTE */}
+              <div className="p-4 bg-[#FAF8F5] rounded-2xl border border-[#E2D9CC] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-[#E2D9CC]/70">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase tracking-wider text-[#241C15]">
+                      Seguimiento Postventa
+                    </span>
+                    {selectedPedidoDetail.seguimientoPostventa ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] text-xs font-bold">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span>Realizado {selectedPedidoDetail.fechaPostventa && `(${formatDate(selectedPedidoDetail.fechaPostventa)})`}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FEF9C3] border border-[#FDE047] text-[#854D0E] text-xs font-bold">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Pendiente de contacto</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => handleTogglePostventa(selectedPedidoDetail.id, !selectedPedidoDetail.seguimientoPostventa, e)}
+                    className={`h-8 px-3 rounded-xl font-bold text-xs cursor-pointer shadow-2xs transition-colors ${
+                      selectedPedidoDetail.seguimientoPostventa
+                        ? 'border-[#E2D9CC] bg-white text-[#75695D] hover:bg-[#F4EFEA]'
+                        : 'border-[#B4E3C0] bg-[#EBF7EE] text-[#1E5E3A] hover:bg-[#DCF4E3]'
+                    }`}
+                  >
+                    {selectedPedidoDetail.seguimientoPostventa ? 'Desmarcar Seguimiento' : '✓ Marcar como Realizado'}
+                  </Button>
+                </div>
+
+                {/* Botones de Contacto Directo según el origen donde se comunicó */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {selectedPedidoDetail.handleSocial ? (
+                    <a
+                      href={getInstagramDirectUrl(selectedPedidoDetail.handleSocial)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-10 px-3.5 rounded-xl bg-[#FDF2F8] border border-[#FBCFE8] hover:bg-[#FCE7F3] text-[#BE185D] font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-2xs"
+                      title="Abrir mensaje directo en Instagram"
+                    >
+                      <InstagramIcon className="h-4 w-4 shrink-0" />
+                      <span>Hablar por Instagram (@{selectedPedidoDetail.handleSocial.replace(/^@/, '')})</span>
+                    </a>
+                  ) : (
+                    <div className="h-10 px-3 rounded-xl bg-white border border-dashed border-[#E2D9CC] text-[#75695D] text-xs flex items-center justify-center gap-1.5 italic">
+                      <InstagramIcon className="h-3.5 w-3.5 opacity-50" />
+                      <span>Sin usuario de Instagram registrado</span>
+                    </div>
+                  )}
+
+                  {selectedPedidoDetail.telefono ? (
+                    <a
+                      href={getWhatsAppPostventaUrl(selectedPedidoDetail.telefono, selectedPedidoDetail.cliente, selectedPedidoDetail.codigo)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-10 px-3.5 rounded-xl bg-[#EBF7EE] border border-[#B4E3C0] hover:bg-[#DCF4E3] text-[#1E5E3A] font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-2xs"
+                      title="Abrir chat de WhatsApp con plantilla de seguimiento"
+                    >
+                      <MessageCircle className="h-4 w-4 shrink-0 fill-[#1E5E3A]" />
+                      <span>Escribir mensaje Postventa WhatsApp</span>
+                    </a>
+                  ) : (
+                    <div className="h-10 px-3 rounded-xl bg-white border border-dashed border-[#E2D9CC] text-[#75695D] text-xs flex items-center justify-center gap-1.5 italic">
+                      <Phone className="h-3.5 w-3.5 opacity-50" />
+                      <span>Sin teléfono registrado</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notas de postventa */}
+                <div className="flex items-center gap-2 pt-1">
+                  <Input
+                    placeholder="Notas o feedback postventa (ej: le gustó el acabado, cliente contento)..."
+                    value={detailPostventaNotas}
+                    onChange={(e) => setDetailPostventaNotas(e.target.value)}
+                    className="h-8.5 bg-white border-[#E2D9CC] text-xs rounded-xl"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleSavePostventaNotas}
+                    disabled={isSavingPostventaNotas}
+                    className="h-8.5 px-3 rounded-xl bg-[#A36F4C] hover:bg-[#8C5D3D] text-white font-bold text-xs cursor-pointer shrink-0"
+                  >
+                    {isSavingPostventaNotas ? 'Guardando...' : 'Guardar Nota'}
+                  </Button>
                 </div>
               </div>
 
@@ -2372,6 +2738,23 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                   </div>
 
                   <div className="space-y-1">
+                    <Label className="text-xs text-[#241C15] font-bold flex items-center gap-1">
+                      <AtSign className="h-3 w-3 text-[#BE185D]" />
+                      <span>Usuario Instagram</span>
+                    </Label>
+                    <Input
+                      placeholder="@usuario"
+                      value={formHandleSocial}
+                      onChange={(e) => setFormHandleSocial(e.target.value)}
+                      className={`text-sm rounded-xl transition-colors ${
+                        formCanal === 'Instagram'
+                          ? 'bg-[#FDF2F8] border-[#FBCFE8] text-[#BE185D] focus:bg-white'
+                          : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15]'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold">Teléfono / WhatsApp</Label>
                     <Input
                       placeholder="Ej: 987654321"
@@ -2380,7 +2763,9 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold">Canal de Venta</Label>
                     <select
@@ -2396,9 +2781,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       <option value="Directo">Directo / Taller</option>
                     </select>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold">Fecha / Hora Pactada de Entrega</Label>
                     <Input
@@ -2418,6 +2801,34 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos }: Pedid
                       className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
                     />
                   </div>
+                </div>
+
+                {/* Seguimiento Postventa en Edición */}
+                <div className="p-3.5 bg-[#FAF8F5] border border-[#E2D9CC] rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#241C15]">
+                    <input
+                      type="checkbox"
+                      checked={editSeguimientoPostventa}
+                      onChange={(e) => {
+                        const checked = e.target.checked
+                        setEditSeguimientoPostventa(checked)
+                        if (checked && !editFechaPostventa) {
+                          setEditFechaPostventa(new Date().toISOString())
+                        } else if (!checked) {
+                          setEditFechaPostventa(null)
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-[#E2D9CC] text-[#1E5E3A] focus:ring-[#1E5E3A] cursor-pointer"
+                    />
+                    <span>¿Seguimiento postventa realizado con el cliente?</span>
+                  </label>
+
+                  <Input
+                    placeholder="Notas postventa (opcional)..."
+                    value={editNotasPostventa}
+                    onChange={(e) => setEditNotasPostventa(e.target.value)}
+                    className="h-8 text-xs bg-white border-[#E2D9CC] rounded-xl sm:w-72"
+                  />
                 </div>
 
                 <div className="space-y-1">

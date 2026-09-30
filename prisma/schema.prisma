@@ -307,6 +307,10 @@ model Pedido {
   updatedAt           DateTime     @updatedAt
   negocio             String       @default("3D")
   dni                 String?
+  handleSocial        String?
+  seguimientoPostventa Boolean      @default(false)
+  fechaPostventa      DateTime?
+  notasPostventa      String?
   items               ItemPedido[]
   pagos               PagoPedido[]
 

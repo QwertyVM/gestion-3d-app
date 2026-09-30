@@ -106,6 +106,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
     dniSugerido?: string | null
     telefonoSugerido?: string | null
     canalSugerido?: string | null
+    handleSocialSugerido?: string | null
     destinoSugerido?: string | null
   }> = {}
 
@@ -128,8 +129,13 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
         dniSugerido: p.dni || null,
         telefonoSugerido: p.telefono || null,
         canalSugerido: p.canalVenta || null,
+        handleSocialSugerido: p.handleSocial || null,
         destinoSugerido: p.destinoEnvio || null
       }
+    }
+
+    if (p.handleSocial && !metricsMap[key].handleSocialSugerido) {
+      metricsMap[key].handleSocialSugerido = p.handleSocial
     }
 
     const m = metricsMap[key]
@@ -192,7 +198,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
       telefono: c.telefono || m.telefonoSugerido || null,
       email: c.email || null,
       canalOrigen: c.canalOrigen || canalPreferido || null,
-      handleSocial: c.handleSocial || null,
+      handleSocial: c.handleSocial || m.handleSocialSugerido || null,
       direccion: c.direccion || m.destinoSugerido || null,
       distrito: c.distrito || null,
       notas: c.notas || null,
@@ -236,7 +242,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
         telefono: m.telefonoSugerido || null,
         email: null,
         canalOrigen: canalPreferido,
-        handleSocial: null,
+        handleSocial: m.handleSocialSugerido || null,
         direccion: m.destinoSugerido || null,
         distrito: null,
         notas: null,
@@ -308,7 +314,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
     telefono: cliente?.telefono || pedidos.find((p: any) => p.telefono)?.telefono || null,
     email: cliente?.email || null,
     canalOrigen: cliente?.canalOrigen || pedidos[0]?.canalVenta || null,
-    handleSocial: cliente?.handleSocial || null,
+    handleSocial: cliente?.handleSocial || pedidos.find((p: any) => p.handleSocial)?.handleSocial || null,
     direccion: cliente?.direccion || pedidos.find((p: any) => p.destinoEnvio)?.destinoEnvio || null,
     distrito: cliente?.distrito || null,
     notas: cliente?.notas || null,
@@ -332,6 +338,9 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
       montoPagado: Number(p.montoPagado),
       saldoPendiente: Number(p.saldoPendiente),
       canalVenta: p.canalVenta,
+      handleSocial: p.handleSocial || null,
+      seguimientoPostventa: Boolean(p.seguimientoPostventa),
+      fechaPostventa: p.fechaPostventa ? p.fechaPostventa.toISOString() : null,
       items: p.items.map((it: any) => ({
         nombre: it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Producto',
         cantidad: Number(it.cantidad),

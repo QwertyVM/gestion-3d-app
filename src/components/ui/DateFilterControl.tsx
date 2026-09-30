@@ -99,7 +99,7 @@ export function DateFilterControl({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute mt-1.5 w-76 sm:w-84 rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xl z-50 p-3.5 space-y-3 ${
+          className={`absolute mt-1.5 w-76 sm:w-84 max-w-[calc(100vw-24px)] rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xl z-50 p-3.5 space-y-3 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >

@@ -46,6 +46,7 @@ export interface CreatePedidoInput {
   dni?: string | null
   telefono?: string | null
   canalVenta?: string | null
+  handleSocial?: string | null
   destinoEnvio?: string | null
   diaEntregaPrometida?: string | null
   notas?: string | null
@@ -159,6 +160,7 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
     dni: p.dni || null,
     telefono: p.telefono || null,
     canalVenta: p.canalVenta || null,
+    handleSocial: p.handleSocial || null,
     destinoEnvio: p.destinoEnvio || null,
     diaEntregaPrometida: p.diaEntregaPrometida || null,
     notas: p.notas || null,
@@ -177,6 +179,9 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
     total: Number(p.total || 0),
     montoPagado: Number(p.montoPagado || 0),
     saldoPendiente: Number(p.saldoPendiente || 0),
+    seguimientoPostventa: Boolean(p.seguimientoPostventa),
+    fechaPostventa: p.fechaPostventa instanceof Date ? p.fechaPostventa.toISOString() : (p.fechaPostventa ? String(p.fechaPostventa) : null),
+    notasPostventa: p.notasPostventa || null,
     items,
     pagos,
     totalItemsCount: items.reduce((sum: number, it: any) => sum + it.cantidad, 0),
@@ -337,11 +342,13 @@ export async function createPedido(data: CreatePedidoInput) {
           dni: data.dni?.trim() || null,
           telefono: data.telefono?.trim() || null,
           canalVenta: data.canalVenta || 'WhatsApp',
+          handleSocial: data.handleSocial?.trim() || null,
           destinoEnvio: data.destinoEnvio?.trim() || null,
           diaEntregaPrometida: data.diaEntregaPrometida?.trim() || null,
           notas: data.notas?.trim() || null,
           metodoPago: data.metodoPago || 'YAPE',
           estado: 'PENDIENTE',
+          seguimientoPostventa: false,
           costoEnvio: costoEnvioNum,
           subtotal: subtotalCalculado,
           total: totalCalculado,
@@ -352,6 +359,46 @@ export async function createPedido(data: CreatePedidoInput) {
           }
         }
       })
+
+      // Auto-sincronizar o registrar en Directorio de Clientes
+      try {
+        const clienteClean = data.cliente.trim()
+        const existingCliente = await tx.cliente.findUnique({
+          where: {
+            nombre_negocio: {
+              nombre: clienteClean,
+              negocio: targetNegocio
+            }
+          }
+        })
+
+        if (existingCliente) {
+          await tx.cliente.update({
+            where: { id: existingCliente.id },
+            data: {
+              ...(data.handleSocial?.trim() ? { handleSocial: data.handleSocial.trim() } : {}),
+              ...(data.telefono?.trim() && !existingCliente.telefono ? { telefono: data.telefono.trim() } : {}),
+              ...(data.dni?.trim() && !existingCliente.dni ? { dni: data.dni.trim() } : {}),
+              ...(data.destinoEnvio?.trim() && !existingCliente.direccion ? { direccion: data.destinoEnvio.trim() } : {})
+            }
+          })
+        } else {
+          await tx.cliente.create({
+            data: {
+              negocio: targetNegocio,
+              nombre: clienteClean,
+              dni: data.dni?.trim() || null,
+              telefono: data.telefono?.trim() || null,
+              canalOrigen: data.canalVenta || 'WhatsApp',
+              handleSocial: data.handleSocial?.trim() || null,
+              direccion: data.destinoEnvio?.trim() || null,
+              activo: true
+            }
+          })
+        }
+      } catch (errCliente) {
+        console.warn('No se pudo auto-sincronizar cliente:', errCliente)
+      }
 
       // If initial payment was made, register initial PagoPedido
       if (montoPagadoNum > 0) {
@@ -739,6 +786,7 @@ export interface UpdatePedidoInput {
   dni?: string | null
   telefono?: string | null
   canalVenta?: string | null
+  handleSocial?: string | null
   destinoEnvio?: string | null
   diaEntregaPrometida?: string | null
   notas?: string | null
@@ -746,6 +794,9 @@ export interface UpdatePedidoInput {
   costoEnvio?: number
   items: ItemPedidoInput[]
   fecha?: string | Date
+  seguimientoPostventa?: boolean
+  fechaPostventa?: string | Date | null
+  notasPostventa?: string | null
 }
 
 export async function updatePedido(id: string, data: UpdatePedidoInput) {
@@ -854,10 +905,14 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
           dni: data.dni !== undefined ? (data.dni?.trim() || null) : current.dni,
           telefono: data.telefono !== undefined ? (data.telefono?.trim() || null) : current.telefono,
           canalVenta: data.canalVenta || 'WhatsApp',
+          handleSocial: data.handleSocial !== undefined ? (data.handleSocial?.trim() || null) : current.handleSocial,
           destinoEnvio: data.destinoEnvio?.trim() || null,
           diaEntregaPrometida: data.diaEntregaPrometida?.trim() || null,
           notas: data.notas?.trim() || null,
           ...(data.estado ? { estado: data.estado } : {}),
+          ...(data.seguimientoPostventa !== undefined ? { seguimientoPostventa: data.seguimientoPostventa } : {}),
+          ...(data.fechaPostventa !== undefined ? { fechaPostventa: data.fechaPostventa ? parseDateInput(data.fechaPostventa) : null } : {}),
+          ...(data.notasPostventa !== undefined ? { notasPostventa: data.notasPostventa?.trim() || null } : {}),
           costoEnvio: costoEnvioNum,
           subtotal: subtotalCalculado,
           total: totalCalculado,
@@ -875,6 +930,33 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
         }
       })
 
+      // Sync updated client information if available
+      if (data.handleSocial?.trim() || data.telefono?.trim() || data.dni?.trim()) {
+        try {
+          const clienteClean = data.cliente.trim()
+          const existingCliente = await tx.cliente.findUnique({
+            where: {
+              nombre_negocio: {
+                nombre: clienteClean,
+                negocio: current.negocio
+              }
+            }
+          })
+          if (existingCliente) {
+            await tx.cliente.update({
+              where: { id: existingCliente.id },
+              data: {
+                ...(data.handleSocial?.trim() ? { handleSocial: data.handleSocial.trim() } : {}),
+                ...(data.telefono?.trim() && !existingCliente.telefono ? { telefono: data.telefono.trim() } : {}),
+                ...(data.dni?.trim() && !existingCliente.dni ? { dni: data.dni.trim() } : {})
+              }
+            })
+          }
+        } catch (err) {
+          console.warn('No se pudo actualizar datos del cliente:', err)
+        }
+      }
+
       return p
     })
 
@@ -886,5 +968,46 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
   } catch (error: any) {
     console.error('Error updating pedido:', error)
     return { success: false, error: error.message || 'Error al actualizar pedido' }
+  }
+}
+
+export async function toggleSeguimientoPostventa(id: string, seguimiento?: boolean, notas?: string) {
+  try {
+    const current = await prisma.pedido.findUnique({
+      where: { id }
+    })
+
+    if (!current) {
+      return { success: false, error: 'Pedido no encontrado' }
+    }
+
+    const nuevoSeguimiento = seguimiento !== undefined ? seguimiento : !current.seguimientoPostventa
+    const fecha = nuevoSeguimiento ? (current.fechaPostventa || new Date()) : null
+
+    const updated = await prisma.pedido.update({
+      where: { id },
+      data: {
+        seguimientoPostventa: nuevoSeguimiento,
+        fechaPostventa: fecha,
+        ...(notas !== undefined ? { notasPostventa: notas.trim() || null } : {})
+      },
+      include: {
+        items: {
+          include: { producto: true, colorFilamento: true }
+        },
+        pagos: {
+          orderBy: { fecha: 'asc' }
+        }
+      }
+    })
+
+    const allFilamentos = await prisma.inventarioFilamento.findMany()
+    const filMap = new Map(allFilamentos.map(f => [f.id, f]))
+
+    safeRevalidate()
+    return { success: true, pedido: serializePedido(updated, filMap) }
+  } catch (error: any) {
+    console.error('Error toggling seguimiento postventa:', error)
+    return { success: false, error: error.message || 'Error al actualizar seguimiento postventa' }
   }
 }
