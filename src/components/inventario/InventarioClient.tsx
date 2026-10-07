@@ -27,7 +27,9 @@ import {
   SlidersHorizontal,
   Flame,
   Archive,
-  RotateCcw
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -120,6 +122,14 @@ export function InventarioClient({
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<FilterTab>('todos')
   const [isPending, startTransition] = useTransition()
+
+  // Paginación (8 filamentos por página)
+  const ITEMS_PER_PAGE = 8
+  const [currentPage, setCurrentPage] = useState(1)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, activeTab])
 
   // Copy Feedback State
   const [isCopied, setIsCopied] = useState(false)
@@ -586,23 +596,20 @@ export function InventarioClient({
       })
     }
 
-    // Ordenar: Disponibles de MAYOR a MENOR stock (gramos), luego Restock/Descatalogados alfabético
-    return combined.sort((a, b) => {
-      const aIsDisp = a.estado === 'DISPONIBLE'
-      const bIsDisp = b.estado === 'DISPONIBLE'
-
-      if (aIsDisp && bIsDisp) {
-        const diff = (b.stockGramos ?? 0) - (a.stockGramos ?? 0)
-        if (diff !== 0) return diff
-        return a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' })
-      }
-
-      if (aIsDisp && !bIsDisp) return -1
-      if (!aIsDisp && bIsDisp) return 1
-
-      return a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' })
-    })
+    // Orden alfabético estricto A-Z por nombre de color (fijo y estable al modificar gramos)
+    return combined.sort((a, b) =>
+      a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' })
+    )
   }, [disponibles, restock, descatalogados, activeTab, search])
+
+  // Paginación calculada
+  const totalPages = Math.max(1, Math.ceil(filteredGridItems.length / ITEMS_PER_PAGE))
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages)
+
+  const paginatedItems = useMemo(() => {
+    const start = (safeCurrentPage - 1) * ITEMS_PER_PAGE
+    return filteredGridItems.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredGridItems, safeCurrentPage])
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 animate-in fade-in duration-200 px-1 sm:px-2 pb-16">
@@ -1025,7 +1032,7 @@ export function InventarioClient({
           <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl overflow-hidden shadow-xs">
             {/* Mobile / Tablet View (< lg): Filament Cards */}
             <div className="block lg:hidden divide-y divide-[#E2D9CC]/70">
-              {filteredGridItems.map((item, idx) => {
+              {paginatedItems.map((item, idx) => {
                 const isDescatalogado = item.estado === 'DESCATALOGADO'
                 const isDisp = item.estado === 'DISPONIBLE'
                 const rollos = item.rollos || 1
@@ -1156,7 +1163,8 @@ export function InventarioClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredGridItems.map((item, idx) => {
+                  {paginatedItems.map((item, idx) => {
+                    const globalIdx = (safeCurrentPage - 1) * ITEMS_PER_PAGE + idx + 1
                     const isDescatalogado = item.estado === 'DESCATALOGADO'
                     const isDisp = item.estado === 'DISPONIBLE'
                     const rollos = item.rollos || 1
@@ -1179,7 +1187,7 @@ export function InventarioClient({
                       >
                         {/* 1. Rank # */}
                         <TableCell className="px-2 py-3 text-center font-mono font-bold text-[#75695D]">
-                          {idx + 1}
+                          {globalIdx}
                         </TableCell>
 
                         {/* 2. Swatch & Color Name */}
@@ -1279,6 +1287,61 @@ export function InventarioClient({
                   })}
                 </TableBody>
               </Table>
+            </div>
+
+            {/* Paginación de Filamentos (8 por página) */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#FAF8F5] border-t border-[#E2D9CC]">
+              <div className="text-xs text-[#75695D] font-medium text-center sm:text-left">
+                Mostrando <span className="font-bold text-[#241C15]">{(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> -{' '}
+                <span className="font-bold text-[#241C15]">{Math.min(safeCurrentPage * ITEMS_PER_PAGE, filteredGridItems.length)}</span> de{' '}
+                <span className="font-bold text-[#241C15]">{filteredGridItems.length}</span> filamentos{' '}
+                <span className="text-[11px] text-[#A36F4C] font-semibold">(A-Z)</span>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={safeCurrentPage <= 1}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className="h-8 px-2.5 text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-white disabled:opacity-40 cursor-pointer shadow-2xs"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                    Anterior
+                  </Button>
+
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`h-8 min-w-[32px] px-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          pageNum === safeCurrentPage
+                            ? 'bg-[#A36F4C] text-white shadow-2xs'
+                            : 'bg-white text-[#75695D] hover:bg-[#FAF8F5] border border-[#E2D9CC]'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={safeCurrentPage >= totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    className="h-8 px-2.5 text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-white disabled:opacity-40 cursor-pointer shadow-2xs"
+                  >
+                    Siguiente
+                    <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}

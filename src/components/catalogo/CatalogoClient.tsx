@@ -25,7 +25,10 @@ import {
   MoreHorizontal,
   Trash2,
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Calendar
 } from 'lucide-react'
 import { useBusiness } from '@/context/BusinessContext'
 import { Badge } from '@/components/ui/badge'
@@ -106,6 +109,51 @@ export function CatalogoClient({
   const menuRef = useRef<HTMLDivElement>(null)
   const [isPending, startTransition] = useTransition()
 
+  // Paginación: 5 productos por página
+  const ITEMS_PER_PAGE = 5
+  const [currentPage, setCurrentPage] = useState(1)
+  const [ordenFilter, setOrdenFilter] = useState<'RECIENTES' | 'NOMBRE_ASC' | 'ANTIGUOS' | 'NOMBRE_DESC'>('RECIENTES')
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, estadoFilter, categoriaFilter, ordenFilter])
+
+  // Helpers de fecha de registro sin desajuste de zona horaria
+  const getTodayDateString = () => {
+    const d = new Date()
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const getDateInputString = (val?: string | Date | null) => {
+    if (!val) return getTodayDateString()
+    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+      return val.split('T')[0]
+    }
+    const d = new Date(val)
+    if (isNaN(d.getTime())) return getTodayDateString()
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const formatFechaRegistro = (rawDate: string | Date | null | undefined) => {
+    if (!rawDate) return '-'
+    const dateStr = String(rawDate).split('T')[0]
+    const parts = dateStr.split('-')
+    if (parts.length === 3) {
+      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
+      const day = parts[2]
+      const month = months[Number(parts[1]) - 1] || ''
+      const year = parts[0]
+      return `${day} ${month}. ${year}`
+    }
+    return dateStr
+  }
+
   // Modal State
   const [openModal, setOpenModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -123,7 +171,8 @@ export function CatalogoClient({
     porcentajeDescuento: '',
     imagenUrl: '',
     descripcionWeb: '',
-    destacadoWeb: false
+    destacadoWeb: false,
+    fechaRegistro: getTodayDateString()
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -199,9 +248,38 @@ export function CatalogoClient({
     return list.sort((a, b) => {
       if (a.activo && !b.activo) return -1
       if (!a.activo && b.activo) return 1
+
+      if (ordenFilter === 'RECIENTES') {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        if (timeB !== timeA) return timeB - timeA
+        return a.nombreModelo.localeCompare(b.nombreModelo, 'es', { sensitivity: 'base' })
+      }
+
+      if (ordenFilter === 'ANTIGUOS') {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+        if (timeA !== timeB) return timeA - timeB
+        return a.nombreModelo.localeCompare(b.nombreModelo, 'es', { sensitivity: 'base' })
+      }
+
+      if (ordenFilter === 'NOMBRE_DESC') {
+        return b.nombreModelo.localeCompare(a.nombreModelo, 'es', { sensitivity: 'base' })
+      }
+
+      // 'NOMBRE_ASC'
       return a.nombreModelo.localeCompare(b.nombreModelo, 'es', { sensitivity: 'base' })
     })
-  }, [productos, estadoFilter, categoriaFilter, search])
+  }, [productos, estadoFilter, categoriaFilter, search, ordenFilter])
+
+  // Paginación calculada
+  const totalPages = Math.max(1, Math.ceil(filteredProductos.length / ITEMS_PER_PAGE))
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages)
+
+  const paginatedProductos = useMemo(() => {
+    const start = (safeCurrentPage - 1) * ITEMS_PER_PAGE
+    return filteredProductos.slice(start, start + ITEMS_PER_PAGE)
+  }, [filteredProductos, safeCurrentPage])
 
   // Copy Quotation to Clipboard for WhatsApp: "[Nombre] - Menor: S/ [X] | Mayor: S/ [Y]"
   const handleCopiarCotizacion = (p: ProductoItem) => {
@@ -275,7 +353,8 @@ export function CatalogoClient({
       porcentajeDescuento: '',
       imagenUrl: '',
       descripcionWeb: '',
-      destacadoWeb: false
+      destacadoWeb: false,
+      fechaRegistro: getTodayDateString()
     })
     setOpenModal(true)
   }
@@ -297,7 +376,8 @@ export function CatalogoClient({
       porcentajeDescuento: (p as any).porcentajeDescuento ? (p as any).porcentajeDescuento.toString() : '',
       imagenUrl: p.imagenUrl || '',
       descripcionWeb: p.descripcionWeb || '',
-      destacadoWeb: p.destacadoWeb || false
+      destacadoWeb: p.destacadoWeb || false,
+      fechaRegistro: getDateInputString(p.createdAt)
     })
     setOpenModal(true)
   }
@@ -333,7 +413,8 @@ export function CatalogoClient({
       porcentajeDescuento: formData.enOferta ? (parseInt(formData.porcentajeDescuento) || 0) : 0,
       imagenUrl: formData.imagenUrl.trim() || null,
       descripcionWeb: formData.descripcionWeb.trim() || null,
-      destacadoWeb: formData.destacadoWeb
+      destacadoWeb: formData.destacadoWeb,
+      fechaRegistro: formData.fechaRegistro
     }
 
     setIsSubmitting(true)
@@ -550,6 +631,18 @@ export function CatalogoClient({
                 </option>
               ))}
             </select>
+
+            {/* Dropdown de Orden */}
+            <select
+              value={ordenFilter}
+              onChange={(e) => setOrdenFilter(e.target.value as any)}
+              className="h-10 px-3 bg-[#F8F6F2] border border-[#E2D9CC] text-xs font-bold text-[#241C15] rounded-2xl focus:border-[#A36F4C] focus:bg-white cursor-pointer min-w-[140px]"
+            >
+              <option value="RECIENTES">Más recientes</option>
+              <option value="ANTIGUOS">Más antiguos</option>
+              <option value="NOMBRE_ASC">Nombre (A - Z)</option>
+              <option value="NOMBRE_DESC">Nombre (Z - A)</option>
+            </select>
           </div>
 
           {/* Lado Derecho: Segmented Control Estado */}
@@ -596,7 +689,7 @@ export function CatalogoClient({
         </div>
 
         {/* Barra de Filtros Activos & Reset si hay búsqueda o filtros aplicados */}
-        {(search || estadoFilter !== 'TODOS' || categoriaFilter !== 'TODAS') && (
+        {(search || estadoFilter !== 'TODOS' || categoriaFilter !== 'TODAS' || ordenFilter !== 'RECIENTES') && (
           <div className="flex items-center justify-between pt-2 border-t border-[#E2D9CC]/60 text-xs text-[#75695D]">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-medium">Mostrando:</span>
@@ -618,6 +711,11 @@ export function CatalogoClient({
                   estado <strong>{estadoFilter}</strong>
                 </span>
               )}
+              {ordenFilter !== 'RECIENTES' && (
+                <span className="text-[#75695D]">
+                  orden <strong>{ordenFilter === 'NOMBRE_ASC' ? 'A - Z' : ordenFilter === 'ANTIGUOS' ? 'Más antiguos' : 'Z - A'}</strong>
+                </span>
+              )}
             </div>
             <button
               type="button"
@@ -625,6 +723,7 @@ export function CatalogoClient({
                 setSearch('')
                 setEstadoFilter('TODOS')
                 setCategoriaFilter('TODAS')
+                setOrdenFilter('RECIENTES')
               }}
               className="text-xs text-[#A36F4C] hover:text-[#8E5E3E] font-bold underline flex items-center gap-1 cursor-pointer"
             >
@@ -643,30 +742,32 @@ export function CatalogoClient({
       <div className="hidden lg:block w-full bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
         <table className="w-full text-left border-collapse table-fixed text-xs">
           <colgroup>
-            <col className="w-[34%]" />
+            <col className="w-[30%]" />
             <col className="w-[14%]" />
-            <col className="w-[20%]" />
-            <col className="w-[20%]" />
-            <col className="w-[12%]" />
+            <col className="w-[14%]" />
+            <col className="w-[18%]" />
+            <col className="w-[14%]" />
+            <col className="w-[10%]" />
           </colgroup>
           <thead>
             <tr className="bg-[#FAF8F5] border-b border-[#E2D9CC] text-[#75695D] text-[11px] font-semibold">
               <th className="py-3.5 px-4 font-bold text-left">Modelo & Familia</th>
-              <th className="py-3.5 px-4 font-bold text-right">Costo Base</th>
-              <th className="py-3.5 px-4 font-bold text-center">Precio por Menor</th>
-              <th className="py-3.5 px-4 font-bold text-center">Precio por Mayor</th>
-              <th className="py-3.5 px-4 font-bold text-center">Estado</th>
+              <th className="py-3.5 px-3 font-bold text-center">Fecha Registro</th>
+              <th className="py-3.5 px-3 font-bold text-right">Costo Base</th>
+              <th className="py-3.5 px-3 font-bold text-center">Precio por Menor</th>
+              <th className="py-3.5 px-3 font-bold text-center">Precio por Mayor</th>
+              <th className="py-3.5 px-3 font-bold text-center">Estado</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2D9CC]">
             {filteredProductos.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-[#75695D] italic bg-[#FFFFFF]">
+                <td colSpan={6} className="py-12 text-center text-[#75695D] italic bg-[#FFFFFF]">
                   No se encontraron productos con ese criterio de búsqueda
                 </td>
               </tr>
             ) : (
-              filteredProductos.map((p) => {
+              paginatedProductos.map((p) => {
                 const costo = p.costoBase || 0
 
                 return (
@@ -687,20 +788,34 @@ export function CatalogoClient({
                           <span className="font-bold text-sm text-[#241C15] block truncate" title={p.nombreModelo}>
                             {p.nombreModelo}
                           </span>
-                          <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] mt-0.5">
-                            {p.lineaCategoria || 'General'}
-                          </Badge>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC]">
+                              {p.lineaCategoria || 'General'}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Columna 2: Costo Base */}
-                    <td className="py-3 px-4 text-right font-mono font-semibold text-[#241C15] text-xs tabular-nums">
+                    {/* Columna 2: Fecha de Registro */}
+                    <td className="py-3 px-3 text-center">
+                      {p.createdAt ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[11px] font-mono text-[#5C5046] font-medium" title={`Fecha de registro: ${formatFechaRegistro(p.createdAt)}`}>
+                          <Calendar className="h-3 w-3 text-[#A36F4C]" />
+                          <span>{formatFechaRegistro(p.createdAt)}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[#A89F91] text-[11px] font-mono">-</span>
+                      )}
+                    </td>
+
+                    {/* Columna 3: Costo Base */}
+                    <td className="py-3 px-3 text-right font-mono font-semibold text-[#241C15] text-xs tabular-nums">
                       {formatCurrency(costo)}
                     </td>
 
-                    {/* Columna 3: Precio al por Menor */}
-                    <td className="py-3 px-4">
+                    {/* Columna 4: Precio al por Menor */}
+                    <td className="py-3 px-3">
                       <div className="flex justify-center text-center font-mono text-xs tabular-nums">
                         <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#A36F4C]/40 shadow-2xs ring-1 ring-[#A36F4C]/10 w-full max-w-[130px]">
                           <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Por Menor</span>
@@ -714,8 +829,8 @@ export function CatalogoClient({
                       </div>
                     </td>
 
-                    {/* Columna 4: Precio al por Mayor */}
-                    <td className="py-3 px-4">
+                    {/* Columna 5: Precio al por Mayor */}
+                    <td className="py-3 px-3">
                       <div className="flex justify-center text-center font-mono text-xs tabular-nums">
                         <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#2563EB]/40 shadow-2xs ring-1 ring-[#2563EB]/10 w-full max-w-[130px]">
                           <span className="text-[9px] text-[#2563EB] block font-sans font-bold">Por Mayor</span>
@@ -729,8 +844,8 @@ export function CatalogoClient({
                       </div>
                     </td>
 
-                    {/* Columna 5: Estado */}
-                    <td className="py-3 px-4 text-center">
+                    {/* Columna 6: Estado */}
+                    <td className="py-3 px-3 text-center">
                       {p.activo ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] border border-[#B4E3C0] text-[#1E5E3A] text-[11px] font-bold">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
@@ -758,7 +873,7 @@ export function CatalogoClient({
             No se encontraron productos
           </div>
         ) : (
-          filteredProductos.map((p) => {
+          paginatedProductos.map((p) => {
             const costo = p.costoBase || 0
 
             return (
@@ -778,9 +893,17 @@ export function CatalogoClient({
                       <span className="font-bold text-sm text-[#241C15] block truncate" title={p.nombreModelo}>
                         {p.nombreModelo}
                       </span>
-                      <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] mt-0.5">
-                        {p.lineaCategoria || 'General'}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC]">
+                          {p.lineaCategoria || 'General'}
+                        </Badge>
+                        {p.createdAt && (
+                          <span className="text-[10px] text-[#75695D] font-mono flex items-center gap-1 bg-[#FAF8F5] px-1.5 py-0.5 rounded border border-[#E2D9CC]">
+                            <Calendar className="h-2.5 w-2.5 text-[#A36F4C]" />
+                            <span>{formatFechaRegistro(p.createdAt)}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -869,6 +992,62 @@ export function CatalogoClient({
         )}
       </div>
 
+      {/* Controles de Paginación de Productos (5 por página) */}
+      {filteredProductos.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-2xs">
+          <div className="text-xs text-[#75695D] font-medium text-center sm:text-left">
+            Mostrando <span className="font-bold text-[#241C15]">{(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> -{' '}
+            <span className="font-bold text-[#241C15]">{Math.min(safeCurrentPage * ITEMS_PER_PAGE, filteredProductos.length)}</span> de{' '}
+            <span className="font-bold text-[#241C15]">{filteredProductos.length}</span> modelos 3D
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={safeCurrentPage <= 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="h-8 px-2.5 text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-[#FAF8F5] disabled:opacity-40 cursor-pointer shadow-2xs"
+              >
+                <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                Anterior
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`h-8 min-w-[32px] px-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                      pageNum === safeCurrentPage
+                        ? 'bg-[#A36F4C] text-white shadow-2xs'
+                        : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] border border-[#E2D9CC]'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={safeCurrentPage >= totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                className="h-8 px-2.5 text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-[#FAF8F5] disabled:opacity-40 cursor-pointer shadow-2xs"
+              >
+                Siguiente
+                <ChevronRight className="h-3.5 w-3.5 ml-1" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* 5. MODAL: REGISTRAR / EDITAR PRODUCTO (REDISEÑADO)                        */}
       {/* ========================================================================= */}
@@ -903,8 +1082,8 @@ export function CatalogoClient({
             {/* Formulario */}
             <div className="space-y-4">
               
-              {/* Fila 1: Nombre & Categoría */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Fila 1: Nombre, Categoría & Fecha de Registro */}
+              <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                     {is3D ? 'Nombre del Modelo *' : 'Nombre del Juego *'}
@@ -919,23 +1098,38 @@ export function CatalogoClient({
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    Categoría / Familia *
-                  </Label>
-                  <Input 
-                    value={formData.lineaCategoria}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lineaCategoria: e.target.value }))}
-                    placeholder="Ej: Macetas & Jardín, Decoración, Figuras"
-                    required
-                    list="categorias-list"
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
-                  />
-                  <datalist id="categorias-list">
-                    {categoryNamesList.map(cat => (
-                      <option key={cat} value={cat} />
-                    ))}
-                  </datalist>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
+                      Categoría / Familia *
+                    </Label>
+                    <Input 
+                      value={formData.lineaCategoria}
+                      onChange={(e) => setFormData(prev => ({ ...prev, lineaCategoria: e.target.value }))}
+                      placeholder="Ej: Macetas & Jardín, Decoración, Figuras"
+                      required
+                      list="categorias-list"
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
+                    />
+                    <datalist id="categorias-list">
+                      {categoryNamesList.map(cat => (
+                        <option key={cat} value={cat} />
+                      ))}
+                    </datalist>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1">
+                      <Calendar className="h-3 w-3 text-[#A36F4C]" />
+                      Fecha de Registro
+                    </Label>
+                    <Input 
+                      type="date"
+                      value={formData.fechaRegistro}
+                      onChange={(e) => setFormData(prev => ({ ...prev, fechaRegistro: e.target.value }))}
+                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10 cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
 

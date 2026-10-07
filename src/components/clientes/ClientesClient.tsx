@@ -40,8 +40,6 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { useBusiness } from '@/context/BusinessContext'
-import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
-import { DateFilterControl } from '@/components/ui/DateFilterControl'
 import { 
   ClienteItem, 
   ClienteDetalleView, 
@@ -85,7 +83,6 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
   const [search, setSearch] = useState('')
   const [filtroPago, setFiltroPago] = useState<FiltroPago>('TODOS')
   const [canalFilter, setCanalFilter] = useState<string>('TODOS')
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
 
   // Modales
   const [modalFormOpen, setModalFormOpen] = useState(false)
@@ -119,15 +116,8 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
     return `https://wa.me/${clean}?text=${text}`
   }
 
-  // Clientes filtrados por período activo
-  const clientesEnRango = useMemo(() => {
-    if (dateRange.preset === 'TODO') return clientes
-    return clientes.filter(c => {
-      const matchUltimo = c.ultimoPedidoFecha ? isDateInRange(c.ultimoPedidoFecha, dateRange.from, dateRange.to) : false
-      const matchRegistro = c.createdAt ? isDateInRange(c.createdAt, dateRange.from, dateRange.to) : false
-      return matchUltimo || matchRegistro
-    })
-  }, [clientes, dateRange])
+  // Directorio completo de clientes (sin filtrado por fecha)
+  const clientesEnRango = clientes
 
   // KPIs calculados sobre el período activo
   const totalClientes = clientesEnRango.length
@@ -330,10 +320,6 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <DateFilterControl
-            value={dateRange}
-            onChange={setDateRange}
-          />
 
           <Link
             href="/pedidos"

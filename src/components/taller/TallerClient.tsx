@@ -157,7 +157,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
   // Modos de visualización y filtros
   const [modoVista, setModoVista] = useState<ModoVista>('COLA')
   const [orden, setOrden] = useState<OrdenPrioridad>('LIFO_RECIENTES')
-  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('PENDIENTE')
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('TODOS')
   const [filtroColor, setFiltroColor] = useState<string>('TODOS')
   const [filtroCategoria, setFiltroCategoria] = useState<string>('TODOS')
   const [busqueda, setBusqueda] = useState('')

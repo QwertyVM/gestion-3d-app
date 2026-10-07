@@ -288,7 +288,7 @@ export async function getColoresInventario(forceReset = false): Promise<{
 
   const disponibles = mapped
     .filter(c => c.estado === 'DISPONIBLE')
-    .sort((a, b) => (b.stockGramos || 0) - (a.stockGramos || 0))
+    .sort((a, b) => a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' }))
 
   const restock = mapped
     .filter(c => c.estado === 'RESTOCK')

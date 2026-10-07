@@ -193,7 +193,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
   const [search, setSearch] = useState('')
   const [categoriaFilter, setCategoriaFilter] = useState<string>('TODOS')
   const [tagFilter, setTagFilter] = useState<string>('TODOS')
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('TODO'))
+  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
   const [openModal, setOpenModal] = useState(false)
   const [openEditModal, setOpenEditModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -1071,8 +1071,11 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
           <Table className="w-full table-fixed">
             <TableHeader className="bg-[#FAF8F5]/80 border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-                <TableHead className="w-[140px] px-4 py-3 text-xs font-bold text-[#75695D] text-left">
-                  Fecha & Categoría
+                <TableHead className="w-[105px] px-3 py-3 text-xs font-bold text-[#75695D] text-left">
+                  Fecha
+                </TableHead>
+                <TableHead className="w-[130px] px-3 py-3 text-xs font-bold text-[#75695D] text-left">
+                  Categoría
                 </TableHead>
                 <TableHead className="px-3 py-3 text-xs font-bold text-[#75695D] text-left">
                   Concepto & Tags
@@ -1083,7 +1086,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 <TableHead className="w-[115px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
                   Total Egreso
                 </TableHead>
-                <TableHead className="w-[120px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
+                <TableHead className="w-[110px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
                   Acción
                 </TableHead>
               </TableRow>
@@ -1091,7 +1094,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
             <TableBody>
               {filteredEgresos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-12 text-[#75695D] text-xs">
+                  <TableCell colSpan={6} className="text-center py-12 text-[#75695D] text-xs">
                     No se encontraron egresos con los filtros aplicados.
                   </TableCell>
                 </TableRow>
@@ -1111,15 +1114,17 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                       onClick={() => handleOpenEdit(eg)}
                       className="border-b border-[#E2D9CC]/60 hover:bg-[#FAF8F5]/60 transition-colors cursor-pointer group"
                     >
-                      {/* 1. Fecha & Categoría */}
-                      <TableCell className="px-4 py-3 align-top">
-                        <div className="space-y-1">
-                          <span className="text-xs text-[#75695D] font-mono block">
-                            {formatDate(eg.createdAt)}
-                          </span>
-                          <div>
-                            {renderCategoriaBadge(eg.categoria)}
-                          </div>
+                      {/* 1. Fecha */}
+                      <TableCell className="px-3 py-3 align-top whitespace-nowrap">
+                        <span className="text-xs text-[#75695D] font-mono block">
+                          {formatDate(eg.createdAt)}
+                        </span>
+                      </TableCell>
+
+                      {/* 2. Categoría */}
+                      <TableCell className="px-3 py-3 align-top">
+                        <div>
+                          {renderCategoriaBadge(eg.categoria)}
                         </div>
                       </TableCell>
 

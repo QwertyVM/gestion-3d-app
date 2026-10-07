@@ -47,6 +47,22 @@ interface ProductoPayload {
   stock?: number | string
   descripcionWeb?: string | null
   imagenUrl?: string | null
+  fechaRegistro?: string | Date
+  createdAt?: string | Date
+}
+
+function parseFechaApi(fecha?: string | Date): Date | undefined {
+  if (!fecha) return undefined
+  if (fecha instanceof Date) return fecha
+  if (typeof fecha === 'string') {
+    const trimmed = fecha.trim()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return new Date(`${trimmed}T12:00:00.000Z`)
+    }
+    const parsed = new Date(trimmed)
+    if (!isNaN(parsed.getTime())) return parsed
+  }
+  return undefined
 }
 
 async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
@@ -61,6 +77,8 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
   const costoBaseNum = Number(item.costoBase) >= 0 ? Number(Number(item.costoBase).toFixed(2)) : 0
   const precioMenorNum = Number(item.precioMenor) >= 0 ? Number(Number(item.precioMenor).toFixed(2)) : 0
   const precioMayorNum = Number(item.precioMayor) >= 0 ? Number(Number(item.precioMayor).toFixed(2)) : 0
+
+  const parsedFecha = parseFechaApi(item.fechaRegistro || item.createdAt)
 
   // Sincronizar Categoria si se especifica
   if (cleanCategoria) {
@@ -105,6 +123,7 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         ...(item.stock !== undefined ? { stock: Number(item.stock) || 0 } : {}),
         ...(item.descripcionWeb !== undefined ? { descripcionWeb: item.descripcionWeb } : {}),
         ...(item.imagenUrl !== undefined ? { imagenUrl: item.imagenUrl } : {}),
+        ...(parsedFecha ? { createdAt: parsedFecha } : {}),
       }
     })
 
@@ -120,6 +139,8 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         activo: updated.activo,
         stock: updated.stock,
         negocio: updated.negocio,
+        fechaRegistro: updated.createdAt.toISOString().split('T')[0],
+        createdAt: updated.createdAt.toISOString(),
         updatedAt: updated.updatedAt.toISOString()
       }
     }
@@ -136,6 +157,7 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         stock: item.stock !== undefined ? Number(item.stock) || 0 : 0,
         descripcionWeb: item.descripcionWeb ?? null,
         imagenUrl: item.imagenUrl ?? null,
+        ...(parsedFecha ? { createdAt: parsedFecha } : {}),
       }
     })
 
@@ -151,6 +173,7 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         activo: created.activo,
         stock: created.stock,
         negocio: created.negocio,
+        fechaRegistro: created.createdAt.toISOString().split('T')[0],
         createdAt: created.createdAt.toISOString()
       }
     }
@@ -256,7 +279,8 @@ export async function GET(req: Request) {
         lineaCategoria: 'Figuras & Decoración',
         costoBase: 8.50,
         precioMenor: 35.00,
-        precioMayor: 22.00
+        precioMayor: 22.00,
+        fechaRegistro: '2026-10-07'
       }
     })
   }
@@ -273,6 +297,7 @@ export async function GET(req: Request) {
       precioMenor: true,
       precioMayor: true,
       activo: true,
+      createdAt: true,
       updatedAt: true
     }
   })
@@ -285,6 +310,9 @@ export async function GET(req: Request) {
       costoBase: Number(p.costoBase),
       precioMenor: Number(p.precioMenor),
       precioMayor: Number(p.precioMayor),
+      fechaRegistro: p.createdAt.toISOString().split('T')[0],
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
     }))
   })
 }

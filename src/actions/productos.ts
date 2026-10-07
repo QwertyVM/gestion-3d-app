@@ -41,6 +41,20 @@ export async function getProductos(negocio?: TipoNegocio) {
   }))
 }
 
+function parseFechaRegistro(fecha?: string | Date): Date | undefined {
+  if (!fecha) return undefined
+  if (fecha instanceof Date) return fecha
+  if (typeof fecha === 'string') {
+    const trimmed = fecha.trim()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      return new Date(`${trimmed}T12:00:00.000Z`)
+    }
+    const parsed = new Date(trimmed)
+    if (!isNaN(parsed.getTime())) return parsed
+  }
+  return undefined
+}
+
 export async function createProducto(data: {
   negocio?: TipoNegocio
   lineaCategoria: string
@@ -56,8 +70,10 @@ export async function createProducto(data: {
   imagenUrl?: string | null
   descripcionWeb?: string | null
   destacadoWeb?: boolean
+  fechaRegistro?: string | Date
 }) {
   const targetNegocio = data.negocio || await getActiveNegocioServer()
+  const parsedFecha = parseFechaRegistro(data.fechaRegistro)
 
   const producto = await prisma.producto.create({
     data: {
@@ -75,6 +91,7 @@ export async function createProducto(data: {
       imagenUrl: data.imagenUrl ?? null,
       descripcionWeb: data.descripcionWeb ?? null,
       destacadoWeb: data.destacadoWeb ?? false,
+      ...(parsedFecha ? { createdAt: parsedFecha } : {}),
     }
   })
 
@@ -104,7 +121,10 @@ export async function updateProducto(id: string, data: {
   imagenUrl?: string | null
   descripcionWeb?: string | null
   destacadoWeb?: boolean
+  fechaRegistro?: string | Date
 }) {
+  const parsedFecha = parseFechaRegistro(data.fechaRegistro)
+
   const producto = await prisma.producto.update({
     where: { id },
     data: {
@@ -121,6 +141,7 @@ export async function updateProducto(id: string, data: {
       ...(data.imagenUrl !== undefined ? { imagenUrl: data.imagenUrl } : {}),
       ...(data.descripcionWeb !== undefined ? { descripcionWeb: data.descripcionWeb } : {}),
       ...(data.destacadoWeb !== undefined ? { destacadoWeb: data.destacadoWeb } : {}),
+      ...(parsedFecha ? { createdAt: parsedFecha } : {}),
     }
   })
 
