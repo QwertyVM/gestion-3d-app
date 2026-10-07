@@ -374,18 +374,16 @@ export async function createCliente(data: {
     throw new Error('El nombre del cliente es obligatorio')
   }
 
-  // Verificar si ya existe en este negocio
-  const existing = await prisma.cliente.findUnique({
+  // Verificar si ya existe en este negocio (insensible a mayúsculas/minúsculas)
+  const existing = await prisma.cliente.findFirst({
     where: {
-      nombre_negocio: {
-        nombre: cleanNombre,
-        negocio: targetNegocio
-      }
+      negocio: targetNegocio,
+      nombre: { equals: cleanNombre, mode: 'insensitive' }
     }
   })
 
   if (existing) {
-    throw new Error(`Ya existe un cliente con el nombre "${cleanNombre}" en este negocio`)
+    throw new Error(`Ya existe un cliente con el nombre "${existing.nombre}" en este negocio`)
   }
 
   const cliente = await prisma.cliente.create({
@@ -429,13 +427,115 @@ export async function updateCliente(idOrName: string, data: {
 }) {
   const targetNegocio = await getActiveNegocioServer()
 
-  // Si el id comienza con "auto-", significa que era un cliente no registrado formalmente, lo creamos
+  // 1. Identificar el nombre anterior y si ya era un Cliente registrado
+  let oldNombre: string | null = null
+  let existingClienteId: string | null = null
+
   if (idOrName.startsWith('auto-')) {
-    const rawNombre = (data.nombre || idOrName.replace(/^auto-/, '')).trim()
-    const nuevo = await prisma.cliente.create({
+    const autoKey = idOrName.replace(/^auto-/, '').trim().toLowerCase()
+    const foundPed = await prisma.pedido.findFirst({
+      where: {
+        negocio: targetNegocio,
+        cliente: { mode: 'insensitive', equals: autoKey }
+      },
+      select: { cliente: true }
+    })
+    oldNombre = foundPed?.cliente?.trim() || idOrName.replace(/^auto-/, '').trim()
+  } else {
+    const current = await prisma.cliente.findUnique({ where: { id: idOrName } })
+    if (current) {
+      oldNombre = current.nombre.trim()
+      existingClienteId = current.id
+    }
+  }
+
+  const nuevoNombre = (data.nombre !== undefined ? data.nombre.trim() : oldNombre) || ''
+  if (!nuevoNombre) {
+    throw new Error('El nombre del cliente no puede estar vacío')
+  }
+
+  // 2. Si hay nombre previo, propagar el nuevo nombre a todos los pedidos, ventas e ingresos
+  if (oldNombre) {
+    await prisma.pedido.updateMany({
+      where: {
+        cliente: { equals: oldNombre, mode: 'insensitive' },
+        negocio: targetNegocio
+      },
+      data: { cliente: nuevoNombre }
+    })
+
+    await prisma.venta.updateMany({
+      where: {
+        cliente: { equals: oldNombre, mode: 'insensitive' },
+        negocio: targetNegocio
+      },
+      data: { cliente: nuevoNombre }
+    })
+
+    await prisma.ingreso.updateMany({
+      where: {
+        cliente: { equals: oldNombre, mode: 'insensitive' },
+        negocio: targetNegocio
+      },
+      data: { cliente: nuevoNombre }
+    })
+  }
+
+  // 3. Gestionar o fusionar registro formal en la tabla Cliente
+  const existingTarget = await prisma.cliente.findFirst({
+    where: {
+      nombre: { equals: nuevoNombre, mode: 'insensitive' },
+      negocio: targetNegocio
+    }
+  })
+
+  let resultCliente: any
+
+  if (existingTarget) {
+    // Si ya existe un registro formal con el nuevo nombre, actualizarlo con los nuevos datos
+    resultCliente = await prisma.cliente.update({
+      where: { id: existingTarget.id },
+      data: {
+        nombre: nuevoNombre,
+        ...(data.dni !== undefined ? { dni: data.dni.trim() || null } : {}),
+        ...(data.telefono !== undefined ? { telefono: data.telefono.trim() || null } : {}),
+        ...(data.email !== undefined ? { email: data.email.trim() || null } : {}),
+        ...(data.canalOrigen !== undefined ? { canalOrigen: data.canalOrigen.trim() || null } : {}),
+        ...(data.handleSocial !== undefined ? { handleSocial: data.handleSocial.trim() || null } : {}),
+        ...(data.direccion !== undefined ? { direccion: data.direccion.trim() || null } : {}),
+        ...(data.distrito !== undefined ? { distrito: data.distrito.trim() || null } : {}),
+        ...(data.notas !== undefined ? { notas: data.notas.trim() || null } : {}),
+        ...(data.activo !== undefined ? { activo: data.activo } : {})
+      }
+    })
+
+    // Si existía otro registro Cliente previo diferente, eliminar el duplicado viejo (fusión)
+    if (existingClienteId && existingClienteId !== existingTarget.id) {
+      await prisma.cliente.delete({ where: { id: existingClienteId } })
+    }
+  } else if (existingClienteId) {
+    // Actualizar registro existente
+    resultCliente = await prisma.cliente.update({
+      where: { id: existingClienteId },
+      data: {
+        nombre: nuevoNombre,
+        ...(data.dni !== undefined ? { dni: data.dni.trim() || null } : {}),
+        ...(data.telefono !== undefined ? { telefono: data.telefono.trim() || null } : {}),
+        ...(data.email !== undefined ? { email: data.email.trim() || null } : {}),
+        ...(data.canalOrigen !== undefined ? { canalOrigen: data.canalOrigen.trim() || null } : {}),
+        ...(data.handleSocial !== undefined ? { handleSocial: data.handleSocial.trim() || null } : {}),
+        ...(data.direccion !== undefined ? { direccion: data.direccion.trim() || null } : {}),
+        ...(data.distrito !== undefined ? { distrito: data.distrito.trim() || null } : {}),
+        ...(data.notas !== undefined ? { notas: data.notas.trim() || null } : {}),
+        ...(data.activo !== undefined ? { activo: data.activo } : {})
+      }
+    })
+  } else {
+    // Crear formalmente en la tabla Cliente
+    resultCliente = await prisma.cliente.create({
       data: {
         negocio: targetNegocio,
-        nombre: rawNombre,
+        nombre: nuevoNombre,
         dni: data.dni?.trim() || null,
         telefono: data.telefono?.trim() || null,
         email: data.email?.trim() || null,
@@ -447,35 +547,13 @@ export async function updateCliente(idOrName: string, data: {
         activo: data.activo ?? true
       }
     })
-    safeRevalidate()
-    return {
-      ...nuevo,
-      createdAt: nuevo.createdAt.toISOString(),
-      updatedAt: nuevo.updatedAt.toISOString(),
-    }
   }
-
-  const updated = await prisma.cliente.update({
-    where: { id: idOrName },
-    data: {
-      ...(data.nombre !== undefined ? { nombre: data.nombre.trim() } : {}),
-      ...(data.dni !== undefined ? { dni: data.dni.trim() || null } : {}),
-      ...(data.telefono !== undefined ? { telefono: data.telefono.trim() || null } : {}),
-      ...(data.email !== undefined ? { email: data.email.trim() || null } : {}),
-      ...(data.canalOrigen !== undefined ? { canalOrigen: data.canalOrigen.trim() || null } : {}),
-      ...(data.handleSocial !== undefined ? { handleSocial: data.handleSocial.trim() || null } : {}),
-      ...(data.direccion !== undefined ? { direccion: data.direccion.trim() || null } : {}),
-      ...(data.distrito !== undefined ? { distrito: data.distrito.trim() || null } : {}),
-      ...(data.notas !== undefined ? { notas: data.notas.trim() || null } : {}),
-      ...(data.activo !== undefined ? { activo: data.activo } : {})
-    }
-  })
 
   safeRevalidate()
   return {
-    ...updated,
-    createdAt: updated.createdAt.toISOString(),
-    updatedAt: updated.updatedAt.toISOString(),
+    ...resultCliente,
+    createdAt: resultCliente.createdAt.toISOString(),
+    updatedAt: resultCliente.updatedAt.toISOString(),
   }
 }
 

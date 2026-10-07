@@ -1,8 +1,15 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Calendar, ChevronDown, Check, RotateCcw } from 'lucide-react'
-import { DatePreset, DateRange, getPresetDateRange, MESES_ES, formatFechaEvolucion } from '@/lib/date-utils'
+import { Calendar, ChevronDown, ChevronLeft, ChevronRight, Check, RotateCcw } from 'lucide-react'
+import { 
+  DatePreset, 
+  DateRange, 
+  getPresetDateRange, 
+  getMonthYearDateRange, 
+  MESES_ES, 
+  formatFechaEvolucion 
+} from '@/lib/date-utils'
 
 interface DateFilterControlProps {
   value: DateRange
@@ -11,6 +18,7 @@ interface DateFilterControlProps {
   align?: 'left' | 'right'
   className?: string
   showAllOption?: boolean
+  showMonthSwitcher?: boolean
 }
 
 export function DateFilterControl({
@@ -20,6 +28,7 @@ export function DateFilterControl({
   align = 'right',
   className = '',
   showAllOption = true,
+  showMonthSwitcher = true,
 }: DateFilterControlProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -45,11 +54,69 @@ export function DateFilterControl({
     setIsOpen(false)
   }
 
+  // Obtener año y mes activo (0-11) para la navegación
+  const getActiveMonthAndYear = () => {
+    if (value.from) {
+      const parts = value.from.split('-').map(Number)
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return { year: parts[0], month: parts[1] - 1 }
+      }
+    }
+    const now = new Date()
+    return { year: now.getFullYear(), month: now.getMonth() }
+  }
+
+  const { year: currentYear, month: currentMonth } = getActiveMonthAndYear()
+  const prevDate = new Date(currentYear, currentMonth - 1, 1)
+  const nextDate = new Date(currentYear, currentMonth + 1, 1)
+  const prevMonthLabel = `${MESES_ES[prevDate.getMonth()]} ${prevDate.getFullYear()}`
+  const nextMonthLabel = `${MESES_ES[nextDate.getMonth()]} ${nextDate.getFullYear()}`
+
+  // Navegar horizontalmente un mes atrás o adelante
+  const handleNavigateMonth = (direction: -1 | 1) => {
+    const targetDate = new Date(currentYear, currentMonth + direction, 1)
+    const targetYear = targetDate.getFullYear()
+    const targetMonth = targetDate.getMonth() // 0-11
+
+    const now = new Date()
+    const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth()
+
+    if (isCurrentMonth) {
+      onChange(getPresetDateRange('ESTE_MES'))
+      return
+    }
+
+    // getMonthYearDateRange toma mes 1-12
+    const newRange = getMonthYearDateRange(targetYear, targetMonth + 1)
+    onChange(newRange)
+  }
+
+  // Detectar si el rango actual corresponde a un mes calendario completo
+  const getFullCalendarMonthInfo = () => {
+    if (!value.from || !value.to) return null
+    const [fromY, fromM, fromD] = value.from.split('-').map(Number)
+    const [toY, toM, toD] = value.to.split('-').map(Number)
+    if (fromY === toY && fromM === toM && fromD === 1) {
+      const lastDayOfMonth = new Date(fromY, fromM, 0).getDate()
+      if (toD === lastDayOfMonth) {
+        return { year: fromY, monthIndex: fromM - 1 }
+      }
+    }
+    return null
+  }
+
+  const fullMonthInfo = getFullCalendarMonthInfo()
+
   // Label description for button display
   const getDisplayLabel = () => {
     if (value.preset === 'ESTE_MES') {
       const now = new Date()
       return `${MESES_ES[now.getMonth()]} ${now.getFullYear()} (Mes Actual)`
+    }
+    if (value.preset === 'MES_ANTERIOR') {
+      const prev = new Date()
+      prev.setMonth(prev.getMonth() - 1)
+      return `${MESES_ES[prev.getMonth()]} ${prev.getFullYear()}`
     }
     if (value.preset === 'ESTA_SEMANA') {
       if (value.from && value.to) {
@@ -69,6 +136,11 @@ export function DateFilterControl({
     if (value.preset === 'TODO') {
       return 'Histórico'
     }
+    if (fullMonthInfo) {
+      const now = new Date()
+      const isCurrentMonth = fullMonthInfo.year === now.getFullYear() && fullMonthInfo.monthIndex === now.getMonth()
+      return `${MESES_ES[fullMonthInfo.monthIndex]} ${fullMonthInfo.year}${isCurrentMonth ? ' (Mes Actual)' : ''}`
+    }
     if (value.from && value.to) {
       return `${formatFechaEvolucion(value.from)} - ${formatFechaEvolucion(value.to)}`
     }
@@ -76,12 +148,30 @@ export function DateFilterControl({
   }
 
   const isAllActive = value.preset === 'TODO'
+  const isCustomSpecificMonth = fullMonthInfo !== null && value.preset !== 'ESTE_MES'
   const estaSemanaRange = getPresetDateRange('ESTA_SEMANA')
   const semanaAnteriorRange = getPresetDateRange('SEMANA_ANTERIOR')
 
   return (
-    <div className={`relative inline-block text-left ${className}`} ref={dropdownRef}>
-      {/* Trigger Button */}
+    <div className={`relative inline-flex items-center gap-1 text-left ${className}`} ref={dropdownRef}>
+      {/* Botón Mes Anterior */}
+      {showMonthSwitcher && (
+        <button
+          type="button"
+          onClick={() => handleNavigateMonth(-1)}
+          title={`Mes anterior (${prevMonthLabel})`}
+          aria-label={`Mes anterior (${prevMonthLabel})`}
+          className={`h-9 w-8 sm:w-8.5 rounded-xl border flex items-center justify-center transition-all shadow-2xs cursor-pointer shrink-0 ${
+            !isAllActive
+              ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF]'
+              : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
+          }`}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+      )}
+
+      {/* Trigger Button (Abre el menú desplegable con opciones) */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -92,14 +182,31 @@ export function DateFilterControl({
         }`}
       >
         <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-        <span className="truncate max-w-[210px] sm:max-w-[280px]">{getDisplayLabel()}</span>
-        <ChevronDown className="h-3 w-3 text-[#75695D] shrink-0" />
+        <span className="truncate max-w-[190px] sm:max-w-[260px]">{getDisplayLabel()}</span>
+        <ChevronDown className={`h-3 w-3 text-[#75695D] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
+
+      {/* Botón Mes Siguiente */}
+      {showMonthSwitcher && (
+        <button
+          type="button"
+          onClick={() => handleNavigateMonth(1)}
+          title={`Mes siguiente (${nextMonthLabel})`}
+          aria-label={`Mes siguiente (${nextMonthLabel})`}
+          className={`h-9 w-8 sm:w-8.5 rounded-xl border flex items-center justify-center transition-all shadow-2xs cursor-pointer shrink-0 ${
+            !isAllActive
+              ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF]'
+              : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
+          }`}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      )}
 
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute mt-1.5 w-76 sm:w-84 max-w-[calc(100vw-24px)] rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xl z-50 p-3.5 space-y-3 ${
+          className={`absolute top-full mt-1.5 w-76 sm:w-84 max-w-[calc(100vw-24px)] rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xl z-50 p-3.5 space-y-3 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >
@@ -150,6 +257,14 @@ export function DateFilterControl({
               <span>📅 Mes Actual ({MESES_ES[new Date().getMonth()]})</span>
               {value.preset === 'ESTE_MES' && <Check className="h-3.5 w-3.5" />}
             </button>
+
+            {/* Mes personalizado seleccionado mediante flechas horizontales */}
+            {isCustomSpecificMonth && (
+              <div className="px-3 py-2 rounded-lg text-xs font-bold bg-[#A36F4C] text-white flex items-center justify-between shadow-2xs">
+                <span>📅 {MESES_ES[fullMonthInfo.monthIndex]} {fullMonthInfo.year}</span>
+                <Check className="h-3.5 w-3.5 shrink-0" />
+              </div>
+            )}
 
             <button
               type="button"
@@ -205,3 +320,4 @@ export function DateFilterControl({
     </div>
   )
 }
+

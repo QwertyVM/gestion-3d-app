@@ -221,7 +221,7 @@ export function SearchableCombobox({
   }
 
   return (
-    <div ref={containerRef} className={cn('relative w-full text-left select-none', className)}>
+    <div ref={containerRef} className={cn('relative w-full text-left select-none', isOpen && 'z-30', className)}>
       {/* Search Input Container */}
       <div className="relative w-full flex items-center">
         {/* Leading Search / Package / Tag Icon */}

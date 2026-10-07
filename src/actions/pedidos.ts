@@ -361,12 +361,10 @@ export async function createPedido(data: CreatePedidoInput) {
       // Auto-sincronizar o registrar en Directorio de Clientes
       try {
         const clienteClean = data.cliente.trim()
-        const existingCliente = await tx.cliente.findUnique({
+        const existingCliente = await tx.cliente.findFirst({
           where: {
-            nombre_negocio: {
-              nombre: clienteClean,
-              negocio: targetNegocio
-            }
+            nombre: { equals: clienteClean, mode: 'insensitive' },
+            negocio: targetNegocio
           }
         })
 
@@ -375,9 +373,9 @@ export async function createPedido(data: CreatePedidoInput) {
             where: { id: existingCliente.id },
             data: {
               ...(data.handleSocial?.trim() ? { handleSocial: data.handleSocial.trim() } : {}),
-              ...(data.telefono?.trim() && !existingCliente.telefono ? { telefono: data.telefono.trim() } : {}),
-              ...(data.dni?.trim() && !existingCliente.dni ? { dni: data.dni.trim() } : {}),
-              ...(data.destinoEnvio?.trim() && !existingCliente.direccion ? { direccion: data.destinoEnvio.trim() } : {})
+              ...(data.telefono?.trim() ? { telefono: data.telefono.trim() } : {}),
+              ...(data.dni?.trim() ? { dni: data.dni.trim() } : {}),
+              ...(data.destinoEnvio?.trim() ? { direccion: data.destinoEnvio.trim() } : {})
             }
           })
         } else {
@@ -932,12 +930,10 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
       if (data.handleSocial?.trim() || data.telefono?.trim() || data.dni?.trim()) {
         try {
           const clienteClean = data.cliente.trim()
-          const existingCliente = await tx.cliente.findUnique({
+          const existingCliente = await tx.cliente.findFirst({
             where: {
-              nombre_negocio: {
-                nombre: clienteClean,
-                negocio: current.negocio
-              }
+              nombre: { equals: clienteClean, mode: 'insensitive' },
+              negocio: current.negocio
             }
           })
           if (existingCliente) {
@@ -945,8 +941,8 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
               where: { id: existingCliente.id },
               data: {
                 ...(data.handleSocial?.trim() ? { handleSocial: data.handleSocial.trim() } : {}),
-                ...(data.telefono?.trim() && !existingCliente.telefono ? { telefono: data.telefono.trim() } : {}),
-                ...(data.dni?.trim() && !existingCliente.dni ? { dni: data.dni.trim() } : {})
+                ...(data.telefono?.trim() ? { telefono: data.telefono.trim() } : {}),
+                ...(data.dni?.trim() ? { dni: data.dni.trim() } : {})
               }
             })
           }

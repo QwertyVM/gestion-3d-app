@@ -46,14 +46,20 @@ import {
   ArrowDown,
   MessageCircle,
   AtSign,
-  MapPin
+  MapPin,
+  UserCheck,
+  UserPlus,
+  Check
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { DateFilterControl } from '@/components/ui/DateFilterControl'
 import { DateRange, getPresetDateRange, isDateInRange, formatToYMD } from '@/lib/date-utils'
 import { EstadoPedido, TipoPrecio } from '@prisma/client'
 import { createPedido, updateEstadoPedido, updatePedido, addPagoPedido, updatePagoPedido, deletePagoPedido, deletePedido, toggleSeguimientoPostventa } from '@/actions/pedidos'
+import { createCliente } from '@/actions/clientes'
 import { formatDate } from '@/lib/utils'
 import { MultiColorPicker } from '@/components/ui/MultiColorPicker'
+import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 
 function InstagramIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
@@ -362,41 +368,112 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
   const [formNotasPago, setFormNotasPago] = useState('')
   const [formDescontarStock, setFormDescontarStock] = useState(true)
 
-  // Autocompletado de clientes existentes
-  const [clientSuggestions, setClientSuggestions] = useState<ClienteOption[]>([])
-  const [showClientSuggestions, setShowClientSuggestions] = useState(false)
+  // Selector avanzado de clientes (Existente vs Nuevo)
+  const [clientesList, setClientesList] = useState<ClienteOption[]>(clientesIniciales || [])
+  const [clientSelectMode, setClientSelectMode] = useState<'EXISTING' | 'NEW'>(
+    clientesIniciales && clientesIniciales.length > 0 ? 'EXISTING' : 'NEW'
+  )
+  const [selectedClientOption, setSelectedClientOption] = useState<ClienteOption | null>(null)
+  const [clientSearchTerm, setClientSearchTerm] = useState('')
+  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false)
 
-  // Sincronizar notas de postventa cuando se abre o cambia el detalle del pedido
+  // Sincronizar clientes si cambian las props iniciales
   useEffect(() => {
-    if (selectedPedidoDetail) {
-      setDetailPostventaNotas(selectedPedidoDetail.notasPostventa || '')
+    if (clientesIniciales && clientesIniciales.length > 0) {
+      setClientesList(clientesIniciales)
     }
-  }, [selectedPedidoDetail?.id, selectedPedidoDetail?.notasPostventa])
+  }, [clientesIniciales])
 
-  const handleClienteChange = (val: string) => {
-    setFormCliente(val)
-    if (!val.trim()) {
-      setClientSuggestions([])
-      setShowClientSuggestions(false)
-      return
+  // Opciones de productos 3D para el buscador predictivo
+  const productosComboboxItems: ComboboxItem[] = useMemo(() => {
+    return (productos || []).map(p => ({
+      id: p.id,
+      label: p.nombreModelo,
+      sublabel: `${p.lineaCategoria || 'General'} • Base: S/ ${Number(p.costoBase || 0).toFixed(2)}`,
+      badge: `S/ ${Number(p.precioMenor || 0).toFixed(2)}`,
+      icon: Boxes,
+    }))
+  }, [productos])
+
+  // Filtrado de clientes para el dropdown
+  const filteredClientOptions = useMemo(() => {
+    if (!clientSearchTerm.trim()) {
+      return (clientesList || []).slice(0, 30)
     }
-    const q = val.toLowerCase()
-    const matches = (clientesIniciales || []).filter(c =>
-      c.nombre.toLowerCase().includes(q) ||
-      (c.handleSocial && c.handleSocial.toLowerCase().includes(q)) ||
-      (c.telefono && c.telefono.includes(q))
-    ).slice(0, 5)
-    setClientSuggestions(matches)
-    setShowClientSuggestions(matches.length > 0)
-  }
+    const q = clientSearchTerm.trim().toLowerCase()
+    const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    return (clientesList || []).filter(c => {
+      const n = (c.nombre || '').toLowerCase()
+      const nNorm = n.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const t = c.telefono || ''
+      const h = ((c.handleSocial || '')).toLowerCase()
+      return n.includes(q) || nNorm.includes(qNorm) || t.includes(q) || h.includes(q)
+    }).slice(0, 20)
+  }, [clientesList, clientSearchTerm])
+
+  // Detección preventiva de duplicados/similitud en modo "NUEVO"
+  const similarExistingClient = useMemo(() => {
+    if (clientSelectMode !== 'NEW' || !formCliente.trim()) return null
+    const cleanInput = formCliente.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    return (clientesList || []).find(c => {
+      const cleanC = (c.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      return cleanC === cleanInput || (cleanInput.length >= 4 && cleanC.includes(cleanInput))
+    }) || null
+  }, [clientSelectMode, formCliente, clientesList])
 
   const handleSelectClient = (c: ClienteOption) => {
+    setSelectedClientOption(c)
+    setClientSelectMode('EXISTING')
     setFormCliente(c.nombre)
     if (c.telefono) setFormTelefono(c.telefono)
     if (c.handleSocial) setFormHandleSocial(c.handleSocial)
     if (c.canalOrigen || c.canalPreferido) setFormCanal(c.canalOrigen || c.canalPreferido || 'WhatsApp')
     if (c.direccion || c.distrito) setFormDestino(c.direccion || c.distrito || '')
-    setShowClientSuggestions(false)
+    setIsClientDropdownOpen(false)
+    setClientSearchTerm('')
+  }
+
+  const handleSwitchToNewClient = (presetName = '') => {
+    setSelectedClientOption(null)
+    setClientSelectMode('NEW')
+    setFormCliente(presetName || clientSearchTerm.trim() || formCliente || '')
+    setIsClientDropdownOpen(false)
+  }
+
+  const [isRegisteringClientInline, setIsRegisteringClientInline] = useState(false)
+
+  const handleRegisterClientInline = async () => {
+    if (!formCliente.trim()) {
+      toast.error('Ingresa al menos el nombre del cliente')
+      return
+    }
+    setIsRegisteringClientInline(true)
+    try {
+      const created = await createCliente({
+        nombre: formCliente.trim(),
+        telefono: formTelefono.trim() || undefined,
+        handleSocial: formHandleSocial.trim() || undefined,
+        canalOrigen: formCanal,
+        direccion: formDestino.trim() || undefined
+      })
+      const newOption: ClienteOption = {
+        id: created.id,
+        nombre: created.nombre,
+        telefono: created.telefono,
+        handleSocial: created.handleSocial,
+        canalOrigen: created.canalOrigen,
+        canalPreferido: created.canalOrigen,
+        direccion: created.direccion
+      }
+      setClientesList(prev => [newOption, ...prev.filter(c => c.id !== newOption.id)])
+      setSelectedClientOption(newOption)
+      setClientSelectMode('EXISTING')
+      toast.success(`Cliente "${created.nombre}" guardado y vinculado`)
+    } catch (err: any) {
+      toast.error(err.message || 'Error al registrar cliente')
+    } finally {
+      setIsRegisteringClientInline(false)
+    }
   }
 
   const handleTogglePostventa = async (pedidoId: string, nuevoEstado: boolean, e?: React.MouseEvent) => {
@@ -562,8 +639,10 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
     setFormTelefono('')
     setFormCanal('WhatsApp')
     setFormHandleSocial('')
-    setClientSuggestions([])
-    setShowClientSuggestions(false)
+    setSelectedClientOption(null)
+    setClientSelectMode((clientesList || []).length > 0 ? 'EXISTING' : 'NEW')
+    setClientSearchTerm('')
+    setIsClientDropdownOpen(false)
     setFormDestino('')
     setFormDiaEntrega('')
     setFormNotas('')
@@ -636,8 +715,24 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
 
       if (res.success && res.pedido) {
         setPedidos(prev => [res.pedido as any, ...prev])
+        const cleanName = formCliente.trim()
+        if (!clientesList.some(c => c.nombre.toLowerCase() === cleanName.toLowerCase())) {
+          setClientesList(prev => [
+            {
+              id: `auto-${cleanName.toLowerCase()}`,
+              nombre: cleanName,
+              telefono: formTelefono.trim() || null,
+              handleSocial: formHandleSocial.trim() || null,
+              canalPreferido: formCanal,
+              canalOrigen: formCanal,
+              direccion: formDestino.trim() || null
+            },
+            ...prev
+          ])
+        }
         setIsNewOrderModalOpen(false)
         resetForm()
+        toast.success(`Pedido ${res.pedido.codigo} registrado exitosamente`)
       } else {
         alert(res.error || 'No se pudo crear el pedido')
       }
@@ -666,6 +761,22 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
     setEditSeguimientoPostventa(p.seguimientoPostventa || false)
     setEditFechaPostventa(p.fechaPostventa || null)
     setEditNotasPostventa(p.notasPostventa || '')
+
+    // Vincular cliente existente si coincide por nombre
+    const cleanPName = (p.cliente || '').trim().toLowerCase()
+    const matchingClient = (clientesList || []).find(c =>
+      c.nombre.trim().toLowerCase() === cleanPName
+    )
+    if (matchingClient) {
+      setSelectedClientOption(matchingClient)
+      setClientSelectMode('EXISTING')
+    } else {
+      setSelectedClientOption(null)
+      setClientSelectMode('NEW')
+    }
+    setClientSearchTerm('')
+    setIsClientDropdownOpen(false)
+
     setFormItems(p.items.map((it, idx) => {
       const rawCols = it.coloresIds && it.coloresIds.length > 0
         ? it.coloresIds
@@ -734,8 +845,24 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         if (selectedPedidoDetail?.id === editingPedido.id) {
           setSelectedPedidoDetail(res.pedido as any)
         }
+        const cleanName = formCliente.trim()
+        if (!clientesList.some(c => c.nombre.toLowerCase() === cleanName.toLowerCase())) {
+          setClientesList(prev => [
+            {
+              id: `auto-${cleanName.toLowerCase()}`,
+              nombre: cleanName,
+              telefono: formTelefono.trim() || null,
+              handleSocial: formHandleSocial.trim() || null,
+              canalPreferido: formCanal,
+              canalOrigen: formCanal,
+              direccion: formDestino.trim() || null
+            },
+            ...prev
+          ])
+        }
         setIsEditModalOpen(false)
         setEditingPedido(null)
+        toast.success(`Pedido ${res.pedido.codigo} actualizado exitosamente`)
       } else {
         alert(res.error || 'No se pudo actualizar el pedido')
       }
@@ -1639,12 +1766,290 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
             {/* Modal Form Body */}
             <form onSubmit={handleSubmitNuevoPedido} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
               {/* SECCIÓN 1: DATOS DEL CLIENTE Y ENVÍO */}
-              <div className="space-y-3">
-                <span className="text-xs font-extrabold text-[#A36F4C] uppercase tracking-wider flex items-center gap-1.5 pb-1 border-b border-[#E2D9CC]">
-                  <User className="h-3.5 w-3.5" />
-                  1. Datos del Cliente y Despacho
-                </span>
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#E2D9CC] gap-2">
+                  <span className="text-xs font-extrabold text-[#A36F4C] uppercase tracking-wider flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" />
+                    1. Datos del Cliente y Despacho
+                  </span>
 
+                  {/* Toggle Existente / Nuevo Cliente */}
+                  <div className="inline-flex items-center p-0.5 bg-[#FAF8F5] border border-[#E2D9CC] rounded-xl self-start sm:self-auto shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClientSelectMode('EXISTING')
+                        setIsClientDropdownOpen(false)
+                      }}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        clientSelectMode === 'EXISTING'
+                          ? 'bg-[#A36F4C] text-white shadow-xs'
+                          : 'text-[#75695D] hover:text-[#241C15]'
+                      }`}
+                    >
+                      <UserCheck className="h-3.5 w-3.5" />
+                      <span>Cliente Registrado ({clientesList.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchToNewClient()}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        clientSelectMode === 'NEW'
+                          ? 'bg-[#2E7D32] text-white shadow-xs'
+                          : 'text-[#75695D] hover:text-[#241C15]'
+                      }`}
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      <span>+ Registrar Nuevo</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* CONTENIDO SEGÚN MODO: CLIENTE EXISTENTE vs NUEVO CLIENTE */}
+                {clientSelectMode === 'EXISTING' ? (
+                  <div className="bg-[#FAF8F5]/60 border border-[#E2D9CC] rounded-2xl p-3.5 space-y-3">
+                    {selectedClientOption ? (
+                      /* TARJETA DE CLIENTE SELECCIONADO */
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white border border-[#D4BEA7] rounded-xl shadow-xs">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-[#F4EBE1] text-[#A36F4C] flex items-center justify-center font-black text-sm shrink-0">
+                            {selectedClientOption.nombre.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-extrabold text-sm text-[#241C15]">
+                                {selectedClientOption.nombre}
+                              </span>
+                              <Badge className="bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0] text-[10px] font-bold py-0">
+                                <Check className="h-3 w-3 mr-1" /> Cliente Vinculado
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-[#75695D] mt-0.5 flex-wrap">
+                              {selectedClientOption.telefono && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3 text-[#A36F4C]" />
+                                  {selectedClientOption.telefono}
+                                </span>
+                              )}
+                              {selectedClientOption.handleSocial && (
+                                <span className="flex items-center gap-1 text-[#BE185D]">
+                                  <AtSign className="h-3 w-3" />
+                                  {selectedClientOption.handleSocial.replace(/^@/, '')}
+                                </span>
+                              )}
+                              {(selectedClientOption.canalOrigen || selectedClientOption.canalPreferido) && (
+                                <span className="font-mono text-[10px] bg-[#F4EBE1] px-1.5 py-0.5 rounded text-[#75695D]">
+                                  Canal: {selectedClientOption.canalOrigen || selectedClientOption.canalPreferido}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedClientOption(null)
+                              setIsClientDropdownOpen(true)
+                            }}
+                            className="text-xs h-8 border-[#D4BEA7] hover:bg-[#F4EBE1] text-[#241C15]"
+                          >
+                            <Search className="h-3.5 w-3.5 mr-1 text-[#A36F4C]" />
+                            Cambiar de Cliente
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* BUSCADOR DE CLIENTES EXISTENTES */
+                      <div className="relative">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]" />
+                            <Input
+                              placeholder="Buscar cliente registrado por nombre, teléfono o @instagram..."
+                              value={clientSearchTerm}
+                              onChange={(e) => {
+                                setClientSearchTerm(e.target.value)
+                                setIsClientDropdownOpen(true)
+                              }}
+                              onFocus={() => setIsClientDropdownOpen(true)}
+                              className="pl-9 bg-white border-[#D4BEA7] text-sm rounded-xl h-10 shadow-xs"
+                            />
+                            {clientSearchTerm && (
+                              <button
+                                type="button"
+                                onClick={() => setClientSearchTerm('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleSwitchToNewClient(clientSearchTerm)}
+                            className="h-10 text-xs border-[#D4BEA7] bg-white hover:bg-[#F4EBE1] text-[#241C15] shrink-0"
+                          >
+                            <UserPlus className="h-3.5 w-3.5 mr-1.5 text-[#2E7D32]" />
+                            ¿Es cliente nuevo? Registrar
+                          </Button>
+                        </div>
+
+                        {/* Menú desplegable flotante de resultados */}
+                        {isClientDropdownOpen && (
+                          <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[#D4BEA7] rounded-2xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto divide-y divide-[#E2D9CC]/60 animate-in fade-in-50 duration-150">
+                            <div className="p-2 bg-[#FAF8F5] text-[11px] font-bold text-[#75695D] flex items-center justify-between border-b border-[#E2D9CC]">
+                              <span>
+                                {clientSearchTerm.trim()
+                                  ? `Resultados para "${clientSearchTerm}" (${filteredClientOptions.length})`
+                                  : `Clientes registrados (${clientesList.length}) - Selecciona uno:`}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setIsClientDropdownOpen(false)}
+                                className="text-xs text-[#75695D] hover:text-[#241C15] cursor-pointer"
+                              >
+                                Cerrar
+                              </button>
+                            </div>
+
+                            {filteredClientOptions.length > 0 ? (
+                              filteredClientOptions.map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => handleSelectClient(c)}
+                                  className="w-full text-left p-3 hover:bg-[#FAF8F5] transition-colors cursor-pointer flex items-center justify-between gap-3 group"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="h-7 w-7 rounded-lg bg-[#F4EBE1] group-hover:bg-[#EAE4DC] text-[#A36F4C] flex items-center justify-center font-bold text-xs shrink-0">
+                                      {c.nombre.slice(0, 1).toUpperCase()}
+                                    </div>
+                                    <div className="truncate">
+                                      <span className="font-extrabold text-xs text-[#241C15] block truncate">
+                                        {c.nombre}
+                                      </span>
+                                      <div className="flex items-center gap-2 text-[10px] text-[#75695D]">
+                                        {c.telefono && <span>📞 {c.telefono}</span>}
+                                        {c.handleSocial && <span className="text-[#BE185D]">@{c.handleSocial.replace(/^@/, '')}</span>}
+                                        {c.distrito && <span>📍 {c.distrito}</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] font-mono">
+                                      {c.canalOrigen || c.canalPreferido || 'Directo'}
+                                    </span>
+                                    <span className="text-xs text-[#A36F4C] font-bold group-hover:translate-x-0.5 transition-transform">
+                                      Seleccionar →
+                                    </span>
+                                  </div>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="p-4 text-center space-y-2">
+                                <p className="text-xs text-[#75695D]">
+                                  No se encontró ningún cliente registrado con "{clientSearchTerm}".
+                                </p>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => handleSwitchToNewClient(clientSearchTerm)}
+                                  className="bg-[#2E7D32] hover:bg-[#256628] text-white text-xs rounded-xl"
+                                >
+                                  <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                                  Registrar "{clientSearchTerm}" como nuevo cliente
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* MODO NUEVO CLIENTE */
+                  <div className="bg-[#ECFDF5]/30 border border-[#A7F3D0] rounded-2xl p-3.5 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-[#2E7D32] text-white text-[10px] font-bold">
+                          <UserPlus className="h-3 w-3 mr-1" /> Nuevo Cliente
+                        </Badge>
+                        <span className="text-xs text-[#1E3A1E] font-medium">
+                          Se registrará automáticamente con este pedido sin salir de la vista.
+                        </span>
+                      </div>
+
+                      {clientesList.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClientSelectMode('EXISTING')
+                            setIsClientDropdownOpen(true)
+                          }}
+                          className="text-xs text-[#A36F4C] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <UserCheck className="h-3 w-3" />
+                          Elegir de clientes registrados ({clientesList.length})
+                        </button>
+                      )}
+                    </div>
+
+                    {/* ADVERTENCIA DE DUPLICADO EN TIEMPO REAL */}
+                    {similarExistingClient && (
+                      <div className="p-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in-50 duration-150">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+                          <div className="text-xs text-[#92400E]">
+                            <span className="font-bold block">
+                              ¡Atención! Ya existe un cliente similar registrado:
+                            </span>
+                            <span>
+                              "{similarExistingClient.nombre}"
+                              {similarExistingClient.telefono ? ` (📞 ${similarExistingClient.telefono})` : ''}
+                              {similarExistingClient.handleSocial ? ` (@${similarExistingClient.handleSocial.replace(/^@/, '')})` : ''}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleSelectClient(similarExistingClient)}
+                          className="bg-[#D97706] hover:bg-[#B45309] text-white text-xs rounded-lg shrink-0 h-7"
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          Usar "{similarExistingClient.nombre}"
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Opción de guardar inmediatamente en el directorio */}
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#A7F3D0]/40">
+                      <span className="text-[11px] text-[#2D5A27]">
+                        💡 Completa los datos abajo. Puedes guardarlo en el directorio con 1 clic o al crear el pedido.
+                      </span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!formCliente.trim() || isRegisteringClientInline}
+                        onClick={handleRegisterClientInline}
+                        className="text-[11px] h-7 border-[#A7F3D0] text-[#166534] bg-white hover:bg-[#ECFDF5]"
+                      >
+                        {isRegisteringClientInline ? 'Guardando...' : '💾 Guardar ahora en Directorio'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* CAMPOS DE DATOS: Fecha, Cliente, Instagram, Teléfono, Canal, etc. */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold flex items-center gap-1">
@@ -1660,42 +2065,20 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                     />
                   </div>
 
-                  <div className="space-y-1 relative">
-                    <Label className="text-xs text-[#241C15] font-bold">Cliente *</Label>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-[#241C15] font-bold flex items-center justify-between">
+                      <span>Nombre del Cliente *</span>
+                      {clientSelectMode === 'EXISTING' && selectedClientOption && (
+                        <span className="text-[10px] text-[#065F46] font-semibold">Registrado</span>
+                      )}
+                    </Label>
                     <Input
                       required
-                      placeholder="Nombre del cliente..."
+                      placeholder="Nombre completo del cliente..."
                       value={formCliente}
-                      onChange={(e) => handleClienteChange(e.target.value)}
-                      onFocus={() => {
-                        if (formCliente.trim()) {
-                          handleClienteChange(formCliente)
-                        }
-                      }}
-                      className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
+                      onChange={(e) => setFormCliente(e.target.value)}
+                      className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl font-medium"
                     />
-                    {showClientSuggestions && clientSuggestions.length > 0 && (
-                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E2D9CC] rounded-xl shadow-lg z-50 overflow-hidden divide-y divide-[#E2D9CC]/50">
-                        {clientSuggestions.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => handleSelectClient(c)}
-                            className="w-full text-left p-2.5 hover:bg-[#FAF8F5] transition-colors cursor-pointer flex items-center justify-between gap-2"
-                          >
-                            <div>
-                              <span className="font-bold text-xs text-[#241C15] block">{c.nombre}</span>
-                              <span className="text-[10px] text-[#75695D]">
-                                {c.telefono || 'Sin telf.'} {c.handleSocial && `• @${c.handleSocial.replace(/^@/, '')}`}
-                              </span>
-                            </div>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] font-mono">
-                              {c.canalOrigen || c.canalPreferido || 'Directo'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -1792,6 +2175,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                     return (
                       <div
                         key={item.id}
+                        style={{ zIndex: formItems.length - index }}
                         className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3 relative"
                       >
                         <div className="flex items-center justify-between">
@@ -1816,18 +2200,18 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-[11px] text-[#241C15] font-bold">Modelo 3D *</Label>
-                            <select
-                              required
+                            <SearchableCombobox
+                              items={productosComboboxItems}
                               value={item.productoId}
-                              onChange={(e) => updateItem(item.id, { productoId: e.target.value })}
-                              className="w-full h-9 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] px-3 text-xs text-[#241C15] font-bold"
-                            >
-                              {productos.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.nombreModelo} ({p.lineaCategoria}) — Base: S/ {p.costoBase.toFixed(2)}
-                                </option>
-                              ))}
-                            </select>
+                              onChange={(newId) => updateItem(item.id, { productoId: newId })}
+                              placeholder="Buscar modelo 3D..."
+                              searchPlaceholder="Escribe para filtrar modelo..."
+                              emptyMessage="No se encontró ningún modelo"
+                              icon={Boxes}
+                              size="sm"
+                              inputClassName="bg-[#FFFFFF] border-[#E2D9CC] text-xs font-bold text-[#241C15]"
+                              clearable={false}
+                            />
                           </div>
 
                           <div className="space-y-1">
@@ -2680,29 +3064,289 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
             {/* Modal Form Body */}
             <form onSubmit={handleSubmitEditPedido} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
               {/* SECCIÓN 1: ESTADO Y DATOS DEL CLIENTE */}
-              <div className="space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-1 border-b border-[#E2D9CC] gap-2">
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-[#E2D9CC] gap-2">
                   <span className="text-xs font-extrabold text-[#A36F4C] uppercase tracking-wider flex items-center gap-1.5">
                     <User className="h-3.5 w-3.5" />
                     1. Estado y Datos del Cliente
                   </span>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#75695D]">Estado:</span>
-                    <select
-                      value={editEstado}
-                      onChange={(e) => setEditEstado(e.target.value as EstadoPedido)}
-                      className="text-xs font-extrabold rounded-xl px-3 py-1 border border-[#D4BEA7] bg-[#FDF6E2] text-[#8C6D1F] cursor-pointer"
-                    >
-                      {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
-                        <option key={stKey} value={stKey}>
-                          {conf.label}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="inline-flex items-center p-0.5 bg-[#FAF8F5] border border-[#E2D9CC] rounded-xl shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setClientSelectMode('EXISTING')
+                          setIsClientDropdownOpen(false)
+                        }}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          clientSelectMode === 'EXISTING'
+                            ? 'bg-[#A36F4C] text-white shadow-xs'
+                            : 'text-[#75695D] hover:text-[#241C15]'
+                        }`}
+                      >
+                        <UserCheck className="h-3.5 w-3.5" />
+                        <span>Cliente Registrado</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchToNewClient()}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          clientSelectMode === 'NEW'
+                            ? 'bg-[#2E7D32] text-white shadow-xs'
+                            : 'text-[#75695D] hover:text-[#241C15]'
+                        }`}
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        <span>+ Nuevo / Otro</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#75695D]">Estado:</span>
+                      <select
+                        value={editEstado}
+                        onChange={(e) => setEditEstado(e.target.value as EstadoPedido)}
+                        className="text-xs font-extrabold rounded-xl px-3 py-1 border border-[#D4BEA7] bg-[#FDF6E2] text-[#8C6D1F] cursor-pointer"
+                      >
+                        {Object.entries(ESTADOS_CONFIG).map(([stKey, conf]) => (
+                          <option key={stKey} value={stKey}>
+                            {conf.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
+                {/* CONTENIDO SEGÚN MODO: CLIENTE EXISTENTE vs NUEVO CLIENTE */}
+                {clientSelectMode === 'EXISTING' ? (
+                  <div className="bg-[#FAF8F5]/60 border border-[#E2D9CC] rounded-2xl p-3.5 space-y-3">
+                    {selectedClientOption ? (
+                      /* TARJETA DE CLIENTE SELECCIONADO */
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white border border-[#D4BEA7] rounded-xl shadow-xs">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-[#F4EBE1] text-[#A36F4C] flex items-center justify-center font-black text-sm shrink-0">
+                            {selectedClientOption.nombre.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-extrabold text-sm text-[#241C15]">
+                                {selectedClientOption.nombre}
+                              </span>
+                              <Badge className="bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0] text-[10px] font-bold py-0">
+                                <Check className="h-3 w-3 mr-1" /> Cliente Vinculado
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-[#75695D] mt-0.5 flex-wrap">
+                              {selectedClientOption.telefono && (
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3 text-[#A36F4C]" />
+                                  {selectedClientOption.telefono}
+                                </span>
+                              )}
+                              {selectedClientOption.handleSocial && (
+                                <span className="flex items-center gap-1 text-[#BE185D]">
+                                  <AtSign className="h-3 w-3" />
+                                  {selectedClientOption.handleSocial.replace(/^@/, '')}
+                                </span>
+                              )}
+                              {(selectedClientOption.canalOrigen || selectedClientOption.canalPreferido) && (
+                                <span className="font-mono text-[10px] bg-[#F4EBE1] px-1.5 py-0.5 rounded text-[#75695D]">
+                                  Canal: {selectedClientOption.canalOrigen || selectedClientOption.canalPreferido}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedClientOption(null)
+                              setIsClientDropdownOpen(true)
+                            }}
+                            className="text-xs h-8 border-[#D4BEA7] hover:bg-[#F4EBE1] text-[#241C15]"
+                          >
+                            <Search className="h-3.5 w-3.5 mr-1 text-[#A36F4C]" />
+                            Cambiar de Cliente
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* BUSCADOR DE CLIENTES EXISTENTES */
+                      <div className="relative">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A36F4C]" />
+                            <Input
+                              placeholder="Buscar cliente registrado por nombre, teléfono o @instagram..."
+                              value={clientSearchTerm}
+                              onChange={(e) => {
+                                setClientSearchTerm(e.target.value)
+                                setIsClientDropdownOpen(true)
+                              }}
+                              onFocus={() => setIsClientDropdownOpen(true)}
+                              className="pl-9 bg-white border-[#D4BEA7] text-sm rounded-xl h-10 shadow-xs"
+                            />
+                            {clientSearchTerm && (
+                              <button
+                                type="button"
+                                onClick={() => setClientSearchTerm('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleSwitchToNewClient(clientSearchTerm)}
+                            className="h-10 text-xs border-[#D4BEA7] bg-white hover:bg-[#F4EBE1] text-[#241C15] shrink-0"
+                          >
+                            <UserPlus className="h-3.5 w-3.5 mr-1.5 text-[#2E7D32]" />
+                            ¿Es cliente nuevo? Registrar
+                          </Button>
+                        </div>
+
+                        {/* Menú desplegable flotante de resultados */}
+                        {isClientDropdownOpen && (
+                          <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-[#D4BEA7] rounded-2xl shadow-xl z-50 overflow-hidden max-h-64 overflow-y-auto divide-y divide-[#E2D9CC]/60 animate-in fade-in-50 duration-150">
+                            <div className="p-2 bg-[#FAF8F5] text-[11px] font-bold text-[#75695D] flex items-center justify-between border-b border-[#E2D9CC]">
+                              <span>
+                                {clientSearchTerm.trim()
+                                  ? `Resultados para "${clientSearchTerm}" (${filteredClientOptions.length})`
+                                  : `Clientes registrados (${clientesList.length}) - Selecciona uno:`}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setIsClientDropdownOpen(false)}
+                                className="text-xs text-[#75695D] hover:text-[#241C15] cursor-pointer"
+                              >
+                                Cerrar
+                              </button>
+                            </div>
+
+                            {filteredClientOptions.length > 0 ? (
+                              filteredClientOptions.map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => handleSelectClient(c)}
+                                  className="w-full text-left p-3 hover:bg-[#FAF8F5] transition-colors cursor-pointer flex items-center justify-between gap-3 group"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="h-7 w-7 rounded-lg bg-[#F4EBE1] group-hover:bg-[#EAE4DC] text-[#A36F4C] flex items-center justify-center font-bold text-xs shrink-0">
+                                      {c.nombre.slice(0, 1).toUpperCase()}
+                                    </div>
+                                    <div className="truncate">
+                                      <span className="font-extrabold text-xs text-[#241C15] block truncate">
+                                        {c.nombre}
+                                      </span>
+                                      <div className="flex items-center gap-2 text-[10px] text-[#75695D]">
+                                        {c.telefono && <span>📞 {c.telefono}</span>}
+                                        {c.handleSocial && <span className="text-[#BE185D]">@{c.handleSocial.replace(/^@/, '')}</span>}
+                                        {c.distrito && <span>📍 {c.distrito}</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] font-mono">
+                                      {c.canalOrigen || c.canalPreferido || 'Directo'}
+                                    </span>
+                                    <span className="text-xs text-[#A36F4C] font-bold group-hover:translate-x-0.5 transition-transform">
+                                      Seleccionar →
+                                    </span>
+                                  </div>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="p-4 text-center space-y-2">
+                                <p className="text-xs text-[#75695D]">
+                                  No se encontró ningún cliente registrado con "{clientSearchTerm}".
+                                </p>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  onClick={() => handleSwitchToNewClient(clientSearchTerm)}
+                                  className="bg-[#2E7D32] hover:bg-[#256628] text-white text-xs rounded-xl"
+                                >
+                                  <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                                  Registrar "{clientSearchTerm}" como nuevo cliente
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* MODO NUEVO CLIENTE */
+                  <div className="bg-[#ECFDF5]/30 border border-[#A7F3D0] rounded-2xl p-3.5 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-[#2E7D32] text-white text-[10px] font-bold">
+                          <UserPlus className="h-3 w-3 mr-1" /> Nuevo / Cambiar Cliente
+                        </Badge>
+                        <span className="text-xs text-[#1E3A1E] font-medium">
+                          Modifica el nombre o registra un cliente nuevo para este pedido.
+                        </span>
+                      </div>
+
+                      {clientesList.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setClientSelectMode('EXISTING')
+                            setIsClientDropdownOpen(true)
+                          }}
+                          className="text-xs text-[#A36F4C] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <UserCheck className="h-3 w-3" />
+                          Elegir de clientes registrados ({clientesList.length})
+                        </button>
+                      )}
+                    </div>
+
+                    {/* ADVERTENCIA DE DUPLICADO EN TIEMPO REAL */}
+                    {similarExistingClient && (
+                      <div className="p-3 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in-50 duration-150">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-[#D97706] shrink-0 mt-0.5" />
+                          <div className="text-xs text-[#92400E]">
+                            <span className="font-bold block">
+                              ¡Atención! Ya existe un cliente similar registrado:
+                            </span>
+                            <span>
+                              "{similarExistingClient.nombre}"
+                              {similarExistingClient.telefono ? ` (📞 ${similarExistingClient.telefono})` : ''}
+                              {similarExistingClient.handleSocial ? ` (@${similarExistingClient.handleSocial.replace(/^@/, '')})` : ''}
+                            </span>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleSelectClient(similarExistingClient)}
+                          className="bg-[#D97706] hover:bg-[#B45309] text-white text-xs rounded-lg shrink-0 h-7"
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          Usar "{similarExistingClient.nombre}"
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* CAMPOS DE DATOS: Fecha, Cliente, Instagram, Teléfono, Canal, etc. */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold flex items-center gap-1">
@@ -2719,13 +3363,18 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#241C15] font-bold">Cliente *</Label>
+                    <Label className="text-xs text-[#241C15] font-bold flex items-center justify-between">
+                      <span>Nombre del Cliente *</span>
+                      {clientSelectMode === 'EXISTING' && selectedClientOption && (
+                        <span className="text-[10px] text-[#065F46] font-semibold">Registrado</span>
+                      )}
+                    </Label>
                     <Input
                       required
                       placeholder="Nombre del cliente..."
                       value={formCliente}
                       onChange={(e) => setFormCliente(e.target.value)}
-                      className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
+                      className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl font-medium"
                     />
                   </div>
 
@@ -2860,6 +3509,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                     return (
                       <div
                         key={item.id}
+                        style={{ zIndex: formItems.length - index }}
                         className="p-3.5 sm:p-4 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3 relative"
                       >
                         <div className="flex items-center justify-between">
@@ -2884,18 +3534,18 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-[11px] text-[#241C15] font-bold">Modelo 3D *</Label>
-                            <select
-                              required
+                            <SearchableCombobox
+                              items={productosComboboxItems}
                               value={item.productoId}
-                              onChange={(e) => updateItem(item.id, { productoId: e.target.value })}
-                              className="w-full h-9 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] px-3 text-xs text-[#241C15] font-bold"
-                            >
-                              {productos.map(p => (
-                                <option key={p.id} value={p.id}>
-                                  {p.nombreModelo} ({p.lineaCategoria}) — Base: S/ {p.costoBase.toFixed(2)}
-                                </option>
-                              ))}
-                            </select>
+                              onChange={(newId) => updateItem(item.id, { productoId: newId })}
+                              placeholder="Buscar modelo 3D..."
+                              searchPlaceholder="Escribe para filtrar modelo..."
+                              emptyMessage="No se encontró ningún modelo"
+                              icon={Boxes}
+                              size="sm"
+                              inputClassName="bg-[#FFFFFF] border-[#E2D9CC] text-xs font-bold text-[#241C15]"
+                              clearable={false}
+                            />
                           </div>
 
                           <div className="space-y-1">
