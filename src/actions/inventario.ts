@@ -190,7 +190,6 @@ export async function getColoresInventario(forceReset = false): Promise<{
               id: true,
               nombreModelo: true,
               lineaCategoria: true,
-              pesoGramos: true,
               costoBase: true,
             }
           }
@@ -201,26 +200,7 @@ export async function getColoresInventario(forceReset = false): Promise<{
     orderBy: { nombreColor: 'asc' }
   })
 
-  // Auto-sync: Sincronizar ventas activas que no tenían gramos registrados pero cuyo producto ahora tiene pesoGramos definido
-  for (const f of filamentos) {
-    for (const v of f.ventas) {
-      if (v.estado !== 'CANCELADO' && (!v.gramosConsumidos || Number(v.gramosConsumidos) === 0) && v.producto?.pesoGramos && Number(v.producto.pesoGramos) > 0) {
-        const cant = Number(v.cantidad || 1)
-        const computedGramos = Number(v.producto.pesoGramos) * cant
-        try {
-          await prisma.venta.update({
-            where: { id: v.id },
-            data: { gramosConsumidos: computedGramos }
-          })
-          v.gramosConsumidos = computedGramos as any
-          await ajustarStockBobina(f.id, computedGramos)
-          if (f.stockGramos != null) {
-            f.stockGramos = Math.max(0, Number(f.stockGramos) - computedGramos) as any
-          }
-        } catch (e) {}
-      }
-    }
-  }
+
 
   const mapped: ColorFilamentoItem[] = filamentos.map(f => {
     const isDescatalogado = f.activo === false || f.estadoStock === 'DESCATALOGADO' || f.estado === 'DESCATALOGADO'
@@ -246,13 +226,11 @@ export async function getColoresInventario(forceReset = false): Promise<{
       const lineaCat = v.producto?.lineaCategoria || 'General'
       const cant = Number(v.cantidad || 1)
       
-      const pesoGramosUnit = (v.producto?.pesoGramos != null && Number(v.producto.pesoGramos) > 0)
-        ? Number(v.producto.pesoGramos)
-        : (v.gramosConsumidos && Number(v.gramosConsumidos) > 0 ? Number(v.gramosConsumidos) / cant : 0)
+      const pesoGramosUnit = (v.gramosConsumidos && Number(v.gramosConsumidos) > 0 ? Number(v.gramosConsumidos) / cant : 0)
 
       const gramosVenta = (v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0)
         ? Number(v.gramosConsumidos)
-        : (pesoGramosUnit * cant)
+        : 0
 
       totalGramosConsumidos += gramosVenta
 

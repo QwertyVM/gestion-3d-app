@@ -125,7 +125,7 @@ export function TabStockCatalogo({ negocio, productos, onRefresh }: TabStockCata
   const handleDiscountPercentChange = (pct: number) => {
     setPorcentajeDescuento(pct)
     if (editingProduct && pct > 0) {
-      const calcPrice = Number((editingProduct.precioMercado * (1 - pct / 100)).toFixed(2))
+      const calcPrice = Number((editingProduct.precioMenor * (1 - pct / 100)).toFixed(2))
       setPrecioOferta(calcPrice)
       if (!badgePromocion) {
         setBadgePromocion(`${pct}% OFF`)
@@ -167,7 +167,7 @@ export function TabStockCatalogo({ negocio, productos, onRefresh }: TabStockCata
       const nextEnOferta = !p.enOferta
       const defaultDiscount = nextEnOferta ? (p.porcentajeDescuento > 0 ? p.porcentajeDescuento : 15) : 0
       const defaultPrice = nextEnOferta
-        ? Number((p.precioMercado * (1 - defaultDiscount / 100)).toFixed(2))
+        ? Number((p.precioMenor * (1 - defaultDiscount / 100)).toFixed(2))
         : null
 
       await updateProductoStoreConfig(p.id, {
@@ -382,7 +382,7 @@ export function TabStockCatalogo({ negocio, productos, onRefresh }: TabStockCata
                         <div className="space-y-0.5">
                           <div className="flex items-baseline gap-1.5 md:justify-end">
                             <span className="text-xs text-gray-400 line-through">
-                              S/ {p.precioMercado.toFixed(2)}
+                              S/ {p.precioMenor.toFixed(2)}
                             </span>
                             <span className="text-sm font-black text-amber-600">
                               S/ {p.precioOferta!.toFixed(2)}
@@ -394,7 +394,7 @@ export function TabStockCatalogo({ negocio, productos, onRefresh }: TabStockCata
                         </div>
                       ) : (
                         <span className="text-sm font-black text-[#241C15]">
-                          S/ {p.precioMercado.toFixed(2)}
+                          S/ {p.precioMenor.toFixed(2)}
                         </span>
                       )}
                     </div>
@@ -473,7 +473,7 @@ export function TabStockCatalogo({ negocio, productos, onRefresh }: TabStockCata
                   </h3>
                   <p className="text-[11px] text-[#75695D]">
                     Categoría: {editingProduct.lineaCategoria} • Precio Base:{' '}
-                    <strong>S/ {editingProduct.precioMercado.toFixed(2)}</strong>
+                    <strong>S/ {editingProduct.precioMenor.toFixed(2)}</strong>
                   </p>
                 </div>
               </div>

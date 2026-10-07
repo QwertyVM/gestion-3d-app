@@ -48,10 +48,8 @@ export interface ProductoItem {
   lineaCategoria: string
   nombreModelo: string
   costoBase: number
-  precioAmigos: number
-  precioMercado: number
-  precioComunidad?: number
-  pesoGramos?: number
+  precioMayor: number
+  precioMenor: number
   activo: boolean
   stock?: number
   controlarStock?: boolean
@@ -131,11 +129,9 @@ export function CatalogoClient({
   const [formData, setFormData] = useState({
     nombreModelo: '',
     lineaCategoria: '',
-    pesoGramos: '',
-    tiempoHoras: '',
     costoBase: '',
-    precioAmigos: '',
-    precioMercado: '',
+    precioMayor: '',
+    precioMenor: '',
     activo: true,
     stock: '0',
     controlarStock: false,
@@ -174,17 +170,15 @@ export function CatalogoClient({
 
   // Calculate profit margin percentage
   const calcMargen = (precio: number, costo: number) => {
-    if (costo <= 0) return '+0%'
+    if (costo <= 0) return precio > 0 ? '+100%' : '+0%'
     const margen = ((precio - costo) / costo) * 100
     return margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`
   }
 
-  // Estimate print time (approx 22g/hour as workshop baseline)
-  const estimarTiempoImpresion = (gramos: number) => {
-    if (!gramos || gramos <= 0) return '—'
-    const horas = gramos / 22
-    if (horas < 1) return `${Math.round(horas * 60)} min`
-    return `${horas.toFixed(1)}h`
+  // Calculate net profit
+  const calcGanancia = (precio: number, costo: number) => {
+    const diff = precio - costo
+    return diff >= 0 ? `+S/ ${diff.toFixed(2)}` : `-S/ ${Math.abs(diff).toFixed(2)}`
   }
 
   // Categories list for dropdown
@@ -225,9 +219,8 @@ export function CatalogoClient({
       list = list.filter(p => {
         const nombre = (p.nombreModelo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
         const cat = (p.lineaCategoria || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-        const gramos = (p.pesoGramos || '').toString()
 
-        return nombre.includes(q) || cat.includes(q) || gramos.includes(q)
+        return nombre.includes(q) || cat.includes(q)
       })
     }
 
@@ -238,9 +231,9 @@ export function CatalogoClient({
     })
   }, [productos, estadoFilter, categoriaFilter, search])
 
-  // Copy Quotation to Clipboard for WhatsApp: "[Nombre] - Precio: S/ [Mercado]"
+  // Copy Quotation to Clipboard for WhatsApp: "[Nombre] - Menor: S/ [X] | Mayor: S/ [Y]"
   const handleCopiarCotizacion = (p: ProductoItem) => {
-    const message = `${p.nombreModelo} - Precio: ${formatCurrency(p.precioMercado)}`
+    const message = `${p.nombreModelo} - Precio Menor: ${formatCurrency(p.precioMenor)} | Precio Mayor: ${formatCurrency(p.precioMayor)}`
     navigator.clipboard.writeText(message)
     setCopiedId(p.id)
     setTimeout(() => setCopiedId(null), 2000)
@@ -299,11 +292,9 @@ export function CatalogoClient({
     setFormData({
       nombreModelo: '',
       lineaCategoria: categoryNamesList[0] || 'General',
-      pesoGramos: is3D ? '150' : '0',
-      tiempoHoras: is3D ? '4.5' : '0',
-      costoBase: is3D ? '9.75' : '0',
-      precioAmigos: is3D ? '18.00' : '0',
-      precioMercado: is3D ? '30.00' : '0',
+      costoBase: is3D ? '10.00' : '0.00',
+      precioMayor: is3D ? '20.00' : '0.00',
+      precioMenor: is3D ? '30.00' : '0.00',
       activo: true,
       stock: '0',
       controlarStock: false,
@@ -331,15 +322,12 @@ export function CatalogoClient({
   // Open Edit Modal
   const handleOpenEdit = (p: ProductoItem) => {
     setEditingId(p.id)
-    const gramos = p.pesoGramos || 0
     setFormData({
       nombreModelo: p.nombreModelo,
       lineaCategoria: p.lineaCategoria || 'General',
-      pesoGramos: gramos > 0 ? gramos.toString() : '',
-      tiempoHoras: gramos > 0 ? (gramos / 22).toFixed(1) : '',
       costoBase: p.costoBase.toString(),
-      precioAmigos: p.precioAmigos.toString(),
-      precioMercado: p.precioMercado.toString(),
+      precioMayor: p.precioMayor.toString(),
+      precioMenor: p.precioMenor.toString(),
       activo: p.activo,
       stock: p.stock?.toString() || '0',
       controlarStock: p.controlarStock || false,
@@ -364,22 +352,6 @@ export function CatalogoClient({
     setOpenModal(true)
   }
 
-  // Recalculate base cost automatically from grams
-  const handleGramosChange = (val: string) => {
-    const g = parseFloat(val) || 0
-    const horas = g > 0 ? (g / 22).toFixed(1) : ''
-    const costoEstimado = g > 0 ? (g * 0.065).toFixed(2) : ''
-    
-    setFormData(prev => ({
-      ...prev,
-      pesoGramos: val,
-      tiempoHoras: horas,
-      costoBase: costoEstimado || prev.costoBase
-    }))
-  }
-
-
-
   // Submit Modal
   const handleSubmitModal = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -389,6 +361,8 @@ export function CatalogoClient({
     }
 
     const costoBase = parseFloat(formData.costoBase) || 0
+    const precioMayor = parseFloat(formData.precioMayor) || 0
+    const precioMenor = parseFloat(formData.precioMenor) || 0
     const precioOferta = formData.precioOferta ? parseFloat(formData.precioOferta) : 0
     if (formData.enOferta && precioOferta > 0 && precioOferta < costoBase) {
       toast.error('El precio de oferta no puede ser menor al costo base')
@@ -398,10 +372,9 @@ export function CatalogoClient({
     const payload = {
       nombreModelo: formData.nombreModelo.trim(),
       lineaCategoria: formData.lineaCategoria.trim() || 'General',
-      pesoGramos: formData.pesoGramos ? parseFloat(formData.pesoGramos) : 0,
       costoBase: costoBase,
-      precioAmigos: parseFloat(formData.precioAmigos) || 0,
-      precioMercado: parseFloat(formData.precioMercado) || 0,
+      precioMayor: precioMayor,
+      precioMenor: precioMenor,
       activo: formData.activo,
       stock: parseInt(formData.stock) || 0,
       controlarStock: formData.controlarStock,
@@ -468,7 +441,7 @@ export function CatalogoClient({
               <span>Catálogo de Productos</span>
             </h1>
             <p className="text-xs sm:text-sm text-[#75695D] mt-1">
-              {is3D ? 'Modelos 3D disponibles con costos base, tiempos de impresión y precios escalonados.' : 'Juegos de mesa disponibles para venta online y presencial.'}
+              {is3D ? 'Modelos 3D disponibles con costos base y precios al por mayor y menor.' : 'Juegos de mesa disponibles para venta online y presencial.'}
             </p>
           </div>
 
@@ -610,7 +583,7 @@ export function CatalogoClient({
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
               <Input 
-                placeholder="Buscar modelo, tag o gramaje..."
+                placeholder="Buscar modelo o categoría..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-2xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
@@ -731,98 +704,112 @@ export function CatalogoClient({
       <div className="hidden lg:block w-full bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
         <table className="w-full text-left border-collapse table-fixed text-xs">
           <colgroup>
-            <col className="w-[45%]" />
-            <col className="w-[15%]" />
+            <col className="w-[34%]" />
+            <col className="w-[14%]" />
             <col className="w-[20%]" />
             <col className="w-[20%]" />
+            <col className="w-[12%]" />
           </colgroup>
           <thead>
             <tr className="bg-[#FAF8F5] border-b border-[#E2D9CC] text-[#75695D] text-[11px] font-semibold">
               <th className="py-3.5 px-4 font-bold text-left">Modelo & Familia</th>
               <th className="py-3.5 px-4 font-bold text-right">Costo Base</th>
-              <th className="py-3.5 px-4 font-bold text-center">Precio de Venta (Mercado)</th>
+              <th className="py-3.5 px-4 font-bold text-center">Precio por Menor</th>
+              <th className="py-3.5 px-4 font-bold text-center">Precio por Mayor</th>
               <th className="py-3.5 px-4 font-bold text-center">Estado</th>
             </tr>
           </thead>
-            <tbody className="divide-y divide-[#E2D9CC]">
-              {filteredProductos.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-12 text-center text-[#75695D] italic bg-[#FFFFFF]">
-                    No se encontraron productos con ese criterio de búsqueda
-                  </td>
-                </tr>
-              ) : (
-                filteredProductos.map((p) => {
-                  const gramos = p.pesoGramos || 0
-                  const costo = p.costoBase || 0
-                  const isMenuOpen = activeMenuId === p.id
+          <tbody className="divide-y divide-[#E2D9CC]">
+            {filteredProductos.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-12 text-center text-[#75695D] italic bg-[#FFFFFF]">
+                  No se encontraron productos con ese criterio de búsqueda
+                </td>
+              </tr>
+            ) : (
+              filteredProductos.map((p) => {
+                const costo = p.costoBase || 0
 
-                  return (
-                    <tr 
-                      key={p.id} 
-                      onClick={() => handleOpenEdit(p)}
-                      className={`h-16 transition-colors cursor-pointer ${
-                        !p.activo ? 'bg-[#FAF8F5]/60 opacity-80' : 'hover:bg-[#FAF8F5]'
-                      }`}
-                    >
-                      {/* Columna 1: Modelo & Familia */}
-                      <td className="py-3 px-4 min-w-[200px]">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-2xl bg-[#F5EBE1] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center flex-shrink-0 shadow-2xs">
-                            <Package className="h-4.5 w-4.5 stroke-[2.2]" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="font-bold text-sm text-[#241C15] block truncate" title={p.nombreModelo}>
-                              {p.nombreModelo}
-                            </span>
-                            <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] mt-0.5">
-                              {p.lineaCategoria || 'General'}
-                            </Badge>
-                          </div>
+                return (
+                  <tr 
+                    key={p.id} 
+                    onClick={() => handleOpenEdit(p)}
+                    className={`h-16 transition-colors cursor-pointer ${
+                      !p.activo ? 'bg-[#FAF8F5]/60 opacity-80' : 'hover:bg-[#FAF8F5]'
+                    }`}
+                  >
+                    {/* Columna 1: Modelo & Familia */}
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-2xl bg-[#F5EBE1] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center flex-shrink-0 shadow-2xs">
+                          <Package className="h-4.5 w-4.5 stroke-[2.2]" />
                         </div>
-                      </td>
-
-                      {/* Columna 3: Costo Base */}
-                      <td className="py-3 px-4 text-right font-mono font-semibold text-[#241C15] text-xs min-w-[90px] tabular-nums">
-                        {formatCurrency(costo)}
-                      </td>
-
-                      {/* Columna 4: Niveles de Precios (1 Columna) */}
-                      <td className="py-3 px-4 min-w-[120px]">
-                        <div className="flex justify-center text-center font-mono text-xs tabular-nums">
-                          {/* Mercado */}
-                          <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#A36F4C]/40 shadow-2xs ring-1 ring-[#A36F4C]/10 w-full max-w-[100px]">
-                            <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Mercado</span>
-                            <span className="font-black text-[#A36F4C] block">
-                              {formatCurrency(p.precioMercado)}
-                            </span>
-                            <span className="text-[9px] text-[#1E5E3A] font-bold block">
-                              {calcMargen(p.precioMercado, costo)}
-                            </span>
-                          </div>
+                        <div className="min-w-0">
+                          <span className="font-bold text-sm text-[#241C15] block truncate" title={p.nombreModelo}>
+                            {p.nombreModelo}
+                          </span>
+                          <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] mt-0.5">
+                            {p.lineaCategoria || 'General'}
+                          </Badge>
                         </div>
-                      </td>
+                      </div>
+                    </td>
 
-                      {/* Columna 5: Estado */}
-                      <td className="py-3 px-4 text-center min-w-[100px]">
-                        {p.activo ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] border border-[#B4E3C0] text-[#1E5E3A] text-[11px] font-bold">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
-                            <span>Activo</span>
+                    {/* Columna 2: Costo Base */}
+                    <td className="py-3 px-4 text-right font-mono font-semibold text-[#241C15] text-xs tabular-nums">
+                      {formatCurrency(costo)}
+                    </td>
+
+                    {/* Columna 3: Precio al por Menor */}
+                    <td className="py-3 px-4">
+                      <div className="flex justify-center text-center font-mono text-xs tabular-nums">
+                        <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#A36F4C]/40 shadow-2xs ring-1 ring-[#A36F4C]/10 w-full max-w-[130px]">
+                          <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Por Menor</span>
+                          <span className="font-black text-[#A36F4C] block">
+                            {formatCurrency(p.precioMenor)}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] text-[11px] font-medium">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#75695D]" />
-                            <span>Archivado</span>
+                          <span className="text-[9px] text-[#1E5E3A] font-bold block">
+                            {calcMargen(p.precioMenor, costo)}
                           </span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Columna 4: Precio al por Mayor */}
+                    <td className="py-3 px-4">
+                      <div className="flex justify-center text-center font-mono text-xs tabular-nums">
+                        <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#2563EB]/40 shadow-2xs ring-1 ring-[#2563EB]/10 w-full max-w-[130px]">
+                          <span className="text-[9px] text-[#2563EB] block font-sans font-bold">Por Mayor</span>
+                          <span className="font-black text-[#2563EB] block">
+                            {formatCurrency(p.precioMayor)}
+                          </span>
+                          <span className="text-[9px] text-[#1E5E3A] font-bold block">
+                            {calcMargen(p.precioMayor, costo)}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Columna 5: Estado */}
+                    <td className="py-3 px-4 text-center">
+                      {p.activo ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] border border-[#B4E3C0] text-[#1E5E3A] text-[11px] font-bold">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
+                          <span>Activo</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] text-[11px] font-medium">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#75695D]" />
+                          <span>Archivado</span>
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* VISTA MÓVIL Y TABLET (< lg): Tarjetas táctiles limpias */}
@@ -833,7 +820,6 @@ export function CatalogoClient({
           </div>
         ) : (
           filteredProductos.map((p) => {
-            const gramos = p.pesoGramos || 0
             const costo = p.costoBase || 0
 
             return (
@@ -871,36 +857,30 @@ export function CatalogoClient({
                   )}
                 </div>
 
-                {/* Fila 2: Especificaciones Técnicas y Costo Base */}
-                <div className="flex items-center justify-between text-xs font-mono bg-[#FAF8F5] p-2.5 rounded-2xl border border-[#E2D9CC]/70">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[#75695D]">
-                      Peso: <strong className="text-[#241C15]">{gramos > 0 ? `${gramos}g` : '—'}</strong>
-                    </span>
-                    <span className="text-[#75695D]">
-                      Tiempo: <strong className="text-[#241C15]">{estimarTiempoImpresion(gramos)}</strong>
-                    </span>
+                {/* Fila 2: Grid Financiero Móvil (Costo Base, Menor, Mayor) */}
+                <div className="grid grid-cols-3 gap-2 bg-[#FAF8F5] p-2.5 rounded-2xl border border-[#E2D9CC]/70 text-center font-mono">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-[#75695D] block font-sans font-semibold">Costo Base</span>
+                    <span className="text-xs font-bold text-[#241C15] block">{formatCurrency(costo)}</span>
                   </div>
-                  <span className="font-bold text-[#241C15]">
-                    Costo: {formatCurrency(costo)}
-                  </span>
-                </div>
-
-                {/* Fila 3: Precio de Venta (1 Col) */}
-                <div className="flex justify-center text-center font-mono text-xs tabular-nums">
-                  <div className="p-1.5 bg-[#FFFFFF] rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10 w-full max-w-[120px]">
-                    <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Mercado</span>
-                    <span className="font-black text-[#A36F4C] block">{formatCurrency(p.precioMercado)}</span>
-                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioMercado, costo)}</span>
+                  <div className="space-y-0.5 border-x border-[#E2D9CC]/80 px-1">
+                    <span className="text-[10px] text-[#A36F4C] block font-sans font-bold">Por Menor</span>
+                    <span className="text-xs font-black text-[#A36F4C] block">{formatCurrency(p.precioMenor)}</span>
+                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioMenor, costo)}</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] text-[#2563EB] block font-sans font-bold">Por Mayor</span>
+                    <span className="text-xs font-black text-[#2563EB] block">{formatCurrency(p.precioMayor)}</span>
+                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioMayor, costo)}</span>
                   </div>
                 </div>
 
-                {/* Fila 4: Acciones Móvil */}
+                {/* Fila 3: Acciones Móvil */}
                 <div className="pt-2 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => handleCopiarCotizacion(p)}
-                    className="flex-1 h-8 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#241C15] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                    className="flex-1 h-8 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#241C15] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                   >
                     {copiedId === p.id ? (
                       <>
@@ -910,7 +890,7 @@ export function CatalogoClient({
                     ) : (
                       <>
                         <Share2 className="h-3.5 w-3.5 text-[#A36F4C]" />
-                        <span>Copiar Cotización</span>
+                        <span>Copiar Precios</span>
                       </>
                     )}
                   </button>
@@ -918,7 +898,7 @@ export function CatalogoClient({
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(p)}
-                    className="h-8 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#A36F4C] font-bold text-xs flex items-center gap-1 shadow-2xs"
+                    className="h-8 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#A36F4C] font-bold text-xs flex items-center gap-1 shadow-2xs cursor-pointer"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                     <span>Editar</span>
@@ -927,7 +907,7 @@ export function CatalogoClient({
                   <button
                     type="button"
                     onClick={() => handleDuplicar(p)}
-                    className="h-8 w-8 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#75695D] flex items-center justify-center shadow-2xs"
+                    className="h-8 w-8 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#75695D] flex items-center justify-center shadow-2xs cursor-pointer"
                     title="Duplicar"
                   >
                     <CopyPlus className="h-3.5 w-3.5" />
@@ -936,7 +916,7 @@ export function CatalogoClient({
                   <button
                     type="button"
                     onClick={() => handleToggleEstado(p)}
-                    className={`h-8 w-8 rounded-xl border flex items-center justify-center shadow-2xs ${
+                    className={`h-8 w-8 rounded-xl border flex items-center justify-center shadow-2xs cursor-pointer ${
                       p.activo ? 'border-[#E2D9CC] text-[#75695D]' : 'border-[#B4E3C0] bg-[#EBF7EE] text-[#1E5E3A]'
                     }`}
                     title={p.activo ? 'Descontinuar' : 'Reactivar'}
@@ -951,10 +931,10 @@ export function CatalogoClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 5. MODAL: CREAR / EDITAR PRODUCTO 3D (2 COLUMNAS)                         */}
+      {/* 5. MODAL: REGISTRAR / EDITAR PRODUCTO (REDISEÑADO)                        */}
       {/* ========================================================================= */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[560px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
+        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[580px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
           <form onSubmit={handleSubmitModal} className="p-5 sm:p-6 space-y-4">
             
             {/* Header */}
@@ -968,7 +948,7 @@ export function CatalogoClient({
                     {editingId ? (is3D ? 'Editar Modelo 3D' : 'Editar Juego de Mesa') : (is3D ? 'Registrar Nuevo Producto 3D' : 'Registrar Juego de Mesa')}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                    {is3D ? 'Define costos base, parámetros técnicos y precios escalonados' : 'Define costos de compra, precios de venta y detalles para la web'}
+                    Define costos base y precios de venta al por mayor y menor
                   </DialogDescription>
                 </div>
               </div>
@@ -981,7 +961,7 @@ export function CatalogoClient({
               </button>
             </div>
 
-            {/* Formulario en 2 Columnas */}
+            {/* Formulario */}
             <div className="space-y-4">
               
               {/* Fila 1: Nombre & Categoría */}
@@ -1075,92 +1055,129 @@ export function CatalogoClient({
                 )}
               </div>
 
-              {/* Fila 2: Parámetros Técnicos (Gramos, Tiempo, Costo Base) */}
-              <div className="p-3.5 bg-[#FAF8F5] border border-[#E2D9CC] rounded-2xl space-y-2.5">
+              {/* Fila 2: Estructura Financiera (Costo Base, Por Menor, Por Mayor) */}
+              <div className="p-4 bg-[#FAF8F5] border border-[#E2D9CC] rounded-2xl space-y-3.5 shadow-2xs">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
                     <Calculator className="h-3.5 w-3.5 text-[#A36F4C]" />
-                    {is3D ? 'Parámetros de Taller & Costo' : 'Costo de Compra'}
+                    Estructura Financiera & Precios
                   </span>
-                  {is3D && (
-                    <span className="text-[10px] text-[#75695D]">
-                      Auto-cálculo de costo sugerido
-                    </span>
-                  )}
+                  <span className="text-[10px] font-medium text-[#75695D] bg-white px-2 py-0.5 rounded-full border border-[#E2D9CC]">
+                    Márgenes en tiempo real
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2.5">
-                  {is3D && (
-                    <>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] font-bold text-[#75695D]">Peso (g)</Label>
-                        <Input 
-                          type="number"
-                          step="1"
-                          value={formData.pesoGramos}
-                          onChange={(e) => handleGramosChange(e.target.value)}
-                          placeholder="150"
-                          className="bg-white border-[#E2D9CC] rounded-xl text-xs font-mono font-bold h-9"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-[11px] font-bold text-[#75695D]">Tiempo (h)</Label>
-                        <Input 
-                          type="number"
-                          step="0.1"
-                          value={formData.tiempoHoras}
-                          onChange={(e) => setFormData(prev => ({ ...prev, tiempoHoras: e.target.value }))}
-                          placeholder="4.5"
-                          className="bg-white border-[#E2D9CC] rounded-xl text-xs font-mono font-bold h-9"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  <div className={`space-y-1 ${!is3D ? 'col-span-3' : ''}`}>
-                    <Label className="text-[11px] font-bold text-[#1E5E3A]">Costo Base (S/)</Label>
+                {/* Costo Base */}
+                <div className="space-y-1.5 p-3 bg-white rounded-xl border border-[#B4E3C0]/80 shadow-2xs">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-[#1E5E3A] uppercase tracking-wider flex items-center gap-1">
+                      <span>Costo Base (S/) *</span>
+                    </Label>
+                    <span className="text-[10px] text-[#75695D]">
+                      {is3D ? 'Costo unitario directo' : 'Costo de compra o importación'}
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#1E5E3A]">S/</span>
                     <Input 
                       type="number"
                       step="0.01"
+                      min="0"
                       value={formData.costoBase}
                       onChange={(e) => setFormData(prev => ({ ...prev, costoBase: e.target.value }))}
-                      placeholder={is3D ? "9.75" : "0.00"}
+                      placeholder="0.00"
                       required
-                      className="bg-white border-[#B4E3C0] text-[#1E5E3A] rounded-xl text-xs font-mono font-black h-9"
+                      className="pl-8 bg-[#FAF8F5] border-[#B4E3C0] text-[#1E5E3A] rounded-xl text-sm font-mono font-black h-10"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Fila 3: Precios de Venta & Márgenes en Tiempo Real */}
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                  Precios de Venta (S/)
-                </Label>
-
-                <div className="grid grid-cols-1 gap-3">
-                  {/* Mercado */}
-                  <div className="space-y-1 p-2.5 bg-[#FAF8F5] rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10">
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-bold text-[#A36F4C]">Mercado</span>
-                      <span className="font-mono font-bold text-[#1E5E3A]">
-                        {calcMargen(parseFloat(formData.precioMercado) || 0, parseFloat(formData.costoBase) || 0)}
-                      </span>
+                {/* Precios de Venta: Por Menor & Por Mayor */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  
+                  {/* Precio al por Menor */}
+                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#A36F4C] uppercase tracking-wider">Por Menor</span>
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-[#F5EBE1] text-[#A36F4C] border-[#D4BEA7]">
+                        Detal / PVP
+                      </Badge>
                     </div>
-                    <Input 
-                      type="number"
-                      step="0.5"
-                      value={formData.precioMercado}
-                      onChange={(e) => setFormData(prev => ({ ...prev, precioMercado: e.target.value }))}
-                      placeholder="30.00"
-                      className="bg-white border-[#A36F4C]/50 rounded-lg text-xs font-mono font-black h-9 text-[#A36F4C]"
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#A36F4C]">S/</span>
+                      <Input 
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={formData.precioMenor}
+                        onChange={(e) => setFormData(prev => ({ ...prev, precioMenor: e.target.value }))}
+                        placeholder="0.00"
+                        required
+                        className="pl-8 bg-[#FAF8F5] border-[#A36F4C]/50 rounded-xl text-sm font-mono font-black h-10 text-[#A36F4C]"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-[#E2D9CC]/60">
+                      <span className="text-[#75695D]">Margen:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-[#1E5E3A]">
+                          {calcMargen(parseFloat(formData.precioMenor) || 0, parseFloat(formData.costoBase) || 0)}
+                        </span>
+                        <span className="text-[#75695D]">
+                          ({calcGanancia(parseFloat(formData.precioMenor) || 0, parseFloat(formData.costoBase) || 0)})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Precio al por Mayor */}
+                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#2563EB]/40 ring-1 ring-[#2563EB]/10 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#2563EB] uppercase tracking-wider">Por Mayor</span>
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
+                        Volumen / B2B
+                      </Badge>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#2563EB]">S/</span>
+                      <Input 
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={formData.precioMayor}
+                        onChange={(e) => setFormData(prev => ({ ...prev, precioMayor: e.target.value }))}
+                        placeholder="0.00"
+                        required
+                        className="pl-8 bg-[#FAF8F5] border-[#2563EB]/50 rounded-xl text-sm font-mono font-black h-10 text-[#2563EB]"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-[#E2D9CC]/60">
+                      <span className="text-[#75695D]">Margen:</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-[#1E5E3A]">
+                          {calcMargen(parseFloat(formData.precioMayor) || 0, parseFloat(formData.costoBase) || 0)}
+                        </span>
+                        <span className="text-[#75695D]">
+                          ({calcGanancia(parseFloat(formData.precioMayor) || 0, parseFloat(formData.costoBase) || 0)})
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                {/* Validaciones de precio en vivo */}
+                {(parseFloat(formData.precioMayor) || 0) > (parseFloat(formData.precioMenor) || 0) && (parseFloat(formData.precioMenor) || 0) > 0 && (
+                  <div className="p-2 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-center gap-1.5">
+                    <span>💡 Nota: El precio por mayor (S/ {formData.precioMayor}) suele ser menor o igual al precio por menor (S/ {formData.precioMenor}).</span>
+                  </div>
+                )}
+                {(parseFloat(formData.costoBase) || 0) > (parseFloat(formData.precioMenor) || 0) && (parseFloat(formData.precioMenor) || 0) > 0 && (
+                  <div className="p-2 bg-red-50 rounded-xl border border-red-200 text-[11px] text-red-800 flex items-center gap-1.5">
+                    <span>⚠️ Alerta: El precio por menor está por debajo del costo base.</span>
+                  </div>
+                )}
               </div>
 
-              {/* Fila 4: Estado Inicial */}
+              {/* Fila 3: Estado Inicial */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                   Estado del Producto
@@ -1169,33 +1186,33 @@ export function CatalogoClient({
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, activo: true }))}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                       formData.activo
-                        ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] shadow-2xs'
-                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC]'
+                        ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] shadow-2xs ring-1 ring-[#1E5E3A]/20'
+                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC] hover:bg-[#F4EFEA]'
                     }`}
                   >
-                    🟢 Activo en Venta
+                    <span className="h-2 w-2 rounded-full bg-[#1E5E3A]" />
+                    <span>Activo en Venta</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, activo: false }))}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                       !formData.activo
-                        ? 'bg-[#FAF8F5] text-[#75695D] border-[#D4BEA7] shadow-2xs'
-                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC]'
+                        ? 'bg-[#FAF8F5] text-[#75695D] border-[#D4BEA7] shadow-2xs ring-1 ring-[#75695D]/20'
+                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC] hover:bg-[#F4EFEA]'
                     }`}
                   >
-                    📁 Descontinuado
+                    <Archive className="h-3.5 w-3.5 text-[#75695D]" />
+                    <span>Descontinuado</span>
                   </button>
                 </div>
               </div>
 
-
-
               {/* Ficha Técnica BG (solo visible en modo Juegos de Mesa) */}
               {isBG && (
-                <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-sm">
+                <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-xs">
                   <div className="flex items-center gap-1.5 pb-2 border-b border-[#E2D9CC]/50">
                     <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
                       🎲 Ficha Técnica del Juego
@@ -1295,7 +1312,7 @@ export function CatalogoClient({
                 size="sm"
                 className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 rounded-xl cursor-pointer shadow-xs"
               >
-                {isSubmitting ? 'Guardando...' : 'Guardar Producto'}
+                {isSubmitting ? 'Guardando...' : (editingId ? 'Guardar Cambios' : 'Guardar Producto')}
               </Button>
             </div>
           </form>

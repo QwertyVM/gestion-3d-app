@@ -535,13 +535,13 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
                               {prod.nombreModelo}
                             </span>
                             <span className="text-[10px] font-mono font-bold text-[#1E5E3A] shrink-0">
-                              S/ {prod.precioMercado.toFixed(2)}
+                              S/ {prod.precioMenor.toFixed(2)}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between text-[10px] text-[#75695D] pt-1 border-t border-[#E2D9CC]/60 font-mono">
                             <span>Costo: S/ {prod.costoBase.toFixed(2)}</span>
-                            <span>{prod.pesoGramos && prod.pesoGramos > 0 ? `${prod.pesoGramos}g` : 'Peso N/E'}</span>
+                            <span>Mayor: S/ {(prod.precioMayor || 0).toFixed(2)}</span>
                           </div>
                         </div>
                       ))}

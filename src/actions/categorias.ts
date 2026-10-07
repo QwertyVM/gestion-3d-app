@@ -9,8 +9,8 @@ export interface CategoriaProductoSummary {
   id: string
   nombreModelo: string
   costoBase: number
-  precioMercado: number
-  pesoGramos?: number | null
+  precioMenor: number
+  precioMayor?: number
   activo: boolean
 }
 
@@ -35,8 +35,8 @@ export async function getCategorias(negocio?: TipoNegocio): Promise<CategoriaIte
       lineaCategoria: true,
       nombreModelo: true,
       costoBase: true,
-      precioMercado: true,
-      pesoGramos: true,
+      precioMenor: true,
+      precioMayor: true,
       activo: true
     },
     orderBy: { nombreModelo: 'asc' }
@@ -76,8 +76,8 @@ export async function getCategorias(negocio?: TipoNegocio): Promise<CategoriaIte
       id: p.id,
       nombreModelo: p.nombreModelo,
       costoBase: Number(p.costoBase),
-      precioMercado: Number(p.precioMercado),
-      pesoGramos: p.pesoGramos != null ? Number(p.pesoGramos) : null,
+      precioMenor: Number(p.precioMenor),
+      precioMayor: Number(p.precioMayor),
       activo: p.activo
     })
   })
@@ -198,8 +198,8 @@ export async function updateCategoria(id: string, data: { nombre: string; descri
       id: true,
       nombreModelo: true,
       costoBase: true,
-      precioMercado: true,
-      pesoGramos: true,
+      precioMenor: true,
+      precioMayor: true,
       activo: true
     },
     orderBy: { nombreModelo: 'asc' }
@@ -218,8 +218,8 @@ export async function updateCategoria(id: string, data: { nombre: string; descri
       id: p.id,
       nombreModelo: p.nombreModelo,
       costoBase: Number(p.costoBase),
-      precioMercado: Number(p.precioMercado),
-      pesoGramos: p.pesoGramos != null ? Number(p.pesoGramos) : null,
+      precioMenor: Number(p.precioMenor),
+      precioMayor: Number(p.precioMayor),
       activo: p.activo
     })),
     createdAt: updated.createdAt.toISOString(),

@@ -102,10 +102,8 @@ function serializeVenta(v: any) {
       lineaCategoria: v.producto.lineaCategoria,
       nombreModelo: v.producto.nombreModelo,
       costoBase: Number(v.producto.costoBase),
-      precioAmigos: Number(v.producto.precioAmigos),
-      precioMercado: Number(v.producto.precioMercado),
-      precioComunidad: Number(v.producto.precioComunidad),
-      pesoGramos: v.producto.pesoGramos != null ? Number(v.producto.pesoGramos) : 0,
+      precioMayor: Number(v.producto.precioMayor),
+      precioMenor: Number(v.producto.precioMenor),
       activo: v.producto.activo,
       createdAt: v.producto.createdAt instanceof Date ? v.producto.createdAt.toISOString() : String(v.producto.createdAt),
       updatedAt: v.producto.updatedAt instanceof Date ? v.producto.updatedAt.toISOString() : String(v.producto.updatedAt),
@@ -114,10 +112,8 @@ function serializeVenta(v: any) {
       lineaCategoria: 'General',
       nombreModelo: v.nombreProductoSnapshot || 'Producto',
       costoBase: 0,
-      precioAmigos: 0,
-      precioMercado: 0,
-      precioComunidad: 0,
-      pesoGramos: 0,
+      precioMayor: 0,
+      precioMenor: 0,
       activo: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -172,10 +168,8 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
       lineaCategoria: single.producto.lineaCategoria,
       nombreModelo: single.producto.nombreModelo,
       costoBase: Number(single.producto.costoBase),
-      precioAmigos: Number(single.producto.precioAmigos),
-      precioMercado: Number(single.producto.precioMercado),
-      precioComunidad: Number(single.producto.precioComunidad),
-      pesoGramos: single.producto.pesoGramos != null ? Number(single.producto.pesoGramos) : 0,
+      precioMayor: Number(single.producto.precioMayor),
+      precioMenor: Number(single.producto.precioMenor),
       activo: single.producto.activo,
       createdAt: single.producto.createdAt instanceof Date ? single.producto.createdAt.toISOString() : String(single.producto.createdAt),
       updatedAt: single.producto.updatedAt instanceof Date ? single.producto.updatedAt.toISOString() : String(single.producto.updatedAt),
@@ -188,10 +182,8 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
       lineaCategoria: 'Multiproducto',
       nombreModelo: `${p.codigo}: ${items.length} modelos (${totalCantidad} pzs)`,
       costoBase: costoBaseSnapshotUnit,
-      precioAmigos: 0,
-      precioMercado: 0,
-      precioComunidad: 0,
-      pesoGramos: 0,
+      precioMayor: 0,
+      precioMenor: 0,
       activo: true,
       createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt),
       updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt),
@@ -236,7 +228,7 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
     personalizacion: p.notas || null,
     gramosConsumidos: gramosConsumidosTotal,
     cantidad: totalCantidad,
-    tipoPrecio: items[0]?.tipoPrecio || 'MERCADO',
+    tipoPrecio: items[0]?.tipoPrecio || 'MENOR',
     precioUnitario: totalCantidad > 0 ? Number((Number(p.total) / totalCantidad).toFixed(2)) : Number(p.total),
     total: Number(p.total),
     montoPagado: Number(p.montoPagado),
@@ -256,10 +248,8 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
       lineaCategoria,
       nombreModelo: nombreProducto,
       costoBase: costoBaseSnapshotUnit,
-      precioAmigos: 0,
-      precioMercado: 0,
-      precioComunidad: 0,
-      pesoGramos: 0,
+      precioMayor: 0,
+      precioMenor: 0,
       activo: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -345,13 +335,9 @@ export async function createVenta(data: {
     where: { id: data.productoId }
   })
 
-  const prodGramosUnit = producto?.pesoGramos != null && Number(producto.pesoGramos) > 0
-    ? Number(producto.pesoGramos)
-    : 0
-
   const gramosConsumidos = (data.gramosConsumidos !== undefined && data.gramosConsumidos !== null && data.gramosConsumidos > 0)
     ? data.gramosConsumidos
-    : (prodGramosUnit * data.cantidad)
+    : 0
 
   const fechaVenta = parseDateInput(data.fecha) || new Date()
   const fechaPago = parseDateInput(data.fechaPagoInicial || data.fecha) || fechaVenta

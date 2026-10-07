@@ -501,10 +501,8 @@ export interface ProductoStoreConfigItem {
   lineaCategoria: string
   nombreModelo: string
   costoBase: number
-  precioAmigos: number
-  precioMercado: number
-  precioComunidad: number
-  pesoGramos: number
+  precioMayor: number
+  precioMenor: number
   stock: number
   controlarStock: boolean
   enOferta: boolean
@@ -538,10 +536,8 @@ export async function getProductosStoreConfig(negocio?: TipoNegocio): Promise<Pr
     lineaCategoria: p.lineaCategoria,
     nombreModelo: p.nombreModelo,
     costoBase: Number(p.costoBase),
-    precioAmigos: Number(p.precioAmigos),
-    precioMercado: Number(p.precioMercado),
-    precioComunidad: Number(p.precioComunidad),
-    pesoGramos: p.pesoGramos != null ? Number(p.pesoGramos) : 0,
+    precioMayor: Number(p.precioMayor),
+    precioMenor: Number(p.precioMenor),
     stock: p.stock ?? 0,
     controlarStock: p.controlarStock ?? false,
     enOferta: p.enOferta ?? false,
@@ -570,7 +566,7 @@ export async function updateProductoStoreConfig(
     imagenUrl?: string
     descripcionWeb?: string
     activo?: boolean
-    precioMercado?: number
+    precioMenor?: number
   }
 ) {
   // If enOferta is true and porcentajeDescuento is provided, calculate precioOferta or viceversa
@@ -578,7 +574,7 @@ export async function updateProductoStoreConfig(
   const current = await prisma.producto.findUnique({ where: { id } })
   if (!current) throw new Error('Producto no encontrado')
 
-  const basePrice = data.precioMercado !== undefined ? Number(data.precioMercado) : Number(current.precioMercado)
+  const basePrice = data.precioMenor !== undefined ? Number(data.precioMenor) : Number(current.precioMenor)
 
   if (data.enOferta && data.porcentajeDescuento && data.porcentajeDescuento > 0) {
     computedPrecioOferta = Number((basePrice * (1 - data.porcentajeDescuento / 100)).toFixed(2))
@@ -597,7 +593,7 @@ export async function updateProductoStoreConfig(
       ...(data.imagenUrl !== undefined ? { imagenUrl: data.imagenUrl.trim() || null } : {}),
       ...(data.descripcionWeb !== undefined ? { descripcionWeb: data.descripcionWeb.trim() || null } : {}),
       ...(data.activo !== undefined ? { activo: data.activo } : {}),
-      ...(data.precioMercado !== undefined ? { precioMercado: data.precioMercado } : {}),
+      ...(data.precioMenor !== undefined ? { precioMenor: data.precioMenor } : {}),
     },
   })
 
@@ -650,7 +646,7 @@ export interface ProductoDemandaFavoritosItem {
   negocio: TipoNegocio
   stock: number
   controlarStock: boolean
-  precioMercado: number
+  precioMenor: number
   precioOferta: number | null
   enOferta: boolean
   imagenUrl: string | null
@@ -709,7 +705,7 @@ export async function getFavoritosDemanda(
       negocio: p.negocio as TipoNegocio,
       stock: p.stock,
       controlarStock: p.controlarStock,
-      precioMercado: Number(p.precioMercado),
+      precioMenor: Number(p.precioMenor),
       precioOferta: p.precioOferta ? Number(p.precioOferta) : null,
       enOferta: p.enOferta ?? false,
       imagenUrl: p.imagenUrl || null,

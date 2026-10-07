@@ -122,13 +122,11 @@ model Producto {
   lineaCategoria      String
   nombreModelo        String
   costoBase           Decimal              @db.Decimal(10, 2)
-  precioAmigos        Decimal              @db.Decimal(10, 2)
-  precioMercado       Decimal              @db.Decimal(10, 2)
-  precioComunidad     Decimal              @db.Decimal(10, 2)
+  precioMayor         Decimal              @default(0.00) @db.Decimal(10, 2)
+  precioMenor         Decimal              @default(0.00) @db.Decimal(10, 2)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   activo              Boolean              @default(true)
-  pesoGramos          Decimal?             @default(0.00) @db.Decimal(10, 2)
   negocio             String               @default("3D")
   badgePromocion      String?
   controlarStock      Boolean              @default(false)
@@ -200,7 +198,7 @@ model Venta {
   cliente                String
   productoId             String
   cantidad               Int                  @default(1)
-  tipoPrecio             TipoPrecio           @default(COMUNIDAD)
+  tipoPrecio             TipoPrecio           @default(MENOR)
   precioUnitario         Decimal              @db.Decimal(10, 2)
   total                  Decimal              @db.Decimal(10, 2)
   montoPagado            Decimal              @db.Decimal(10, 2)
@@ -326,7 +324,7 @@ model ItemPedido {
   colorFilamentoId       String?
   personalizacion        String?
   cantidad               Int                  @default(1)
-  tipoPrecio             TipoPrecio           @default(COMUNIDAD)
+  tipoPrecio             TipoPrecio           @default(MENOR)
   precioUnitario         Decimal              @db.Decimal(10, 2)
   costoPackaging         Decimal?             @default(0.00) @db.Decimal(10, 2)
   porcentajeAdicional    Decimal?             @default(0.00) @db.Decimal(5, 2)
@@ -499,10 +497,12 @@ enum EstadoPedido {
 }
 
 enum TipoPrecio {
+  MAYOR
+  MENOR
+  PERSONALIZADO
   AMIGOS
   MERCADO
   COMUNIDAD
-  PERSONALIZADO
 }
 
 model DireccionEntrega {

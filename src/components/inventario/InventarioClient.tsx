@@ -2102,9 +2102,6 @@ export function InventarioClient({
                                     </Badge>
                                   )}
                                 </div>
-                                <span className="text-xs text-[#75695D] block mt-0.5">
-                                  Peso: {prod.pesoGramosUnitario > 0 ? `${prod.pesoGramosUnitario}g c/u` : 'N/E'}
-                                </span>
                               </div>
 
                               <div className="text-right flex-shrink-0">

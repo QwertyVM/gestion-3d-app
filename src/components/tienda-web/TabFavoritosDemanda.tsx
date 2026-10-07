@@ -398,7 +398,7 @@ export function TabFavoritosDemanda({
                           <span>
                             Precio:{' '}
                             <strong className="text-[#241C15]">
-                              S/ {p.precioMercado.toFixed(2)}
+                              S/ {p.precioMenor.toFixed(2)}
                             </strong>
                           </span>
                         </div>

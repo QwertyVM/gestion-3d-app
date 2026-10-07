@@ -167,11 +167,9 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       ped.items.forEach((item) => {
         // Taller 3D es exclusivamente para fabricación 3D, no juegos de mesa (BG)
         if (item.producto && item.producto.negocio !== '3D') return
-        const pesoUnit = item.producto?.pesoGramos != null && Number(item.producto.pesoGramos) > 0
-          ? Number(item.producto.pesoGramos)
-          : (item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0 
-              ? Number(item.gramosConsumidos) / Number(item.cantidad || 1)
-              : 25)
+        const pesoUnit = (item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0 
+          ? Number(item.gramosConsumidos) / Number(item.cantidad || 1)
+          : 0)
 
         const cant = Number(item.cantidad || 1)
         const pesoTotal = item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0
@@ -243,11 +241,9 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       // Taller 3D es exclusivamente para fabricación 3D, no juegos de mesa (BG)
       if (v.producto && v.producto.negocio !== '3D') return
       const rawFecha = v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha)
-      const pesoUnit = v.producto?.pesoGramos != null && Number(v.producto.pesoGramos) > 0
-        ? Number(v.producto.pesoGramos)
-        : (v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0 
-            ? Number(v.gramosConsumidos) / Number(v.cantidad || 1)
-            : 25)
+      const pesoUnit = (v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0 
+        ? Number(v.gramosConsumidos) / Number(v.cantidad || 1)
+        : 0)
 
       const cant = Number(v.cantidad || 1)
       const pesoTotal = v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0

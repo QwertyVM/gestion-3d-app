@@ -130,10 +130,8 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
         lineaCategoria: it.producto.lineaCategoria,
         nombreModelo: it.producto.nombreModelo,
         costoBase: Number(it.producto.costoBase),
-        precioAmigos: Number(it.producto.precioAmigos),
-        precioMercado: Number(it.producto.precioMercado),
-        precioComunidad: Number(it.producto.precioComunidad),
-        pesoGramos: it.producto.pesoGramos != null ? Number(it.producto.pesoGramos) : 0,
+        precioMayor: Number(it.producto.precioMayor),
+        precioMenor: Number(it.producto.precioMenor),
         activo: it.producto.activo
       } : null,
       colorFilamento: primaryColorFilamento
@@ -314,11 +312,11 @@ export async function createPedido(data: CreatePedidoInput) {
         coloresIds: rawColores,
         personalizacion: item.personalizacion?.trim() || null,
         cantidad: qty,
-        tipoPrecio: item.tipoPrecio || 'MERCADO',
+        tipoPrecio: item.tipoPrecio || 'MENOR',
         precioUnitario: unitPrice,
         costoPackaging: packCost,
         porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
-        gramosConsumidos: Number(item.gramosConsumidos) || (prod?.pesoGramos ? Number(prod.pesoGramos) * qty : 0),
+        gramosConsumidos: Number(item.gramosConsumidos) || 0,
         subtotal: itemSubtotal
       }
     })
@@ -848,11 +846,11 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
         coloresIds: rawColores,
         personalizacion: item.personalizacion?.trim() || null,
         cantidad: qty,
-        tipoPrecio: item.tipoPrecio || 'MERCADO',
+        tipoPrecio: item.tipoPrecio || 'MENOR',
         precioUnitario: unitPrice,
         costoPackaging: packCost,
         porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
-        gramosConsumidos: Number(item.gramosConsumidos) || (prod?.pesoGramos ? Number(prod.pesoGramos) * qty : 0),
+        gramosConsumidos: Number(item.gramosConsumidos) || 0,
         subtotal: itemSubtotal,
         estado: data.estado || current.estado || 'PENDIENTE'
       }

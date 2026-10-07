@@ -2,7 +2,6 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { ajustarStockBobina } from '@/actions/inventario'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
 
@@ -34,10 +33,8 @@ export async function getProductos(negocio?: TipoNegocio) {
     ...p,
     activo: p.activo ?? true,
     costoBase: Number(p.costoBase),
-    precioAmigos: Number(p.precioAmigos),
-    precioMercado: Number(p.precioMercado),
-    precioComunidad: Number(p.precioComunidad),
-    pesoGramos: p.pesoGramos != null ? Number(p.pesoGramos) : 0,
+    precioMayor: Number(p.precioMayor),
+    precioMenor: Number(p.precioMenor),
     precioOferta: p.precioOferta != null ? Number(p.precioOferta) : null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
@@ -49,10 +46,8 @@ export async function createProducto(data: {
   lineaCategoria: string
   nombreModelo: string
   costoBase: number
-  precioAmigos: number
-  precioMercado: number
-  precioComunidad?: number
-  pesoGramos?: number
+  precioMayor: number
+  precioMenor: number
   activo?: boolean
   stock?: number
   controlarStock?: boolean
@@ -81,10 +76,8 @@ export async function createProducto(data: {
       lineaCategoria: data.lineaCategoria.trim(),
       nombreModelo: data.nombreModelo.trim(),
       costoBase: data.costoBase,
-      precioAmigos: data.precioAmigos,
-      precioMercado: data.precioMercado,
-      precioComunidad: data.precioComunidad ?? data.precioMercado,
-      pesoGramos: data.pesoGramos != null ? data.pesoGramos : 0,
+      precioMayor: data.precioMayor,
+      precioMenor: data.precioMenor,
       activo: data.activo ?? true,
       stock: data.stock ?? 0,
       controlarStock: data.controlarStock ?? false,
@@ -111,10 +104,8 @@ export async function createProducto(data: {
   return {
     ...producto,
     costoBase: Number(producto.costoBase),
-    precioAmigos: Number(producto.precioAmigos),
-    precioMercado: Number(producto.precioMercado),
-    precioComunidad: Number(producto.precioComunidad),
-    pesoGramos: producto.pesoGramos != null ? Number(producto.pesoGramos) : 0,
+    precioMayor: Number(producto.precioMayor),
+    precioMenor: Number(producto.precioMenor),
     precioOferta: producto.precioOferta != null ? Number(producto.precioOferta) : null,
     createdAt: producto.createdAt.toISOString(),
     updatedAt: producto.updatedAt.toISOString(),
@@ -125,10 +116,8 @@ export async function updateProducto(id: string, data: {
   lineaCategoria: string
   nombreModelo: string
   costoBase: number
-  precioAmigos: number
-  precioMercado: number
-  precioComunidad?: number
-  pesoGramos?: number
+  precioMayor: number
+  precioMenor: number
   activo?: boolean
   stock?: number
   controlarStock?: boolean
@@ -149,20 +138,14 @@ export async function updateProducto(id: string, data: {
   mecanicas?: string | null
   bggId?: number | null
 }) {
-  const current = await prisma.producto.findUnique({ where: { id } })
-  const prevPesoGramos = current?.pesoGramos != null ? Number(current.pesoGramos) : 0
-  const nuevoPesoGramos = data.pesoGramos !== undefined && data.pesoGramos !== null ? Number(data.pesoGramos) : prevPesoGramos
-
   const producto = await prisma.producto.update({
     where: { id },
     data: {
       lineaCategoria: data.lineaCategoria.trim(),
       nombreModelo: data.nombreModelo.trim(),
       costoBase: data.costoBase,
-      precioAmigos: data.precioAmigos,
-      precioMercado: data.precioMercado,
-      precioComunidad: data.precioComunidad !== undefined ? data.precioComunidad : (current?.precioComunidad ?? data.precioMercado),
-      ...(data.pesoGramos !== undefined ? { pesoGramos: data.pesoGramos } : {}),
+      precioMayor: data.precioMayor,
+      precioMenor: data.precioMenor,
       ...(data.activo !== undefined ? { activo: data.activo } : {}),
       ...(data.stock !== undefined ? { stock: data.stock } : {}),
       ...(data.controlarStock !== undefined ? { controlarStock: data.controlarStock } : {}),
@@ -185,42 +168,12 @@ export async function updateProducto(id: string, data: {
     }
   })
 
-  // Si se actualizó el peso en gramos, sincronizar todas las ventas activas de este producto y ajustar sus bobinas
-  if (data.pesoGramos !== undefined && nuevoPesoGramos !== prevPesoGramos) {
-    const ventasAsociadas = await prisma.venta.findMany({
-      where: {
-        productoId: id,
-        estado: { not: 'CANCELADO' }
-      }
-    })
-
-    for (const v of ventasAsociadas) {
-      const cant = Number(v.cantidad || 1)
-      const prevVentaGramos = v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0
-        ? Number(v.gramosConsumidos)
-        : (prevPesoGramos * cant)
-      const newVentaGramos = nuevoPesoGramos * cant
-      const delta = newVentaGramos - prevVentaGramos
-
-      await prisma.venta.update({
-        where: { id: v.id },
-        data: { gramosConsumidos: newVentaGramos }
-      })
-
-      if (v.colorFilamentoId && delta !== 0) {
-        await ajustarStockBobina(v.colorFilamentoId, delta)
-      }
-    }
-  }
-
   safeRevalidate()
   return {
     ...producto,
     costoBase: Number(producto.costoBase),
-    precioAmigos: Number(producto.precioAmigos),
-    precioMercado: Number(producto.precioMercado),
-    precioComunidad: Number(producto.precioComunidad),
-    pesoGramos: producto.pesoGramos != null ? Number(producto.pesoGramos) : 0,
+    precioMayor: Number(producto.precioMayor),
+    precioMenor: Number(producto.precioMenor),
     precioOferta: producto.precioOferta != null ? Number(producto.precioOferta) : null,
     createdAt: producto.createdAt.toISOString(),
     updatedAt: producto.updatedAt.toISOString(),
@@ -240,10 +193,8 @@ export async function toggleEstadoProducto(id: string) {
   return {
     ...updated,
     costoBase: Number(updated.costoBase),
-    precioAmigos: Number(updated.precioAmigos),
-    precioMercado: Number(updated.precioMercado),
-    precioComunidad: Number(updated.precioComunidad),
-    pesoGramos: updated.pesoGramos != null ? Number(updated.pesoGramos) : 0,
+    precioMayor: Number(updated.precioMayor),
+    precioMenor: Number(updated.precioMenor),
     precioOferta: updated.precioOferta != null ? Number(updated.precioOferta) : null,
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
@@ -267,10 +218,8 @@ export async function duplicarProducto(id: string) {
       lineaCategoria: current.lineaCategoria,
       nombreModelo: nuevoNombre,
       costoBase: current.costoBase,
-      precioAmigos: current.precioAmigos,
-      precioMercado: current.precioMercado,
-      precioComunidad: current.precioComunidad,
-      pesoGramos: current.pesoGramos,
+      precioMayor: current.precioMayor,
+      precioMenor: current.precioMenor,
       activo: true,
       stock: 0,
       controlarStock: current.controlarStock,
@@ -286,10 +235,8 @@ export async function duplicarProducto(id: string) {
   return {
     ...duplicado,
     costoBase: Number(duplicado.costoBase),
-    precioAmigos: Number(duplicado.precioAmigos),
-    precioMercado: Number(duplicado.precioMercado),
-    precioComunidad: Number(duplicado.precioComunidad),
-    pesoGramos: duplicado.pesoGramos != null ? Number(duplicado.pesoGramos) : 0,
+    precioMayor: Number(duplicado.precioMayor),
+    precioMenor: Number(duplicado.precioMenor),
     precioOferta: duplicado.precioOferta != null ? Number(duplicado.precioOferta) : null,
     createdAt: duplicado.createdAt.toISOString(),
     updatedAt: duplicado.updatedAt.toISOString(),

@@ -112,10 +112,8 @@ export interface ItemPedidoView {
     lineaCategoria: string
     nombreModelo: string
     costoBase: number
-    precioAmigos: number
-    precioMercado: number
-    precioComunidad?: number
-    pesoGramos: number
+    precioMayor: number
+    precioMenor: number
     activo: boolean
   } | null
   colorFilamento?: {
@@ -174,10 +172,8 @@ export interface ProductoOption {
   lineaCategoria: string
   nombreModelo: string
   costoBase: number
-  precioAmigos: number
-  precioMercado: number
-  precioComunidad?: number
-  pesoGramos: number
+  precioMayor: number
+  precioMenor: number
   activo: boolean
 }
 
@@ -466,11 +462,11 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
-        tipoPrecio: 'MERCADO',
-        precioUnitario: defaultProd ? defaultProd.precioMercado : '',
+        tipoPrecio: 'MENOR',
+        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
         costoPackaging: '',
         porcentajeAdicional: 0,
-        gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
+        gramosConsumidos: 0
       }
     ]
   })
@@ -492,11 +488,11 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
-        tipoPrecio: 'MERCADO',
-        precioUnitario: defaultProd ? defaultProd.precioMercado : '',
+        tipoPrecio: 'MENOR',
+        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
         costoPackaging: '',
         porcentajeAdicional: 0,
-        gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
+        gramosConsumidos: 0
       }
     ])
   }
@@ -511,15 +507,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       if (item.id !== id) return item
       const merged = { ...item, ...updates }
 
-      // Si cambió el producto, recalcular precio y gramos base
+      // Si cambió el producto, recalcular precio base
       if (updates.productoId && updates.productoId !== item.productoId) {
         const p = productos.find(prod => prod.id === updates.productoId)
         if (p) {
-          let pUnit = p.precioMercado
-          if (merged.tipoPrecio === 'AMIGOS') pUnit = p.precioAmigos
-          else if (merged.tipoPrecio === 'MERCADO') pUnit = p.precioMercado
+          let pUnit = p.precioMenor
+          if (merged.tipoPrecio === 'MAYOR' || (merged.tipoPrecio as string) === 'AMIGOS') pUnit = p.precioMayor
+          else if (merged.tipoPrecio === 'MENOR' || (merged.tipoPrecio as string) === 'MERCADO') pUnit = p.precioMenor
           merged.precioUnitario = pUnit
-          merged.gramosConsumidos = p.pesoGramos * (Number(merged.cantidad) || 1)
         }
       }
 
@@ -527,16 +522,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       if (updates.tipoPrecio && updates.tipoPrecio !== item.tipoPrecio) {
         const p = productos.find(prod => prod.id === merged.productoId)
         if (p) {
-          if (updates.tipoPrecio === 'AMIGOS') merged.precioUnitario = p.precioAmigos
-          else if (updates.tipoPrecio === 'MERCADO') merged.precioUnitario = p.precioMercado
-        }
-      }
-
-      // Si cambió la cantidad, actualizar gramos estimados
-      if (updates.cantidad !== undefined) {
-        const p = productos.find(prod => prod.id === merged.productoId)
-        if (p && p.pesoGramos) {
-          merged.gramosConsumidos = p.pesoGramos * (Number(merged.cantidad) || 0)
+          if (updates.tipoPrecio === 'MAYOR' || (updates.tipoPrecio as string) === 'AMIGOS') merged.precioUnitario = p.precioMayor
+          else if (updates.tipoPrecio === 'MENOR' || (updates.tipoPrecio as string) === 'MERCADO') merged.precioUnitario = p.precioMenor
         }
       }
 
@@ -593,11 +580,11 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         coloresIds: defaultFilId ? [defaultFilId] : [],
         personalizacion: '',
         cantidad: 1,
-        tipoPrecio: 'MERCADO',
-        precioUnitario: defaultProd ? defaultProd.precioMercado : '',
+        tipoPrecio: 'MENOR',
+        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
         costoPackaging: '',
         porcentajeAdicional: 0,
-        gramosConsumidos: defaultProd ? defaultProd.pesoGramos : 0
+        gramosConsumidos: 0
       }
     ])
   }
@@ -1866,8 +1853,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                               onChange={(e) => updateItem(item.id, { tipoPrecio: e.target.value as TipoPrecio })}
                               className="w-full h-8 rounded-lg border border-[#E2D9CC] bg-[#FFFFFF] px-2 text-xs font-semibold"
                             >
-                              <option value="MERCADO">Mercado</option>
-                              <option value="AMIGOS">Amigos</option>
+                              <option value="MENOR">Por Menor</option>
+                              <option value="MAYOR">Por Mayor</option>
                               <option value="PERSONALIZADO">Personalizado</option>
                             </select>
                           </div>
@@ -2934,8 +2921,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                               onChange={(e) => updateItem(item.id, { tipoPrecio: e.target.value as TipoPrecio })}
                               className="w-full h-8 rounded-lg border border-[#E2D9CC] bg-[#FFFFFF] px-2 text-xs font-semibold"
                             >
-                              <option value="MERCADO">Mercado</option>
-                              <option value="AMIGOS">Amigos</option>
+                              <option value="MENOR">Por Menor</option>
+                              <option value="MAYOR">Por Mayor</option>
                               <option value="PERSONALIZADO">Personalizado</option>
                             </select>
                           </div>
