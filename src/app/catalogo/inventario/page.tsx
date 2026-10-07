@@ -1,5 +1,5 @@
 import { getColoresInventario } from '@/actions/inventario'
-import { InventarioClient } from '@/components/inventario/InventarioClient'
+import { InventarioFilamentosClient } from '@/components/inventario/InventarioFilamentosClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,7 +7,7 @@ export default async function CatalogoInventarioPage() {
   const { disponibles, restock, descatalogados } = await getColoresInventario()
 
   return (
-    <InventarioClient 
+    <InventarioFilamentosClient 
       disponibles={disponibles} 
       restock={restock}
       descatalogados={descatalogados}

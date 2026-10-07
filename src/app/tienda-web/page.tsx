@@ -7,7 +7,7 @@ import {
   getProductosStoreConfig,
   getFavoritosDemanda,
 } from '@/actions/tienda'
-import { GestionTiendaClient } from '@/components/tienda-web/GestionTiendaClient'
+import { TiendaWebClient } from '@/components/tienda-web/TiendaWebClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +29,7 @@ export default async function TiendaWebPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6">
-      <GestionTiendaClient
+      <TiendaWebClient
         initialConfig={config}
         initialBanners={banners}
         initialCupones={cupones}

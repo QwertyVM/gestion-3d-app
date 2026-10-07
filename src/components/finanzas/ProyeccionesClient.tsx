@@ -58,7 +58,7 @@ import { toast } from 'sonner'
 import { DatosPresupuestoTranquilidad } from '@/actions/presupuesto'
 import { pagarCuotaPrestamo } from '@/actions/inversiones'
 
-interface PresupuestoClientProps {
+export interface ProyeccionesClientProps {
   datos: DatosPresupuestoTranquilidad
 }
 
@@ -109,7 +109,7 @@ const CATEGORIA_CONFIG: Record<CategoriaGastoPlan, { label: string; badgeColor: 
   }
 }
 
-export function PresupuestoClient({ datos }: PresupuestoClientProps) {
+export function ProyeccionesClient({ datos }: ProyeccionesClientProps) {
   const router = useRouter()
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -1255,3 +1255,7 @@ export function PresupuestoClient({ datos }: PresupuestoClientProps) {
     </div>
   )
 }
+
+// Alias de compatibilidad
+export const PresupuestoClient = ProyeccionesClient
+export type PresupuestoClientProps = ProyeccionesClientProps

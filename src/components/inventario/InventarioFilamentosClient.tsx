@@ -29,7 +29,8 @@ import {
   Archive,
   RotateCcw,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -57,7 +58,7 @@ import {
   reactivarColor
 } from '@/actions/inventario'
 
-interface InventarioClientProps {
+export interface InventarioFilamentosClientProps {
   disponibles: ColorFilamentoItem[]
   restock: ColorFilamentoItem[]
   descatalogados?: ColorFilamentoItem[]
@@ -111,11 +112,12 @@ const esColorCritico = (c: ColorFilamentoItem) => {
 
 type FilterTab = 'todos' | 'disponibles' | 'criticos' | 'restock' | 'descatalogados'
 
-export function InventarioClient({ 
+export function InventarioFilamentosClient({ 
   disponibles: initialDisponibles, 
   restock: initialRestock,
   descatalogados: initialDescatalogados = []
-}: InventarioClientProps) {
+}: InventarioFilamentosClientProps) {
+  // Alias de compatibilidad hacia atrás
   const [disponibles, setDisponibles] = useState<ColorFilamentoItem[]>(initialDisponibles)
   const [restock, setRestock] = useState<ColorFilamentoItem[]>(initialRestock)
   const [descatalogados, setDescatalogados] = useState<ColorFilamentoItem[]>(initialDescatalogados)
@@ -156,6 +158,9 @@ export function InventarioClient({
   const [openColorDetailsModal, setOpenColorDetailsModal] = useState(false)
   const [modalGramosInput, setModalGramosInput] = useState('1000')
   const [isEditingColorData, setIsEditingColorData] = useState(false)
+  const [copiedHex, setCopiedHex] = useState(false)
+  const [isSavingGramos, setIsSavingGramos] = useState(false)
+  const [savedGramosSuccess, setSavedGramosSuccess] = useState(false)
 
   // Close copy dropdown on click outside
   useEffect(() => {
@@ -210,6 +215,8 @@ export function InventarioClient({
     setEditNombre(item.nombreColor)
     setEditHex(item.codigoHex || '#18181B')
     setEditNota(item.nota || '')
+    setCopiedHex(false)
+    setSavedGramosSuccess(false)
     setOpenColorDetailsModal(true)
   }
 
@@ -347,12 +354,14 @@ export function InventarioClient({
 
   // Guardar gramos directamente desde la vista específica del filamento
   const handleGuardarGramosModal = async () => {
-    if (!selectedColorForDetails) return
+    if (!selectedColorForDetails || isSavingGramos) return
     const num = Math.max(0, parseInt(modalGramosInput || '0', 10))
     if (isNaN(num)) {
       toast.error('Ingresa una cantidad válida de gramos')
       return
     }
+
+    setIsSavingGramos(true)
 
     const capacidad = Math.max(1000, Math.ceil(num / 1000) * 1000)
     const rollos = Math.max(1, Math.ceil(num / 1000))
@@ -389,8 +398,12 @@ export function InventarioClient({
     try {
       await actualizarGramosColor(selectedColorForDetails.id, num)
       toast.success(`Stock de "${selectedColorForDetails.nombreColor}" actualizado a ${num.toLocaleString()}g`)
+      setSavedGramosSuccess(true)
+      setTimeout(() => setSavedGramosSuccess(false), 2000)
     } catch (e: any) {
       toast.error('Error al actualizar gramos: ' + e.message)
+    } finally {
+      setIsSavingGramos(false)
     }
   }
 
@@ -640,20 +653,6 @@ export function InventarioClient({
               </div>
             </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              title="Restablecer lista de taller oficial"
-              className="h-9 px-3 text-xs font-bold text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] rounded-xl cursor-pointer transition-colors"
-            >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-              Restablecer
-            </Button>
-          </div>
         </div>
 
         {/* Fila de 4 KPIs Interactivos (Click para filtrar) Minimalistas */}
@@ -661,11 +660,14 @@ export function InventarioClient({
           {/* KPI 1: Kilos en Taller -> Activa 'todos' */}
           <button
             type="button"
-            onClick={() => setActiveTab('todos')}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer ${
+            onClick={() => {
+              setActiveTab('todos')
+              setCurrentPage(1)
+            }}
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
               activeTab === 'todos'
                 ? 'bg-white border-[#A36F4C] ring-1 ring-[#A36F4C]'
-                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
             }`}
           >
             <div className="flex items-center justify-between text-[#6B7280]">
@@ -675,8 +677,9 @@ export function InventarioClient({
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
-                {(totalGramosActivos / 1000).toFixed(2)} <span className="text-xs font-normal font-sans text-[#75695D]">kg</span>
+              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums whitespace-nowrap">
+                <span>{(totalGramosActivos / 1000).toFixed(2)}</span>
+                <span className="text-xs font-normal font-sans text-[#75695D]">kg</span>
               </div>
               <span className="text-xs text-[#75695D] mt-0.5 block truncate">
                 {totalGramosActivos.toLocaleString()} g activos
@@ -687,11 +690,14 @@ export function InventarioClient({
           {/* KPI 2: Colores Disponibles -> Activa 'disponibles' */}
           <button
             type="button"
-            onClick={() => setActiveTab('disponibles')}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer ${
+            onClick={() => {
+              setActiveTab('disponibles')
+              setCurrentPage(1)
+            }}
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
               activeTab === 'disponibles'
                 ? 'bg-white border-[#1E5E3A] ring-1 ring-[#1E5E3A]'
-                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
             }`}
           >
             <div className="flex items-center justify-between text-[#6B7280]">
@@ -701,8 +707,9 @@ export function InventarioClient({
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
-                {disponibles.length} <span className="text-xs font-normal font-sans text-[#75695D]">colores</span>
+              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums whitespace-nowrap">
+                <span>{disponibles.length}</span>
+                <span className="text-xs font-normal font-sans text-[#75695D]">colores</span>
               </div>
               <span className="text-xs text-[#1E5E3A] font-medium mt-0.5 block truncate">
                 Stock activo para producción
@@ -713,11 +720,14 @@ export function InventarioClient({
           {/* KPI 3: Stock Crítico (<300g) -> Activa 'criticos' */}
           <button
             type="button"
-            onClick={() => setActiveTab('criticos')}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer ${
+            onClick={() => {
+              setActiveTab('criticos')
+              setCurrentPage(1)
+            }}
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
               activeTab === 'criticos'
                 ? 'bg-white border-[#854D0E] ring-1 ring-[#854D0E]'
-                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
             }`}
           >
             <div className="flex items-center justify-between text-[#6B7280]">
@@ -727,8 +737,11 @@ export function InventarioClient({
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#854D0E] font-mono tabular-nums">
-                {totalCriticos.length} <span className="text-xs font-normal font-sans text-[#75695D]">{totalCriticos.length === 1 ? 'color' : 'colores'}</span>
+              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-black text-[#854D0E] font-mono tabular-nums whitespace-nowrap">
+                <span>{totalCriticos.length}</span>
+                <span className="text-xs font-normal font-sans text-[#75695D]">
+                  {totalCriticos.length === 1 ? 'color' : 'colores'}
+                </span>
               </div>
               <span className="text-xs text-[#854D0E] font-medium mt-0.5 block truncate">
                 {totalCriticos.length > 0 ? 'Reponer pronto' : 'Nivel óptimo'}
@@ -739,11 +752,14 @@ export function InventarioClient({
           {/* KPI 4: Para Restock -> Activa 'restock' */}
           <button
             type="button"
-            onClick={() => setActiveTab('restock')}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer ${
+            onClick={() => {
+              setActiveTab('restock')
+              setCurrentPage(1)
+            }}
+            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
               activeTab === 'restock'
                 ? 'bg-white border-[#A36F4C] ring-1 ring-[#A36F4C]'
-                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
             }`}
           >
             <div className="flex items-center justify-between text-[#6B7280]">
@@ -753,8 +769,11 @@ export function InventarioClient({
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
-                {restock.length} <span className="text-xs font-normal font-sans text-[#75695D]">colores</span>
+              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums whitespace-nowrap">
+                <span>{restock.length}</span>
+                <span className="text-xs font-normal font-sans text-[#75695D]">
+                  {restock.length === 1 ? 'color' : 'colores'}
+                </span>
               </div>
               <span className="text-xs text-[#75695D] font-medium mt-0.5 block truncate">
                 Marcados para compra
@@ -963,30 +982,26 @@ export function InventarioClient({
             </button>
           </div>
 
-          {/* Contador de resultados & Botón Reset */}
-          <div className="flex items-center justify-between sm:justify-end gap-2 text-xs flex-shrink-0">
-            <div className="flex items-center gap-1.5 text-[#75695D]">
-              <span className="font-medium">Total:</span>
-              <span className="font-bold text-[#241C15] font-mono bg-[#FAF8F5] px-2 py-0.5 rounded-lg border border-[#E2D9CC]">
-                {filteredGridItems.length}
-              </span>
-            </div>
-
-            {(search || activeTab !== 'todos') && (
-              <button
+          {/* Botón Restablecer Filtros (Solo visible cuando hay búsqueda o filtro distinto a Todos) */}
+          {(search || activeTab !== 'todos') && (
+            <div className="flex items-center justify-end flex-shrink-0">
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setSearch('')
                   setActiveTab('todos')
+                  setCurrentPage(1)
                 }}
-                className="text-xs text-[#A36F4C] hover:text-[#8E5E3E] font-bold underline flex items-center gap-1 cursor-pointer ml-1"
-                title="Restablecer filtros"
+                title="Restablecer filtros y búsqueda"
+                className="h-8 px-2.5 text-xs font-bold text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] border border-slate-200 rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 bg-[#FAF8F5]"
               >
-                <X className="h-3.5 w-3.5" />
-                <span>Limpiar</span>
-              </button>
-            )}
-          </div>
+                <RefreshCw className="h-3 w-3 text-[#A36F4C]" />
+                <span>Restablecer</span>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1067,7 +1082,7 @@ export function InventarioClient({
                           <span className="font-black text-sm text-[#241C15] truncate block group-hover:text-[#A36F4C] transition-colors">
                             {item.nombreColor}
                           </span>
-                          {item.nota && (
+                          {item.nota && item.estado !== 'RESTOCK' && item.nota !== 'Por terminar / En reposición' && (
                             <span className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-1.5 py-0.2 rounded border border-[#FDE047]/60 inline-block truncate max-w-[220px] mt-0.5">
                               {item.nota}
                             </span>
@@ -1203,7 +1218,7 @@ export function InventarioClient({
                               <span className="font-bold text-xs text-[#241C15] truncate block group-hover:text-[#A36F4C] transition-colors">
                                 {item.nombreColor}
                               </span>
-                              {item.nota && (
+                              {item.nota && item.estado !== 'RESTOCK' && item.nota !== 'Por terminar / En reposición' && (
                                 <span className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-1.5 py-0.2 rounded border border-[#FDE047]/60 inline-block truncate max-w-full mt-0.5">
                                   {item.nota}
                                 </span>
@@ -1237,32 +1252,36 @@ export function InventarioClient({
                           )}
                         </TableCell>
 
-                        {/* 4. Stock en Taller */}
+                        {/* 4. Stock en Taller (Estandarizado [gramos] g ([kilos] kg) y barra proporcional a 1,000 g) */}
                         <TableCell className="px-4 py-3 min-w-0">
-                          {isDescatalogado ? (
-                            <span className="text-xs text-[#75695D] italic">0 g (Descatalogado)</span>
-                          ) : isDisp ? (
-                            <div className="space-y-1">
-                              <div className="flex items-baseline justify-between gap-2">
-                                <span className="font-mono font-black text-xs text-[#241C15] tracking-tight">
-                                  {gramos.toLocaleString()} g
-                                </span>
-                                <span className="text-[#75695D] text-[10px] font-mono">
-                                  {gramos >= 1000 ? `(${(gramos / 1000).toFixed(2)} kg)` : `${pct}%`}
-                                </span>
-                              </div>
-                              <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full rounded-full transition-all duration-300 ${
-                                    esCritico ? 'bg-[#854D0E]' : pct < 30 ? 'bg-[#A36F4C]' : 'bg-[#1E5E3A]'
-                                  }`}
-                                  style={{ width: `${Math.min(100, Math.max(5, (gramos / (item.pesoInicialGramos || 1000)) * 100))}%` }}
-                                />
-                              </div>
+                          <div className="space-y-1">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className={`font-mono font-black text-xs tracking-tight ${
+                                isDescatalogado ? 'text-[#75695D]' : !isDisp || gramos === 0 ? 'text-[#854D0E]' : 'text-[#241C15]'
+                              }`}>
+                                {gramos.toLocaleString()} g
+                              </span>
+                              <span className="text-[#75695D] text-[10px] font-mono">
+                                ({(gramos / 1000).toFixed(2)} kg)
+                              </span>
                             </div>
-                          ) : (
-                            <span className="text-xs text-[#854D0E] font-bold">0 g (En reposición)</span>
-                          )}
+                            <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                  isDescatalogado
+                                    ? 'bg-slate-300'
+                                    : !isDisp || gramos === 0
+                                    ? 'bg-[#854D0E]'
+                                    : esCritico 
+                                    ? 'bg-[#DC2626]' 
+                                    : gramos < 300 
+                                    ? 'bg-[#A36F4C]' 
+                                    : 'bg-[#1E5E3A]'
+                                }`}
+                                style={{ width: `${Math.min(100, Math.max(gramos > 0 ? 4 : 0, (gramos / 1000) * 100))}%` }}
+                              />
+                            </div>
+                          </div>
                         </TableCell>
 
                         {/* 5. Producción */}
@@ -1277,9 +1296,8 @@ export function InventarioClient({
 
                         {/* 6. Gestionar */}
                         <TableCell className="px-3 py-3 text-right pr-4">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] group-hover:text-[#8E5E3E] group-hover:underline">
-                            Ver ficha
-                            <ArrowRight className="h-3 w-3" />
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] hover:text-stone-900 hover:underline group-hover:text-stone-900 group-hover:underline transition-colors">
+                            Ver ficha →
                           </span>
                         </TableCell>
                       </TableRow>
@@ -1719,12 +1737,29 @@ export function InventarioClient({
             const rollos = selectedColorForDetails.rollos || 1
             const pesoInicial = selectedColorForDetails.pesoInicialGramos || (rollos * 1000)
             const inputNum = Math.max(0, parseInt(modalGramosInput || '0', 10))
-            const pct = Math.min(100, Math.round((inputNum / pesoInicial) * 100))
+
+            // Capacidad dinámica de la barra: ajusta dinámicamente si supera 1,000g
+            const baseCapacidad = Math.max(1000, pesoInicial)
+            const dynamicCapacidad = inputNum > baseCapacidad 
+              ? Math.ceil(inputNum / 1000) * 1000 
+              : baseCapacidad
+            const pct = Math.min(100, Math.round((inputNum / dynamicCapacidad) * 100))
             const esCritico = inputNum > 0 && inputNum < 300
+
+            // Métricas de pedidos para producción
+            const allPedidos = selectedColorForDetails.productosInvertidos?.flatMap(p => p.ultimosPedidos || []) || []
+            const pedidosActivos = allPedidos.filter(p => p.estado === 'PENDIENTE' || p.estado === 'EN_PRODUCCION').length
+            const ultimasFechas = allPedidos
+              .map(p => new Date(p.fecha).getTime())
+              .filter(t => !isNaN(t))
+            const ultimoUsoTimestamp = ultimasFechas.length > 0 ? Math.max(...ultimasFechas) : null
+            const ultimoUsoFecha = ultimoUsoTimestamp
+              ? new Date(ultimoUsoTimestamp).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })
+              : null
 
             return (
               <div className="flex flex-col max-h-[92dvh] h-full overflow-hidden">
-                {/* Header */}
+                {/* 1. HEADER Y METADATOS UNIFICADOS */}
                 <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FAF8F5] flex items-center justify-between flex-shrink-0">
                   <div className="flex items-center gap-3 min-w-0">
                     <div 
@@ -1732,29 +1767,56 @@ export function InventarioClient({
                       style={{ backgroundColor: selectedColorForDetails.codigoHex }}
                     />
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                        {/* Badge 1: Estado */}
                         <Badge 
                           variant="outline" 
                           className={
                             isDescatalogado
-                              ? 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] text-[10px] font-bold'
+                              ? 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] text-[10px] font-bold h-6 px-2.5 rounded-lg'
                               : isDisp
-                              ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold'
-                              : 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] text-[10px] font-bold'
+                              ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold h-6 px-2.5 rounded-lg'
+                              : 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] text-[10px] font-bold h-6 px-2.5 rounded-lg'
                           }
                         >
                           {isDescatalogado 
                             ? '⚪ Descatalogado' 
                             : isDisp 
-                            ? '🟢 En Taller (Disponible)' 
+                            ? '🟢 En Taller' 
                             : '🟡 En Restock'}
                         </Badge>
-                        <span className="text-xs text-[#75695D] font-mono font-bold">
+
+                        {/* Badge 2: Bobinas (mismo padding, altura y estilo que las demás pills) */}
+                        <Badge 
+                          variant="outline"
+                          className="bg-white text-[#75695D] border-[#E2D9CC] text-[10px] font-bold font-mono h-6 px-2.5 rounded-lg"
+                        >
                           {rollos} {rollos === 1 ? 'bobina' : 'bobinas'}
-                        </span>
-                        <span className="text-[10px] text-[#75695D] font-mono bg-white px-1.5 py-0.5 rounded border border-[#E2D9CC]">
-                          {selectedColorForDetails.codigoHex}
-                        </span>
+                        </Badge>
+
+                        {/* Badge 3: Código HEX con muestra de color y botón de copiar al portapapeles */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedColorForDetails.codigoHex)
+                            setCopiedHex(true)
+                            toast.success(`HEX ${selectedColorForDetails.codigoHex} copiado`)
+                            setTimeout(() => setCopiedHex(false), 2000)
+                          }}
+                          className="group inline-flex items-center gap-1.5 bg-white hover:bg-[#FAF8F5] active:scale-95 text-[#75695D] hover:text-[#241C15] border border-[#E2D9CC] text-[10px] font-bold font-mono h-6 px-2.5 rounded-lg transition-all cursor-pointer shadow-2xs"
+                          title="Copiar código HEX"
+                        >
+                          <span 
+                            className="h-2.5 w-2.5 rounded-full border border-black/20 shrink-0" 
+                            style={{ backgroundColor: selectedColorForDetails.codigoHex }} 
+                          />
+                          <span>{selectedColorForDetails.codigoHex}</span>
+                          {copiedHex ? (
+                            <Check className="h-3 w-3 text-emerald-600" />
+                          ) : (
+                            <Copy className="h-3 w-3 text-[#A89F91] group-hover:text-[#241C15] transition-colors" />
+                          )}
+                        </button>
                       </div>
                       <DialogTitle className="text-base sm:text-lg font-black text-[#241C15] tracking-tight truncate max-w-[240px] sm:max-w-[360px]">
                         {selectedColorForDetails.nombreColor}
@@ -1770,8 +1832,8 @@ export function InventarioClient({
                   </button>
                 </div>
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+                {/* Body con fix pb-16 para evitar cortes de scroll */}
+                <div className="flex-1 overflow-y-auto p-5 sm:p-6 pb-16 space-y-4 touch-pan-y">
                   
                   {/* ========================================================= */}
                   {/* 1. ACTUALIZAR CANTIDAD DE FILAMENTO (HERO SECTION)       */}
@@ -1780,7 +1842,7 @@ export function InventarioClient({
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <span className="text-xs font-black uppercase tracking-wider text-[#241C15] flex items-center gap-1.5">
-                          <Weight className="h-4 w-4 text-[#A36F4C]" />
+                          <Weight className="h-4 w-4 text-[#96634D]" />
                           Cantidad de Filamento (Stock Actual)
                         </span>
                         <p className="text-[11px] text-[#75695D]">
@@ -1792,12 +1854,12 @@ export function InventarioClient({
                           {inputNum.toLocaleString()} g
                         </span>
                         <span className="text-[10px] text-[#75695D] block font-mono">
-                          {pct}% de {pesoInicial}g
+                          {pct}% de {dynamicCapacidad.toLocaleString()}g
                         </span>
                       </div>
                     </div>
 
-                    {/* Barra visual de stock */}
+                    {/* Barra visual de stock con escala dinámica */}
                     <div className="space-y-1">
                       <div className="h-2.5 w-full rounded-full bg-[#E2D9CC]/70 overflow-hidden">
                         <div 
@@ -1811,14 +1873,14 @@ export function InventarioClient({
                               : 'bg-[#1E5E3A]'
                           }`}
                           style={{ 
-                            width: `${Math.min(100, Math.max(inputNum > 0 ? 5 : 0, pct))}%` 
+                            width: `${Math.min(100, Math.max(inputNum > 0 ? 4 : 0, pct))}%` 
                           }}
                         />
                       </div>
                       <div className="flex justify-between text-[10px] text-[#75695D] font-mono">
                         <span>0g (Agotado)</span>
                         <span>Crítico &lt;300g</span>
-                        <span>Capacidad {pesoInicial}g</span>
+                        <span>Capacidad {dynamicCapacidad.toLocaleString()}g</span>
                       </div>
                     </div>
 
@@ -1855,7 +1917,7 @@ export function InventarioClient({
                             step="10"
                             value={modalGramosInput}
                             onChange={(e) => setModalGramosInput(e.target.value)}
-                            className="bg-white border-[#E2D9CC] text-center font-mono font-black text-sm sm:text-base h-10 pr-7 rounded-xl focus:ring-2 focus:ring-[#A36F4C]"
+                            className="bg-white border-[#E2D9CC] text-center font-mono font-black text-sm sm:text-base h-10 pr-7 rounded-xl focus:ring-2 focus:ring-[#96634D]"
                             placeholder="Ej: 750"
                           />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#75695D]">
@@ -1901,20 +1963,35 @@ export function InventarioClient({
                                 : 'bg-white text-[#75695D] border-[#E2D9CC] hover:bg-[#FAF8F5]'
                             }`}
                           >
-                            {preset === 0 ? '0g (Agotado)' : preset === 1000 ? '1,000g (1b)' : `${preset}g`}
+                            {preset === 0 ? '0g (Agotado)' : preset === 1000 ? '1,000g (1b)' : `${preset.toLocaleString()}g`}
                           </button>
                         ))}
                       </div>
 
-                      {/* Botón Principal: Guardar Cantidad de Filamento */}
+                      {/* Botón Principal: Terracota #96634D con hover #83543F y micro-interacción */}
                       <div className="pt-2">
                         <Button
                           type="button"
                           onClick={handleGuardarGramosModal}
-                          className="w-full bg-[#1E5E3A] hover:bg-[#164B2E] text-white font-bold text-xs h-10 rounded-xl cursor-pointer shadow-2xs flex items-center justify-center gap-2"
+                          disabled={isSavingGramos}
+                          className="w-full bg-[#96634D] hover:bg-[#83543F] active:bg-[#724533] text-white font-bold text-xs h-10 rounded-xl cursor-pointer shadow-2xs flex items-center justify-center gap-2 transition-all duration-200"
                         >
-                          <Check className="h-4 w-4" />
-                          Actualizar Cantidad de Filamento
+                          {isSavingGramos ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Guardando cambios...</span>
+                            </>
+                          ) : savedGramosSuccess ? (
+                            <>
+                              <Check className="h-4 w-4 text-emerald-300 stroke-[3]" />
+                              <span>¡Cantidad Actualizada con Éxito!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="h-4 w-4" />
+                              <span>Actualizar Cantidad de Filamento</span>
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -1926,86 +2003,86 @@ export function InventarioClient({
                   <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] space-y-3 shadow-2xs">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-black uppercase tracking-wider text-[#241C15] flex items-center gap-1.5">
-                        <SlidersHorizontal className="h-4 w-4 text-[#A36F4C]" />
+                        <SlidersHorizontal className="h-4 w-4 text-[#96634D]" />
                         Acciones del Filamento
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Cambiar Estado */}
-                      {isDescatalogado ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleReactivarColor(selectedColorForDetails)}
-                          className="h-8 text-xs font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white rounded-xl px-3 cursor-pointer shadow-2xs flex items-center gap-1.5"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          Reactivar en Catálogo
-                        </Button>
-                      ) : isDisp ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleMoverARestock(selectedColorForDetails)}
-                          className="h-8 text-xs font-bold rounded-xl px-3 border-[#E2D9CC] bg-[#FEF9C3]/50 text-[#854D0E] hover:bg-[#FEF9C3] cursor-pointer flex items-center gap-1.5"
-                        >
-                          <ShoppingCart className="h-3.5 w-3.5" />
-                          Mover a Restock
-                        </Button>
-                      ) : (
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => handleMoverADisponible(selectedColorForDetails)}
-                          className="h-8 text-xs font-bold bg-[#1E5E3A] hover:bg-[#164B2E] text-white rounded-xl px-3 cursor-pointer shadow-2xs flex items-center gap-1.5"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Marcar como Disponible
-                        </Button>
-                      )}
+                    {/* Fila reorganizada: Pills operativas a la izquierda + Eliminar suave a la derecha */}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Cambiar Estado */}
+                        {isDescatalogado ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleReactivarColor(selectedColorForDetails)}
+                            className="h-8 text-xs font-semibold rounded-xl px-3 border border-[#B4E3C0] bg-[#EBF7EE] text-[#1E5E3A] hover:bg-[#D4EED8] cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Reactivar en Catálogo
+                          </Button>
+                        ) : isDisp ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleMoverARestock(selectedColorForDetails)}
+                            className="h-8 text-xs font-semibold rounded-xl px-3 border border-[#E2D9CC] bg-[#FEF9C3]/60 text-[#854D0E] hover:bg-[#FEF9C3] cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                          >
+                            <ShoppingCart className="h-3.5 w-3.5" />
+                            Mover a Restock
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleMoverADisponible(selectedColorForDetails)}
+                            className="h-8 text-xs font-semibold rounded-xl px-3 border border-[#B4E3C0] bg-[#EBF7EE] text-[#1E5E3A] hover:bg-[#D4EED8] cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Marcar como Disponible
+                          </Button>
+                        )}
 
-                      {/* Editar Nombre / Color */}
-                      <Button
+                        {/* Editar Nombre / Color */}
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setIsEditingColorData(!isEditingColorData)}
+                          className={`h-8 text-xs font-semibold rounded-xl px-3 border transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs ${
+                            isEditingColorData 
+                              ? 'bg-[#241C15] text-white border-[#241C15]' 
+                              : 'bg-white text-[#241C15] border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                          }`}
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-[#96634D]" />
+                          {isEditingColorData ? 'Cerrar Edición' : 'Editar Nombre / Color'}
+                        </Button>
+
+                        {/* Descatalogar */}
+                        {!isDescatalogado && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleDescatalogarColor(selectedColorForDetails)}
+                            className="h-8 text-xs font-semibold rounded-xl px-3 border border-[#E2D9CC] bg-white text-[#75695D] hover:text-[#854D0E] hover:bg-[#FEF9C3]/40 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
+                            title="Descatalogar color"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                            Descatalogar
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Botón Eliminar danger suave */}
+                      <button
                         type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setIsEditingColorData(!isEditingColorData)}
-                        className={`h-8 text-xs font-bold rounded-xl px-3 border-[#E2D9CC] transition-colors cursor-pointer flex items-center gap-1.5 ${
-                          isEditingColorData ? 'bg-[#241C15] text-white border-[#241C15]' : 'bg-white text-[#241C15] hover:bg-[#FAF8F5]'
-                        }`}
-                      >
-                        <Pencil className="h-3.5 w-3.5 text-[#A36F4C]" />
-                        {isEditingColorData ? 'Cerrar Edición' : 'Editar Nombre / Color'}
-                      </Button>
-
-                      {/* Descatalogar */}
-                      {!isDescatalogado && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDescatalogarColor(selectedColorForDetails)}
-                          className="h-8 text-xs font-bold rounded-xl px-3 border-[#E2D9CC] bg-white text-[#75695D] hover:text-[#854D0E] hover:bg-[#FEF9C3]/50 cursor-pointer flex items-center gap-1.5"
-                          title="Descatalogar color"
-                        >
-                          <Archive className="h-3.5 w-3.5" />
-                          Descatalogar
-                        </Button>
-                      )}
-
-                      {/* Eliminar */}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
                         onClick={() => handleEliminarColor(selectedColorForDetails)}
-                        className="h-8 text-xs font-bold rounded-xl px-3 text-[#DC2626] hover:bg-red-50 hover:text-red-700 cursor-pointer ml-auto flex items-center gap-1.5"
+                        className="border border-red-200 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ml-auto inline-flex items-center gap-1.5 shadow-2xs"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Eliminar
-                      </Button>
+                      </button>
                     </div>
 
                     {/* Formulario Desplegable de Edición de Datos */}
@@ -2019,7 +2096,7 @@ export function InventarioClient({
                             value={editNombre}
                             onChange={(e) => setEditNombre(e.target.value)}
                             placeholder="Ej: Negro Carbón, Blanco Hueso..."
-                            className="bg-[#FAF8F5] border-[#E2D9CC] rounded-xl text-xs font-bold text-[#241C15] h-9"
+                            className="bg-[#FAF8F5] border-[#E2D9CC] rounded-xl text-xs font-bold text-[#241C15] h-9 focus:ring-2 focus:ring-[#96634D]"
                           />
                         </div>
 
@@ -2049,7 +2126,7 @@ export function InventarioClient({
                                 type="button"
                                 onClick={() => setEditHex(sw.hex)}
                                 className={`h-6 w-6 rounded-full border shadow-2xs hover:scale-110 active:scale-95 transition-transform cursor-pointer mx-auto flex items-center justify-center ${
-                                  editHex === sw.hex ? 'ring-2 ring-[#A36F4C] ring-offset-1 border-black' : 'border-black/15'
+                                  editHex === sw.hex ? 'ring-2 ring-[#96634D] ring-offset-1 border-black' : 'border-black/15'
                                 }`}
                                 style={{ backgroundColor: sw.hex }}
                                 title={sw.name}
@@ -2087,7 +2164,7 @@ export function InventarioClient({
                             type="button"
                             size="sm"
                             onClick={handleGuardarEdicionColor}
-                            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-4 rounded-xl cursor-pointer shadow-2xs"
+                            className="bg-[#96634D] hover:bg-[#83543F] text-white font-bold text-xs px-4 rounded-xl cursor-pointer shadow-2xs"
                           >
                             Guardar Cambios
                           </Button>
@@ -2101,11 +2178,11 @@ export function InventarioClient({
                   {/* ========================================================= */}
                   <div className="space-y-3">
                     <span className="text-xs font-black uppercase tracking-wider text-[#241C15] flex items-center gap-1.5">
-                      <Package className="h-4 w-4 text-[#A36F4C]" />
+                      <Package className="h-4 w-4 text-[#96634D]" />
                       Modelos Fabricados con este Color ({selectedColorForDetails.productosInvertidos?.length || 0})
                     </span>
 
-                    {/* KPIs de Producción */}
+                    {/* KPIs de Producción: Total Piezas, Filamento Usado, Pedidos Activos */}
                     <div className="grid grid-cols-3 gap-2.5">
                       <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
                         <span className="text-[10px] uppercase font-bold text-[#75695D] block truncate">
@@ -2121,7 +2198,7 @@ export function InventarioClient({
                         <span className="text-[10px] uppercase font-bold text-[#75695D] block truncate">
                           Filamento Usado
                         </span>
-                        <span className="text-lg sm:text-xl font-black text-[#A36F4C] font-mono block mt-0.5">
+                        <span className="text-lg sm:text-xl font-black text-[#96634D] font-mono block mt-0.5">
                           {(selectedColorForDetails.totalGramosConsumidos || 0).toLocaleString()} g
                         </span>
                         <span className="text-[10px] text-[#75695D] truncate block">consumidos</span>
@@ -2129,12 +2206,14 @@ export function InventarioClient({
 
                       <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
                         <span className="text-[10px] uppercase font-bold text-[#75695D] block truncate">
-                          Stock Restante
+                          Pedidos Activos
                         </span>
-                        <span className="text-lg sm:text-xl font-black text-[#1E5E3A] font-mono block mt-0.5">
-                          {(selectedColorForDetails.stockGramos || 0).toLocaleString()} g
+                        <span className="text-lg sm:text-xl font-black text-[#241C15] font-mono block mt-0.5">
+                          {pedidosActivos}
                         </span>
-                        <span className="text-[10px] text-[#75695D] truncate block">en taller</span>
+                        <span className="text-[10px] text-[#75695D] truncate block">
+                          {ultimoUsoFecha ? `Último: ${ultimoUsoFecha}` : 'en producción'}
+                        </span>
                       </div>
                     </div>
 
@@ -2160,7 +2239,7 @@ export function InventarioClient({
                                     {prod.nombreModelo}
                                   </span>
                                   {prod.lineaCategoria && (
-                                    <Badge variant="outline" className="text-[9px] px-2 py-0 bg-[#F5EBE1] text-[#A36F4C] border-[#E2D9CC]">
+                                    <Badge variant="outline" className="text-[9px] px-2 py-0 bg-[#F5EBE1] text-[#96634D] border-[#E2D9CC]">
                                       {prod.lineaCategoria}
                                     </Badge>
                                   )}
@@ -2171,7 +2250,7 @@ export function InventarioClient({
                                 <span className="text-xs font-black text-[#241C15] font-mono block">
                                   {prod.totalUnidades} {prod.totalUnidades === 1 ? 'ud' : 'uds'}
                                 </span>
-                                <span className="text-xs font-bold text-[#A36F4C] font-mono">
+                                <span className="text-xs font-bold text-[#96634D] font-mono">
                                   {prod.totalGramos.toLocaleString()}g
                                 </span>
                               </div>
@@ -2208,7 +2287,7 @@ export function InventarioClient({
                   <Button
                     type="button"
                     onClick={() => setOpenColorDetailsModal(false)}
-                    className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 rounded-xl cursor-pointer"
+                    className="bg-[#96634D] hover:bg-[#83543F] text-white font-bold text-xs px-5 rounded-xl cursor-pointer"
                   >
                     Cerrar
                   </Button>
@@ -2221,3 +2300,6 @@ export function InventarioClient({
     </div>
   )
 }
+
+// Alias de retrocompatibilidad
+export const InventarioClient = InventarioFilamentosClient

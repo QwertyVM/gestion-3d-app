@@ -1,14 +1,7 @@
-import { getProductos } from '@/actions/productos'
-import { getCategorias } from '@/actions/categorias'
-import { CatalogoClient } from '@/components/catalogo/CatalogoClient'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CatalogoProductosPage() {
-  const [productos, categorias] = await Promise.all([
-    getProductos(),
-    getCategorias(),
-  ])
-
-  return <CatalogoClient productos={productos} categoriasIniciales={categorias} />
+export default function CatalogoProductosPage() {
+  redirect('/catalogo')
 }

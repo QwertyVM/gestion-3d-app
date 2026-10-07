@@ -30,7 +30,7 @@ import {
   Heart,
 } from 'lucide-react'
 
-interface GestionTiendaClientProps {
+export interface TiendaWebClientProps {
   initialConfig: ConfiguracionTiendaData
   initialBanners: BannerTiendaItem[]
   initialCupones: CuponDescuentoItem[]
@@ -40,13 +40,13 @@ interface GestionTiendaClientProps {
 
 type TabType = 'identidad' | 'banners' | 'cupones' | 'stock' | 'favoritos'
 
-export function GestionTiendaClient({
+export function TiendaWebClient({
   initialConfig,
   initialBanners,
   initialCupones,
   initialProductos,
   initialFavoritos,
-}: GestionTiendaClientProps) {
+}: TiendaWebClientProps) {
   const router = useRouter()
   const { negocio, setNegocio, is3D, isBG, config } = useBusiness()
   const [activeTab, setActiveTab] = useState<TabType>('identidad')
@@ -250,3 +250,7 @@ export function GestionTiendaClient({
     </div>
   )
 }
+
+// Alias de compatibilidad
+export const GestionTiendaClient = TiendaWebClient
+export type GestionTiendaClientProps = TiendaWebClientProps
