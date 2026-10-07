@@ -157,10 +157,14 @@ export function InventarioFilamentosClient({
   const [selectedColorForDetails, setSelectedColorForDetails] = useState<ColorFilamentoItem | null>(null)
   const [openColorDetailsModal, setOpenColorDetailsModal] = useState(false)
   const [modalGramosInput, setModalGramosInput] = useState('1000')
-  const [isEditingColorData, setIsEditingColorData] = useState(false)
   const [copiedHex, setCopiedHex] = useState(false)
   const [isSavingGramos, setIsSavingGramos] = useState(false)
   const [savedGramosSuccess, setSavedGramosSuccess] = useState(false)
+  const [returnToDetailsAfterEdit, setReturnToDetailsAfterEdit] = useState(false)
+
+  // Delete confirmation state
+  const [colorToDelete, setColorToDelete] = useState<ColorFilamentoItem | null>(null)
+  const [isDeletingColor, setIsDeletingColor] = useState(false)
 
   // Close copy dropdown on click outside
   useEffect(() => {
@@ -198,7 +202,21 @@ export function InventarioFilamentosClient({
       setDisponibles(updater)
       setRestock(updater)
       setDescatalogados(updater)
+
+      if (selectedColorForDetails?.id === editColorId) {
+        setSelectedColorForDetails(prev => prev ? {
+          ...prev,
+          nombreColor: editNombre.trim(),
+          codigoHex: editHex,
+          nota: editNota.trim() || null
+        } : null)
+      }
+
       setOpenEditModal(false)
+      if (returnToDetailsAfterEdit) {
+        setOpenColorDetailsModal(true)
+        setReturnToDetailsAfterEdit(false)
+      }
       toast.success(`Color "${editNombre.trim()}" actualizado`)
     } catch (err: any) {
       toast.error('Error al editar: ' + (err?.message || 'Error desconocido'))
@@ -210,7 +228,6 @@ export function InventarioFilamentosClient({
     setSelectedColorForDetails(item)
     const g = item.stockGramos ?? (item.estado === 'DISPONIBLE' ? 1000 : 0)
     setModalGramosInput(g.toString())
-    setIsEditingColorData(false)
     setEditColorId(item.id)
     setEditNombre(item.nombreColor)
     setEditHex(item.codigoHex || '#18181B')
@@ -407,43 +424,6 @@ export function InventarioFilamentosClient({
     }
   }
 
-  // Guardar datos editados (nombre, HEX, nota) desde la vista específica del filamento
-  const handleGuardarEdicionColor = async () => {
-    if (!selectedColorForDetails || !editNombre.trim()) return
-
-    try {
-      await editarColorFilamento(selectedColorForDetails.id, {
-        nombreColor: editNombre.trim(),
-        codigoHex: editHex,
-        nota: editNota.trim() || null
-      })
-
-      const updater = (prev: ColorFilamentoItem[]) =>
-        prev.map(c => c.id === selectedColorForDetails.id ? { 
-          ...c, 
-          nombreColor: editNombre.trim(), 
-          codigoHex: editHex, 
-          nota: editNota.trim() || null 
-        } : c)
-
-      setDisponibles(updater)
-      setRestock(updater)
-      setDescatalogados(updater)
-
-      setSelectedColorForDetails(prev => prev ? {
-        ...prev,
-        nombreColor: editNombre.trim(),
-        codigoHex: editHex,
-        nota: editNota.trim() || null
-      } : null)
-
-      setIsEditingColorData(false)
-      toast.success(`Color "${editNombre.trim()}" actualizado`)
-    } catch (err: any) {
-      toast.error('Error al editar: ' + (err?.message || 'Error desconocido'))
-    }
-  }
-
   // =========================================================================
   // FUNCIONALIDAD COMERCIAL: COPIAR COLORES PARA CLIENTES
   // =========================================================================
@@ -490,8 +470,6 @@ export function InventarioFilamentosClient({
 
   // Delete color
   const handleEliminarColor = async (item: ColorFilamentoItem) => {
-    if (!confirm(`¿Estás seguro de eliminar permanentemente "${item.nombreColor}"?`)) return
-
     if (item.estado === 'DISPONIBLE') {
       setDisponibles(prev => prev.filter(c => c.id !== item.id))
     } else if (item.estado === 'RESTOCK') {
@@ -1610,7 +1588,16 @@ export function InventarioFilamentosClient({
       {/* ========================================================================= */}
       {/* 5. MODAL: EDITAR COLOR                                                    */}
       {/* ========================================================================= */}
-      <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
+      <Dialog 
+        open={openEditModal} 
+        onOpenChange={(open) => {
+          setOpenEditModal(open)
+          if (!open && returnToDetailsAfterEdit) {
+            setOpenColorDetailsModal(true)
+            setReturnToDetailsAfterEdit(false)
+          }
+        }}
+      >
         <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[440px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
           <form onSubmit={handleEditColorSubmit} className="p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-[#E2D9CC] pb-3">
@@ -1630,7 +1617,13 @@ export function InventarioFilamentosClient({
               </div>
               <button
                 type="button"
-                onClick={() => setOpenEditModal(false)}
+                onClick={() => {
+                  setOpenEditModal(false)
+                  if (returnToDetailsAfterEdit) {
+                    setOpenColorDetailsModal(true)
+                    setReturnToDetailsAfterEdit(false)
+                  }
+                }}
                 className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-xl hover:bg-[#F4EFEA] transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
@@ -1709,7 +1702,13 @@ export function InventarioFilamentosClient({
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => setOpenEditModal(false)}
+                onClick={() => {
+                  setOpenEditModal(false)
+                  if (returnToDetailsAfterEdit) {
+                    setOpenColorDetailsModal(true)
+                    setReturnToDetailsAfterEdit(false)
+                  }
+                }}
                 className="text-xs rounded-xl cursor-pointer"
               >
                 Cancelar
@@ -1727,10 +1726,66 @@ export function InventarioFilamentosClient({
       </Dialog>
 
       {/* ========================================================================= */}
-      {/* 6. MODAL: VISTA ESPECÍFICA DEL FILAMENTO (STOCK, ACCIONES Y MODELOS)       */}
+      {/* 5.1 MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE FILAMENTO                     */}
+      {/* ========================================================================= */}
+      <Dialog open={!!colorToDelete} onOpenChange={(open) => !open && setColorToDelete(null)}>
+        <DialogContent className="bg-white border border-stone-200 text-stone-900 w-[92vw] sm:max-w-md p-6 rounded-3xl shadow-2xl z-50">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-stone-900">
+                  ¿Eliminar filamento?
+                </DialogTitle>
+                <DialogDescription className="text-xs text-stone-500 mt-0.5">
+                  Esta acción no se puede deshacer.
+                </DialogDescription>
+              </div>
+            </div>
+            <p className="text-sm text-stone-600">
+              ¿Estás seguro de que deseas eliminar permanentemente el filamento{' '}
+              <strong className="text-stone-900 font-semibold">{colorToDelete?.nombreColor}</strong>?
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isDeletingColor}
+                onClick={() => setColorToDelete(null)}
+                className="rounded-xl text-xs font-semibold h-9 px-4 border-stone-200 cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                disabled={isDeletingColor}
+                onClick={async () => {
+                  if (!colorToDelete) return
+                  const item = colorToDelete
+                  setIsDeletingColor(true)
+                  try {
+                    await handleEliminarColor(item)
+                    setColorToDelete(null)
+                  } finally {
+                    setIsDeletingColor(false)
+                  }
+                }}
+                className="rounded-xl text-xs font-semibold h-9 px-4 bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-2xs"
+              >
+                {isDeletingColor ? 'Eliminando...' : 'Eliminar Filamento'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* 6. MODAL: FICHA DE FILAMENTO                                              */}
       {/* ========================================================================= */}
       <Dialog open={openColorDetailsModal} onOpenChange={setOpenColorDetailsModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[620px] max-h-[92dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
+        <DialogContent showCloseButton={false} className="bg-white border border-stone-200 text-stone-900 w-[95vw] sm:max-w-[620px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
           {selectedColorForDetails && (() => {
             const isDescatalogado = selectedColorForDetails.estado === 'DESCATALOGADO'
             const isDisp = selectedColorForDetails.estado === 'DISPONIBLE'
@@ -1749,52 +1804,48 @@ export function InventarioFilamentosClient({
             // Métricas de pedidos para producción
             const allPedidos = selectedColorForDetails.productosInvertidos?.flatMap(p => p.ultimosPedidos || []) || []
             const pedidosActivos = allPedidos.filter(p => p.estado === 'PENDIENTE' || p.estado === 'EN_PRODUCCION').length
-            const ultimasFechas = allPedidos
-              .map(p => new Date(p.fecha).getTime())
-              .filter(t => !isNaN(t))
-            const ultimoUsoTimestamp = ultimasFechas.length > 0 ? Math.max(...ultimasFechas) : null
-            const ultimoUsoFecha = ultimoUsoTimestamp
-              ? new Date(ultimoUsoTimestamp).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })
-              : null
 
             return (
-              <div className="flex flex-col max-h-[92dvh] h-full overflow-hidden">
-                {/* 1. HEADER Y METADATOS UNIFICADOS */}
-                <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FAF8F5] flex items-center justify-between flex-shrink-0">
-                  <div className="flex items-center gap-3 min-w-0">
+              <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
+                {/* 1. HEADER UNIFICADO (Con Swatch y Acciones Rápidas) */}
+                <div className="px-5 sm:px-6 py-4 border-b border-stone-200 bg-stone-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shrink-0">
+                  {/* Lado izquierdo */}
+                  <div className="flex items-center gap-3.5 min-w-0">
                     <div 
-                      className="h-10 w-10 rounded-full border border-black/15 shadow-xs flex items-center justify-center flex-shrink-0"
+                      className="w-12 h-12 rounded-full shadow-inner border border-black/5 shrink-0"
                       style={{ backgroundColor: selectedColorForDetails.codigoHex }}
                     />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                        {/* Badge 1: Estado */}
+                    <div className="min-w-0 flex-1">
+                      <DialogTitle className="text-2xl font-bold text-stone-900 tracking-tight truncate leading-tight">
+                        {selectedColorForDetails.nombreColor}
+                      </DialogTitle>
+                      
+                      {/* Fila de badges: Estado ("En Taller"), Stock ("1 bobina") y Código HEX con botón de copiar */}
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {/* Estado */}
                         <Badge 
                           variant="outline" 
                           className={
                             isDescatalogado
-                              ? 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] text-[10px] font-bold h-6 px-2.5 rounded-lg'
+                              ? 'bg-stone-100 text-stone-600 border-stone-200 text-xs font-semibold px-2 py-0.5 rounded-md'
                               : isDisp
-                              ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold h-6 px-2.5 rounded-lg'
-                              : 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] text-[10px] font-bold h-6 px-2.5 rounded-lg'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold px-2 py-0.5 rounded-md'
+                              : 'bg-amber-50 text-amber-700 border-amber-200 text-xs font-semibold px-2 py-0.5 rounded-md'
                           }
                         >
                           {isDescatalogado 
-                            ? '⚪ Descatalogado' 
+                            ? 'Descatalogado' 
                             : isDisp 
-                            ? '🟢 En Taller' 
-                            : '🟡 En Restock'}
+                            ? 'En Taller' 
+                            : 'En Restock'}
                         </Badge>
 
-                        {/* Badge 2: Bobinas (mismo padding, altura y estilo que las demás pills) */}
-                        <Badge 
-                          variant="outline"
-                          className="bg-white text-[#75695D] border-[#E2D9CC] text-[10px] font-bold font-mono h-6 px-2.5 rounded-lg"
-                        >
+                        {/* Stock */}
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md border border-stone-200 bg-white text-stone-600 font-mono">
                           {rollos} {rollos === 1 ? 'bobina' : 'bobinas'}
-                        </Badge>
+                        </span>
 
-                        {/* Badge 3: Código HEX con muestra de color y botón de copiar al portapapeles */}
+                        {/* Código HEX con botón de copiar */}
                         <button
                           type="button"
                           onClick={() => {
@@ -1803,494 +1854,340 @@ export function InventarioFilamentosClient({
                             toast.success(`HEX ${selectedColorForDetails.codigoHex} copiado`)
                             setTimeout(() => setCopiedHex(false), 2000)
                           }}
-                          className="group inline-flex items-center gap-1.5 bg-white hover:bg-[#FAF8F5] active:scale-95 text-[#75695D] hover:text-[#241C15] border border-[#E2D9CC] text-[10px] font-bold font-mono h-6 px-2.5 rounded-lg transition-all cursor-pointer shadow-2xs"
+                          className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-stone-200 bg-white hover:bg-stone-100 active:scale-95 text-stone-600 text-xs font-mono font-medium transition-all cursor-pointer"
                           title="Copiar código HEX"
                         >
                           <span 
-                            className="h-2.5 w-2.5 rounded-full border border-black/20 shrink-0" 
+                            className="w-2.5 h-2.5 rounded-full border border-black/15 shrink-0" 
                             style={{ backgroundColor: selectedColorForDetails.codigoHex }} 
                           />
                           <span>{selectedColorForDetails.codigoHex}</span>
                           {copiedHex ? (
                             <Check className="h-3 w-3 text-emerald-600" />
                           ) : (
-                            <Copy className="h-3 w-3 text-[#A89F91] group-hover:text-[#241C15] transition-colors" />
+                            <Copy className="h-3 w-3 text-stone-400 group-hover:text-stone-700 transition-colors" />
                           )}
                         </button>
                       </div>
-                      <DialogTitle className="text-base sm:text-lg font-black text-[#241C15] tracking-tight truncate max-w-[240px] sm:max-w-[360px]">
-                        {selectedColorForDetails.nombreColor}
-                      </DialogTitle>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setOpenColorDetailsModal(false)}
-                    className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-xl hover:bg-[#F4EFEA] transition-colors cursor-pointer shrink-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+
+                  {/* Lado derecho: Fila de acciones compactas */}
+                  <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                    {/* Botón secundario [ ✏️ Editar ] */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setReturnToDetailsAfterEdit(true)
+                        setOpenColorDetailsModal(false)
+                        handleOpenEditColor(selectedColorForDetails)
+                      }}
+                      className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-stone-200 bg-white hover:bg-stone-50 text-stone-700 cursor-pointer shadow-2xs gap-1.5"
+                    >
+                      <Pencil className="h-3.5 w-3.5 text-stone-500" />
+                      <span>Editar</span>
+                    </Button>
+
+                    {/* Botón secundario [ 🛒 Restock ] / Estado */}
+                    {isDescatalogado ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleReactivarColor(selectedColorForDetails)}
+                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer shadow-2xs gap-1.5"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>Reactivar</span>
+                      </Button>
+                    ) : isDisp ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMoverARestock(selectedColorForDetails)}
+                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-amber-200 bg-amber-50/60 hover:bg-amber-100 text-amber-800 cursor-pointer shadow-2xs gap-1.5"
+                      >
+                        <ShoppingCart className="h-3.5 w-3.5 text-amber-600" />
+                        <span>Restock</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMoverADisponible(selectedColorForDetails)}
+                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer shadow-2xs gap-1.5"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>Disponible</span>
+                      </Button>
+                    )}
+
+                    {/* Botón icon/ghost [ 🗑️ ] con hover rojo para eliminar */}
+                    <button
+                      type="button"
+                      onClick={() => setColorToDelete(selectedColorForDetails)}
+                      className="p-1.5 rounded-xl text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      title="Eliminar filamento"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+
+                    {/* Botón icon [ ✕ ] para cerrar */}
+                    <button
+                      type="button"
+                      onClick={() => setOpenColorDetailsModal(false)}
+                      className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+                      title="Cerrar ficha"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
 
-                {/* Body con fix pb-16 para evitar cortes de scroll */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-6 pb-16 space-y-4 touch-pan-y">
-                  
-                  {/* ========================================================= */}
-                  {/* 1. ACTUALIZAR CANTIDAD DE FILAMENTO (HERO SECTION)       */}
-                  {/* ========================================================= */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] space-y-3.5">
+                {/* Body con scroll natural sin footer flotante */}
+                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+                  {/* 2. SECCIÓN DE AJUSTE DE STOCK */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-stone-50/70 border border-stone-200/80 space-y-3.5">
+                    {/* Visualización */}
                     <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <span className="text-xs font-black uppercase tracking-wider text-[#241C15] flex items-center gap-1.5">
-                          <Weight className="h-4 w-4 text-[#96634D]" />
-                          Cantidad de Filamento (Stock Actual)
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-3xl font-extrabold text-stone-900 font-mono tracking-tight">
+                          {inputNum.toLocaleString()}
                         </span>
-                        <p className="text-[11px] text-[#75695D]">
-                          Modifica la cantidad disponible en el taller
-                        </p>
+                        <span className="text-sm font-semibold text-stone-500 font-mono">g</span>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xl sm:text-2xl font-black font-mono text-[#241C15]">
-                          {inputNum.toLocaleString()} g
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-stone-500 font-mono">
+                          {pct}% ({dynamicCapacidad.toLocaleString()}g)
                         </span>
-                        <span className="text-[10px] text-[#75695D] block font-mono">
-                          {pct}% de {dynamicCapacidad.toLocaleString()}g
-                        </span>
+                        <Badge 
+                          variant="outline"
+                          className={
+                            inputNum <= 0
+                              ? 'bg-stone-200/70 text-stone-600 border-stone-300 text-[10px] font-bold px-2 py-0.5 rounded-md'
+                              : esCritico
+                              ? 'bg-red-50 text-red-700 border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-md'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md'
+                          }
+                        >
+                          {inputNum <= 0 ? 'Agotado' : esCritico ? 'Crítico' : 'Normal'}
+                        </Badge>
                       </div>
                     </div>
 
-                    {/* Barra visual de stock con escala dinámica */}
-                    <div className="space-y-1">
-                      <div className="h-2.5 w-full rounded-full bg-[#E2D9CC]/70 overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            inputNum <= 0 
-                              ? 'bg-gray-400'
-                              : esCritico 
-                              ? 'bg-[#DC2626]' 
-                              : pct < 50 
-                              ? 'bg-[#D97706]' 
-                              : 'bg-[#1E5E3A]'
-                          }`}
-                          style={{ 
-                            width: `${Math.min(100, Math.max(inputNum > 0 ? 4 : 0, pct))}%` 
-                          }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[10px] text-[#75695D] font-mono">
-                        <span>0g (Agotado)</span>
-                        <span>Crítico &lt;300g</span>
-                        <span>Capacidad {dynamicCapacidad.toLocaleString()}g</span>
-                      </div>
+                    {/* Barra de progreso delgada (h-2) */}
+                    <div className="h-2 w-full rounded-full bg-stone-200/80 overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          inputNum <= 0 
+                            ? 'bg-stone-400'
+                            : esCritico 
+                            ? 'bg-red-500' 
+                            : pct < 50 
+                            ? 'bg-amber-500' 
+                            : 'bg-emerald-600'
+                        }`}
+                        style={{ 
+                          width: `${Math.min(100, Math.max(inputNum > 0 ? 3 : 0, pct))}%` 
+                        }}
+                      />
                     </div>
 
-                    {/* Steppers + Input Numérico */}
-                    <div className="space-y-2 pt-1">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const curr = parseInt(modalGramosInput || '0', 10)
-                            setModalGramosInput(Math.max(0, curr - 100).toString())
-                          }}
-                          className="px-2.5 py-2 text-xs font-bold font-mono bg-white border border-[#E2D9CC] rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-all cursor-pointer shadow-2xs"
-                          title="Restar 100g"
-                        >
-                          -100g
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const curr = parseInt(modalGramosInput || '0', 10)
-                            setModalGramosInput(Math.max(0, curr - 50).toString())
-                          }}
-                          className="px-2.5 py-2 text-xs font-bold font-mono bg-white border border-[#E2D9CC] rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-all cursor-pointer shadow-2xs"
-                          title="Restar 50g"
-                        >
-                          -50g
-                        </button>
-
-                        <div className="relative flex-1">
-                          <Input 
-                            type="number"
-                            min="0"
-                            step="10"
-                            value={modalGramosInput}
-                            onChange={(e) => setModalGramosInput(e.target.value)}
-                            className="bg-white border-[#E2D9CC] text-center font-mono font-black text-sm sm:text-base h-10 pr-7 rounded-xl focus:ring-2 focus:ring-[#96634D]"
-                            placeholder="Ej: 750"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#75695D]">
-                            g
-                          </span>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const curr = parseInt(modalGramosInput || '0', 10)
-                            setModalGramosInput((curr + 50).toString())
-                          }}
-                          className="px-2.5 py-2 text-xs font-bold font-mono bg-white border border-[#E2D9CC] rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-all cursor-pointer shadow-2xs"
-                          title="Sumar 50g"
-                        >
-                          +50g
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const curr = parseInt(modalGramosInput || '0', 10)
-                            setModalGramosInput((curr + 100).toString())
-                          }}
-                          className="px-2.5 py-2 text-xs font-bold font-mono bg-white border border-[#E2D9CC] rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] active:scale-95 transition-all cursor-pointer shadow-2xs"
-                          title="Sumar 100g"
-                        >
-                          +100g
-                        </button>
-                      </div>
-
-                      {/* Botones Presets Rápidos */}
-                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                        <span className="text-[10px] font-bold text-[#75695D] uppercase mr-0.5">Presets:</span>
-                        {[0, 250, 500, 750, 1000, 2000].map(preset => (
+                    {/* Fila de ajuste rápido: Stepper + Pills + Botón Actualizar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Stepper central: [-] [ Input editable en gramos ] [+] */}
+                        <div className="inline-flex items-center shadow-2xs rounded-xl overflow-hidden border border-stone-200 bg-white">
                           <button
-                            key={preset}
                             type="button"
-                            onClick={() => setModalGramosInput(preset.toString())}
-                            className={`px-2 py-1 text-[11px] font-mono font-bold rounded-lg border transition-all cursor-pointer ${
-                              modalGramosInput === preset.toString()
-                                ? 'bg-[#241C15] text-white border-[#241C15]'
-                                : 'bg-white text-[#75695D] border-[#E2D9CC] hover:bg-[#FAF8F5]'
-                            }`}
+                            onClick={() => {
+                              const curr = parseInt(modalGramosInput || '0', 10)
+                              setModalGramosInput(Math.max(0, curr - 100).toString())
+                            }}
+                            className="h-8.5 w-8 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-50 active:scale-95 transition-all cursor-pointer font-bold text-sm"
+                            title="Restar 100g"
                           >
-                            {preset === 0 ? '0g (Agotado)' : preset === 1000 ? '1,000g (1b)' : `${preset.toLocaleString()}g`}
+                            -
                           </button>
-                        ))}
+                          <div className="relative w-24 border-x border-stone-200">
+                            <Input 
+                              type="number"
+                              min="0"
+                              step="50"
+                              value={modalGramosInput}
+                              onChange={(e) => setModalGramosInput(e.target.value)}
+                              className="bg-transparent border-0 text-center font-mono font-bold text-xs h-8.5 pr-4 rounded-none focus-visible:ring-0 shadow-none"
+                              placeholder="0"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-stone-400 pointer-events-none">
+                              g
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curr = parseInt(modalGramosInput || '0', 10)
+                              setModalGramosInput((curr + 100).toString())
+                            }}
+                            className="h-8.5 w-8 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-50 active:scale-95 transition-all cursor-pointer font-bold text-sm"
+                            title="Sumar 100g"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        {/* 3 atajos más usados como pills sutiles */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curr = parseInt(modalGramosInput || '0', 10)
+                              setModalGramosInput((curr + 100).toString())
+                            }}
+                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                          >
+                            +100g
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const curr = parseInt(modalGramosInput || '0', 10)
+                              setModalGramosInput((curr + 1000).toString())
+                            }}
+                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                          >
+                            +1 Bobina / 1,000g
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setModalGramosInput('0')}
+                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-white border border-stone-200 text-stone-600 hover:text-red-700 hover:bg-red-50/50 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                          >
+                            Marcar Agotado / 0g
+                          </button>
+                        </div>
                       </div>
 
-                      {/* Botón Principal: Terracota #96634D con hover #83543F y micro-interacción */}
-                      <div className="pt-2">
-                        <Button
-                          type="button"
-                          onClick={handleGuardarGramosModal}
-                          disabled={isSavingGramos}
-                          className="w-full bg-[#96634D] hover:bg-[#83543F] active:bg-[#724533] text-white font-bold text-xs h-10 rounded-xl cursor-pointer shadow-2xs flex items-center justify-center gap-2 transition-all duration-200"
-                        >
-                          {isSavingGramos ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Guardando cambios...</span>
-                            </>
-                          ) : savedGramosSuccess ? (
-                            <>
-                              <Check className="h-4 w-4 text-emerald-300 stroke-[3]" />
-                              <span>¡Cantidad Actualizada con Éxito!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Check className="h-4 w-4" />
-                              <span>Actualizar Cantidad de Filamento</span>
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ========================================================= */}
-                  {/* 2. ACCIONES DEL FILAMENTO (BARRA DE HERRAMIENTAS)         */}
-                  {/* ========================================================= */}
-                  <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] space-y-3 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black uppercase tracking-wider text-[#241C15] flex items-center gap-1.5">
-                        <SlidersHorizontal className="h-4 w-4 text-[#96634D]" />
-                        Acciones del Filamento
-                      </span>
-                    </div>
-
-                    {/* Fila reorganizada: Pills operativas a la izquierda + Eliminar suave a la derecha */}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Cambiar Estado */}
-                        {isDescatalogado ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => handleReactivarColor(selectedColorForDetails)}
-                            className="h-8 text-xs font-semibold rounded-xl px-3 border border-[#B4E3C0] bg-[#EBF7EE] text-[#1E5E3A] hover:bg-[#D4EED8] cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" />
-                            Reactivar en Catálogo
-                          </Button>
-                        ) : isDisp ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => handleMoverARestock(selectedColorForDetails)}
-                            className="h-8 text-xs font-semibold rounded-xl px-3 border border-[#E2D9CC] bg-[#FEF9C3]/60 text-[#854D0E] hover:bg-[#FEF9C3] cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
-                          >
-                            <ShoppingCart className="h-3.5 w-3.5" />
-                            Mover a Restock
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => handleMoverADisponible(selectedColorForDetails)}
-                            className="h-8 text-xs font-semibold rounded-xl px-3 border border-[#B4E3C0] bg-[#EBF7EE] text-[#1E5E3A] hover:bg-[#D4EED8] cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Marcar como Disponible
-                          </Button>
-                        )}
-
-                        {/* Editar Nombre / Color */}
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => setIsEditingColorData(!isEditingColorData)}
-                          className={`h-8 text-xs font-semibold rounded-xl px-3 border transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs ${
-                            isEditingColorData 
-                              ? 'bg-[#241C15] text-white border-[#241C15]' 
-                              : 'bg-white text-[#241C15] border-[#E2D9CC] hover:bg-[#FAF8F5]'
-                          }`}
-                        >
-                          <Pencil className="h-3.5 w-3.5 text-[#96634D]" />
-                          {isEditingColorData ? 'Cerrar Edición' : 'Editar Nombre / Color'}
-                        </Button>
-
-                        {/* Descatalogar */}
-                        {!isDescatalogado && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => handleDescatalogarColor(selectedColorForDetails)}
-                            className="h-8 text-xs font-semibold rounded-xl px-3 border border-[#E2D9CC] bg-white text-[#75695D] hover:text-[#854D0E] hover:bg-[#FEF9C3]/40 cursor-pointer shadow-2xs flex items-center gap-1.5 transition-colors"
-                            title="Descatalogar color"
-                          >
-                            <Archive className="h-3.5 w-3.5" />
-                            Descatalogar
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Botón Eliminar danger suave */}
-                      <button
+                      {/* Botón de confirmación compacto: [ Actualizar Stock ] */}
+                      <Button
                         type="button"
-                        onClick={() => handleEliminarColor(selectedColorForDetails)}
-                        className="border border-red-200 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0 ml-auto inline-flex items-center gap-1.5 shadow-2xs"
+                        onClick={handleGuardarGramosModal}
+                        disabled={isSavingGramos}
+                        className="h-8.5 px-3.5 bg-[#96634d] hover:bg-[#83543f] active:bg-[#724533] text-white font-semibold text-xs rounded-xl cursor-pointer shadow-2xs inline-flex items-center gap-1.5 transition-all shrink-0 self-end sm:self-auto"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Eliminar
-                      </button>
+                        {isSavingGramos ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            <span>Guardando...</span>
+                          </>
+                        ) : savedGramosSuccess ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-300 stroke-[3]" />
+                            <span>¡Actualizado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Actualizar Stock</span>
+                          </>
+                        )}
+                      </Button>
                     </div>
-
-                    {/* Formulario Desplegable de Edición de Datos */}
-                    {isEditingColorData && (
-                      <div className="pt-3 border-t border-[#E2D9CC] space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="space-y-1">
-                          <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                            Nombre del Filamento *
-                          </Label>
-                          <Input 
-                            value={editNombre}
-                            onChange={(e) => setEditNombre(e.target.value)}
-                            placeholder="Ej: Negro Carbón, Blanco Hueso..."
-                            className="bg-[#FAF8F5] border-[#E2D9CC] rounded-xl text-xs font-bold text-[#241C15] h-9 focus:ring-2 focus:ring-[#96634D]"
-                          />
-                        </div>
-
-                        {/* Muestra Visual HEX */}
-                        <div className="space-y-2 p-3 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-[#241C15]">Muestra Visual (HEX)</span>
-                            <div className="flex items-center gap-2">
-                              <input 
-                                type="color"
-                                value={editHex}
-                                onChange={(e) => setEditHex(e.target.value)}
-                                className="h-6 w-8 rounded-lg border border-[#E2D9CC] cursor-pointer"
-                              />
-                              <Input 
-                                value={editHex}
-                                onChange={(e) => setEditHex(e.target.value)}
-                                className="w-20 h-6 text-xs font-mono font-bold bg-white border-[#E2D9CC] p-1 rounded-md text-center"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 pt-1">
-                            {ALL_SWATCHES.slice(0, 18).map(sw => (
-                              <button
-                                key={sw.name}
-                                type="button"
-                                onClick={() => setEditHex(sw.hex)}
-                                className={`h-6 w-6 rounded-full border shadow-2xs hover:scale-110 active:scale-95 transition-transform cursor-pointer mx-auto flex items-center justify-center ${
-                                  editHex === sw.hex ? 'ring-2 ring-[#96634D] ring-offset-1 border-black' : 'border-black/15'
-                                }`}
-                                style={{ backgroundColor: sw.hex }}
-                                title={sw.name}
-                              >
-                                {editHex === sw.hex && <Check className="h-2.5 w-2.5 text-white drop-shadow" />}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Nota de Producción */}
-                        <div className="space-y-1">
-                          <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                            Nota de Producción (Opcional)
-                          </Label>
-                          <Input 
-                            value={editNota}
-                            onChange={(e) => setEditNota(e.target.value)}
-                            placeholder="Ej: Lote #2, Bobina especial..."
-                            className="bg-[#FAF8F5] border-[#E2D9CC] rounded-xl text-xs h-9 text-[#241C15]"
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-end gap-2 pt-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsEditingColorData(false)}
-                            className="text-xs rounded-xl cursor-pointer"
-                          >
-                            Cancelar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleGuardarEdicionColor}
-                            className="bg-[#96634D] hover:bg-[#83543F] text-white font-bold text-xs px-4 rounded-xl cursor-pointer shadow-2xs"
-                          >
-                            Guardar Cambios
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  {/* ========================================================= */}
-                  {/* 3. HISTORIAL DE PRODUCCIÓN & MODELOS FABRICADOS           */}
-                  {/* ========================================================= */}
-                  <div className="space-y-3">
-                    <span className="text-xs font-black uppercase tracking-wider text-[#241C15] flex items-center gap-1.5">
-                      <Package className="h-4 w-4 text-[#96634D]" />
-                      Modelos Fabricados con este Color ({selectedColorForDetails.productosInvertidos?.length || 0})
-                    </span>
-
-                    {/* KPIs de Producción: Total Piezas, Filamento Usado, Pedidos Activos */}
+                  {/* 3. MÉTRICAS DE PRODUCCIÓN Y MODELOS */}
+                  <div className="space-y-4">
+                    {/* Fila de 3 KPIs minimalistas con fondo bg-stone-50 y bordes sutiles */}
                     <div className="grid grid-cols-3 gap-2.5">
-                      <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
-                        <span className="text-[10px] uppercase font-bold text-[#75695D] block truncate">
-                          Total Piezas
-                        </span>
-                        <span className="text-lg sm:text-xl font-black text-[#241C15] font-mono block mt-0.5">
+                      <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 text-center">
+                        <span className="text-xl sm:text-2xl font-extrabold text-stone-900 font-mono block">
                           {selectedColorForDetails.totalProductosImpresos || 0}
                         </span>
-                        <span className="text-[10px] text-[#75695D] truncate block">fabricadas</span>
+                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
+                          Piezas Fabricadas
+                        </span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
-                        <span className="text-[10px] uppercase font-bold text-[#75695D] block truncate">
-                          Filamento Usado
+                      <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 text-center">
+                        <span className="text-xl sm:text-2xl font-extrabold text-[#96634d] font-mono block">
+                          {(selectedColorForDetails.totalGramosConsumidos || 0).toLocaleString()}g
                         </span>
-                        <span className="text-lg sm:text-xl font-black text-[#96634D] font-mono block mt-0.5">
-                          {(selectedColorForDetails.totalGramosConsumidos || 0).toLocaleString()} g
+                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
+                          Filamento Consumido
                         </span>
-                        <span className="text-[10px] text-[#75695D] truncate block">consumidos</span>
                       </div>
 
-                      <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] text-center">
-                        <span className="text-[10px] uppercase font-bold text-[#75695D] block truncate">
-                          Pedidos Activos
-                        </span>
-                        <span className="text-lg sm:text-xl font-black text-[#241C15] font-mono block mt-0.5">
+                      <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 text-center">
+                        <span className="text-xl sm:text-2xl font-extrabold text-stone-900 font-mono block">
                           {pedidosActivos}
                         </span>
-                        <span className="text-[10px] text-[#75695D] truncate block">
-                          {ultimoUsoFecha ? `Último: ${ultimoUsoFecha}` : 'en producción'}
+                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
+                          Pedidos Activos
                         </span>
                       </div>
                     </div>
 
-                    {/* Lista de Modelos */}
-                    {(!selectedColorForDetails.productosInvertidos || selectedColorForDetails.productosInvertidos.length === 0) ? (
-                      <div className="p-6 rounded-2xl border border-dashed border-[#E2D9CC] bg-[#FAF8F5] text-center space-y-1.5">
-                        <Package className="h-7 w-7 text-[#D4BEA7] mx-auto opacity-70" />
-                        <p className="text-xs font-bold text-[#75695D]">
-                          No hay productos registrados con este color todavía.
-                        </p>
+                    {/* Sección "Modelos con este color" */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider text-stone-700">
+                          Modelos con este color
+                        </span>
+                        {selectedColorForDetails.productosInvertidos && selectedColorForDetails.productosInvertidos.length > 0 && (
+                          <span className="text-[11px] font-medium text-stone-500">
+                            {selectedColorForDetails.productosInvertidos.length} {selectedColorForDetails.productosInvertidos.length === 1 ? 'modelo' : 'modelos'}
+                          </span>
+                        )}
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {selectedColorForDetails.productosInvertidos.map((prod) => (
-                          <div 
-                            key={prod.productoId}
-                            className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC] hover:bg-[#FFFFFF] transition-all space-y-2 shadow-2xs"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs sm:text-sm font-bold text-[#241C15]">
+
+                      {(!selectedColorForDetails.productosInvertidos || selectedColorForDetails.productosInvertidos.length === 0) ? (
+                        <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-stone-50 border border-stone-200/70 text-stone-500 text-xs">
+                          <Package className="h-3.5 w-3.5 text-stone-400 shrink-0" />
+                          <span className="text-stone-500 text-xs">Aún no se han producido modelos con este color</span>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-stone-200/60 rounded-xl border border-stone-200/70 bg-stone-50/40 overflow-hidden">
+                          {selectedColorForDetails.productosInvertidos.map((prod) => {
+                            const ultPedido = prod.ultimosPedidos?.[0]
+                            const fechaFormateada = ultPedido?.fecha 
+                              ? new Date(ultPedido.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })
+                              : null
+
+                            return (
+                              <div 
+                                key={prod.productoId}
+                                className="flex items-center justify-between px-3.5 py-2.5 hover:bg-stone-50/70 transition-colors text-xs"
+                              >
+                                <div className="min-w-0 flex items-center gap-2">
+                                  <span className="font-semibold text-stone-900 truncate">
                                     {prod.nombreModelo}
                                   </span>
-                                  {prod.lineaCategoria && (
-                                    <Badge variant="outline" className="text-[9px] px-2 py-0 bg-[#F5EBE1] text-[#96634D] border-[#E2D9CC]">
-                                      {prod.lineaCategoria}
-                                    </Badge>
+                                  {fechaFormateada && (
+                                    <span className="text-[11px] text-stone-400 font-mono shrink-0">
+                                      • {fechaFormateada}
+                                    </span>
                                   )}
                                 </div>
-                              </div>
-
-                              <div className="text-right flex-shrink-0">
-                                <span className="text-xs font-black text-[#241C15] font-mono block">
-                                  {prod.totalUnidades} {prod.totalUnidades === 1 ? 'ud' : 'uds'}
-                                </span>
-                                <span className="text-xs font-bold text-[#96634D] font-mono">
-                                  {prod.totalGramos.toLocaleString()}g
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Mini Historial de Pedidos */}
-                            {prod.ultimosPedidos && prod.ultimosPedidos.length > 0 && (
-                              <div className="pt-2 border-t border-[#E2D9CC]/70 space-y-1">
-                                <div className="space-y-1">
-                                  {prod.ultimosPedidos.slice(0, 3).map((ped, idx) => (
-                                    <div key={idx} className="flex items-center justify-between text-xs bg-white px-2 py-1 rounded-xl border border-[#E2D9CC]/60">
-                                      <span className="text-[#241C15] font-medium truncate max-w-[140px] sm:max-w-[200px]">
-                                        👤 {ped.cliente}
-                                      </span>
-                                      <div className="flex items-center gap-1.5 text-[10px] text-[#75695D] font-mono">
-                                        <span>{ped.cantidad} un. ({ped.gramos}g)</span>
-                                        <span>•</span>
-                                        <span>{new Date(ped.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })}</span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                <div className="flex items-center gap-2.5 shrink-0 font-mono">
+                                  <span className="text-stone-500 text-[11px]">
+                                    {prod.totalUnidades} {prod.totalUnidades === 1 ? 'ud' : 'uds'}
+                                  </span>
+                                  <span className="font-bold text-[#96634d]">
+                                    {prod.totalGramos.toLocaleString()}g
+                                  </span>
                                 </div>
                               </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                {/* Footer */}
-                <div className="px-5 sm:px-6 py-3 border-t border-[#E2D9CC] bg-[#FAF8F5] flex items-center justify-end flex-shrink-0">
-                  <Button
-                    type="button"
-                    onClick={() => setOpenColorDetailsModal(false)}
-                    className="bg-[#96634D] hover:bg-[#83543F] text-white font-bold text-xs px-5 rounded-xl cursor-pointer"
-                  >
-                    Cerrar
-                  </Button>
                 </div>
               </div>
             )
