@@ -99,6 +99,25 @@ const ALL_SWATCHES = [
   ...SWATCH_GROUPS.frios,
 ]
 
+const STANDARD_3D_COLORS = [
+  { name: 'Negro carbón', hex: '#18181B' },
+  { name: 'Blanco hueso', hex: '#F5F5F0' },
+  { name: 'Gris ceniza', hex: '#94A3B8' },
+  { name: 'Arena', hex: '#D4B996' },
+  { name: 'Rojo escarlata', hex: '#DC2626' },
+  { name: 'Naranja mandarina', hex: '#F97316' },
+  { name: 'Amarillo', hex: '#EAB308' },
+  { name: 'Verde grass', hex: '#22C55E' },
+  { name: 'Verde oscuro', hex: '#14532D' },
+  { name: 'Azul oscuro', hex: '#1E3A8A' },
+  { name: 'Celeste', hex: '#0EA5E9' },
+  { name: 'Lila púrpura', hex: '#C084FC' },
+  { name: 'Ciruela', hex: '#581C87' },
+  { name: 'Rosa Sakura', hex: '#F472B6' },
+  { name: 'Marrón latte', hex: '#854D0E' },
+  { name: 'Chocolate oscuro', hex: '#451A03' },
+]
+
 const NEUTRAL_KEYWORDS = ['negro', 'blanco', 'gris', 'ceniza', 'hueso', 'marfil', 'arena', 'beige', 'plata', 'silver', 'carbón']
 
 const normalizeSearchText = (text: string) =>
@@ -524,7 +543,7 @@ export function InventarioFilamentosClient({
     const gNum = nuevoEstado === 'DISPONIBLE' 
       ? Math.max(0, parseInt(nuevoGramos || '1000', 10)) 
       : 0
-    const rollosNum = Math.max(1, Math.ceil(gNum / 1000))
+    const rollosNum = Math.max(1, Math.ceil((gNum || 1000) / 1000))
 
     try {
       const created = await agregarNuevoColor({
@@ -546,6 +565,8 @@ export function InventarioFilamentosClient({
       setNuevoNombre('')
       setNuevaNota('')
       setNuevoGramos('1000')
+      setNuevoHex('#18181B')
+      setNuevoEstado('DISPONIBLE')
       setOpenAddModal(false)
     } catch (e: any) {
       toast.error('Error al registrar: ' + e.message)
@@ -1344,69 +1365,93 @@ export function InventarioFilamentosClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. MODAL REFACTORIZADO: NUEVO COLOR (1 SOLA COLUMNA LIMPIA)               */}
+      {/* 4. MODAL: REGISTRAR NUEVO FILAMENTO                                       */}
       {/* ========================================================================= */}
       <Dialog open={openAddModal} onOpenChange={setOpenAddModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[460px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
-          <form onSubmit={handleAddColorSubmit} className="p-5 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E2D9CC] pb-3">
+        <DialogContent showCloseButton={false} className="bg-white border border-stone-200 text-stone-900 w-[95vw] sm:max-w-[540px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
+          <form onSubmit={handleAddColorSubmit} className="p-5 sm:p-6 space-y-4 sm:space-y-4.5">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-stone-200/80 pb-3">
               <div>
-                <DialogTitle className="text-base sm:text-lg font-black text-[#241C15]">
-                  Registrar Nuevo Color
+                <DialogTitle className="text-lg font-bold text-stone-900">
+                  Registrar Nuevo Filamento
                 </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Agrega un filamento al inventario del taller
+                <DialogDescription className="text-xs text-stone-500 mt-0.5">
+                  Agrega un nuevo filamento al inventario del taller
                 </DialogDescription>
               </div>
               <button
                 type="button"
                 onClick={() => setOpenAddModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-xl hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                className="text-stone-400 hover:text-stone-700 hover:bg-stone-100 p-1.5 rounded-xl transition-colors cursor-pointer"
+                title="Cerrar"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="space-y-4">
-              {/* 1. Nombre */}
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                  Nombre del Filamento / Color *
-                </Label>
-                <Input 
-                  value={nuevoNombre}
-                  onChange={(e) => setNuevoNombre(e.target.value)}
-                  placeholder="Ej: Negro Carbón, Terracota Seda, Turquesa..."
-                  required
-                  autoFocus
-                  className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
+              {/* 1 & 2. HEADER Y PREVIEW EN VIVO + INPUT DE NOMBRE */}
+              <div className="flex items-center gap-3.5">
+                <div 
+                  className="w-12 h-12 rounded-full border border-black/10 shadow-inner shrink-0 transition-colors duration-200"
+                  style={{ backgroundColor: nuevoHex }}
+                  title={`Color seleccionado: ${nuevoHex}`}
                 />
+                <div className="flex-1 space-y-1">
+                  <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                    Nombre del Filamento / Color *
+                  </Label>
+                  <Input 
+                    value={nuevoNombre}
+                    onChange={(e) => setNuevoNombre(e.target.value)}
+                    placeholder="Ej: Negro Carbón, Terracota Seda..."
+                    required
+                    autoFocus
+                    className="bg-stone-50/70 border-stone-200 rounded-xl text-sm font-semibold text-stone-900 h-10 focus:ring-2 focus:ring-[#96634d]"
+                  />
+                </div>
               </div>
 
-              {/* 2. Selector Visual de Muestras (HEX Swatches agrupados) */}
-              <div className="space-y-2.5 p-3.5 rounded-2xl bg-[#F8F6F2] border border-[#E2D9CC]">
+              {/* 3. SELECTOR DE COLOR COMPACTO */}
+              <div className="space-y-2.5 p-3.5 rounded-2xl bg-stone-50/70 border border-stone-200/80">
+                {/* Fila superior: Input HEX editable + Input tipo color con icono de paleta */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#241C15]">Muestra Visual (HEX)</span>
+                  <span className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                    Tono / Color (HEX)
+                  </span>
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="color"
-                      value={nuevoHex}
-                      onChange={(e) => setNuevoHex(e.target.value)}
-                      className="h-6 w-8 rounded-lg border border-[#E2D9CC] cursor-pointer"
-                    />
+                    <div className="relative flex items-center">
+                      <input 
+                        type="color"
+                        id="nuevo-color-picker"
+                        value={nuevoHex}
+                        onChange={(e) => setNuevoHex(e.target.value)}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                      />
+                      <label 
+                        htmlFor="nuevo-color-picker"
+                        className="h-8 px-2.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 hover:text-stone-900 flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-2xs transition-colors"
+                        title="Abrir selector de color libre"
+                      >
+                        <Palette className="h-3.5 w-3.5 text-stone-500" />
+                        <span>Paleta</span>
+                      </label>
+                    </div>
                     <Input 
                       value={nuevoHex}
                       onChange={(e) => setNuevoHex(e.target.value)}
-                      className="w-20 h-6 text-xs font-mono font-bold bg-white border-[#E2D9CC] p-1 rounded-md text-center"
+                      className="w-24 h-8 text-xs font-mono font-bold bg-white border-stone-200 p-1 text-center rounded-lg uppercase focus:ring-2 focus:ring-[#96634d]"
+                      placeholder="#18181B"
                     />
                   </div>
                 </div>
 
-                {/* Tonos Neutros */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider">Tonos Neutros:</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {SWATCH_GROUPS.neutros.map(sw => (
+                {/* Fila inferior: Grilla limpia con los colores estándar en 3D */}
+                <div className="grid grid-cols-8 gap-2 pt-0.5">
+                  {STANDARD_3D_COLORS.map(sw => {
+                    const isSelected = nuevoHex.toLowerCase() === sw.hex.toLowerCase()
+                    return (
                       <button
                         key={sw.name}
                         type="button"
@@ -1414,171 +1459,202 @@ export function InventarioFilamentosClient({
                           setNuevoHex(sw.hex)
                           if (!nuevoNombre) setNuevoNombre(sw.name)
                         }}
-                        className={`h-7 w-7 rounded-full border shadow-2xs hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center ${
-                          nuevoHex === sw.hex ? 'ring-2 ring-[#A36F4C] ring-offset-1 border-black' : 'border-black/15'
+                        className={`h-7 w-7 rounded-full border shadow-2xs hover:scale-110 active:scale-95 transition-all cursor-pointer mx-auto flex items-center justify-center ${
+                          isSelected 
+                            ? 'ring-2 ring-[#96634d] ring-offset-2 border-black/40 scale-105' 
+                            : 'border-black/10'
                         }`}
                         style={{ backgroundColor: sw.hex }}
                         title={sw.name}
                       >
-                        {nuevoHex === sw.hex && <Check className="h-3 w-3 text-white drop-shadow" />}
+                        {isSelected && (
+                          <Check className="h-3 w-3 text-white drop-shadow stroke-[3]" />
+                        )}
                       </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tonos Cálidos */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider">Tonos Cálidos:</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {SWATCH_GROUPS.calidos.map(sw => (
-                      <button
-                        key={sw.name}
-                        type="button"
-                        onClick={() => {
-                          setNuevoHex(sw.hex)
-                          if (!nuevoNombre) setNuevoNombre(sw.name)
-                        }}
-                        className={`h-7 w-7 rounded-full border shadow-2xs hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center ${
-                          nuevoHex === sw.hex ? 'ring-2 ring-[#A36F4C] ring-offset-1 border-black' : 'border-black/15'
-                        }`}
-                        style={{ backgroundColor: sw.hex }}
-                        title={sw.name}
-                      >
-                        {nuevoHex === sw.hex && <Check className="h-3 w-3 text-white drop-shadow" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tonos Fríos */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider">Tonos Fríos:</span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {SWATCH_GROUPS.frios.map(sw => (
-                      <button
-                        key={sw.name}
-                        type="button"
-                        onClick={() => {
-                          setNuevoHex(sw.hex)
-                          if (!nuevoNombre) setNuevoNombre(sw.name)
-                        }}
-                        className={`h-7 w-7 rounded-full border shadow-2xs hover:scale-110 active:scale-95 transition-transform cursor-pointer flex items-center justify-center ${
-                          nuevoHex === sw.hex ? 'ring-2 ring-[#A36F4C] ring-offset-1 border-black' : 'border-black/15'
-                        }`}
-                        style={{ backgroundColor: sw.hex }}
-                        title={sw.name}
-                      >
-                        {nuevoHex === sw.hex && <Check className="h-3 w-3 text-white drop-shadow" />}
-                      </button>
-                    ))}
-                  </div>
+                    )
+                  })}
                 </div>
               </div>
 
-              {/* 3. Estado Inicial */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                  Estado Inicial
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setNuevoEstado('DISPONIBLE')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                      nuevoEstado === 'DISPONIBLE'
-                        ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] shadow-2xs'
-                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC]'
-                    }`}
-                  >
-                    🟢 Disponible
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNuevoEstado('RESTOCK')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                      nuevoEstado === 'RESTOCK'
-                        ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] shadow-2xs'
-                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC]'
-                    }`}
-                  >
-                    🟡 Para Restock
-                  </button>
-                </div>
-              </div>
-
-              {/* 4. Gramos Iniciales con Presets (250g, 500g, 1000g, 2000g) */}
-              {nuevoEstado === 'DISPONIBLE' && (
-                <div className="space-y-2">
+              {/* 4. SECCIÓN DE STOCK Y ESTADO (Grid de 2 columnas) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* Columna Izquierda: Stock */}
+                <div className="space-y-2 p-3.5 rounded-2xl bg-stone-50/70 border border-stone-200/80">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                      Stock Inicial en Gramos
+                    <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                      Stock Inicial
                     </Label>
-                    <span className="text-xs font-mono font-bold text-[#1E5E3A]">
-                      {nuevoGramos} g {parseInt(nuevoGramos || '0', 10) >= 1000 ? `(~${(parseInt(nuevoGramos || '0', 10) / 1000).toFixed(1)} bobinas)` : ''}
+                    <span className="text-[11px] font-mono text-stone-500">
+                      Equivale a ~{(Math.max(0, parseInt(nuevoGramos || '0', 10)) / 1000).toFixed(1)} bobina{parseInt(nuevoGramos || '0', 10) === 1000 ? '' : 's'}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {[250, 500, 1000, 2000].map(g => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setNuevoGramos(g.toString())}
-                        className={`flex-1 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                          nuevoGramos === g.toString()
-                            ? 'bg-[#241C15] text-white border-[#241C15]'
-                            : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC] hover:bg-white'
-                        }`}
-                      >
-                        {g >= 1000 ? `${g}g (${g/1000}b)` : `${g}g`}
-                      </button>
-                    ))}
+                  {/* Input numérico acompañado del sufijo "g" fijo ([ 1000 | g ]) */}
+                  <div className="relative">
+                    <Input 
+                      type="number"
+                      min="0"
+                      step="50"
+                      value={nuevoGramos}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setNuevoGramos(val)
+                        const num = parseInt(val, 10)
+                        if (num === 0) {
+                          setNuevoEstado('RESTOCK')
+                        } else if (num > 0 && nuevoEstado === 'RESTOCK' && nuevoGramos === '0') {
+                          setNuevoEstado('DISPONIBLE')
+                        }
+                      }}
+                      placeholder="1000"
+                      required
+                      className="bg-white border-stone-200 rounded-xl text-sm font-mono font-bold h-9 pr-7 focus:ring-2 focus:ring-[#96634d]"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-stone-400 pointer-events-none">
+                      g
+                    </span>
                   </div>
 
-                  <Input 
-                    type="number"
-                    min="0"
-                    value={nuevoGramos}
-                    onChange={(e) => setNuevoGramos(e.target.value)}
-                    placeholder="1000"
-                    required
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-mono font-bold h-10"
-                  />
+                  {/* Pills de atajos rápidos debajo: [ 1 Bobina (1kg) ], [ 500g ], [ 250g ], [ 0g (Sin stock) ] */}
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNuevoGramos('1000')
+                        setNuevoEstado('DISPONIBLE')
+                      }}
+                      className={`py-1 px-2 text-[11px] font-mono font-semibold rounded-lg border transition-all cursor-pointer text-center ${
+                        nuevoGramos === '1000'
+                          ? 'bg-stone-900 text-white border-stone-900'
+                          : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                      }`}
+                    >
+                      1 Bobina (1kg)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNuevoGramos('500')
+                        setNuevoEstado('DISPONIBLE')
+                      }}
+                      className={`py-1 px-2 text-[11px] font-mono font-semibold rounded-lg border transition-all cursor-pointer text-center ${
+                        nuevoGramos === '500'
+                          ? 'bg-stone-900 text-white border-stone-900'
+                          : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                      }`}
+                    >
+                      500g
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNuevoGramos('250')
+                        setNuevoEstado('DISPONIBLE')
+                      }}
+                      className={`py-1 px-2 text-[11px] font-mono font-semibold rounded-lg border transition-all cursor-pointer text-center ${
+                        nuevoGramos === '250'
+                          ? 'bg-stone-900 text-white border-stone-900'
+                          : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                      }`}
+                    >
+                      250g
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNuevoGramos('0')
+                        setNuevoEstado('RESTOCK')
+                      }}
+                      className={`py-1 px-2 text-[11px] font-mono font-semibold rounded-lg border transition-all cursor-pointer text-center ${
+                        nuevoGramos === '0'
+                          ? 'bg-amber-600 text-white border-amber-600'
+                          : 'bg-white text-stone-600 border-stone-200 hover:text-red-600 hover:bg-red-50/40'
+                      }`}
+                    >
+                      0g (Sin stock)
+                    </button>
+                  </div>
                 </div>
-              )}
 
-              {/* Nota */}
-              {nuevoEstado === 'RESTOCK' && (
-                <div className="space-y-1">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    Nota de Reposición (Opcional)
-                  </Label>
-                  <Input 
-                    value={nuevaNota}
-                    onChange={(e) => setNuevaNota(e.target.value)}
-                    placeholder="Ej: Solicitado para proyecto especial..."
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                  />
+                {/* Columna Derecha: Estado */}
+                <div className="space-y-2 p-3.5 rounded-2xl bg-stone-50/70 border border-stone-200/80 flex flex-col justify-between">
+                  <div>
+                    <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-2">
+                      Estado Inicial
+                    </Label>
+                    
+                    {/* Toggle o selector tipo pill */}
+                    <div className="flex flex-col gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNuevoEstado('DISPONIBLE')
+                          if (nuevoGramos === '0') setNuevoGramos('1000')
+                        }}
+                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center justify-between ${
+                          nuevoEstado === 'DISPONIBLE'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 shadow-2xs font-bold'
+                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>🟢</span>
+                          <span>En Taller (Disponible)</span>
+                        </span>
+                        {nuevoEstado === 'DISPONIBLE' && <Check className="h-3.5 w-3.5 text-emerald-600 stroke-[3]" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setNuevoEstado('RESTOCK')}
+                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center justify-between ${
+                          nuevoEstado === 'RESTOCK'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200 shadow-2xs font-bold'
+                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>🟡</span>
+                          <span>Para Compra (Restock)</span>
+                        </span>
+                        {nuevoEstado === 'RESTOCK' && <Check className="h-3.5 w-3.5 text-amber-600 stroke-[3]" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nota opcional si está en restock */}
+                  {nuevoEstado === 'RESTOCK' && (
+                    <div className="pt-1 space-y-1">
+                      <Input 
+                        value={nuevaNota}
+                        onChange={(e) => setNuevaNota(e.target.value)}
+                        placeholder="Nota de reposición (opcional)..."
+                        className="bg-white border-stone-200 rounded-xl text-xs h-8 text-stone-700 placeholder:text-stone-400"
+                      />
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E2D9CC]">
+            {/* 5. FOOTER LIMPIO */}
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-200/80">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setOpenAddModal(false)}
-                className="text-xs rounded-xl cursor-pointer"
+                className="text-xs text-stone-600 hover:text-stone-900 rounded-xl cursor-pointer"
               >
                 Cancelar
               </Button>
               <Button
                 type="submit"
                 size="sm"
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-4 rounded-xl cursor-pointer"
+                disabled={!nuevoNombre.trim()}
+                className="bg-[#96634d] hover:bg-[#83543f] active:bg-[#724533] disabled:opacity-50 disabled:pointer-events-none text-white font-semibold text-xs px-4 h-9 rounded-xl cursor-pointer shadow-2xs transition-all"
               >
-                Registrar Color
+                Registrar Filamento
               </Button>
             </div>
           </form>
