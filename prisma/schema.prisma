@@ -137,24 +137,6 @@ model Producto {
   porcentajeDescuento Int?                 @default(0)
   precioOferta        Decimal?             @db.Decimal(10, 2)
   stock               Int                  @default(0)
-  bggId               Int?
-  bggRating           Decimal?             @db.Decimal(4, 2)
-  bggRatingCount      Int?
-  bggRatingUpdatedAt  DateTime?
-  bulletPoint1        String?
-  bulletPoint2        String?
-  bulletPoint3        String?
-  bulletPoint4        String?
-  duracionMinutos     Int?
-  edadMinima          Int?
-  editorialMarca      String?
-  idioma              String?
-  mecanicas           String?
-  numJugadores        String?
-  bggMaxPlayers       Int?
-  bggMinPlayers       Int?
-  bggPlaytime         Int?
-  bggWeight           Decimal?             @db.Decimal(4, 2)
   comentarios         ComentarioProducto[]
   itemPedidos         ItemPedido[]
   ventas              Venta[]

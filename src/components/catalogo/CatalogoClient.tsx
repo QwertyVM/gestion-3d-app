@@ -25,8 +25,7 @@ import {
   MoreHorizontal,
   Trash2,
   ExternalLink,
-  ChevronDown,
-  Dices
+  ChevronDown
 } from 'lucide-react'
 import { useBusiness } from '@/context/BusinessContext'
 import { Badge } from '@/components/ui/badge'
@@ -62,22 +61,6 @@ export interface ProductoItem {
   createdAt?: string
   updatedAt?: string
   negocio?: string
-  bggId?: number | null
-  bggRating?: any
-  bggWeight?: any
-  bggMinPlayers?: number | null
-  bggMaxPlayers?: number | null
-  bggPlaytime?: number | null
-  editorialMarca?: string | null
-  mecanicas?: string | null
-  edadMinima?: number | null
-  duracionMinutos?: number | null
-  idioma?: string | null
-  numJugadores?: string | null
-  bulletPoint1?: string | null
-  bulletPoint2?: string | null
-  bulletPoint3?: string | null
-  bulletPoint4?: string | null
 }
 
 export interface CategoriaItem {
@@ -140,18 +123,7 @@ export function CatalogoClient({
     porcentajeDescuento: '',
     imagenUrl: '',
     descripcionWeb: '',
-    destacadoWeb: false,
-    bulletPoint1: '',
-    bulletPoint2: '',
-    bulletPoint3: '',
-    bulletPoint4: '',
-    numJugadores: '',
-    edadMinima: '',
-    duracionMinutos: '',
-    idioma: '',
-    editorialMarca: '',
-    mecanicas: '',
-    bggId: ''
+    destacadoWeb: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -303,18 +275,7 @@ export function CatalogoClient({
       porcentajeDescuento: '',
       imagenUrl: '',
       descripcionWeb: '',
-      destacadoWeb: false,
-      bulletPoint1: '',
-      bulletPoint2: '',
-      bulletPoint3: '',
-      bulletPoint4: '',
-      numJugadores: '',
-      edadMinima: '',
-      duracionMinutos: '',
-      idioma: '',
-      editorialMarca: '',
-      mecanicas: '',
-      bggId: ''
+      destacadoWeb: false
     })
     setOpenModal(true)
   }
@@ -336,18 +297,7 @@ export function CatalogoClient({
       porcentajeDescuento: (p as any).porcentajeDescuento ? (p as any).porcentajeDescuento.toString() : '',
       imagenUrl: p.imagenUrl || '',
       descripcionWeb: p.descripcionWeb || '',
-      destacadoWeb: p.destacadoWeb || false,
-      bulletPoint1: (p as any).bulletPoint1 || '',
-      bulletPoint2: (p as any).bulletPoint2 || '',
-      bulletPoint3: (p as any).bulletPoint3 || '',
-      bulletPoint4: (p as any).bulletPoint4 || '',
-      numJugadores: (p as any).numJugadores || '',
-      edadMinima: (p as any).edadMinima?.toString() || '',
-      duracionMinutos: (p as any).duracionMinutos?.toString() || '',
-      idioma: (p as any).idioma || '',
-      editorialMarca: (p as any).editorialMarca || '',
-      mecanicas: (p as any).mecanicas || '',
-      bggId: (p as any).bggId?.toString() || ''
+      destacadoWeb: p.destacadoWeb || false
     })
     setOpenModal(true)
   }
@@ -383,18 +333,7 @@ export function CatalogoClient({
       porcentajeDescuento: formData.enOferta ? (parseInt(formData.porcentajeDescuento) || 0) : 0,
       imagenUrl: formData.imagenUrl.trim() || null,
       descripcionWeb: formData.descripcionWeb.trim() || null,
-      destacadoWeb: formData.destacadoWeb,
-      bulletPoint1: formData.bulletPoint1.trim() || null,
-      bulletPoint2: formData.bulletPoint2.trim() || null,
-      bulletPoint3: formData.bulletPoint3.trim() || null,
-      bulletPoint4: formData.bulletPoint4.trim() || null,
-      numJugadores: formData.numJugadores.trim() || null,
-      edadMinima: formData.edadMinima ? parseInt(formData.edadMinima) : null,
-      duracionMinutos: formData.duracionMinutos ? parseInt(formData.duracionMinutos) : null,
-      idioma: formData.idioma.trim() || null,
-      editorialMarca: formData.editorialMarca.trim() || null,
-      mecanicas: formData.mecanicas.trim() || null,
-      bggId: formData.bggId ? parseInt(formData.bggId) : null
+      destacadoWeb: formData.destacadoWeb
     }
 
     setIsSubmitting(true)
@@ -987,7 +926,7 @@ export function CatalogoClient({
                   <Input 
                     value={formData.lineaCategoria}
                     onChange={(e) => setFormData(prev => ({ ...prev, lineaCategoria: e.target.value }))}
-                    placeholder={is3D ? "Ej: Macetas & Jardín" : "Ej: Juegos Familiares"}
+                    placeholder="Ej: Macetas & Jardín, Decoración, Figuras"
                     required
                     list="categorias-list"
                     className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
@@ -998,61 +937,6 @@ export function CatalogoClient({
                     ))}
                   </datalist>
                 </div>
-
-                {/* BGG ID justo abajo del nombre (Modo Juegos de Mesa) */}
-                {!is3D && (
-                  <>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
-                          <Dices className="h-3.5 w-3.5 text-indigo-600" />
-                          BGG ID (BoardGameGeek)
-                        </Label>
-                        <a
-                          href={formData.bggId ? `https://boardgamegeek.com/boardgame/${formData.bggId}` : (formData.nombreModelo ? `https://boardgamegeek.com/geeksearch.php?action=search&objecttype=boardgame&q=${encodeURIComponent(formData.nombreModelo)}` : 'https://boardgamegeek.com')}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline font-bold flex items-center gap-1"
-                        >
-                          Buscar en BGG ↗
-                        </a>
-                      </div>
-                      <Input
-                        type="number"
-                        value={formData.bggId}
-                        onChange={(e) => setFormData(prev => ({ ...prev, bggId: e.target.value }))}
-                        placeholder="Ej: 83195"
-                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-mono font-bold text-[#241C15] h-10"
-                      />
-                      <p className="text-[10px] text-[#75695D]">
-                        Al guardar, la web mostrará el rating real de BGG automáticamente.
-                      </p>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div className="w-full p-2.5 bg-[#FAF8F5] border border-[#E2D9CC] rounded-xl text-xs flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <span className="font-bold text-[#241C15] block truncate">
-                            {formData.bggId ? `ID Vinculado: #${formData.bggId}` : 'Vincular con BGG'}
-                          </span>
-                          <span className="text-[10px] text-[#75695D] block truncate">
-                            {formData.bggId ? 'Calificación sincronizada con BoardGameGeek' : 'Busca el juego en BGG y copia su ID numérico'}
-                          </span>
-                        </div>
-                        {formData.bggId && (
-                          <a
-                            href={`https://boardgamegeek.com/boardgame/${formData.bggId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="shrink-0 px-2 py-1 bg-white border border-[#E2D9CC] rounded-lg text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 flex items-center gap-1 shadow-2xs"
-                          >
-                            Ver en BGG <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
               </div>
 
               {/* Fila 2: Estructura Financiera (Costo Base, Por Menor, Por Mayor) */}
@@ -1209,76 +1093,6 @@ export function CatalogoClient({
                   </button>
                 </div>
               </div>
-
-              {/* Ficha Técnica BG (solo visible en modo Juegos de Mesa) */}
-              {isBG && (
-                <div className="p-3.5 bg-white border border-[#E2D9CC] rounded-2xl space-y-3 shadow-xs">
-                  <div className="flex items-center gap-1.5 pb-2 border-b border-[#E2D9CC]/50">
-                    <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                      🎲 Ficha Técnica del Juego
-                    </span>
-                    <span className="text-[10px] text-[#75695D] ml-auto">Tabla de características en la web</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-bold text-[#75695D]">Número de Jugadores</Label>
-                      <Input
-                        value={formData.numJugadores}
-                        onChange={(e) => setFormData(prev => ({ ...prev, numJugadores: e.target.value }))}
-                        placeholder="Ej: 2-4"
-                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-bold text-[#75695D]">Edad Mínima (años)</Label>
-                      <Input
-                        type="number"
-                        value={formData.edadMinima}
-                        onChange={(e) => setFormData(prev => ({ ...prev, edadMinima: e.target.value }))}
-                        placeholder="Ej: 8"
-                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-bold text-[#75695D]">Duración (minutos)</Label>
-                      <Input
-                        type="number"
-                        value={formData.duracionMinutos}
-                        onChange={(e) => setFormData(prev => ({ ...prev, duracionMinutos: e.target.value }))}
-                        placeholder="Ej: 45"
-                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-bold text-[#75695D]">Editorial / Marca</Label>
-                      <Input
-                        value={formData.editorialMarca}
-                        onChange={(e) => setFormData(prev => ({ ...prev, editorialMarca: e.target.value }))}
-                        placeholder="Ej: Devir"
-                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-bold text-[#75695D]">Idioma</Label>
-                      <Input
-                        value={formData.idioma}
-                        onChange={(e) => setFormData(prev => ({ ...prev, idioma: e.target.value }))}
-                        placeholder="Ej: Español"
-                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-bold text-[#75695D]">Mecánicas</Label>
-                      <Input
-                        value={formData.mecanicas}
-                        onChange={(e) => setFormData(prev => ({ ...prev, mecanicas: e.target.value }))}
-                        placeholder="Ej: Deducción, Velocidad"
-                        className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
 
             </div>
 

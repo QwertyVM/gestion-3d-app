@@ -42,7 +42,6 @@ interface ProductoPayload {
   costoBase?: number | string
   precioMenor?: number | string
   precioMayor?: number | string
-  duracionMinutos?: number | string | null
   negocio?: string
   activo?: boolean
   stock?: number | string
@@ -62,9 +61,6 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
   const costoBaseNum = Number(item.costoBase) >= 0 ? Number(Number(item.costoBase).toFixed(2)) : 0
   const precioMenorNum = Number(item.precioMenor) >= 0 ? Number(Number(item.precioMenor).toFixed(2)) : 0
   const precioMayorNum = Number(item.precioMayor) >= 0 ? Number(Number(item.precioMayor).toFixed(2)) : 0
-  const duracionMinutosNum = item.duracionMinutos != null && !isNaN(Number(item.duracionMinutos))
-    ? Math.round(Number(item.duracionMinutos))
-    : null
 
   // Sincronizar Categoria si se especifica
   if (cleanCategoria) {
@@ -105,7 +101,6 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         costoBase: costoBaseNum,
         precioMayor: precioMayorNum,
         precioMenor: precioMenorNum,
-        ...(duracionMinutosNum !== null ? { duracionMinutos: duracionMinutosNum } : {}),
         ...(item.activo !== undefined ? { activo: Boolean(item.activo) } : {}),
         ...(item.stock !== undefined ? { stock: Number(item.stock) || 0 } : {}),
         ...(item.descripcionWeb !== undefined ? { descripcionWeb: item.descripcionWeb } : {}),
@@ -122,7 +117,6 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         costoBase: Number(updated.costoBase),
         precioMayor: Number(updated.precioMayor),
         precioMenor: Number(updated.precioMenor),
-        duracionMinutos: updated.duracionMinutos,
         activo: updated.activo,
         stock: updated.stock,
         negocio: updated.negocio,
@@ -137,7 +131,6 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         costoBase: costoBaseNum,
         precioMayor: precioMayorNum,
         precioMenor: precioMenorNum,
-        duracionMinutos: duracionMinutosNum,
         negocio: negocioTarget,
         activo: item.activo !== undefined ? Boolean(item.activo) : true,
         stock: item.stock !== undefined ? Number(item.stock) || 0 : 0,
@@ -155,7 +148,6 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         costoBase: Number(created.costoBase),
         precioMayor: Number(created.precioMayor),
         precioMenor: Number(created.precioMenor),
-        duracionMinutos: created.duracionMinutos,
         activo: created.activo,
         stock: created.stock,
         negocio: created.negocio,
@@ -280,7 +272,6 @@ export async function GET(req: Request) {
       costoBase: true,
       precioMenor: true,
       precioMayor: true,
-      duracionMinutos: true,
       activo: true,
       updatedAt: true
     }
