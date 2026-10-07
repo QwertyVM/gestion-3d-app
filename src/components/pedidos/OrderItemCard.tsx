@@ -119,11 +119,11 @@ export function OrderItemCard({
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 sm:p-4.5 space-y-3.5 shadow-sm transition-all duration-200 hover:border-primary/30 animate-in fade-in-50 slide-in-from-top-2 duration-200 relative">
-      {/* Cabecera de la Tarjeta con Layout Flex */}
-      <div className="flex items-center justify-between pb-2 border-b border-border/60">
-        <span className="bg-accent text-accent-foreground font-semibold px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5">
-          <Package className="h-3.5 w-3.5 text-accent-foreground" />
+    <div className="bg-card border border-border rounded-xl p-3.5 space-y-2.5 shadow-sm transition-all duration-200 hover:border-primary/30 animate-in fade-in-50 slide-in-from-top-1 relative">
+      {/* Cabecera de la Tarjeta con Layout Flex Compacto */}
+      <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
+        <span className="bg-accent/80 text-accent-foreground font-semibold px-2 py-0.5 rounded-md text-[11px] flex items-center gap-1.5">
+          <Package className="h-3 w-3 text-accent-foreground" />
           <span>PRODUCTO #{index + 1}</span>
         </span>
 
@@ -131,21 +131,21 @@ export function OrderItemCard({
           <button
             type="button"
             onClick={() => onRemoveItem(item.id)}
-            className="text-destructive hover:bg-destructive/10 rounded-lg p-1.5 text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1"
+            className="text-destructive hover:bg-destructive/10 rounded-md p-1 text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1"
             title="Quitar este producto del pedido"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3 w-3" />
             <span>Quitar</span>
           </button>
         )}
       </div>
 
-      {/* Grid de Datos Técnicos - Fila 1: Modelo 3D (60%) y Filamentos (40%) */}
-      <div className="flex flex-col md:flex-row gap-3.5 items-start">
-        {/* Selección de Modelo 3D (60% ancho) */}
-        <div className="w-full md:w-[60%] space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <Boxes className="h-3.5 w-3.5 text-primary" />
+      {/* Fila 1: Modelo 3D (flexible) y Filamento(s) (multi-select compacto) */}
+      <div className="flex flex-col sm:flex-row gap-2.5 items-start">
+        {/* Selección de Modelo 3D (flexible) */}
+        <div className="flex-1 w-full sm:min-w-0 space-y-1">
+          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <Boxes className="h-3 w-3 text-primary" />
             Modelo 3D *
           </Label>
           <SearchableCombobox
@@ -157,19 +157,19 @@ export function OrderItemCard({
             emptyMessage="No se encontró ningún modelo"
             icon={Boxes}
             size="sm"
-            inputClassName="bg-card/80 border-input text-foreground text-sm font-semibold h-10 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20"
+            inputClassName="bg-card/80 border-input text-foreground text-xs font-semibold h-9 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20"
             clearable={false}
           />
         </div>
 
-        {/* Multi-selector de Filamentos (40% ancho) */}
-        <div ref={filamentDropdownRef} className="w-full md:w-[40%] space-y-1.5 relative">
+        {/* Multi-selector de Filamentos (compacto) */}
+        <div ref={filamentDropdownRef} className="w-full sm:w-[42%] shrink-0 space-y-1 relative">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-              <Palette className="h-3.5 w-3.5 text-primary" />
+            <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <Palette className="h-3 w-3 text-primary" />
               <span>Filamento(s)</span>
               {selectedFilaments.length > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-accent text-accent-foreground border border-border">
+                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-accent text-accent-foreground border border-border">
                   {selectedFilaments.length}
                 </span>
               )}
@@ -178,57 +178,57 @@ export function OrderItemCard({
               <button
                 type="button"
                 onClick={handleClearAllFilaments}
-                className="text-[11px] text-muted-foreground hover:text-destructive cursor-pointer font-normal underline-offset-2 hover:underline"
+                className="text-[10px] text-muted-foreground hover:text-destructive cursor-pointer font-normal underline-offset-2 hover:underline"
               >
-                Quitar todos
+                Limpiar
               </button>
             )}
           </div>
 
-          {/* Selector Trigger con Chips de Filamento */}
+          {/* Trigger de Selección */}
           <div
             onClick={() => setIsFilamentOpen(prev => !prev)}
-            className="min-h-[40px] p-1.5 rounded-xl border border-input bg-card/80 text-foreground text-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 flex flex-wrap items-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+            className="min-h-[36px] p-1 px-2 rounded-xl border border-input bg-card/80 text-foreground text-xs focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 flex flex-wrap items-center gap-1 cursor-pointer shadow-2xs transition-all"
           >
             {selectedFilaments.length === 0 ? (
-              <div className="flex items-center justify-between w-full px-2 text-xs text-muted-foreground">
-                <span className="italic">Sin asignar / Varios colores</span>
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center justify-between w-full px-1 text-xs text-muted-foreground">
+                <span className="italic text-[11px]">Sin asignar / Varios colores</span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
             ) : (
               <>
-                <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1 flex-1 min-w-0">
                   {selectedFilaments.map((f) => (
                     <span
                       key={f.id}
-                      className="bg-secondary text-secondary-foreground text-xs px-2.5 py-1 rounded-lg border border-border/80 flex items-center gap-1 shadow-2xs group"
+                      className="bg-secondary text-secondary-foreground text-[11px] px-2 py-0.5 rounded-md border border-border/80 flex items-center gap-1 shadow-2xs group"
                     >
                       <span
-                        className="w-2.5 h-2.5 rounded-full inline-block mr-1.5 border border-black/20 shrink-0"
+                        className="w-2 h-2 rounded-full inline-block mr-0.5 border border-black/20 shrink-0"
                         style={{ backgroundColor: f.codigoHex || '#1E1E1E' }}
                       />
-                      <span className="truncate max-w-[95px] font-medium">{f.nombreColor}</span>
+                      <span className="truncate max-w-[80px] font-medium">{f.nombreColor}</span>
                       <button
                         type="button"
                         onClick={(e) => handleRemoveFilament(f.id, e)}
                         className="text-muted-foreground hover:text-destructive rounded-full p-0.5 cursor-pointer transition-colors"
                         title="Quitar filamento"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-2.5 w-2.5" />
                       </button>
                     </span>
                   ))}
                 </div>
-                <ChevronDown className="h-4 w-4 text-muted-foreground pr-1 shrink-0" />
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground pr-0.5 shrink-0" />
               </>
             )}
           </div>
 
-          {/* Dropdown de Selección de Filamentos con Preview Visual */}
+          {/* Dropdown de Filamentos */}
           {isFilamentOpen && (
-            <div className="absolute left-0 right-0 top-full mt-1.5 bg-popover border border-border shadow-lg rounded-xl overflow-hidden py-1 z-50 animate-in fade-in-50 duration-150">
-              <div className="p-2 border-b border-border flex items-center gap-2">
-                <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="absolute left-0 right-0 top-full mt-1 bg-popover border border-border shadow-lg rounded-xl overflow-hidden py-1 z-50 animate-in fade-in-50 duration-150">
+              <div className="p-1.5 border-b border-border flex items-center gap-1.5">
+                <Search className="h-3 w-3 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Filtrar filamento..."
@@ -250,13 +250,13 @@ export function OrderItemCard({
                           e.stopPropagation()
                           handleToggleFilament(f.id)
                         }}
-                        className={`hover:bg-muted/70 transition-colors cursor-pointer px-2.5 py-1.5 text-xs flex justify-between items-center rounded-lg ${
+                        className={`hover:bg-muted/70 transition-colors cursor-pointer px-2 py-1 text-xs flex justify-between items-center rounded-lg ${
                           isSelected ? 'bg-secondary font-semibold' : ''
                         }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span
-                            className="w-3 h-3 rounded-full border border-black/20 shrink-0"
+                            className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
                             style={{ backgroundColor: f.codigoHex || '#1E1E1E' }}
                           />
                           <span className="truncate text-foreground text-xs">{f.nombreColor}</span>
@@ -271,13 +271,13 @@ export function OrderItemCard({
                               {f.stockGramos}g
                             </span>
                           )}
-                          {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
+                          {isSelected && <Check className="h-3 w-3 text-primary" />}
                         </div>
                       </div>
                     )
                   })
                 ) : (
-                  <div className="p-3 text-center text-xs text-muted-foreground">
+                  <div className="p-2.5 text-center text-xs text-muted-foreground">
                     No se encontró ningún filamento
                   </div>
                 )}
@@ -287,17 +287,17 @@ export function OrderItemCard({
         </div>
       </div>
 
-      {/* Grid de Datos Técnicos - Fila 2: 4 Columnas Simétricas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {/* Tier de Precio */}
-        <div className="space-y-1">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            Tier de Precio
+      {/* Fila 2: 5 Columnas Horizontales Compactas */}
+      <div className="flex flex-wrap sm:flex-nowrap items-end gap-2.5">
+        {/* Tier (Por Menor) */}
+        <div className="flex-1 min-w-[110px] space-y-1">
+          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+            Tier
           </Label>
           <select
             value={item.tipoPrecio}
             onChange={(e) => onUpdateItem(item.id, { tipoPrecio: e.target.value as TipoPrecio })}
-            className="w-full h-10 rounded-xl border border-input bg-card/80 text-foreground text-sm font-semibold px-2.5 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+            className="w-full h-9 rounded-xl border border-input bg-card/80 text-foreground text-xs font-semibold px-2 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
           >
             <option value="MENOR">Por Menor</option>
             <option value="MAYOR">Por Mayor</option>
@@ -305,9 +305,9 @@ export function OrderItemCard({
           </select>
         </div>
 
-        {/* Cantidad */}
-        <div className="space-y-1">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
+        {/* Cantidad (w-20) */}
+        <div className="w-20 shrink-0 space-y-1">
+          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
             Cantidad
           </Label>
           <Input
@@ -317,14 +317,14 @@ export function OrderItemCard({
             value={item.cantidad}
             onFocus={(e) => e.target.select()}
             onChange={(e) => onUpdateItem(item.id, { cantidad: e.target.value })}
-            className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm font-mono font-semibold focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="h-9 rounded-xl border-input bg-card/80 text-foreground text-xs font-mono font-semibold px-2 text-center focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
         </div>
 
-        {/* Precio Unitario */}
-        <div className="space-y-1">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            Unitario (S/)
+        {/* Unitario S/ (w-24) */}
+        <div className="w-24 shrink-0 space-y-1">
+          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block truncate">
+            Unitario S/
           </Label>
           <Input
             type="number"
@@ -333,14 +333,14 @@ export function OrderItemCard({
             value={item.precioUnitario}
             onFocus={(e) => e.target.select()}
             onChange={(e) => onUpdateItem(item.id, { precioUnitario: e.target.value, tipoPrecio: 'PERSONALIZADO' })}
-            className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm font-mono font-bold text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="h-9 rounded-xl border-input bg-card/80 text-foreground text-xs font-mono font-bold px-2 text-right focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
         </div>
 
-        {/* Packaging */}
-        <div className="space-y-1">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            Packaging (S/)
+        {/* Packaging S/ (w-24) */}
+        <div className="w-24 shrink-0 space-y-1">
+          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block truncate">
+            Packaging S/
           </Label>
           <Input
             type="number"
@@ -349,31 +349,29 @@ export function OrderItemCard({
             value={item.costoPackaging}
             onFocus={(e) => e.target.select()}
             onChange={(e) => onUpdateItem(item.id, { costoPackaging: e.target.value })}
-            className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm font-mono focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="h-9 rounded-xl border-input bg-card/80 text-foreground text-xs font-mono px-2 text-right focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
+        </div>
+
+        {/* Subtotal Ítem (badge destacado a la derecha: font-bold text-stone-900) */}
+        <div className="shrink-0 space-y-1 text-right flex flex-col items-end">
+          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+            Subtotal Ítem
+          </Label>
+          <div className="h-9 px-3 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-center font-bold text-xs font-mono text-stone-900 dark:text-stone-100 shadow-2xs">
+            {formatCurrency(itemSubtotal)}
+          </div>
         </div>
       </div>
 
-      {/* Footer de la Tarjeta: Personalización y Subtotal */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-border/60">
-        <div className="flex-1 w-full">
-          <Input
-            placeholder="Personalización / Texto grabado / Notas del modelo..."
-            value={item.personalizacion}
-            onChange={(e) => onUpdateItem(item.id, { personalizacion: e.target.value })}
-            className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60 w-full"
-          />
-        </div>
-
-        {/* Badge de Subtotal del Ítem */}
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto font-mono">
-          <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-            Subtotal Ítem:
-          </span>
-          <span className="text-sm font-bold text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-lg font-mono">
-            {formatCurrency(itemSubtotal)}
-          </span>
-        </div>
+      {/* Fila 3: Notas / Personalización / Grabado (input delgado con placeholder discreto) */}
+      <div>
+        <Input
+          placeholder="Notas / Personalización / Grabado del modelo (opcional)..."
+          value={item.personalizacion}
+          onChange={(e) => onUpdateItem(item.id, { personalizacion: e.target.value })}
+          className="h-8 rounded-lg border-input/70 bg-card/60 text-foreground text-xs placeholder:text-muted-foreground/50 focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all w-full"
+        />
       </div>
     </div>
   )

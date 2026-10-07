@@ -425,8 +425,8 @@ export function RegisterMultiProductOrderModal({
 
         {/* Modal Form Container con Flex Col y Scroll Confinado */}
         <form onSubmit={handleSubmitNuevoPedido} className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          {/* Contenedor con Scroll y Padding Inferior Calibrado (pb-16) */}
-          <div className="flex-1 overflow-y-auto pr-1 p-4 sm:p-6 pb-16 space-y-5">
+          {/* Contenedor con Scroll y Padding Inferior Calibrado (pb-28) */}
+          <div className="flex-1 overflow-y-auto pr-1 p-4 sm:p-6 pb-28 space-y-5">
             {/* SECCIÓN 1: DATOS DEL CLIENTE Y DESPACHO */}
             <OrderCustomerSection
               clientSelectMode={clientSelectMode}

@@ -143,57 +143,74 @@ export function OrderSummarySection({
           </div>
         </div>
 
-        {/* Bloque Derecho: Tarjeta de Balance Consolidado (5 columnas) Compacta */}
-        <div className="lg:col-span-5 h-fit bg-secondary/60 border border-border rounded-xl p-4 space-y-2.5 shadow-2xs">
-          <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground block">
-            Resumen de Balance
-          </span>
+        {/* Bloque Derecho: Desglose Operativo de Balance (5 columnas) */}
+        <div className="lg:col-span-5 h-fit bg-secondary/50 border border-border rounded-xl p-3.5 space-y-2.5 shadow-2xs">
+          <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Resumen de Balance
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground/70">
+              Desglose Operativo
+            </span>
+          </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Subtotal Productos:</span>
-              <span className="font-mono font-bold text-foreground">
+          {/* Cálculo Matemático Operativo */}
+          <div className="text-[10.5px] font-mono text-muted-foreground bg-muted/60 rounded-lg px-2.5 py-1 text-center border border-border/50">
+            Subtotal + Envío − Anticipo = Saldo por Cobrar
+          </div>
+
+          <div className="space-y-1.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <span className="text-muted-foreground/60 font-mono">(+)</span> Subtotal:
+              </span>
+              <span className="font-mono font-semibold text-foreground">
                 {formatCurrency(subtotal)}
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Costo de Envío:</span>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <span className="text-muted-foreground/60 font-mono">(+)</span> Envío:
+              </span>
               <span className="font-mono font-medium text-foreground">
                 {montoEnvio > 0 ? formatCurrency(montoEnvio) : 'S/ 0.00'}
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-sm pt-2 border-t border-border/80">
-              <span className="font-bold text-foreground uppercase tracking-wide">
-                Total Pedido:
+            {/* Total Pedido con tipografía reducida */}
+            <div className="flex items-center justify-between py-1 border-t border-border/60 text-xs">
+              <span className="font-semibold text-muted-foreground flex items-center gap-1 uppercase tracking-wide text-[11px]">
+                <span className="text-muted-foreground/60 font-mono">(=)</span> Total Pedido:
               </span>
-              <span className="font-mono font-black text-foreground text-base">
+              <span className="font-mono font-bold text-foreground text-xs">
                 {formatCurrency(total)}
               </span>
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Anticipo / Abono:</span>
-              <span className="font-mono font-bold text-primary">
-                - {formatCurrency(montoAnticipo)}
+              <span className="text-muted-foreground flex items-center gap-1">
+                <span className="text-muted-foreground/60 font-mono">(−)</span> Anticipo:
+              </span>
+              <span className="font-mono font-medium text-primary">
+                − {formatCurrency(montoAnticipo)}
               </span>
             </div>
-          </div>
 
-          {/* Saldo Pendiente Destacado Directamente Debajo del Anticipo */}
-          <div className="pt-2.5 border-t border-border flex items-center justify-between">
-            <div>
-              <span className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground block">
-                Saldo Pendiente
-              </span>
-              <span className="text-[10px] text-muted-foreground">
-                {saldoPendiente === 0 ? 'Liquidado' : 'Por cobrar al entregar'}
+            {/* Saldo por Cobrar con tipografía reducida */}
+            <div className="flex items-center justify-between pt-1.5 border-t border-border/60">
+              <div>
+                <span className="font-semibold text-foreground flex items-center gap-1 text-xs">
+                  <span className="text-muted-foreground/60 font-mono">(=)</span> Saldo por Cobrar:
+                </span>
+                <span className="text-[10px] text-muted-foreground block pl-4">
+                  {saldoPendiente === 0 ? 'Liquidado' : 'Pendiente al entregar'}
+                </span>
+              </div>
+              <span className="font-mono font-bold text-xs text-stone-900 dark:text-stone-100 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded border border-stone-200 dark:border-stone-700">
+                {formatCurrency(saldoPendiente)}
               </span>
             </div>
-            <span className="text-primary font-bold text-lg font-mono">
-              {formatCurrency(saldoPendiente)}
-            </span>
           </div>
         </div>
       </div>
