@@ -1,0 +1,70 @@
+name: Daily Neon Backup to Google Drive
+
+on:
+  schedule:
+    # 02:00 AM hora de Perú (07:00 UTC) todos los días
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Permite ejecutar el backup manualmente cuando quieras
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL Client Tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+
+      - name: Generate Database Dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          BACKUP_NAME="neondb_backup_$(date +'%Y%m%d_%H%M%S').dump"
+          pg_dump "$DATABASE_URL" -Fc -f "$BACKUP_NAME"
+          echo "BACKUP_FILE=$BACKUP_NAME" >> $GITHUB_ENV
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Google API Libraries
+        run: pip install google-api-python-client google-auth
+
+      - name: Upload Dump to Google Drive
+        env:
+          GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+        run: |
+          python3 - << 'EOF'
+          import os, json
+          from googleapiclient.discovery import build
+          from googleapiclient.http import MediaFileUpload
+          from google.oauth2 import service_account
+
+          sa_info = json.loads(os.environ['GDRIVE_SA_KEY'])
+          folder_id = os.environ['GDRIVE_FOLDER_ID']
+          backup_file = os.environ['BACKUP_FILE']
+
+          creds = service_account.Credentials.from_service_account_info(
+              sa_info,
+              scopes=['https://www.googleapis.com/auth/drive.file']
+          )
+          drive_service = build('drive', 'v3', credentials=creds)
+
+          file_metadata = {
+              'name': backup_file,
+              'parents': [folder_id]
+          }
+          media = MediaFileUpload(backup_file, mimetype='application/octet-stream')
+          uploaded_file = drive_service.files().create(
+              body=file_metadata,
+              media_body=media,
+              fields='id, name'
+          ).execute()
+
+          print(f"Backup exitoso: {uploaded_file.get('name')} (ID: {uploaded_file.get('id')})")
+          EOF
