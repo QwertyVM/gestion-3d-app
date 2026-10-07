@@ -49,6 +49,7 @@ import {
   MapPin,
   UserCheck,
   UserPlus,
+  Lock,
   Check
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -673,8 +674,13 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
   // =========================================================================
   const handleSubmitNuevoPedido = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (clientSelectMode === 'EXISTING' && !selectedClientOption) {
+      toast.error('Por favor busca y selecciona un cliente registrado, o haz clic en "+ Registrar Nuevo".')
+      return
+    }
+
     if (!formCliente.trim()) {
-      alert('Por favor ingresa el nombre del cliente.')
+      toast.error('Por favor ingresa el nombre del cliente.')
       return
     }
 
@@ -801,8 +807,13 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
   const handleSubmitEditPedido = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingPedido) return
+    if (clientSelectMode === 'EXISTING' && !selectedClientOption) {
+      toast.error('Por favor busca y selecciona un cliente registrado, o haz clic en "+ Nuevo / Otro".')
+      return
+    }
+
     if (!formCliente.trim()) {
-      alert('Por favor ingresa el nombre del cliente.')
+      toast.error('Por favor ingresa el nombre del cliente.')
       return
     }
     if (formItems.some(i => !i.productoId)) {
@@ -2067,44 +2078,98 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
 
                   <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold flex items-center justify-between">
-                      <span>Nombre del Cliente *</span>
-                      {clientSelectMode === 'EXISTING' && selectedClientOption && (
-                        <span className="text-[10px] text-[#065F46] font-semibold">Registrado</span>
+                      <span className="flex items-center gap-1">
+                        <span>Nombre del Cliente *</span>
+                        {clientSelectMode === 'EXISTING' && (
+                          <Lock className="h-3 w-3 text-[#A36F4C]" />
+                        )}
+                      </span>
+                      {clientSelectMode === 'EXISTING' && (
+                        <span className={`text-[10px] font-bold ${selectedClientOption ? 'text-[#065F46]' : 'text-[#A36F4C]'}`}>
+                          {selectedClientOption ? '🔒 Registrado (Bloqueado)' : 'Buscar arriba'}
+                        </span>
                       )}
                     </Label>
                     <Input
                       required
-                      placeholder="Nombre completo del cliente..."
+                      readOnly={clientSelectMode === 'EXISTING'}
+                      disabled={clientSelectMode === 'EXISTING' && !selectedClientOption}
+                      placeholder={
+                        clientSelectMode === 'EXISTING'
+                          ? (selectedClientOption ? selectedClientOption.nombre : "Selecciona un cliente de la búsqueda arriba...")
+                          : "Nombre completo del cliente..."
+                      }
                       value={formCliente}
                       onChange={(e) => setFormCliente(e.target.value)}
-                      className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl font-medium"
+                      className={
+                        clientSelectMode === 'EXISTING'
+                          ? "bg-[#F5EFEA] border-[#D4BEA7] text-[#4A3B2C] cursor-not-allowed font-semibold opacity-95 text-sm rounded-xl select-text"
+                          : "bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl font-medium"
+                      }
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#241C15] font-bold flex items-center gap-1">
-                      <AtSign className="h-3 w-3 text-[#BE185D]" />
-                      <span>Usuario Instagram</span>
+                    <Label className="text-xs text-[#241C15] font-bold flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <AtSign className="h-3 w-3 text-[#BE185D]" />
+                        <span>Usuario Instagram</span>
+                        {clientSelectMode === 'EXISTING' && (
+                          <Lock className="h-2.5 w-2.5 text-[#A36F4C]" />
+                        )}
+                      </span>
+                      {clientSelectMode === 'EXISTING' && (
+                        <span className="text-[10px] text-[#75695D] font-medium">Bloqueado</span>
+                      )}
                     </Label>
                     <Input
-                      placeholder="@usuario"
+                      readOnly={clientSelectMode === 'EXISTING'}
+                      disabled={clientSelectMode === 'EXISTING' && !selectedClientOption}
+                      placeholder={
+                        clientSelectMode === 'EXISTING'
+                          ? (selectedClientOption ? (selectedClientOption.handleSocial || 'Sin usuario Instagram') : 'Se autocompleta con el cliente')
+                          : "@usuario"
+                      }
                       value={formHandleSocial}
                       onChange={(e) => setFormHandleSocial(e.target.value)}
-                      className={`text-sm rounded-xl transition-colors ${
-                        formCanal === 'Instagram'
-                          ? 'bg-[#FDF2F8] border-[#FBCFE8] text-[#BE185D] focus:bg-white'
-                          : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15]'
-                      }`}
+                      className={
+                        clientSelectMode === 'EXISTING'
+                          ? "bg-[#F5EFEA] border-[#D4BEA7] text-[#4A3B2C] cursor-not-allowed font-medium opacity-95 text-sm rounded-xl select-text"
+                          : formCanal === 'Instagram'
+                            ? 'bg-[#FDF2F8] border-[#FBCFE8] text-[#BE185D] focus:bg-white text-sm rounded-xl transition-colors'
+                            : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] text-sm rounded-xl'
+                      }
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#241C15] font-bold">Teléfono / WhatsApp</Label>
+                    <Label className="text-xs text-[#241C15] font-bold flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3 w-3 text-[#A36F4C]" />
+                        <span>Teléfono / WhatsApp</span>
+                        {clientSelectMode === 'EXISTING' && (
+                          <Lock className="h-2.5 w-2.5 text-[#A36F4C]" />
+                        )}
+                      </span>
+                      {clientSelectMode === 'EXISTING' && (
+                        <span className="text-[10px] text-[#75695D] font-medium">Bloqueado</span>
+                      )}
+                    </Label>
                     <Input
-                      placeholder="Ej: 987654321"
+                      readOnly={clientSelectMode === 'EXISTING'}
+                      disabled={clientSelectMode === 'EXISTING' && !selectedClientOption}
+                      placeholder={
+                        clientSelectMode === 'EXISTING'
+                          ? (selectedClientOption ? (selectedClientOption.telefono || 'Sin teléfono') : 'Se autocompleta con el cliente')
+                          : "Ej: 987654321"
+                      }
                       value={formTelefono}
                       onChange={(e) => setFormTelefono(e.target.value)}
-                      className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
+                      className={
+                        clientSelectMode === 'EXISTING'
+                          ? "bg-[#F5EFEA] border-[#D4BEA7] text-[#4A3B2C] cursor-not-allowed font-medium opacity-95 text-sm rounded-xl select-text"
+                          : "bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
+                      }
                     />
                   </div>
                 </div>
@@ -3364,44 +3429,98 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
 
                   <div className="space-y-1">
                     <Label className="text-xs text-[#241C15] font-bold flex items-center justify-between">
-                      <span>Nombre del Cliente *</span>
-                      {clientSelectMode === 'EXISTING' && selectedClientOption && (
-                        <span className="text-[10px] text-[#065F46] font-semibold">Registrado</span>
+                      <span className="flex items-center gap-1">
+                        <span>Nombre del Cliente *</span>
+                        {clientSelectMode === 'EXISTING' && (
+                          <Lock className="h-3 w-3 text-[#A36F4C]" />
+                        )}
+                      </span>
+                      {clientSelectMode === 'EXISTING' && (
+                        <span className={`text-[10px] font-bold ${selectedClientOption ? 'text-[#065F46]' : 'text-[#A36F4C]'}`}>
+                          {selectedClientOption ? '🔒 Registrado (Bloqueado)' : 'Buscar arriba'}
+                        </span>
                       )}
                     </Label>
                     <Input
                       required
-                      placeholder="Nombre del cliente..."
+                      readOnly={clientSelectMode === 'EXISTING'}
+                      disabled={clientSelectMode === 'EXISTING' && !selectedClientOption}
+                      placeholder={
+                        clientSelectMode === 'EXISTING'
+                          ? (selectedClientOption ? selectedClientOption.nombre : "Selecciona un cliente de la búsqueda arriba...")
+                          : "Nombre del cliente..."
+                      }
                       value={formCliente}
                       onChange={(e) => setFormCliente(e.target.value)}
-                      className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl font-medium"
+                      className={
+                        clientSelectMode === 'EXISTING'
+                          ? "bg-[#F5EFEA] border-[#D4BEA7] text-[#4A3B2C] cursor-not-allowed font-semibold opacity-95 text-sm rounded-xl select-text"
+                          : "bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl font-medium"
+                      }
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#241C15] font-bold flex items-center gap-1">
-                      <AtSign className="h-3 w-3 text-[#BE185D]" />
-                      <span>Usuario Instagram</span>
+                    <Label className="text-xs text-[#241C15] font-bold flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <AtSign className="h-3 w-3 text-[#BE185D]" />
+                        <span>Usuario Instagram</span>
+                        {clientSelectMode === 'EXISTING' && (
+                          <Lock className="h-2.5 w-2.5 text-[#A36F4C]" />
+                        )}
+                      </span>
+                      {clientSelectMode === 'EXISTING' && (
+                        <span className="text-[10px] text-[#75695D] font-medium">Bloqueado</span>
+                      )}
                     </Label>
                     <Input
-                      placeholder="@usuario"
+                      readOnly={clientSelectMode === 'EXISTING'}
+                      disabled={clientSelectMode === 'EXISTING' && !selectedClientOption}
+                      placeholder={
+                        clientSelectMode === 'EXISTING'
+                          ? (selectedClientOption ? (selectedClientOption.handleSocial || 'Sin usuario Instagram') : 'Se autocompleta con el cliente')
+                          : "@usuario"
+                      }
                       value={formHandleSocial}
                       onChange={(e) => setFormHandleSocial(e.target.value)}
-                      className={`text-sm rounded-xl transition-colors ${
-                        formCanal === 'Instagram'
-                          ? 'bg-[#FDF2F8] border-[#FBCFE8] text-[#BE185D] focus:bg-white'
-                          : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15]'
-                      }`}
+                      className={
+                        clientSelectMode === 'EXISTING'
+                          ? "bg-[#F5EFEA] border-[#D4BEA7] text-[#4A3B2C] cursor-not-allowed font-medium opacity-95 text-sm rounded-xl select-text"
+                          : formCanal === 'Instagram'
+                            ? 'bg-[#FDF2F8] border-[#FBCFE8] text-[#BE185D] focus:bg-white text-sm rounded-xl transition-colors'
+                            : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] text-sm rounded-xl'
+                      }
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#241C15] font-bold">Teléfono / WhatsApp</Label>
+                    <Label className="text-xs text-[#241C15] font-bold flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3 w-3 text-[#A36F4C]" />
+                        <span>Teléfono / WhatsApp</span>
+                        {clientSelectMode === 'EXISTING' && (
+                          <Lock className="h-2.5 w-2.5 text-[#A36F4C]" />
+                        )}
+                      </span>
+                      {clientSelectMode === 'EXISTING' && (
+                        <span className="text-[10px] text-[#75695D] font-medium">Bloqueado</span>
+                      )}
+                    </Label>
                     <Input
-                      placeholder="Ej: 987654321"
+                      readOnly={clientSelectMode === 'EXISTING'}
+                      disabled={clientSelectMode === 'EXISTING' && !selectedClientOption}
+                      placeholder={
+                        clientSelectMode === 'EXISTING'
+                          ? (selectedClientOption ? (selectedClientOption.telefono || 'Sin teléfono') : 'Se autocompleta con el cliente')
+                          : "Ej: 987654321"
+                      }
                       value={formTelefono}
                       onChange={(e) => setFormTelefono(e.target.value)}
-                      className="bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
+                      className={
+                        clientSelectMode === 'EXISTING'
+                          ? "bg-[#F5EFEA] border-[#D4BEA7] text-[#4A3B2C] cursor-not-allowed font-medium opacity-95 text-sm rounded-xl select-text"
+                          : "bg-[#FAF8F5] border-[#E2D9CC] text-sm rounded-xl"
+                      }
                     />
                   </div>
                 </div>

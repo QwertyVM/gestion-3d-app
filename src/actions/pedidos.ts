@@ -369,15 +369,25 @@ export async function createPedido(data: CreatePedidoInput) {
         })
 
         if (existingCliente) {
-          await tx.cliente.update({
-            where: { id: existingCliente.id },
-            data: {
-              ...(data.handleSocial?.trim() ? { handleSocial: data.handleSocial.trim() } : {}),
-              ...(data.telefono?.trim() ? { telefono: data.telefono.trim() } : {}),
-              ...(data.dni?.trim() ? { dni: data.dni.trim() } : {}),
-              ...(data.destinoEnvio?.trim() ? { direccion: data.destinoEnvio.trim() } : {})
-            }
-          })
+          const updateData: any = {}
+          if (!existingCliente.handleSocial && data.handleSocial?.trim()) {
+            updateData.handleSocial = data.handleSocial.trim()
+          }
+          if (!existingCliente.telefono && data.telefono?.trim()) {
+            updateData.telefono = data.telefono.trim()
+          }
+          if (!existingCliente.dni && data.dni?.trim()) {
+            updateData.dni = data.dni.trim()
+          }
+          if (!existingCliente.direccion && data.destinoEnvio?.trim()) {
+            updateData.direccion = data.destinoEnvio.trim()
+          }
+          if (Object.keys(updateData).length > 0) {
+            await tx.cliente.update({
+              where: { id: existingCliente.id },
+              data: updateData
+            })
+          }
         } else {
           await tx.cliente.create({
             data: {
@@ -937,14 +947,22 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
             }
           })
           if (existingCliente) {
-            await tx.cliente.update({
-              where: { id: existingCliente.id },
-              data: {
-                ...(data.handleSocial?.trim() ? { handleSocial: data.handleSocial.trim() } : {}),
-                ...(data.telefono?.trim() ? { telefono: data.telefono.trim() } : {}),
-                ...(data.dni?.trim() ? { dni: data.dni.trim() } : {})
-              }
-            })
+            const updateData: any = {}
+            if (!existingCliente.handleSocial && data.handleSocial?.trim()) {
+              updateData.handleSocial = data.handleSocial.trim()
+            }
+            if (!existingCliente.telefono && data.telefono?.trim()) {
+              updateData.telefono = data.telefono.trim()
+            }
+            if (!existingCliente.dni && data.dni?.trim()) {
+              updateData.dni = data.dni.trim()
+            }
+            if (Object.keys(updateData).length > 0) {
+              await tx.cliente.update({
+                where: { id: existingCliente.id },
+                data: updateData
+              })
+            }
           }
         } catch (err) {
           console.warn('No se pudo actualizar datos del cliente:', err)
