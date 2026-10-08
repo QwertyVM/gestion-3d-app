@@ -19,6 +19,28 @@ interface DateFilterControlProps {
   className?: string
   showAllOption?: boolean
   showMonthSwitcher?: boolean
+  size?: 'sm' | 'md'
+  maxDate?: string | Date | null
+  minDate?: string | Date | null
+}
+
+function parseDateToYearMonth(d: string | Date | null | undefined): { year: number; month: number } | null {
+  if (!d) return null
+  if (d instanceof Date) {
+    if (isNaN(d.getTime())) return null
+    return { year: d.getFullYear(), month: d.getMonth() }
+  }
+  const str = String(d).trim()
+  if (!str) return null
+  const ymd = str.split('T')[0].split('-').map(Number)
+  if (ymd.length >= 2 && !isNaN(ymd[0]) && !isNaN(ymd[1])) {
+    return { year: ymd[0], month: ymd[1] - 1 }
+  }
+  const dateObj = new Date(str)
+  if (!isNaN(dateObj.getTime())) {
+    return { year: dateObj.getFullYear(), month: dateObj.getMonth() }
+  }
+  return null
 }
 
 export function DateFilterControl({
@@ -29,9 +51,17 @@ export function DateFilterControl({
   className = '',
   showAllOption = true,
   showMonthSwitcher = true,
+  size = 'md',
+  maxDate,
+  minDate,
 }: DateFilterControlProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Límites temporales según data disponible o mes actual
+  const now = new Date()
+  const maxLimit = parseDateToYearMonth(maxDate) || { year: now.getFullYear(), month: now.getMonth() }
+  const minLimit = parseDateToYearMonth(minDate)
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -62,8 +92,7 @@ export function DateFilterControl({
         return { year: parts[0], month: parts[1] - 1 }
       }
     }
-    const now = new Date()
-    return { year: now.getFullYear(), month: now.getMonth() }
+    return { year: maxLimit.year, month: maxLimit.month }
   }
 
   const { year: currentYear, month: currentMonth } = getActiveMonthAndYear()
@@ -72,13 +101,47 @@ export function DateFilterControl({
   const prevMonthLabel = `${MESES_ES[prevDate.getMonth()]} ${prevDate.getFullYear()}`
   const nextMonthLabel = `${MESES_ES[nextDate.getMonth()]} ${nextDate.getFullYear()}`
 
+  // ¿El botón siguiente debe estar deshabilitado porque no hay data en meses posteriores?
+  const isNextDisabled =
+    value.preset === 'TODO' ||
+    currentYear > maxLimit.year ||
+    (currentYear === maxLimit.year && currentMonth >= maxLimit.month)
+
+  // ¿El botón anterior debe estar deshabilitado porque se alcanzó el mes más antiguo con data?
+  const isPrevDisabled = Boolean(
+    minLimit &&
+      (currentYear < minLimit.year ||
+        (currentYear === minLimit.year && currentMonth <= minLimit.month))
+  )
+
   // Navegar horizontalmente un mes atrás o adelante
   const handleNavigateMonth = (direction: -1 | 1) => {
+    if (direction === 1 && isNextDisabled) return
+    if (direction === -1 && isPrevDisabled) return
+
+    if (value.preset === 'TODO') {
+      if (direction === -1) {
+        // Desde Histórico, ir al mes más reciente disponible con data
+        const targetYear = maxLimit.year
+        const targetMonth = maxLimit.month
+        const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth()
+
+        if (isCurrentMonth) {
+          onChange(getPresetDateRange('ESTE_MES'))
+          return
+        }
+
+        const newRange = getMonthYearDateRange(targetYear, targetMonth + 1)
+        onChange(newRange)
+        return
+      }
+      return
+    }
+
     const targetDate = new Date(currentYear, currentMonth + direction, 1)
     const targetYear = targetDate.getFullYear()
     const targetMonth = targetDate.getMonth() // 0-11
 
-    const now = new Date()
     const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth()
 
     if (isCurrentMonth) {
@@ -159,15 +222,32 @@ export function DateFilterControl({
         <button
           type="button"
           onClick={() => handleNavigateMonth(-1)}
-          title={`Mes anterior (${prevMonthLabel})`}
-          aria-label={`Mes anterior (${prevMonthLabel})`}
-          className={`h-9 w-8 sm:w-8.5 rounded-xl border flex items-center justify-center transition-all shadow-2xs cursor-pointer shrink-0 ${
-            !isAllActive
-              ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF]'
-              : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
+          disabled={isPrevDisabled}
+          title={
+            isPrevDisabled
+              ? 'No hay registros de meses anteriores'
+              : value.preset === 'TODO'
+              ? `Ver ${MESES_ES[maxLimit.month]} ${maxLimit.year}`
+              : `Mes anterior (${prevMonthLabel})`
+          }
+          aria-label={
+            isPrevDisabled
+              ? 'No hay registros de meses anteriores'
+              : value.preset === 'TODO'
+              ? `Ver ${MESES_ES[maxLimit.month]} ${maxLimit.year}`
+              : `Mes anterior (${prevMonthLabel})`
+          }
+          className={`${
+            size === 'sm' ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-full'
+          } border flex items-center justify-center transition-all shrink-0 ${
+            isPrevDisabled
+              ? 'opacity-35 cursor-not-allowed bg-[#FAF8F5] border-[#E2D9CC] text-[#B0A495] shadow-none'
+              : !isAllActive
+              ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF] cursor-pointer shadow-2xs'
+              : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
           }`}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-3.5 w-3.5" />
         </button>
       )}
 
@@ -175,15 +255,17 @@ export function DateFilterControl({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`h-9 px-3 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-2xs cursor-pointer ${
+        className={`${
+          size === 'sm' ? 'h-8 px-3 rounded-full' : 'h-9 px-3.5 rounded-full'
+        } border flex items-center gap-1.5 sm:gap-2 text-xs font-medium transition-all shadow-2xs cursor-pointer ${
           !isAllActive
             ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF]'
-            : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
+            : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40'
         }`}
       >
-        <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-        <span className="truncate max-w-[190px] sm:max-w-[260px]">{getDisplayLabel()}</span>
-        <ChevronDown className={`h-3 w-3 text-[#75695D] shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-[#A36F4C]' : 'text-muted-foreground'}`} />
+        <span className="truncate max-w-[170px] sm:max-w-[220px]">{getDisplayLabel()}</span>
+        <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Botón Mes Siguiente */}
@@ -191,15 +273,28 @@ export function DateFilterControl({
         <button
           type="button"
           onClick={() => handleNavigateMonth(1)}
-          title={`Mes siguiente (${nextMonthLabel})`}
-          aria-label={`Mes siguiente (${nextMonthLabel})`}
-          className={`h-9 w-8 sm:w-8.5 rounded-xl border flex items-center justify-center transition-all shadow-2xs cursor-pointer shrink-0 ${
-            !isAllActive
-              ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF]'
-              : 'bg-[#FAF8F5] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
+          disabled={isNextDisabled}
+          title={
+            isNextDisabled
+              ? 'No hay datos disponibles en meses posteriores'
+              : `Mes siguiente (${nextMonthLabel})`
+          }
+          aria-label={
+            isNextDisabled
+              ? 'No hay datos disponibles en meses posteriores'
+              : `Mes siguiente (${nextMonthLabel})`
+          }
+          className={`${
+            size === 'sm' ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-full'
+          } border flex items-center justify-center transition-all shrink-0 ${
+            isNextDisabled
+              ? 'opacity-35 cursor-not-allowed bg-[#FAF8F5] border-[#E2D9CC] text-[#B0A495] shadow-none'
+              : !isAllActive
+              ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF] cursor-pointer shadow-2xs'
+              : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
           }`}
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-3.5 w-3.5" />
         </button>
       )}
 

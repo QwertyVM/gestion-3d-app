@@ -58,6 +58,23 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
   const [search, setSearch] = useState('')
   const [tipoFilter, setTipoFilter] = useState<'TODOS' | 'VENTAS' | 'DIRECTOS'>('TODOS')
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
+
+  // Rango global de fechas con datos
+  const { minFechaData, maxFechaData } = useMemo(() => {
+    let min: string | undefined
+    let max: string | undefined
+    const checkDate = (d?: string | Date | null) => {
+      if (!d) return
+      const s = typeof d === 'string' ? d : d.toISOString()
+      if (!min || s < min) min = s
+      if (!max || s > max) max = s
+    }
+    pedidos?.forEach((p: any) => checkDate(p.fecha))
+    ventas?.forEach((v: any) => checkDate(v.fecha))
+    directos?.forEach((d: any) => checkDate(d.fecha))
+    return { minFechaData: min, maxFechaData: max }
+  }, [pedidos, ventas, directos])
+
   const [openModal, setOpenModal] = useState(false)
   const [openEditModal, setOpenEditModal] = useState(false)
   const [editingItem, setEditingItem] = useState<IngresoDirectoItem | null>(null)
@@ -455,6 +472,8 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
               setDateRange(newRange)
               setCurrentPage(1)
             }}
+            minDate={minFechaData}
+            maxDate={maxFechaData}
           />
 
           <Button 

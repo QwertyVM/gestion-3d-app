@@ -194,6 +194,22 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
   const [categoriaFilter, setCategoriaFilter] = useState<string>('TODOS')
   const [tagFilter, setTagFilter] = useState<string>('TODOS')
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('ESTE_MES'))
+
+  // Rango global de fechas con datos
+  const { minFechaData, maxFechaData } = useMemo(() => {
+    if (!items || items.length === 0) return { minFechaData: undefined, maxFechaData: undefined }
+    let min: string | undefined
+    let max: string | undefined
+    for (const eg of items) {
+      const d = eg.createdAt
+      if (d) {
+        if (!min || d < min) min = d
+        if (!max || d > max) max = d
+      }
+    }
+    return { minFechaData: min, maxFechaData: max }
+  }, [items])
+
   const [openModal, setOpenModal] = useState(false)
   const [openEditModal, setOpenEditModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -676,6 +692,8 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               setDateRange(newRange)
               setCurrentPage(1)
             }}
+            minDate={minFechaData}
+            maxDate={maxFechaData}
           />
 
           <Link href="/finanzas/tags">

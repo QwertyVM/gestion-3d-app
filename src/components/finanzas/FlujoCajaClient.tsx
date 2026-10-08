@@ -184,6 +184,22 @@ export function FlujoCajaClient({
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('TODO'))
   const [currentPage, setCurrentPage] = useState(1)
 
+  // Rango global de fechas con datos
+  const { minFechaData, maxFechaData } = useMemo(() => {
+    let min: string | undefined
+    let max: string | undefined
+    const checkDate = (d?: string | Date | null) => {
+      if (!d) return
+      const s = typeof d === 'string' ? d : d.toISOString()
+      if (!min || s < min) min = s
+      if (!max || s > max) max = s
+    }
+    ventas?.forEach((v: any) => checkDate(v.fecha))
+    ingresosDirectos?.forEach((d: any) => checkDate(d.fecha))
+    egresos?.forEach((e: any) => checkDate(e.createdAt))
+    return { minFechaData: min, maxFechaData: max }
+  }, [ventas, ingresosDirectos, egresos])
+
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Filter raw collections by selected date range
@@ -500,6 +516,8 @@ export function FlujoCajaClient({
               setDateRange(newRange)
               setCurrentPage(1)
             }}
+            minDate={minFechaData}
+            maxDate={maxFechaData}
           />
 
           <button

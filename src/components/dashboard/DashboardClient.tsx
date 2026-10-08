@@ -320,6 +320,22 @@ export function DashboardClient({
 
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+  // 0. Calcular rango global de fechas con datos
+  const { minFechaData, maxFechaData } = useMemo(() => {
+    let min: string | undefined
+    let max: string | undefined
+    const checkDate = (d?: string | Date | null) => {
+      if (!d) return
+      const s = typeof d === 'string' ? d : d.toISOString()
+      if (!min || s < min) min = s
+      if (!max || s > max) max = s
+    }
+    rawVentas?.forEach((v: any) => checkDate(v.fecha))
+    rawInversiones?.forEach((inv: any) => checkDate(inv.fecha || inv.createdAt))
+    rawIngresosDirectos?.forEach((ing: any) => checkDate(ing.fecha))
+    return { minFechaData: min, maxFechaData: max }
+  }, [rawVentas, rawInversiones, rawIngresosDirectos])
+
   // 1. Filtrar ventas por rango de fecha
   const filteredVentas = useMemo(() => {
     if (!rawVentas || rawVentas.length === 0) return []
@@ -1070,6 +1086,8 @@ export function DashboardClient({
             onChange={setDateRange} 
             label="Período del Dashboard" 
             align="right" 
+            minDate={minFechaData}
+            maxDate={maxFechaData}
           />
 
           <button
