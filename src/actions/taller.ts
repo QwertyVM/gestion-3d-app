@@ -113,6 +113,7 @@ export interface GrupoColorTaller {
 
 export interface TallerDataResponse {
   piezas: PiezaTaller[]
+  historicoPiezas?: PiezaTaller[]
   gruposPorModelo: GrupoModeloTaller[]
   gruposPorColor: GrupoColorTaller[]
   metricas: {
@@ -127,9 +128,173 @@ export interface TallerDataResponse {
   }
 }
 
+function mapDataToPiezas(
+  pedidosList: any[],
+  ventasList: any[],
+  filamentoMap: Map<string, any>
+): PiezaTaller[] {
+  const result: PiezaTaller[] = []
+
+  // 1. Procesar items de Pedidos
+  pedidosList.forEach((ped) => {
+    const rawFecha = ped.fecha instanceof Date ? ped.fecha.toISOString() : String(ped.fecha)
+    ped.items.forEach((item: any) => {
+      // Taller 3D es exclusivamente para fabricación 3D, no juegos de mesa (BG)
+      if (item.producto && item.producto.negocio !== '3D') return
+      const cant = Number(item.cantidad || 1)
+      const pesoUnit = (item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0 
+        ? Number(item.gramosConsumidos) / cant
+        : 0)
+      const pesoTotal = item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0
+        ? Number(item.gramosConsumidos)
+        : pesoUnit * cant
+
+      const rawColores: string[] = Array.isArray(item.coloresIds) && item.coloresIds.length > 0
+        ? item.coloresIds
+        : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
+
+      const resolvedColores = rawColores.map(id => {
+        const f = filamentoMap.get(id)
+        if (f) {
+          return {
+            id: f.id,
+            nombreColor: f.nombreColor,
+            codigoHex: f.codigoHex || '#1E1E1E',
+            tipoMaterial: f.tipoMaterial || 'PLA'
+          }
+        }
+        if (item.colorFilamento && item.colorFilamento.id === id) {
+          return {
+            id: item.colorFilamento.id,
+            nombreColor: item.colorFilamento.nombreColor,
+            codigoHex: item.colorFilamento.codigoHex || '#1E1E1E',
+            tipoMaterial: item.colorFilamento.tipoMaterial || 'PLA'
+          }
+        }
+        return null
+      }).filter(Boolean) as { id: string; nombreColor: string; codigoHex: string; tipoMaterial: string }[]
+
+      const sortedColores = resolvedColores.length > 0
+        ? [...resolvedColores].sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
+        : []
+
+      const primaryCol = sortedColores[0] || item.colorFilamento || (item.colorFilamentoId ? filamentoMap.get(item.colorFilamentoId) : null)
+      const displayNombreColor = sortedColores.length > 1
+        ? sortedColores.map(c => c.nombreColor).join(' + ')
+        : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
+
+      result.push({
+        id: item.id,
+        registroId: ped.id,
+        tipoRegistro: 'PEDIDO_ITEM',
+        codigoRef: ped.codigo,
+        fechaSolicitud: rawFecha,
+        diaEntregaPrometida: ped.diaEntregaPrometida || null,
+        cliente: ped.cliente,
+        telefono: ped.telefono || null,
+        canalVenta: ped.canalVenta || null,
+        productoId: item.productoId,
+        nombreModelo: item.nombreProductoSnapshot || item.producto?.nombreModelo || 'Pieza 3D',
+        lineaCategoria: item.producto?.lineaCategoria || 'General',
+        cantidad: cant,
+        colorFilamentoId: primaryCol?.id || item.colorFilamentoId || null,
+        coloresIds: rawColores,
+        colores: sortedColores,
+        nombreColor: displayNombreColor,
+        codigoHex: primaryCol?.codigoHex || '#94A3B8',
+        tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
+        personalizacion: item.personalizacion || null,
+        pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
+        pesoGramosTotal: Number(pesoTotal.toFixed(1)),
+        costoBaseUnitario: item.costoBaseSnapshot != null ? Number(item.costoBaseSnapshot) : (item.producto ? Number(item.producto.costoBase) : 0),
+        estado: (item.estado || ped.estado) as any,
+        notas: ped.notas || null
+      })
+    })
+  })
+
+  // 2. Procesar Ventas individuales
+  ventasList.forEach((v) => {
+    if (v.producto && v.producto.negocio !== '3D') return
+    const rawFecha = v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha)
+    const cant = Number(v.cantidad || 1)
+    const pesoUnit = (v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0
+      ? Number(v.gramosConsumidos) / cant
+      : 0)
+    const pesoTotal = v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0
+      ? Number(v.gramosConsumidos)
+      : pesoUnit * cant
+
+    const rawColores: string[] = Array.isArray(v.coloresIds) && v.coloresIds.length > 0
+      ? v.coloresIds
+      : (v.colorFilamentoId ? [v.colorFilamentoId] : [])
+
+    const resolvedColores = rawColores.map(id => {
+      const f = filamentoMap.get(id)
+      if (f) {
+        return {
+          id: f.id,
+          nombreColor: f.nombreColor,
+          codigoHex: f.codigoHex || '#1E1E1E',
+          tipoMaterial: f.tipoMaterial || 'PLA'
+        }
+      }
+      if (v.colorFilamento && v.colorFilamento.id === id) {
+        return {
+          id: v.colorFilamento.id,
+          nombreColor: v.colorFilamento.nombreColor,
+          codigoHex: v.colorFilamento.codigoHex || '#1E1E1E',
+          tipoMaterial: v.colorFilamento.tipoMaterial || 'PLA'
+        }
+      }
+      return null
+    }).filter(Boolean) as { id: string; nombreColor: string; codigoHex: string; tipoMaterial: string }[]
+
+    const sortedColores = resolvedColores.length > 0
+      ? [...resolvedColores].sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
+      : []
+
+    const primaryCol = sortedColores[0] || v.colorFilamento || (v.colorFilamentoId ? filamentoMap.get(v.colorFilamentoId) : null)
+    const displayNombreColor = sortedColores.length > 1
+      ? sortedColores.map(c => c.nombreColor).join(' + ')
+      : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
+
+    result.push({
+      id: v.id,
+      registroId: v.id,
+      tipoRegistro: 'VENTA_INDIVIDUAL',
+      codigoRef: 'VTA-INDIVIDUAL',
+      fechaSolicitud: rawFecha,
+      diaEntregaPrometida: v.diaEntregaPrometida || null,
+      cliente: v.cliente,
+      telefono: null,
+      canalVenta: v.canalVenta || null,
+      productoId: v.productoId,
+      nombreModelo: v.nombreProductoSnapshot || v.producto?.nombreModelo || 'Pieza 3D',
+      lineaCategoria: v.producto?.lineaCategoria || 'General',
+      cantidad: cant,
+      colorFilamentoId: primaryCol?.id || v.colorFilamentoId || null,
+      coloresIds: rawColores,
+      colores: sortedColores,
+      nombreColor: displayNombreColor,
+      codigoHex: primaryCol?.codigoHex || '#94A3B8',
+      tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
+      personalizacion: v.personalizacion || null,
+      pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
+      pesoGramosTotal: Number(pesoTotal.toFixed(1)),
+      costoBaseUnitario: v.costoBaseSnapshot != null ? Number(v.costoBaseSnapshot) : (v.producto ? Number(v.producto.costoBase) : 0),
+      estado: v.estado as any,
+      notas: null
+    })
+  })
+
+  return result
+}
+
 export async function getTallerData(): Promise<TallerDataResponse> {
   try {
-    const [pedidos, ventas, filamentos] = await Promise.all([
+    const [pedidos, ventas, filamentos, todosPedidos, todasVentas] = await Promise.all([
+      // Cola activa en taller
       prisma.pedido.findMany({
         where: {
           negocio: '3D',
@@ -158,6 +323,33 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       }),
       prisma.inventarioFilamento.findMany({
         where: { activo: true }
+      }),
+      // Histórico completo de 3D para métricas acumuladas y ranking
+      prisma.pedido.findMany({
+        where: {
+          negocio: '3D',
+          estado: { not: 'CANCELADO' }
+        },
+        include: {
+          items: {
+            include: {
+              producto: true,
+              colorFilamento: true
+            }
+          }
+        },
+        orderBy: { fecha: 'desc' }
+      }),
+      prisma.venta.findMany({
+        where: {
+          negocio: '3D',
+          estado: { not: 'CANCELADO' }
+        },
+        include: {
+          producto: true,
+          colorFilamento: true
+        },
+        orderBy: { fecha: 'desc' }
       })
     ])
 
@@ -166,163 +358,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       filamentoMap.set(f.id, f)
     })
 
-    const piezas: PiezaTaller[] = []
-
-    // 1. Procesar items de Pedidos
-    pedidos.forEach((ped) => {
-      const rawFecha = ped.fecha instanceof Date ? ped.fecha.toISOString() : String(ped.fecha)
-      ped.items.forEach((item) => {
-        // Taller 3D es exclusivamente para fabricación 3D, no juegos de mesa (BG)
-        if (item.producto && item.producto.negocio !== '3D') return
-        const pesoUnit = (item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0 
-          ? Number(item.gramosConsumidos) / Number(item.cantidad || 1)
-          : 0)
-
-        const cant = Number(item.cantidad || 1)
-        const pesoTotal = item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0
-          ? Number(item.gramosConsumidos)
-          : pesoUnit * cant
-
-        const rawColores: string[] = Array.isArray(item.coloresIds) && item.coloresIds.length > 0
-          ? item.coloresIds
-          : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
-
-        const resolvedColores = rawColores.map(id => {
-          const f = filamentoMap.get(id)
-          if (f) {
-            return {
-              id: f.id,
-              nombreColor: f.nombreColor,
-              codigoHex: f.codigoHex || '#1E1E1E',
-              tipoMaterial: f.tipoMaterial || 'PLA'
-            }
-          }
-          if (item.colorFilamento && item.colorFilamento.id === id) {
-            return {
-              id: item.colorFilamento.id,
-              nombreColor: item.colorFilamento.nombreColor,
-              codigoHex: item.colorFilamento.codigoHex || '#1E1E1E',
-              tipoMaterial: item.colorFilamento.tipoMaterial || 'PLA'
-            }
-          }
-          return null
-        }).filter(Boolean) as { id: string; nombreColor: string; codigoHex: string; tipoMaterial: string }[]
-
-        const sortedColores = resolvedColores.length > 0
-          ? [...resolvedColores].sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
-          : []
-
-        const primaryCol = sortedColores[0] || item.colorFilamento || (item.colorFilamentoId ? filamentoMap.get(item.colorFilamentoId) : null)
-        const displayNombreColor = sortedColores.length > 1
-          ? sortedColores.map(c => c.nombreColor).join(' + ')
-          : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
-
-        piezas.push({
-          id: item.id,
-          registroId: ped.id,
-          tipoRegistro: 'PEDIDO_ITEM',
-          codigoRef: ped.codigo,
-          fechaSolicitud: rawFecha,
-          diaEntregaPrometida: ped.diaEntregaPrometida || null,
-          cliente: ped.cliente,
-          telefono: ped.telefono || null,
-          canalVenta: ped.canalVenta || null,
-          productoId: item.productoId,
-          nombreModelo: item.nombreProductoSnapshot || item.producto?.nombreModelo || 'Pieza 3D',
-          lineaCategoria: item.producto?.lineaCategoria || 'General',
-          cantidad: cant,
-          colorFilamentoId: primaryCol?.id || item.colorFilamentoId || null,
-          coloresIds: rawColores,
-          colores: sortedColores,
-          nombreColor: displayNombreColor,
-          codigoHex: primaryCol?.codigoHex || '#94A3B8',
-          tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
-          personalizacion: item.personalizacion || null,
-          pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
-          pesoGramosTotal: Number(pesoTotal.toFixed(1)),
-          costoBaseUnitario: item.costoBaseSnapshot != null ? Number(item.costoBaseSnapshot) : (item.producto ? Number(item.producto.costoBase) : 0),
-          estado: (item.estado || ped.estado) as any,
-          notas: ped.notas || null
-        })
-      })
-    })
-
-    // 2. Procesar Ventas individuales
-    ventas.forEach((v) => {
-      // Taller 3D es exclusivamente para fabricación 3D, no juegos de mesa (BG)
-      if (v.producto && v.producto.negocio !== '3D') return
-      const rawFecha = v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha)
-      const pesoUnit = (v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0 
-        ? Number(v.gramosConsumidos) / Number(v.cantidad || 1)
-        : 0)
-
-      const cant = Number(v.cantidad || 1)
-      const pesoTotal = v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0
-        ? Number(v.gramosConsumidos)
-        : pesoUnit * cant
-
-      const rawColores: string[] = Array.isArray(v.coloresIds) && v.coloresIds.length > 0
-        ? v.coloresIds
-        : (v.colorFilamentoId ? [v.colorFilamentoId] : [])
-
-      const resolvedColores = rawColores.map(id => {
-        const f = filamentoMap.get(id)
-        if (f) {
-          return {
-            id: f.id,
-            nombreColor: f.nombreColor,
-            codigoHex: f.codigoHex || '#1E1E1E',
-            tipoMaterial: f.tipoMaterial || 'PLA'
-          }
-        }
-        if (v.colorFilamento && v.colorFilamento.id === id) {
-          return {
-            id: v.colorFilamento.id,
-            nombreColor: v.colorFilamento.nombreColor,
-            codigoHex: v.colorFilamento.codigoHex || '#1E1E1E',
-            tipoMaterial: v.colorFilamento.tipoMaterial || 'PLA'
-          }
-        }
-        return null
-      }).filter(Boolean) as { id: string; nombreColor: string; codigoHex: string; tipoMaterial: string }[]
-
-      const sortedColores = resolvedColores.length > 0
-        ? [...resolvedColores].sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
-        : []
-
-      const primaryCol = sortedColores[0] || v.colorFilamento || (v.colorFilamentoId ? filamentoMap.get(v.colorFilamentoId) : null)
-      const displayNombreColor = sortedColores.length > 1
-        ? sortedColores.map(c => c.nombreColor).join(' + ')
-        : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
-
-      piezas.push({
-        id: v.id,
-        registroId: v.id,
-        tipoRegistro: 'VENTA_INDIVIDUAL',
-        codigoRef: 'VTA-INDIVIDUAL',
-        fechaSolicitud: rawFecha,
-        diaEntregaPrometida: v.diaEntregaPrometida || null,
-        cliente: v.cliente,
-        telefono: null,
-        canalVenta: v.canalVenta || null,
-        productoId: v.productoId,
-        nombreModelo: v.nombreProductoSnapshot || v.producto?.nombreModelo || 'Pieza 3D',
-        lineaCategoria: v.producto?.lineaCategoria || 'General',
-        cantidad: cant,
-        colorFilamentoId: primaryCol?.id || v.colorFilamentoId || null,
-        coloresIds: rawColores,
-        colores: sortedColores,
-        nombreColor: displayNombreColor,
-        codigoHex: primaryCol?.codigoHex || '#94A3B8',
-        tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
-        personalizacion: v.personalizacion || null,
-        pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
-        pesoGramosTotal: Number(pesoTotal.toFixed(1)),
-        costoBaseUnitario: v.costoBaseSnapshot != null ? Number(v.costoBaseSnapshot) : (v.producto ? Number(v.producto.costoBase) : 0),
-        estado: v.estado as any,
-        notas: null
-      })
-    })
+    const piezas = mapDataToPiezas(pedidos, ventas, filamentoMap)
+    const historicoPiezas = mapDataToPiezas(todosPedidos, todasVentas, filamentoMap)
 
     // 3. Agrupación por Modelo / Producto
     const modeloMap = new Map<string, GrupoModeloTaller>()
@@ -473,6 +510,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
 
     return {
       piezas,
+      historicoPiezas,
       gruposPorModelo,
       gruposPorColor,
       metricas: {
@@ -490,6 +528,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
     console.error('Error fetching taller data:', error)
     return {
       piezas: [],
+      historicoPiezas: [],
       gruposPorModelo: [],
       gruposPorColor: [],
       metricas: {
