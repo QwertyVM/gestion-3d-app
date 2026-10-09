@@ -4,7 +4,7 @@ on:
   schedule:
     # 02:00 AM hora de Perú (07:00 UTC) todos los días
     - cron: '0 7 * * *'
-  workflow_dispatch: # Permite ejecutar el backup manualmente cuando quieras
+  workflow_dispatch: # Permite ejecutar el backup manualmente
 
 jobs:
   backup:
@@ -13,10 +13,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install PostgreSQL Client Tools
+      - name: Install PostgreSQL 18 Client Tools
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
+          pg_dump --version
 
       - name: Generate Database Dump
         env:
