@@ -189,6 +189,9 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
         }
       })
     }
+    if (!canalPreferido) {
+      canalPreferido = 'Instagram'
+    }
 
     return {
       id: c.id,
@@ -197,7 +200,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
       dni: c.dni || m.dniSugerido || null,
       telefono: c.telefono || m.telefonoSugerido || null,
       email: c.email || null,
-      canalOrigen: c.canalOrigen || canalPreferido || null,
+      canalOrigen: c.canalOrigen || canalPreferido || 'Instagram',
       handleSocial: c.handleSocial || m.handleSocialSugerido || null,
       direccion: c.direccion || m.destinoSugerido || null,
       distrito: c.distrito || null,
@@ -232,6 +235,9 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
             canalPreferido = canal
           }
         })
+      }
+      if (!canalPreferido) {
+        canalPreferido = 'Instagram'
       }
 
       result.push({
@@ -313,7 +319,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
     dni: cliente?.dni || pedidos.find((p: any) => p.dni)?.dni || null,
     telefono: cliente?.telefono || pedidos.find((p: any) => p.telefono)?.telefono || null,
     email: cliente?.email || null,
-    canalOrigen: cliente?.canalOrigen || pedidos[0]?.canalVenta || null,
+    canalOrigen: cliente?.canalOrigen || pedidos[0]?.canalVenta || 'Instagram',
     handleSocial: cliente?.handleSocial || pedidos.find((p: any) => p.handleSocial)?.handleSocial || null,
     direccion: cliente?.direccion || pedidos.find((p: any) => p.destinoEnvio)?.destinoEnvio || null,
     distrito: cliente?.distrito || null,
@@ -326,7 +332,7 @@ export async function getClienteDetalle(idOrName: string, negocio?: TipoNegocio)
     pedidosCount,
     piezasCount,
     ultimoPedidoFecha,
-    canalPreferido: cliente?.canalOrigen || pedidos[0]?.canalVenta || null,
+    canalPreferido: cliente?.canalOrigen || pedidos[0]?.canalVenta || 'Instagram',
     createdAt: cliente?.createdAt.toISOString() || new Date().toISOString(),
     updatedAt: cliente?.updatedAt.toISOString() || new Date().toISOString(),
     pedidos: pedidos.map((p: any) => ({
