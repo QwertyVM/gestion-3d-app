@@ -264,6 +264,8 @@ export interface CapacidadGastoData {
   saldoActualCaja: number
   totalBlindadoMes: number
   cuotaPrestamoMensual: number
+  cuotaPrestamoPendiente?: number
+  totalPagadoPrestamoMes?: number
   reservaCapexMensual: number
   gastosFijosTaller: number
   gastoDisponibleHoy: number
@@ -403,26 +405,13 @@ export function DashboardClient({
     }
   }, [filteredVentas, filteredInversiones, filteredIngresosDirectos, dateRange, rawVentas, rawInversiones, initialKpis])
 
-  // 5. Capacidad de gasto calculada para el período
+  // 5. Capacidad de gasto calculada para el período (vinculada a Proyecciones y Presupuestos)
   const gasto = useMemo(() => {
     const saldoActualCaja = Math.max(0, (dynamicKpis.totalCobradoVentas + dynamicKpis.totalIngresosDirectos) - dynamicKpis.egresosTotales)
-    const cuotaPrestamoMensual = 388.68
-    const reservaCapexMensual = 878.00
-    const gastosFijosTaller = 111.00
-
-    // Verificar si la cuota del préstamo ya fue pagada en este ciclo (no restar dos veces del disponible)
-    const totalPagadoPrestamoMes = rawInversiones
-      .filter((inv: any) => 
-        inv.categoria === 'FINANCIERO' && 
-        (inv.itemConcepto?.toLowerCase().includes('préstamo') || 
-         inv.itemConcepto?.toLowerCase().includes('prestamo') || 
-         inv.itemConcepto?.toLowerCase().includes('cuota') ||
-         (inv.subcategoria && inv.subcategoria.toLowerCase().includes('bcp')))
-      )
-      .reduce((acc: number, inv: any) => acc + Number(inv.costoTotal || 0), 0)
-
-    const cuotaPrestamoPendiente = Math.max(0, cuotaPrestamoMensual - totalPagadoPrestamoMes)
-    const totalBlindadoMes = cuotaPrestamoPendiente + reservaCapexMensual + gastosFijosTaller
+    const cuotaPrestamoMensual = initialCapacidadGasto?.cuotaPrestamoMensual ?? 388.68
+    const reservaCapexMensual = initialCapacidadGasto?.reservaCapexMensual ?? 878.00
+    const gastosFijosTaller = initialCapacidadGasto?.gastosFijosTaller ?? 111.00
+    const totalBlindadoMes = initialCapacidadGasto?.totalBlindadoMes ?? (cuotaPrestamoMensual + reservaCapexMensual + gastosFijosTaller)
     const gastoDisponibleHoy = Math.max(0, saldoActualCaja - totalBlindadoMes)
     const margenUnitarioPromedio = dynamicKpis.ticketPromedio > 0 ? (dynamicKpis.gananciaNeta / Math.max(1, filteredVentas.length)) : 97.00
     const pedidosProyectadosMes = Math.max(8, Math.min(30, Math.round(filteredVentas.length / Math.max(1, 1)) || 18))
@@ -433,8 +422,8 @@ export function DashboardClient({
       saldoActualCaja,
       totalBlindadoMes,
       cuotaPrestamoMensual,
-      cuotaPrestamoPendiente,
-      totalPagadoPrestamoMes,
+      cuotaPrestamoPendiente: initialCapacidadGasto?.cuotaPrestamoPendiente ?? 0,
+      totalPagadoPrestamoMes: initialCapacidadGasto?.totalPagadoPrestamoMes ?? 0,
       reservaCapexMensual,
       gastosFijosTaller,
       gastoDisponibleHoy,
@@ -442,7 +431,7 @@ export function DashboardClient({
       pedidosProyectadosMes,
       gananciaProyectadaMes
     }
-  }, [dynamicKpis, filteredVentas.length, rawInversiones])
+  }, [dynamicKpis, filteredVentas.length, initialCapacidadGasto])
 
   // 6. Métricas y datos para los 3 gráficos financieros
   const metricasEvolucion = useMemo(() => {

@@ -500,3 +500,22 @@ model DireccionEntrega {
 
   @@index([userEmail])
 }
+
+model PartidaPresupuesto {
+  id                  String   @id @default(uuid())
+  negocio             String   @default("3D")
+  categoria           String   @default("OPERATIVO") // INSUMOS, BLINDADO, OPERATIVO, CAPEX, MARKETING, OTROS
+  concepto            String
+  subconcepto         String?
+  montoAgostoReal     Decimal? @default(0.00) @db.Decimal(10, 2)
+  montoSeptiembreReal Decimal? @default(0.00) @db.Decimal(10, 2)
+  presupuesto         Decimal  @default(0.00) @db.Decimal(10, 2)
+  tipo                String   @default("Flexible") // "Blindado" | "Flexible"
+  pagado              Boolean  @default(false)
+  orden               Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([concepto, negocio])
+}
+

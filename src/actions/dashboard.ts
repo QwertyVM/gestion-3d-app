@@ -5,6 +5,7 @@ import { getVentas, registrarAbono } from '@/actions/ventas'
 import { addPagoPedido } from '@/actions/pedidos'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
+import { getResumenBlindadoOficial } from '@/actions/presupuesto'
 
 export async function getDashboardData(negocio?: TipoNegocio) {
   const targetNegocio = negocio || await getActiveNegocioServer()
@@ -393,25 +394,10 @@ export async function getDashboardData(negocio?: TipoNegocio) {
       porcentajeFacturacion: ingresosVentas > 0 ? Number(((art.totalFacturado / ingresosVentas) * 100).toFixed(1)) : 0
     }))
 
-  // 14. Indicador de Capacidad de Gasto del Mes Actual (Lo que tengo vs Lo Blindado vs Lo Proyectado)
+  // 14. Capacidad de Gasto y Fondos Blindados directos desde Proyecciones y Presupuestos
+  const resumenBlindado = await getResumenBlindadoOficial()
   const saldoActualCaja = Math.max(0, (totalCobradoVentas + totalIngresosDirectos) - egresosTotales)
-  const cuotaPrestamoMensual = 388.68
-  const reservaCapexMensual = 878.00
-  const gastosFijosTaller = 111.00
-
-  // Verificar si la cuota del préstamo ya fue pagada en este ciclo (no restar dos veces del disponible)
-  const totalPagadoPrestamoMes = inversiones
-    .filter((inv: any) => 
-      inv.categoria === 'FINANCIERO' && 
-      (inv.itemConcepto?.toLowerCase().includes('préstamo') || 
-       inv.itemConcepto?.toLowerCase().includes('prestamo') || 
-       inv.itemConcepto?.toLowerCase().includes('cuota') ||
-       (inv.subcategoria && inv.subcategoria.toLowerCase().includes('bcp')))
-    )
-    .reduce((acc: number, inv: any) => acc + Number(inv.costoTotal || 0), 0)
-
-  const cuotaPrestamoPendiente = Math.max(0, cuotaPrestamoMensual - totalPagadoPrestamoMes)
-  const totalBlindadoMes = cuotaPrestamoPendiente + reservaCapexMensual + gastosFijosTaller
+  const totalBlindadoMes = resumenBlindado.totalBlindadoMes
   const gastoDisponibleHoy = Math.max(0, saldoActualCaja - totalBlindadoMes)
   const margenUnitarioPromedio = ticketPromedio > 0 ? (gananciaNeta / Math.max(1, ventas.length)) : 97.00
   const pedidosProyectadosMes = Math.max(8, Math.min(30, Math.round(ventas.length / Math.max(1, 2)) || 18))
@@ -459,9 +445,11 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     capacidadGasto: {
       saldoActualCaja,
       totalBlindadoMes,
-      cuotaPrestamoMensual,
-      reservaCapexMensual,
-      gastosFijosTaller,
+      cuotaPrestamoMensual: resumenBlindado.cuotaPrestamoMensual,
+      cuotaPrestamoPendiente: resumenBlindado.cuotaPrestamoPendiente,
+      totalPagadoPrestamoMes: resumenBlindado.totalPagadoPrestamoMes,
+      reservaCapexMensual: resumenBlindado.reservaCapexMensual,
+      gastosFijosTaller: resumenBlindado.gastosFijosTaller,
       gastoDisponibleHoy,
       gastoDisponibleProyectado,
       pedidosProyectadosMes,

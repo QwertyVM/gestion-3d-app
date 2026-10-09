@@ -13,7 +13,8 @@ export function getPrisma(): PrismaClient {
     !globalThis.prismaGlobal || 
     !('pagoVenta' in globalThis.prismaGlobal) || 
     !('cliente' in globalThis.prismaGlobal) ||
-    !('configuracionTienda' in globalThis.prismaGlobal)
+    !('configuracionTienda' in globalThis.prismaGlobal) ||
+    !('partidaPresupuesto' in globalThis.prismaGlobal)
   ) {
     if (globalThis.prismaGlobal) {
       try {
