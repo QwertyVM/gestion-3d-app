@@ -1,10 +1,13 @@
-name: Daily Neon Backup to Google Drive
+name: Daily Neon Backup to GitHub Releases
 
 on:
   schedule:
     # 02:00 AM hora de Perú (07:00 UTC) todos los días
     - cron: '0 7 * * *'
   workflow_dispatch: # Permite ejecutar el backup manualmente
+
+permissions:
+  contents: write # Permiso para que GitHub Actions pueda crear Releases
 
 jobs:
   backup:
@@ -29,45 +32,11 @@ jobs:
           /usr/lib/postgresql/18/bin/pg_dump "$DATABASE_URL" -Fc -f "$BACKUP_NAME"
           echo "BACKUP_FILE=$BACKUP_NAME" >> $GITHUB_ENV
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Google API Libraries
-        run: pip install google-api-python-client google-auth
-
-      - name: Upload Dump to Google Drive
+      - name: Publish Backup to GitHub Releases
         env:
-          GDRIVE_SA_KEY: ${{ secrets.GDRIVE_SA_KEY }}
-          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python3 - << 'EOF'
-          import os, json
-          from googleapiclient.discovery import build
-          from googleapiclient.http import MediaFileUpload
-          from google.oauth2 import service_account
-
-          sa_info = json.loads(os.environ['GDRIVE_SA_KEY'])
-          folder_id = os.environ['GDRIVE_FOLDER_ID']
-          backup_file = os.environ['BACKUP_FILE']
-
-          creds = service_account.Credentials.from_service_account_info(
-              sa_info,
-              scopes=['https://www.googleapis.com/auth/drive.file']
-          )
-          drive_service = build('drive', 'v3', credentials=creds)
-
-          file_metadata = {
-              'name': backup_file,
-              'parents': [folder_id]
-          }
-          media = MediaFileUpload(backup_file, mimetype='application/octet-stream')
-          uploaded_file = drive_service.files().create(
-              body=file_metadata,
-              media_body=media,
-              fields='id, name'
-          ).execute()
-
-          print(f"Backup exitoso: {uploaded_file.get('name')} (ID: {uploaded_file.get('id')})")
-          EOF
+          TAG_NAME="backup-$(date +'%Y%m%d_%H%M%S')"
+          gh release create "$TAG_NAME" "$BACKUP_FILE" \
+            --title "Neon DB Backup - $(date +'%Y-%m-%d %H:%M:%S UTC')" \
+            --notes "Backup automático diario de la base de datos Neon PostgreSQL."
