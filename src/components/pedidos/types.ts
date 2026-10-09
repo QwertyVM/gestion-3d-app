@@ -77,6 +77,16 @@ export interface PedidoView {
   updatedAt: string
 }
 
+export interface ProductoVarianteOption {
+  id: string
+  productoId?: string
+  nombreVariante: string
+  costoBase: number
+  precioMenor: number
+  precioMayor: number
+  activo?: boolean
+}
+
 export interface ProductoOption {
   id: string
   lineaCategoria: string
@@ -85,6 +95,8 @@ export interface ProductoOption {
   precioMayor: number
   precioMenor: number
   activo: boolean
+  tieneVariantes?: boolean
+  variantes?: ProductoVarianteOption[]
 }
 
 export interface FilamentoOption {
@@ -114,6 +126,9 @@ export interface ClienteOption {
 export interface FormItemState {
   id: string
   productoId: string
+  varianteId?: string
+  nombreDisplay?: string
+  costoBase?: number
   colorFilamentoId: string
   coloresIds: string[]
   personalizacion: string

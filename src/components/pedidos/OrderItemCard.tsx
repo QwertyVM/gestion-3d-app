@@ -20,6 +20,8 @@ import { Label } from '@/components/ui/label'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { TipoPrecio } from '@prisma/client'
 import { FormItemState, ProductoOption, FilamentoOption } from './types'
+import { GroupedProductCombobox } from './GroupedProductCombobox'
+import { groupCatalogProducts, findVariantInGroups } from './productHierarchy'
 
 interface OrderItemCardProps {
   item: FormItemState
@@ -27,7 +29,7 @@ interface OrderItemCardProps {
   totalItems: number
   productos: ProductoOption[]
   filamentos: FilamentoOption[]
-  productosComboboxItems: ComboboxItem[]
+  productosComboboxItems?: ComboboxItem[]
   onUpdateItem: (id: string, updates: Partial<FormItemState>) => void
   onRemoveItem: (id: string) => void
   formatCurrency: (val: number) => string
@@ -47,6 +49,7 @@ export function OrderItemCard({
   const [isFilamentOpen, setIsFilamentOpen] = useState(false)
   const [filamentSearch, setFilamentSearch] = useState('')
   const filamentDropdownRef = useRef<HTMLDivElement>(null)
+  const quantityInputRef = useRef<HTMLInputElement>(null)
 
   // Subtotal calculado para este ítem
   const itemSubtotal = useMemo(() => {
@@ -148,17 +151,23 @@ export function OrderItemCard({
             <Boxes className="h-3 w-3 text-primary" />
             Modelo 3D *
           </Label>
-          <SearchableCombobox
-            items={productosComboboxItems}
-            value={item.productoId}
-            onChange={(newId) => onUpdateItem(item.id, { productoId: newId })}
-            placeholder="Buscar modelo 3D..."
-            searchPlaceholder="Escribe para filtrar modelo..."
-            emptyMessage="No se encontró ningún modelo"
-            icon={Boxes}
-            size="sm"
-            inputClassName="bg-card/80 border-input text-foreground text-xs font-semibold h-9 rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/20"
-            clearable={false}
+          <GroupedProductCombobox
+            productos={productos}
+            selectedProductoId={item.productoId}
+            selectedVarianteId={item.varianteId}
+            tipoPrecio={item.tipoPrecio}
+            onSelect={(payload) => {
+              onUpdateItem(item.id, {
+                productoId: payload.productoId,
+                varianteId: payload.varianteId,
+                nombreDisplay: payload.nombreDisplay,
+                costoBase: payload.costoBase,
+                precioUnitario: payload.precioUnitario
+              })
+            }}
+            onAfterSelect={() => {
+              quantityInputRef.current?.focus()
+            }}
           />
         </div>
 
@@ -296,7 +305,24 @@ export function OrderItemCard({
           </Label>
           <select
             value={item.tipoPrecio}
-            onChange={(e) => onUpdateItem(item.id, { tipoPrecio: e.target.value as TipoPrecio })}
+            onChange={(e) => {
+              const newTier = e.target.value as TipoPrecio
+              const targetId = item.varianteId || item.productoId
+              const catalogGroups = groupCatalogProducts(productos)
+              const match = findVariantInGroups(catalogGroups, targetId)
+              let newPrice = item.precioUnitario
+              if (match) {
+                if (newTier === 'MAYOR' || (newTier as string) === 'AMIGOS') {
+                  newPrice = match.variant.precioMayor
+                } else if (newTier === 'MENOR' || (newTier as string) === 'MERCADO') {
+                  newPrice = match.variant.precioMenor
+                }
+              }
+              onUpdateItem(item.id, {
+                tipoPrecio: newTier,
+                precioUnitario: newPrice
+              })
+            }}
             className="w-full h-9 rounded-xl border border-input bg-card/80 text-foreground text-xs font-semibold px-2 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
           >
             <option value="MENOR">Por Menor</option>
@@ -311,6 +337,7 @@ export function OrderItemCard({
             Cantidad
           </Label>
           <Input
+            ref={quantityInputRef}
             type="number"
             min="1"
             placeholder="1"
@@ -353,12 +380,12 @@ export function OrderItemCard({
           />
         </div>
 
-        {/* Subtotal Ítem (badge destacado a la derecha: font-bold text-stone-900) */}
+        {/* Subtotal Ítem (badge destacado a la derecha) */}
         <div className="shrink-0 space-y-1 text-right flex flex-col items-end">
           <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
             Subtotal Ítem
           </Label>
-          <div className="h-9 px-3 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-center font-bold text-xs font-mono text-stone-900 dark:text-stone-100 shadow-2xs">
+          <div className="h-9 px-3 rounded-xl bg-secondary border border-border/80 flex items-center justify-center font-bold text-xs font-mono text-foreground shadow-2xs">
             {formatCurrency(itemSubtotal)}
           </div>
         </div>
@@ -376,3 +403,5 @@ export function OrderItemCard({
     </div>
   )
 }
+
+export const OrderProductItemForm = OrderItemCard

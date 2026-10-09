@@ -19,6 +19,7 @@ import {
   PedidoView,
   ProductoOption
 } from './types'
+import { groupCatalogProducts, findVariantInGroups } from './productHierarchy'
 import { OrderClientHeader } from './OrderClientHeader'
 import { OrderLogisticsSection } from './OrderLogisticsSection'
 import { OrderItemsTable } from './OrderItemsTable'
@@ -71,12 +72,18 @@ export function EditOrderModal({
 
   // Opciones de productos 3D para el combobox
   const productosComboboxItems: ComboboxItem[] = useMemo(() => {
-    return (productos || []).map(p => ({
-      id: p.id,
-      label: p.nombreModelo,
-      sublabel: `${p.lineaCategoria || 'General'} • Base: S/ ${Number(p.costoBase || 0).toFixed(2)}`,
-      badge: `S/ ${Number(p.precioMenor || 0).toFixed(2)}`
-    }))
+    return (productos || []).map(p => {
+      const displayName = p.nombreModelo.includes(' - ')
+        ? p.nombreModelo.replace(' - ', ' ➔ ')
+        : p.nombreModelo
+
+      return {
+        id: p.id,
+        label: displayName,
+        sublabel: `${p.lineaCategoria || 'General'} • Base: S/ ${Number(p.costoBase || 0).toFixed(2)}`,
+        badge: `S/ ${Number(p.precioMenor || 0).toFixed(2)}`
+      }
+    })
   }, [productos])
 
   // Inicialización cada vez que se abre el modal con un pedido
@@ -182,29 +189,37 @@ export function EditOrderModal({
       prev.map(item => {
         if (item.id !== id) return item
         const merged = { ...item, ...updates }
+        const catalogGroups = groupCatalogProducts(productos)
+        const targetId = updates.varianteId || updates.productoId || merged.varianteId || merged.productoId
 
-        // Si cambió el producto, actualizar precio según tier
-        if (updates.productoId && updates.productoId !== item.productoId) {
-          const p = productos.find(prod => prod.id === updates.productoId)
-          if (p) {
-            let pUnit = p.precioMenor
+        if (updates.productoId || updates.varianteId) {
+          const match = findVariantInGroups(catalogGroups, targetId)
+          if (match) {
+            merged.varianteId = match.variant.id
+            merged.productoId = match.group.productoId
+            merged.nombreDisplay = match.group.hasVariants
+              ? `${match.group.baseName} - ${match.variant.nombreVariante}`
+              : match.group.baseName
+            merged.costoBase = match.variant.costoBase
+            let pUnit = match.variant.precioMenor
             if (merged.tipoPrecio === 'MAYOR' || (merged.tipoPrecio as string) === 'AMIGOS') {
-              pUnit = p.precioMayor
+              pUnit = match.variant.precioMayor
             } else if (merged.tipoPrecio === 'MENOR' || (merged.tipoPrecio as string) === 'MERCADO') {
-              pUnit = p.precioMenor
+              pUnit = match.variant.precioMenor
             }
-            merged.precioUnitario = pUnit
+            if (updates.precioUnitario === undefined) {
+              merged.precioUnitario = pUnit
+            }
           }
         }
 
-        // Si cambió el tier de precio
         if (updates.tipoPrecio && updates.tipoPrecio !== item.tipoPrecio) {
-          const p = productos.find(prod => prod.id === merged.productoId)
-          if (p) {
+          const match = findVariantInGroups(catalogGroups, targetId)
+          if (match) {
             if (updates.tipoPrecio === 'MAYOR' || (updates.tipoPrecio as string) === 'AMIGOS') {
-              merged.precioUnitario = p.precioMayor
+              merged.precioUnitario = match.variant.precioMayor
             } else if (updates.tipoPrecio === 'MENOR' || (updates.tipoPrecio as string) === 'MERCADO') {
-              merged.precioUnitario = p.precioMenor
+              merged.precioUnitario = match.variant.precioMenor
             }
           }
         }
@@ -272,6 +287,7 @@ export function EditOrderModal({
         costoEnvio: Number(formCostoEnvio) || 0,
         items: formItems.map(it => ({
           productoId: it.productoId,
+          varianteId: it.varianteId || it.productoId,
           colorFilamentoId: it.coloresIds?.[0] || it.colorFilamentoId || undefined,
           coloresIds: it.coloresIds || [],
           personalizacion: it.personalizacion.trim() || undefined,
@@ -391,6 +407,7 @@ export function EditOrderModal({
             <OrderItemsTable
               items={formItems}
               filamentos={filamentos}
+              productos={productos}
               productosComboboxItems={productosComboboxItems}
               onAddItem={handleAddItem}
               onRemoveItem={handleRemoveItem}

@@ -29,6 +29,7 @@ function safeRevalidate() {
 
 export interface ItemPedidoInput {
   productoId: string
+  varianteId?: string | null
   colorFilamentoId?: string | null
   coloresIds?: string[]
   personalizacion?: string | null
@@ -284,16 +285,17 @@ export async function createPedido(data: CreatePedidoInput) {
     }
 
     // 1. Fetch product snapshots to ensure accurate pricing and costs
-    const productIds = data.items.map(i => i.productoId)
+    const targetProductIds = data.items.map(i => i.varianteId || i.productoId)
     const productosDb = await prisma.producto.findMany({
-      where: { id: { in: productIds } }
+      where: { id: { in: targetProductIds } }
     })
     const prodMap = new Map(productosDb.map(p => [p.id, p]))
 
     // 2. Compute item subtotals
     let subtotalCalculado = 0
     const processedItems = data.items.map(item => {
-      const prod = prodMap.get(item.productoId)
+      const resolvedId = item.varianteId || item.productoId
+      const prod = prodMap.get(resolvedId)
       const qty = Math.max(1, Number(item.cantidad) || 1)
       const unitPrice = Number(item.precioUnitario) || 0
       const packCost = Number(item.costoPackaging) || 0
@@ -305,7 +307,7 @@ export async function createPedido(data: CreatePedidoInput) {
         : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
 
       return {
-        productoId: item.productoId,
+        productoId: resolvedId,
         nombreProductoSnapshot: prod?.nombreModelo || (targetNegocio === 'BG' ? 'Juego de Mesa' : 'Modelo 3D'),
         costoBaseSnapshot: prod ? Number(prod.costoBase) : 0,
         colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
@@ -825,16 +827,17 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
     }
 
     // 1. Fetch product snapshots
-    const productIds = data.items.map(i => i.productoId)
+    const targetProductIds = data.items.map(i => i.varianteId || i.productoId)
     const productosDb = await prisma.producto.findMany({
-      where: { id: { in: productIds } }
+      where: { id: { in: targetProductIds } }
     })
     const prodMap = new Map(productosDb.map(p => [p.id, p]))
 
     // 2. Compute item subtotals
     let subtotalCalculado = 0
     const processedItems = data.items.map(item => {
-      const prod = prodMap.get(item.productoId)
+      const resolvedId = item.varianteId || item.productoId
+      const prod = prodMap.get(resolvedId)
       const qty = Math.max(1, Number(item.cantidad) || 1)
       const unitPrice = Number(item.precioUnitario) || 0
       const packCost = Number(item.costoPackaging) || 0
@@ -847,7 +850,7 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
 
       return {
         pedidoId: id,
-        productoId: item.productoId,
+        productoId: resolvedId,
         nombreProductoSnapshot: prod?.nombreModelo || 'Modelo 3D',
         costoBaseSnapshot: prod ? Number(prod.costoBase) : 0,
         colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
@@ -1021,5 +1024,71 @@ export async function toggleSeguimientoPostventa(id: string, seguimiento?: boole
   } catch (error: any) {
     console.error('Error toggling seguimiento postventa:', error)
     return { success: false, error: error.message || 'Error al actualizar seguimiento postventa' }
+  }
+}
+
+export const crearPedido = createPedido
+
+export async function agregarItemPedido(pedidoId: string, item: ItemPedidoInput) {
+  try {
+    const resolvedId = item.varianteId || item.productoId
+    const prod = await prisma.producto.findUnique({
+      where: { id: resolvedId }
+    })
+    const qty = Math.max(1, Number(item.cantidad) || 1)
+    const unitPrice = Number(item.precioUnitario) || 0
+    const packCost = Number(item.costoPackaging) || 0
+    const itemSubtotal = Number(((unitPrice + packCost) * qty).toFixed(2))
+
+    const rawColores = Array.isArray(item.coloresIds) && item.coloresIds.length > 0
+      ? item.coloresIds
+      : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
+
+    const nuevoItem = await prisma.$transaction(async (tx) => {
+      const created = await tx.itemPedido.create({
+        data: {
+          pedidoId,
+          productoId: resolvedId,
+          nombreProductoSnapshot: prod?.nombreModelo || 'Modelo 3D',
+          costoBaseSnapshot: prod ? Number(prod.costoBase) : 0,
+          colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
+          coloresIds: rawColores,
+          personalizacion: item.personalizacion?.trim() || null,
+          cantidad: qty,
+          tipoPrecio: item.tipoPrecio || 'MENOR',
+          precioUnitario: unitPrice,
+          costoPackaging: packCost,
+          porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
+          gramosConsumidos: Number(item.gramosConsumidos) || 0,
+          subtotal: itemSubtotal
+        }
+      })
+
+      // Recalcular subtotal y total del pedido
+      const allItems = await tx.itemPedido.findMany({ where: { pedidoId } })
+      const newSubtotal = allItems.reduce((acc, it) => acc + Number(it.subtotal), 0)
+      const currentPedido = await tx.pedido.findUnique({ where: { id: pedidoId } })
+      const envio = Number(currentPedido?.costoEnvio || 0)
+      const pagado = Number(currentPedido?.montoPagado || 0)
+      const newTotal = Number((newSubtotal + envio).toFixed(2))
+      const newSaldo = Math.max(0, Number((newTotal - pagado).toFixed(2)))
+
+      await tx.pedido.update({
+        where: { id: pedidoId },
+        data: {
+          subtotal: newSubtotal,
+          total: newTotal,
+          saldoPendiente: newSaldo
+        }
+      })
+
+      return created
+    })
+
+    safeRevalidate()
+    return { success: true, item: nuevoItem }
+  } catch (error: any) {
+    console.error('Error al agregar item al pedido:', error)
+    return { success: false, error: error.message || 'Error al agregar item al pedido' }
   }
 }

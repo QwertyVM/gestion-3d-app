@@ -20,6 +20,7 @@ import {
   ClienteOption,
   FormItemState
 } from './types'
+import { groupCatalogProducts, findVariantInGroups } from './productHierarchy'
 import { OrderCustomerSection } from './OrderCustomerSection'
 import { OrderItemCard } from './OrderItemCard'
 import { OrderSummarySection } from './OrderSummarySection'
@@ -30,6 +31,7 @@ interface RegisterMultiProductOrderModalProps {
   productos: ProductoOption[]
   filamentos: FilamentoOption[]
   clientesList: ClienteOption[]
+  initialProductoId?: string
   onOrderCreated: (pedido: any, newClient?: ClienteOption) => void
   onClientAdded?: (cliente: ClienteOption) => void
 }
@@ -47,6 +49,7 @@ export function RegisterMultiProductOrderModal({
   productos,
   filamentos,
   clientesList,
+  initialProductoId,
   onOrderCreated,
   onClientAdded
 }: RegisterMultiProductOrderModalProps) {
@@ -79,31 +82,48 @@ export function RegisterMultiProductOrderModal({
   const [isRegisteringClientInline, setIsRegisteringClientInline] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const getDefaultItemState = (suffix: string = '1', presetProductId?: string): FormItemState => {
+    const catalogGroups = groupCatalogProducts(productos)
+    let selectedGroup = catalogGroups[0]
+    let selectedVariant = selectedGroup?.variants[0] || selectedGroup?.singleVariant
+
+    const targetPresetId = presetProductId || initialProductoId
+    if (targetPresetId) {
+      const match = findVariantInGroups(catalogGroups, targetPresetId)
+      if (match) {
+        selectedGroup = match.group
+        selectedVariant = match.variant
+      }
+    }
+
+    const defaultFilId = getDefaultFilamentoId(filamentos)
+
+    return {
+      id: `item-${Date.now()}-${suffix}`,
+      productoId: selectedGroup?.productoId || selectedVariant?.productoId || (productos[0]?.id || ''),
+      varianteId: selectedVariant?.id || (productos[0]?.id || ''),
+      nombreDisplay: selectedVariant?.nombreCompleto || (productos[0]?.nombreModelo || ''),
+      costoBase: selectedVariant?.costoBase || (productos[0]?.costoBase || 0),
+      colorFilamentoId: defaultFilId,
+      coloresIds: defaultFilId ? [defaultFilId] : [],
+      personalizacion: '',
+      cantidad: 1,
+      tipoPrecio: 'MENOR',
+      precioUnitario: selectedVariant ? selectedVariant.precioMenor : (productos[0]?.precioMenor || ''),
+      costoPackaging: '',
+      porcentajeAdicional: 0,
+      gramosConsumidos: 0
+    }
+  }
+
   // Lista dinámica de ítems
   const [formItems, setFormItems] = useState<FormItemState[]>(() => {
-    const defaultProd = productos[0]
-    const defaultFilId = getDefaultFilamentoId(filamentos)
-    return [
-      {
-        id: `item-${Date.now()}-1`,
-        productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: defaultFilId,
-        coloresIds: defaultFilId ? [defaultFilId] : [],
-        personalizacion: '',
-        cantidad: 1,
-        tipoPrecio: 'MENOR',
-        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
-        costoPackaging: '',
-        porcentajeAdicional: 0,
-        gramosConsumidos: 0
-      }
-    ]
+    return [getDefaultItemState('1')]
   })
 
   // Reset del formulario
   const resetForm = () => {
-    const defaultProd = productos[0]
-    const defaultFilId = getDefaultFilamentoId(filamentos)
+    const presetId = initialProductoId || (typeof window !== 'undefined' ? sessionStorage.getItem('nova_preselected_product_id') || undefined : undefined)
     setFormFecha(new Date().toISOString().split('T')[0])
     setFormCliente('')
     setFormTelefono('')
@@ -120,21 +140,7 @@ export function RegisterMultiProductOrderModal({
     setFormMontoPagado('')
     setFormMetodoPago('YAPE')
     setFormNotasPago('')
-    setFormItems([
-      {
-        id: `item-${Date.now()}-1`,
-        productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: defaultFilId,
-        coloresIds: defaultFilId ? [defaultFilId] : [],
-        personalizacion: '',
-        cantidad: 1,
-        tipoPrecio: 'MENOR',
-        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
-        costoPackaging: '',
-        porcentajeAdicional: 0,
-        gramosConsumidos: 0
-      }
-    ])
+    setFormItems([getDefaultItemState('1', presetId)])
   }
 
   // Reset al abrir el modal si estaba cerrado
@@ -142,17 +148,23 @@ export function RegisterMultiProductOrderModal({
     if (isOpen) {
       resetForm()
     }
-  }, [isOpen])
+  }, [isOpen, initialProductoId])
 
   // Opciones de productos 3D para el SearchableCombobox
   const productosComboboxItems: ComboboxItem[] = useMemo(() => {
-    return (productos || []).map(p => ({
-      id: p.id,
-      label: p.nombreModelo,
-      sublabel: `${p.lineaCategoria || 'General'} • Base: S/ ${Number(p.costoBase || 0).toFixed(2)}`,
-      badge: `S/ ${Number(p.precioMenor || 0).toFixed(2)}`,
-      icon: Boxes
-    }))
+    return (productos || []).map(p => {
+      const displayName = p.nombreModelo.includes(' - ')
+        ? p.nombreModelo.replace(' - ', ' ➔ ')
+        : p.nombreModelo
+
+      return {
+        id: p.id,
+        label: displayName,
+        sublabel: `${p.lineaCategoria || 'General'} • Base: S/ ${Number(p.costoBase || 0).toFixed(2)}`,
+        badge: `S/ ${Number(p.precioMenor || 0).toFixed(2)}`,
+        icon: Boxes
+      }
+    })
   }, [productos])
 
   // Filtrado de clientes para el autocompletado
@@ -244,23 +256,9 @@ export function RegisterMultiProductOrderModal({
 
   // Manejadores de Ítems
   const addItem = () => {
-    const defaultProd = productos[0]
-    const defaultFilId = getDefaultFilamentoId(filamentos)
     setFormItems(prev => [
       ...prev,
-      {
-        id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: defaultFilId,
-        coloresIds: defaultFilId ? [defaultFilId] : [],
-        personalizacion: '',
-        cantidad: 1,
-        tipoPrecio: 'MENOR',
-        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
-        costoPackaging: '',
-        porcentajeAdicional: 0,
-        gramosConsumidos: 0
-      }
+      getDefaultItemState(Math.random().toString(36).substring(2, 6))
     ])
   }
 
@@ -273,22 +271,38 @@ export function RegisterMultiProductOrderModal({
     setFormItems(prev => prev.map(item => {
       if (item.id !== id) return item
       const merged = { ...item, ...updates }
+      const catalogGroups = groupCatalogProducts(productos)
+      const targetId = updates.varianteId || updates.productoId || merged.varianteId || merged.productoId
 
-      if (updates.productoId && updates.productoId !== item.productoId) {
-        const p = productos.find(prod => prod.id === updates.productoId)
-        if (p) {
-          let pUnit = p.precioMenor
-          if (merged.tipoPrecio === 'MAYOR' || (merged.tipoPrecio as string) === 'AMIGOS') pUnit = p.precioMayor
-          else if (merged.tipoPrecio === 'MENOR' || (merged.tipoPrecio as string) === 'MERCADO') pUnit = p.precioMenor
-          merged.precioUnitario = pUnit
+      if (updates.productoId || updates.varianteId) {
+        const match = findVariantInGroups(catalogGroups, targetId)
+        if (match) {
+          merged.varianteId = match.variant.id
+          merged.productoId = match.group.productoId
+          merged.nombreDisplay = match.group.hasVariants
+            ? `${match.group.baseName} - ${match.variant.nombreVariante}`
+            : match.group.baseName
+          merged.costoBase = match.variant.costoBase
+          let pUnit = match.variant.precioMenor
+          if (merged.tipoPrecio === 'MAYOR' || (merged.tipoPrecio as string) === 'AMIGOS') {
+            pUnit = match.variant.precioMayor
+          } else if (merged.tipoPrecio === 'MENOR' || (merged.tipoPrecio as string) === 'MERCADO') {
+            pUnit = match.variant.precioMenor
+          }
+          if (updates.precioUnitario === undefined) {
+            merged.precioUnitario = pUnit
+          }
         }
       }
 
       if (updates.tipoPrecio && updates.tipoPrecio !== item.tipoPrecio) {
-        const p = productos.find(prod => prod.id === merged.productoId)
-        if (p) {
-          if (updates.tipoPrecio === 'MAYOR' || (updates.tipoPrecio as string) === 'AMIGOS') merged.precioUnitario = p.precioMayor
-          else if (updates.tipoPrecio === 'MENOR' || (updates.tipoPrecio as string) === 'MERCADO') merged.precioUnitario = p.precioMenor
+        const match = findVariantInGroups(catalogGroups, targetId)
+        if (match) {
+          if (updates.tipoPrecio === 'MAYOR' || (updates.tipoPrecio as string) === 'AMIGOS') {
+            merged.precioUnitario = match.variant.precioMayor
+          } else if (updates.tipoPrecio === 'MENOR' || (updates.tipoPrecio as string) === 'MERCADO') {
+            merged.precioUnitario = match.variant.precioMenor
+          }
         }
       }
 
@@ -352,6 +366,7 @@ export function RegisterMultiProductOrderModal({
         descontarStock: true,
         items: formItems.map(it => ({
           productoId: it.productoId,
+          varianteId: it.varianteId || it.productoId,
           colorFilamentoId: it.coloresIds?.[0] || it.colorFilamentoId || undefined,
           coloresIds: it.coloresIds || [],
           personalizacion: it.personalizacion.trim() || undefined,

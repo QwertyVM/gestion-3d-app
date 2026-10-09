@@ -304,6 +304,22 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
   const [selectedPagoFilter, setSelectedPagoFilter] = useState<string>('TODOS')
   const [selectedPostventaFilter, setSelectedPostventaFilter] = useState<'TODOS' | 'PENDIENTE' | 'REALIZADO'>('TODOS')
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false)
+  const [preselectedProductId, setPreselectedProductId] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const paramProd = params.get('productoId')
+      const stored = sessionStorage.getItem('nova_preselected_product_id')
+      const prodId = paramProd || stored
+      if (prodId) {
+        setPreselectedProductId(prodId)
+        setIsNewOrderModalOpen(true)
+        if (stored) sessionStorage.removeItem('nova_preselected_product_id')
+      }
+    }
+  }, [])
+
   const [selectedPedidoDetail, setSelectedPedidoDetail] = useState<PedidoView | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   // Estado para Edición de Abono
@@ -365,13 +381,19 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
 
   // Opciones de productos 3D para el buscador predictivo
   const productosComboboxItems: ComboboxItem[] = useMemo(() => {
-    return (productos || []).map(p => ({
-      id: p.id,
-      label: p.nombreModelo,
-      sublabel: `${p.lineaCategoria || 'General'} • Base: S/ ${Number(p.costoBase || 0).toFixed(2)}`,
-      badge: `S/ ${Number(p.precioMenor || 0).toFixed(2)}`,
-      icon: Boxes,
-    }))
+    return (productos || []).map(p => {
+      const displayName = p.nombreModelo.includes(' - ')
+        ? p.nombreModelo.replace(' - ', ' ➔ ')
+        : p.nombreModelo
+
+      return {
+        id: p.id,
+        label: displayName,
+        sublabel: `${p.lineaCategoria || 'General'} • Base: S/ ${Number(p.costoBase || 0).toFixed(2)}`,
+        badge: `S/ ${Number(p.precioMenor || 0).toFixed(2)}`,
+        icon: Boxes,
+      }
+    })
   }, [productos])
 
   // Filtrado de clientes para el dropdown
@@ -1354,10 +1376,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       {/* ========================================================================= */}
       <RegisterMultiProductOrderModal
         isOpen={isNewOrderModalOpen}
-        onClose={() => setIsNewOrderModalOpen(false)}
+        onClose={() => {
+          setIsNewOrderModalOpen(false)
+          setPreselectedProductId(undefined)
+        }}
         productos={productos}
         filamentos={filamentos}
         clientesList={clientesList}
+        initialProductoId={preselectedProductId}
         onOrderCreated={(newPedido, newClient) => {
           setPedidos(prev => [newPedido as any, ...prev])
           if (newClient) {

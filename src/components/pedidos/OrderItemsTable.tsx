@@ -16,12 +16,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
-import { FilamentoOption, FormItemState } from './types'
+import { FilamentoOption, FormItemState, ProductoOption } from './types'
+import { GroupedProductCombobox } from './GroupedProductCombobox'
 
 interface OrderItemsTableProps {
   items: FormItemState[]
   filamentos: FilamentoOption[]
-  productosComboboxItems: ComboboxItem[]
+  productosComboboxItems?: ComboboxItem[]
+  productos?: ProductoOption[]
   onAddItem: () => void
   onRemoveItem: (id: string) => void
   onUpdateItem: (id: string, updates: Partial<FormItemState>) => void
@@ -34,6 +36,7 @@ function OrderItemRow({
   totalItems,
   filamentos,
   productosComboboxItems,
+  productos,
   onUpdateItem,
   onRemoveItem,
   formatCurrency
@@ -42,7 +45,8 @@ function OrderItemRow({
   index: number
   totalItems: number
   filamentos: FilamentoOption[]
-  productosComboboxItems: ComboboxItem[]
+  productosComboboxItems?: ComboboxItem[]
+  productos?: ProductoOption[]
   onUpdateItem: (id: string, updates: Partial<FormItemState>) => void
   onRemoveItem: (id: string) => void
   formatCurrency: (val: number) => string
@@ -122,18 +126,37 @@ function OrderItemRow({
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block md:hidden mb-1">
             Modelo 3D #{index + 1}
           </label>
-          <SearchableCombobox
-            items={productosComboboxItems}
-            value={item.productoId}
-            onChange={(newId) => onUpdateItem(item.id, { productoId: newId })}
-            placeholder="Buscar modelo 3D..."
-            searchPlaceholder="Filtrar modelo..."
-            emptyMessage="No se encontró modelo"
-            icon={Boxes}
-            size="sm"
-            inputClassName="bg-background border-input text-xs font-semibold text-foreground h-8.5 rounded-lg"
-            clearable={false}
-          />
+          {productos && productos.length > 0 ? (
+            <GroupedProductCombobox
+              productos={productos}
+              selectedProductoId={item.productoId}
+              selectedVarianteId={item.varianteId}
+              tipoPrecio={item.tipoPrecio}
+              onSelect={(payload) => {
+                onUpdateItem(item.id, {
+                  productoId: payload.productoId,
+                  varianteId: payload.varianteId,
+                  nombreDisplay: payload.nombreDisplay,
+                  costoBase: payload.costoBase,
+                  precioUnitario: payload.precioUnitario
+                })
+              }}
+              className="h-8.5 rounded-lg text-xs"
+            />
+          ) : (
+            <SearchableCombobox
+              items={productosComboboxItems || []}
+              value={item.productoId}
+              onChange={(newId) => onUpdateItem(item.id, { productoId: newId })}
+              placeholder="Buscar modelo 3D..."
+              searchPlaceholder="Filtrar modelo..."
+              emptyMessage="No se encontró modelo"
+              icon={Boxes}
+              size="sm"
+              inputClassName="bg-background border-input text-xs font-semibold text-foreground h-8.5 rounded-lg"
+              clearable={false}
+            />
+          )}
         </div>
 
         {/* 2. FILAMENTOS (24%) - Dots circulares minimalistas de 10px con Tooltip */}
@@ -357,6 +380,7 @@ export function OrderItemsTable({
   items,
   filamentos,
   productosComboboxItems,
+  productos,
   onAddItem,
   onRemoveItem,
   onUpdateItem,
@@ -409,6 +433,7 @@ export function OrderItemsTable({
             totalItems={items.length}
             filamentos={filamentos}
             productosComboboxItems={productosComboboxItems}
+            productos={productos}
             onUpdateItem={onUpdateItem}
             onRemoveItem={onRemoveItem}
             formatCurrency={formatCurrency}
