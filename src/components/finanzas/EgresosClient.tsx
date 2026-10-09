@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Card } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,31 +19,34 @@ import {
   Truck, 
   ChevronLeft, 
   ChevronRight, 
-  ChevronUp, 
   ChevronDown, 
   Pencil, 
   Tag, 
-  Sparkles, 
   Check, 
   Loader2, 
   ExternalLink, 
   Receipt,
   Landmark,
   Dice5,
-  Gamepad2,
   Store,
-  Building2,
-  Package
+  Calendar
 } from 'lucide-react'
-import { createInversion, updateInversion, deleteInversion, swapInversionOrder } from '@/actions/inversiones'
+import { createInversion, updateInversion, deleteInversion } from '@/actions/inversiones'
 import { TagInsumoItem } from '@/actions/tagsInsumos'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/utils'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { MultiTagInput } from '@/components/ui/MultiTagInput'
-import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
-import { DateFilterControl } from '@/components/ui/DateFilterControl'
+import { 
+  DatePreset, 
+  DateRange, 
+  getDefaultDateRange, 
+  isDateInRange, 
+  getPresetDateRange, 
+  getMonthYearDateRange, 
+  MESES_ES, 
+  formatFechaEvolucion 
+} from '@/lib/date-utils'
 import { EgresoItem } from './FlujoCajaClient'
 import { useBusiness } from '@/context/BusinessContext'
 
@@ -101,7 +102,7 @@ const CATEGORIAS_CONFIG_BG = [
     id: 'MERCADERIA',
     label: 'Compra de Juegos / Stock',
     desc: 'Juegos de mesa, pedidos, expansiones',
-    icon: Gamepad2,
+    icon: Dice5,
   },
   {
     id: 'FINANCIERO',
@@ -147,43 +148,465 @@ const DISTRIBUIDORAS_JUEGOS = [
   'MasQueOca'
 ]
 
-// Paleta de estilos Light Mode por color de tag
-const TAG_COLOR_CLASSES: Record<string, { badge: string; chip: string; chipActive: string }> = {
-  amber: {
-    badge: 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]',
-    chip: 'bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] border-[#E2D9CC]',
-    chipActive: 'bg-[#EFE5D8] text-[#633E20] font-bold shadow-sm border-[#D4BEA7]',
-  },
-  blue: {
-    badge: 'bg-[#EBF3FC] text-[#245D99] border-[#B9D5F3]',
-    chip: 'bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] border-[#E2D9CC]',
-    chipActive: 'bg-[#EBF3FC] text-[#245D99] font-bold shadow-sm border-[#B9D5F3]',
-  },
-  emerald: {
-    badge: 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]',
-    chip: 'bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] border-[#E2D9CC]',
-    chipActive: 'bg-[#EBF7EE] text-[#1E5E3A] font-bold shadow-sm border-[#B4E3C0]',
-  },
-  purple: {
-    badge: 'bg-[#F3EDFA] text-[#6A389D] border-[#D6C2ED]',
-    chip: 'bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] border-[#E2D9CC]',
-    chipActive: 'bg-[#F3EDFA] text-[#6A389D] font-bold shadow-sm border-[#D6C2ED]',
-  },
-  pink: {
-    badge: 'bg-[#FDF0EE] text-[#A34335] border-[#F2C0B8]',
-    chip: 'bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] border-[#E2D9CC]',
-    chipActive: 'bg-[#FDF0EE] text-[#A34335] font-bold shadow-sm border-[#F2C0B8]',
-  },
-  indigo: {
-    badge: 'bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7]',
-    chip: 'bg-[#F4EFEA] text-[#75695D] hover:text-[#241C15] border-[#E2D9CC]',
-    chipActive: 'bg-[#EFE5D8] text-[#633E20] font-bold shadow-sm border-[#D4BEA7]',
-  },
+function parseDateToYearMonth(d: string | Date | null | undefined): { year: number; month: number } | null {
+  if (!d) return null
+  if (d instanceof Date) {
+    if (isNaN(d.getTime())) return null
+    return { year: d.getFullYear(), month: d.getMonth() }
+  }
+  const str = String(d).trim()
+  if (!str) return null
+  const ymd = str.split('T')[0].split('-').map(Number)
+  if (ymd.length >= 2 && !isNaN(ymd[0]) && !isNaN(ymd[1])) {
+    return { year: ymd[0], month: ymd[1] - 1 }
+  }
+  const dateObj = new Date(str)
+  if (!isNaN(dateObj.getTime())) {
+    return { year: dateObj.getFullYear(), month: dateObj.getMonth() }
+  }
+  return null
 }
 
+// =========================================================================
+// Paginador de Meses Segmentado Único
+// =========================================================================
+interface MonthSegmentedControlProps {
+  value: DateRange
+  onChange: (range: DateRange) => void
+  minDate?: string | Date | null
+  maxDate?: string | Date | null
+}
+
+function MonthSegmentedControl({
+  value,
+  onChange,
+  minDate,
+  maxDate,
+}: MonthSegmentedControlProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const now = new Date()
+  const maxLimit = parseDateToYearMonth(maxDate) || { year: now.getFullYear(), month: now.getMonth() }
+  const minLimit = parseDateToYearMonth(minDate)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
+
+  const getActiveMonthAndYear = () => {
+    if (value.from) {
+      const parts = value.from.split('-').map(Number)
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        return { year: parts[0], month: parts[1] - 1 }
+      }
+    }
+    return { year: maxLimit.year, month: maxLimit.month }
+  }
+
+  const { year: currentYear, month: currentMonth } = getActiveMonthAndYear()
+
+  const isNextDisabled =
+    value.preset === 'TODO' ||
+    currentYear > maxLimit.year ||
+    (currentYear === maxLimit.year && currentMonth >= maxLimit.month)
+
+  const isPrevDisabled = Boolean(
+    minLimit &&
+      (currentYear < minLimit.year ||
+        (currentYear === minLimit.year && currentMonth <= minLimit.month))
+  )
+
+  const handleNavigateMonth = (direction: -1 | 1) => {
+    if (direction === 1 && isNextDisabled) return
+    if (direction === -1 && isPrevDisabled) return
+
+    if (value.preset === 'TODO') {
+      if (direction === -1) {
+        const targetYear = maxLimit.year
+        const targetMonth = maxLimit.month
+        const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth()
+
+        if (isCurrentMonth) {
+          onChange(getPresetDateRange('ESTE_MES'))
+          return
+        }
+
+        const newRange = getMonthYearDateRange(targetYear, targetMonth + 1)
+        onChange(newRange)
+        return
+      }
+      return
+    }
+
+    const targetDate = new Date(currentYear, currentMonth + direction, 1)
+    const targetYear = targetDate.getFullYear()
+    const targetMonth = targetDate.getMonth()
+
+    const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth()
+
+    if (isCurrentMonth) {
+      onChange(getPresetDateRange('ESTE_MES'))
+      return
+    }
+
+    const newRange = getMonthYearDateRange(targetYear, targetMonth + 1)
+    onChange(newRange)
+  }
+
+  const getFullCalendarMonthInfo = () => {
+    if (!value.from || !value.to) return null
+    const [fromY, fromM, fromD] = value.from.split('-').map(Number)
+    const [toY, toM, toD] = value.to.split('-').map(Number)
+    if (fromY === toY && fromM === toM && fromD === 1) {
+      const lastDayOfMonth = new Date(fromY, fromM, 0).getDate()
+      if (toD === lastDayOfMonth) {
+        return { year: fromY, monthIndex: fromM - 1 }
+      }
+    }
+    return null
+  }
+
+  const fullMonthInfo = getFullCalendarMonthInfo()
+
+  const getDisplayLabel = () => {
+    if (value.preset === 'ESTE_MES') {
+      return `${MESES_ES[now.getMonth()]} ${now.getFullYear()}`
+    }
+    if (value.preset === 'MES_ANTERIOR') {
+      const prev = new Date()
+      prev.setMonth(prev.getMonth() - 1)
+      return `${MESES_ES[prev.getMonth()]} ${prev.getFullYear()}`
+    }
+    if (value.preset === 'ESTA_SEMANA') {
+      return 'Esta Semana'
+    }
+    if (value.preset === 'SEMANA_ANTERIOR') {
+      return 'Semana Pasada'
+    }
+    if (value.preset === 'ULTIMOS_3_MESES') {
+      return 'Hace 3 meses'
+    }
+    if (value.preset === 'TODO') {
+      return 'Histórico'
+    }
+    if (fullMonthInfo) {
+      return `${MESES_ES[fullMonthInfo.monthIndex]} ${fullMonthInfo.year}`
+    }
+    if (value.from && value.to) {
+      return `${formatFechaEvolucion(value.from)} - ${formatFechaEvolucion(value.to)}`
+    }
+    return 'Histórico'
+  }
+
+  return (
+    <div className="relative inline-flex" ref={dropdownRef}>
+      <div className="bg-card border border-border rounded-xl h-10 inline-flex items-center shadow-xs overflow-hidden">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => handleNavigateMonth(-1)}
+          disabled={isPrevDisabled}
+          className="h-10 w-9 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-none shrink-0 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Mes anterior"
+          aria-label="Mes anterior"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="px-3 text-xs font-semibold text-foreground flex items-center gap-1.5 hover:bg-secondary/60 h-full border-x border-border/70 transition-colors cursor-pointer select-none"
+          title="Ver opciones de periodo o mes"
+        >
+          <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="truncate max-w-[130px] sm:max-w-[170px]">{getDisplayLabel()}</span>
+          <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => handleNavigateMonth(1)}
+          disabled={isNextDisabled}
+          className="h-10 w-9 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-none shrink-0 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+          title="Mes siguiente"
+          aria-label="Mes siguiente"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-64 rounded-xl bg-card border border-border shadow-xl z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-2 py-1 text-[11px] font-bold text-muted-foreground uppercase tracking-wider border-b border-border/60 mb-1 flex items-center justify-between">
+            <span>Periodo de Selección</span>
+            {value.preset !== 'ESTE_MES' && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(getPresetDateRange('ESTE_MES'))
+                  setIsOpen(false)
+                }}
+                className="text-[10px] text-primary hover:underline font-bold cursor-pointer"
+              >
+                Mes Actual
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              onChange(getPresetDateRange('ESTE_MES'))
+              setIsOpen(false)
+            }}
+            className={`w-full px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+              value.preset === 'ESTE_MES'
+                ? 'bg-primary/10 text-primary font-bold'
+                : 'text-foreground hover:bg-secondary'
+            }`}
+          >
+            <span>📅 Mes Actual ({MESES_ES[now.getMonth()]})</span>
+            {value.preset === 'ESTE_MES' && <Check className="h-3.5 w-3.5 text-primary" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onChange(getPresetDateRange('TODO'))
+              setIsOpen(false)
+            }}
+            className={`w-full px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+              value.preset === 'TODO'
+                ? 'bg-primary/10 text-primary font-bold'
+                : 'text-foreground hover:bg-secondary'
+            }`}
+          >
+            <span>🌐 Histórico Completo</span>
+            {value.preset === 'TODO' && <Check className="h-3.5 w-3.5 text-primary" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onChange(getPresetDateRange('ESTA_SEMANA'))
+              setIsOpen(false)
+            }}
+            className={`w-full px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+              value.preset === 'ESTA_SEMANA'
+                ? 'bg-primary/10 text-primary font-bold'
+                : 'text-foreground hover:bg-secondary'
+            }`}
+          >
+            <span>📆 Esta Semana</span>
+            {value.preset === 'ESTA_SEMANA' && <Check className="h-3.5 w-3.5 text-primary" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onChange(getPresetDateRange('SEMANA_ANTERIOR'))
+              setIsOpen(false)
+            }}
+            className={`w-full px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+              value.preset === 'SEMANA_ANTERIOR'
+                ? 'bg-primary/10 text-primary font-bold'
+                : 'text-foreground hover:bg-secondary'
+            }`}
+          >
+            <span>⏪ Semana Pasada</span>
+            {value.preset === 'SEMANA_ANTERIOR' && <Check className="h-3.5 w-3.5 text-primary" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onChange(getPresetDateRange('ULTIMOS_3_MESES'))
+              setIsOpen(false)
+            }}
+            className={`w-full px-2.5 py-2 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+              value.preset === 'ULTIMOS_3_MESES'
+                ? 'bg-primary/10 text-primary font-bold'
+                : 'text-foreground hover:bg-secondary'
+            }`}
+          >
+            <span>⏱️ Hace 3 meses</span>
+            {value.preset === 'ULTIMOS_3_MESES' && <Check className="h-3.5 w-3.5 text-primary" />}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// =========================================================================
+// Selector Independiente de Tags
+// =========================================================================
+interface TagSelectorDropdownProps {
+  tags: string[]
+  value: string
+  onChange: (val: string) => void
+  items: EgresoItem[]
+  categoriaFilter: string
+  isBG: boolean
+}
+
+function TagSelectorDropdown({
+  tags,
+  value,
+  onChange,
+  items,
+  categoriaFilter,
+  isBG,
+}: TagSelectorDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchTag, setSearchTag] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
+
+  const filteredTags = useMemo(() => {
+    if (!searchTag.trim()) return tags
+    return tags.filter(t => t.toLowerCase().includes(searchTag.toLowerCase().trim()))
+  }, [tags, searchTag])
+
+  const getTagCount = (tagName: string) => {
+    return items.filter(e => {
+      let catMatch = categoriaFilter === 'TODOS'
+      if (!catMatch) {
+        if (categoriaFilter === 'MERCADERIA') {
+          catMatch = e.categoria === 'MERCADERIA' || (isBG && e.categoria === 'INSUMO')
+        } else {
+          catMatch = e.categoria === categoriaFilter
+        }
+      }
+      if (!catMatch || !e.subcategoria) return false
+      const itemTags = e.subcategoria.split(',').map(s => s.trim().toLowerCase())
+      return itemTags.includes(tagName.toLowerCase())
+    }).length
+  }
+
+  return (
+    <div className="relative inline-block" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="border-input bg-card text-foreground text-xs font-semibold h-10 px-3 rounded-xl flex items-center gap-2 shadow-xs hover:bg-secondary transition-colors cursor-pointer"
+        title="Filtrar por Tag"
+      >
+        <Tag className="h-3.5 w-3.5 text-primary shrink-0" />
+        <span className="truncate max-w-[120px] sm:max-w-[150px]">
+          {value === 'TODOS' ? (categoriaFilter === 'TODOS' ? 'Todos los Tags' : `Tags (${tags.length})`) : value}
+        </span>
+        <ChevronDown className={`h-3 w-3 text-muted-foreground ml-auto transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1.5 w-60 rounded-xl bg-card border border-border shadow-xl z-50 p-2 space-y-1.5 animate-in fade-in zoom-in-95 duration-150">
+          {tags.length > 5 && (
+            <div className="relative mb-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Buscar tag..."
+                value={searchTag}
+                onChange={(e) => setSearchTag(e.target.value)}
+                className="w-full bg-secondary/60 border border-input text-foreground text-xs rounded-lg pl-8 pr-2.5 py-1.5 placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+                autoFocus
+              />
+            </div>
+          )}
+
+          <div className="max-h-56 overflow-y-auto space-y-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                onChange('TODOS')
+                setIsOpen(false)
+                setSearchTag('')
+              }}
+              className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                value === 'TODOS'
+                  ? 'bg-primary/10 text-primary font-bold'
+                  : 'text-foreground hover:bg-secondary'
+              }`}
+            >
+              <span>Todos los Tags</span>
+              <span className="text-[10px] text-muted-foreground">({tags.length})</span>
+            </button>
+
+            {filteredTags.map(tag => {
+              const count = getTagCount(tag)
+              const isSelected = value.toLowerCase() === tag.toLowerCase()
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => {
+                    onChange(tag)
+                    setIsOpen(false)
+                    setSearchTag('')
+                  }}
+                  className={`w-full px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary/10 text-primary font-bold'
+                      : 'text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  <span className="truncate">{tag}</span>
+                  {count > 0 && (
+                    <span className="text-[10px] text-muted-foreground shrink-0 ml-1">
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+
+            {filteredTags.length === 0 && (
+              <div className="p-3 text-center text-xs text-muted-foreground">
+                No hay tags que coincidan
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// =========================================================================
+// Componente Principal EgresosClient
+// =========================================================================
 export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosClientProps) {
   const router = useRouter()
-  const { isBG, is3D } = useBusiness()
+  const { isBG } = useBusiness()
   const [items, setItems] = useState<EgresoItem[]>(egresos)
 
   useEffect(() => {
@@ -215,10 +638,10 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Item being edited
+  // Item siendo editado
   const [editingItem, setEditingItem] = useState<EgresoItem | null>(null)
 
-  // Form states (Create & Edit)
+  // Estados del Formulario (Crear y Editar)
   const [formPersona, setFormPersona] = useState('Víctor')
   const [formCategoria, setFormCategoria] = useState<CategoriaEgreso>(isBG ? 'MERCADERIA' : 'INSUMO')
   const [formConcepto, setFormConcepto] = useState('')
@@ -228,23 +651,15 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
   const [formCostoEnvio, setFormCostoEnvio] = useState('0')
   const [formFecha, setFormFecha] = useState(new Date().toISOString().split('T')[0])
 
-  // Categorías activas según el negocio
+  // Configuración de categorías activas según el negocio
   const activeCategoriasConfig = isBG ? CATEGORIAS_CONFIG_BG : CATEGORIAS_CONFIG_3D
 
-  // Obtener estilo de color asignado a un tag
-  const getTagColor = (tagText?: string | null) => {
-    if (!tagText) return TAG_COLOR_CLASSES.indigo
-    const found = tags.find(t => t.nombre.trim().toLowerCase() === tagText.trim().toLowerCase())
-    const colorKey = found?.color || 'indigo'
-    return TAG_COLOR_CLASSES[colorKey] || TAG_COLOR_CLASSES.indigo
-  }
-
-  // Lista de tags filtrados dinámicamente por la categoría activa del formulario
+  // Tags para el formulario
   const activeCategoryTags = useMemo(() => {
     return tags.filter(t => t.categoria === formCategoria)
   }, [tags, formCategoria])
 
-  // Lista única de todos los nombres de tags para filtros generales
+  // Lista única de tags disponibles
   const availableTags = useMemo(() => {
     const set = new Set<string>()
 
@@ -264,7 +679,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [items, tags])
 
-  // Tags para el dropdown de la barra de filtros
+  // Tags disponibles para el dropdown filtrados por la categoría activa
   const dropdownTags = useMemo(() => {
     if (categoriaFilter === 'TODOS') {
       return availableTags
@@ -295,40 +710,9 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
   }, [categoriaFilter, tags, items, availableTags, isBG])
 
-  const tagsComboboxItems: ComboboxItem[] = useMemo(() => {
-    const allOption: ComboboxItem = {
-      id: 'TODOS',
-      label: categoriaFilter === 'TODOS' ? 'Todos los Tags' : `Tags (${dropdownTags.length})`,
-      badge: `${dropdownTags.length}`
-    }
-    const tagOptions: ComboboxItem[] = dropdownTags.map(tag => {
-      const count = items.filter(e => {
-        let catMatch = categoriaFilter === 'TODOS'
-        if (!catMatch) {
-          if (categoriaFilter === 'MERCADERIA') {
-            catMatch = e.categoria === 'MERCADERIA' || (isBG && e.categoria === 'INSUMO')
-          } else {
-            catMatch = e.categoria === categoriaFilter
-          }
-        }
-        if (!catMatch || !e.subcategoria) return false
-        const itemTags = e.subcategoria.split(',').map(s => s.trim().toLowerCase())
-        return itemTags.includes(tag.toLowerCase())
-      }).length
-
-      return {
-        id: tag,
-        label: tag,
-        badge: count > 0 ? `${count}` : undefined,
-        icon: Tag
-      }
-    })
-    return [allOption, ...tagOptions]
-  }, [dropdownTags, categoriaFilter, items, isBG])
-
   const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // Filtered & Sorted List (Descendente por fecha de creación createdAt)
+  // Lista Filtrada y Ordenada Dinámica (reactiva instantáneamente a filtros de categoría, tag, fecha y texto)
   const filteredEgresos = useMemo(() => {
     return items
       .filter(eg => {
@@ -363,29 +747,25 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }, [items, dateRange, search, categoriaFilter, tagFilter, isBG])
 
-  // Indicador de filtros activos
   const isFiltered = search.trim() !== '' || categoriaFilter !== 'TODOS' || tagFilter !== 'TODOS' || dateRange.preset !== 'ESTE_MES'
 
-  // Dynamic Financial KPIs based on filtered items
+  // KPIs Dinámicos actualizados en tiempo real según filtros
   const totalEgresosTotales = useMemo(() => {
     return filteredEgresos.reduce((acc, e) => acc + e.costoTotal, 0)
   }, [filteredEgresos])
 
-  // BG: Juegos / Stock. 3D: Insumos & Materiales
   const totalInsumosOrJuegos = useMemo(() => {
     return filteredEgresos
       .filter(e => e.categoria === 'MERCADERIA' || (isBG ? e.categoria === 'INSUMO' : e.categoria === 'INSUMO'))
       .reduce((acc, e) => acc + e.costoTotal, 0)
   }, [filteredEgresos, isBG])
 
-  // BG: Gastos Bancarios & ITF
   const totalFinancieroITF = useMemo(() => {
     return filteredEgresos
       .filter(e => e.categoria === 'FINANCIERO')
       .reduce((acc, e) => acc + e.costoTotal, 0)
   }, [filteredEgresos])
 
-  // 3D: Maquinaria & Equipos. BG: Equipamiento Activo Fijo
   const totalMaquinariaOrEquipamiento = useMemo(() => {
     return filteredEgresos
       .filter(e => e.categoria === 'ACTIVO_FIJO')
@@ -398,12 +778,48 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       .reduce((acc, e) => acc + e.costoTotal, 0)
   }, [filteredEgresos])
 
-  // Pagination
+  // Paginación
   const totalPages = Math.max(1, Math.ceil(filteredEgresos.length / ITEMS_PER_PAGE))
   const paginatedEgresos = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE
     return filteredEgresos.slice(start, start + ITEMS_PER_PAGE)
   }, [filteredEgresos, currentPage])
+
+  // Tabs de categorías con contadores dinámicos
+  const categoryTabs = useMemo(() => {
+    // Calculamos conteos globales o sobre la fecha activa
+    const itemsInPeriod = items.filter(eg => isDateInRange(eg.createdAt, dateRange.from, dateRange.to))
+
+    if (isBG) {
+      const countTodos = itemsInPeriod.length
+      const countStock = itemsInPeriod.filter(e => e.categoria === 'MERCADERIA' || e.categoria === 'INSUMO').length
+      const countEquip = itemsInPeriod.filter(e => e.categoria === 'ACTIVO_FIJO').length
+      const countServ = itemsInPeriod.filter(e => e.categoria === 'SERVICIO').length
+      const countFin = itemsInPeriod.filter(e => e.categoria === 'FINANCIERO').length
+
+      return [
+        { id: 'TODOS', label: `Todos (${countTodos})` },
+        { id: 'MERCADERIA', label: countStock > 0 ? `Juegos / Stock (${countStock})` : 'Juegos / Stock' },
+        { id: 'ACTIVO_FIJO', label: countEquip > 0 ? `Equipamiento (${countEquip})` : 'Equipamiento' },
+        { id: 'SERVICIO', label: countServ > 0 ? `Servicios (${countServ})` : 'Servicios' },
+        { id: 'FINANCIERO', label: countFin > 0 ? `Banco / ITF (${countFin})` : 'Banco / ITF' },
+      ]
+    }
+
+    const countTodos = itemsInPeriod.length
+    const countInsumos = itemsInPeriod.filter(e => e.categoria === 'INSUMO').length
+    const countActivos = itemsInPeriod.filter(e => e.categoria === 'ACTIVO_FIJO').length
+    const countServicios = itemsInPeriod.filter(e => e.categoria === 'SERVICIO').length
+    const countFinanciero = itemsInPeriod.filter(e => e.categoria === 'FINANCIERO').length
+
+    return [
+      { id: 'TODOS', label: `Todos (${countTodos})` },
+      { id: 'INSUMO', label: countInsumos > 0 ? `Insumos (${countInsumos})` : 'Insumos' },
+      { id: 'ACTIVO_FIJO', label: countActivos > 0 ? `Activos Fijos (${countActivos})` : 'Activos Fijos' },
+      { id: 'SERVICIO', label: countServicios > 0 ? `Servicios (${countServicios})` : 'Servicios' },
+      { id: 'FINANCIERO', label: countFinanciero > 0 ? `Financiero (${countFinanciero})` : 'Financiero' },
+    ]
+  }, [items, dateRange, isBG])
 
   // Handler cambio de categoría en modal
   const handleSelectCategoria = (cat: CategoriaEgreso) => {
@@ -417,7 +833,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     }
   }
 
-  // Open Create Modal (General)
+  // Abrir Modal de Creación
   const handleOpenCreate = () => {
     setFormPersona('Víctor')
     const defaultCat: CategoriaEgreso = isBG ? 'MERCADERIA' : 'INSUMO'
@@ -432,7 +848,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     setOpenModal(true)
   }
 
-  // Open Create Modal (Fast ITF)
+  // Abrir Modal de Creación Rápida de ITF
   const handleOpenCreateITF = () => {
     setFormPersona('Víctor')
     setFormCategoria('FINANCIERO')
@@ -445,7 +861,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     setOpenModal(true)
   }
 
-  // Open Edit Modal
+  // Abrir Modal de Edición
   const handleOpenEdit = (eg: EgresoItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     let cat: CategoriaEgreso = eg.categoria as CategoriaEgreso
@@ -464,7 +880,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     setOpenEditModal(true)
   }
 
-  // Stepper handlers for quantity
+  // Handlers para stepper de cantidad
   const handleIncrementCantidad = () => {
     const current = parseInt(formCantidad) || 1
     setFormCantidad((current + 1).toString())
@@ -477,7 +893,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     }
   }
 
-  // Submit Create
+  // Submit Crear
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formConcepto.trim() || !formCostoUnitario) {
@@ -511,7 +927,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     }
   }
 
-  // Submit Edit
+  // Submit Editar
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingItem) return
@@ -547,7 +963,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     }
   }
 
-  // Delete
+  // Eliminar
   const handleDelete = async (id: string, concepto: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     if (confirm(`¿Estás seguro de eliminar el egreso "${concepto}"?`)) {
@@ -557,101 +973,76 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
         toast.success('Egreso eliminado')
         if (openEditModal) setOpenEditModal(false)
         router.refresh()
-      } catch (err) {
-        toast.error('Error al eliminar')
+      } catch {
+        toast.error('Error al eliminar egreso')
       }
     }
   }
 
-  // Reorder within the same day
-  const handleMoveEgreso = async (idCurrent: string, idTarget: string, direction: 'up' | 'down') => {
-    const currentItem = items.find(i => i.id === idCurrent)
-    const targetItem = items.find(i => i.id === idTarget)
-    if (!currentItem || !targetItem) return
-
-    setItems(prev => prev.map(item => {
-      if (item.id === idCurrent) return { ...item, createdAt: targetItem.createdAt }
-      if (item.id === idTarget) return { ...item, createdAt: currentItem.createdAt }
-      return item
-    }))
-
-    try {
-      await swapInversionOrder(idCurrent, idTarget)
-      toast.success(direction === 'up' ? 'Posición subida' : 'Posición bajada')
-    } catch (err: any) {
-      toast.error(err?.message || 'Error al reordenar')
-      router.refresh()
-    }
-  }
-
-  // Tag Badge Renderer con soporte para múltiples tags
-  const renderTagBadge = (tagText?: string | null) => {
+  // Renderizador de Chips de Tags
+  const renderTagChips = (tagText?: string | null) => {
     if (!tagText) return null
     const tagsList = tagText.split(',').map(t => t.trim()).filter(Boolean)
     if (tagsList.length === 0) return null
 
     return (
-      <div className="flex flex-wrap items-center gap-1">
-        {tagsList.map((tag, idx) => {
-          const colorStyle = getTagColor(tag)
-          return (
-            <Badge 
-              key={`${tag}-${idx}`} 
-              variant="outline" 
-              className={`text-[10px] font-semibold py-0 px-1.5 gap-1 ${colorStyle.badge}`}
-            >
-              <Tag className="h-2.5 w-2.5" />
-              {tag}
-            </Badge>
-          )
-        })}
+      <div className="inline-flex items-center flex-wrap gap-1">
+        {tagsList.map((tag, idx) => (
+          <span
+            key={`${tag}-${idx}`}
+            className="bg-secondary/70 border border-border/70 text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md inline-flex items-center gap-1 mt-1 mr-1.5"
+          >
+            <Tag className="h-2.5 w-2.5 shrink-0" />
+            <span>{tag}</span>
+          </span>
+        ))}
       </div>
     )
   }
 
-  // Visual Category Badge
+  // Badges Semánticos de Categoría según paleta oficial NOVA
   const renderCategoriaBadge = (cat: string) => {
     if (cat === 'MERCADERIA' || (isBG && cat === 'INSUMO')) {
       return (
-        <Badge variant="outline" className="bg-[#EBF3FC] text-[#245D99] border-[#B9D5F3] text-[10px] font-bold px-1.5 py-0 gap-1 inline-flex items-center">
-          <Dice5 className="h-3 w-3" />
+        <span className="bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 text-[11px] font-semibold px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+          <Dice5 className="h-3 w-3 shrink-0" />
           Juegos / Stock
-        </Badge>
+        </span>
       )
     }
     if (cat === 'FINANCIERO') {
       return (
-        <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-[10px] font-bold px-1.5 py-0 gap-1 inline-flex items-center">
-          <Landmark className="h-3 w-3" />
+        <span className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-semibold px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+          <Landmark className="h-3 w-3 shrink-0" />
           Bancario / ITF
-        </Badge>
+        </span>
       )
     }
     if (cat === 'ACTIVO_FIJO') {
       return (
-        <Badge variant="outline" className="bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7] text-[10px] font-bold px-1.5 py-0 gap-1 inline-flex items-center">
-          {isBG ? <Store className="h-3 w-3" /> : <Wrench className="h-3 w-3" />}
-          {isBG ? 'Equipamiento' : 'Maquinaria'}
-        </Badge>
+        <span className="bg-primary/10 text-primary border border-primary/20 text-[11px] font-semibold px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+          {isBG ? <Store className="h-3 w-3 shrink-0" /> : <Wrench className="h-3 w-3 shrink-0" />}
+          {isBG ? 'Equipamiento' : 'Activo Fijo'}
+        </span>
       )
     }
     if (cat === 'INSUMO') {
       return (
-        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[10px] font-bold px-1.5 py-0 gap-1 inline-flex items-center">
-          <ShoppingBag className="h-3 w-3" />
+        <span className="bg-accent text-accent-foreground border border-border text-[11px] font-semibold px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+          <ShoppingBag className="h-3 w-3 shrink-0" />
           Insumo
-        </Badge>
+        </span>
       )
     }
     return (
-      <Badge variant="outline" className="bg-emerald-50 text-[#1E5E3A] border-emerald-200 text-[10px] font-bold px-1.5 py-0 gap-1 inline-flex items-center">
-        <Truck className="h-3 w-3" />
+      <span className="bg-secondary text-foreground border border-border text-[11px] font-semibold px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+        <Truck className="h-3 w-3 shrink-0" />
         Servicio
-      </Badge>
+      </span>
     )
   }
 
-  // Live Cost Metrics Preview for Forms
+  // Previsualización de métricas en formularios
   const liveCostMetrics = useMemo(() => {
     const cant = Math.max(1, parseInt(formCantidad) || 1)
     const unit = Math.max(0, parseFloat(formCostoUnitario) || 0)
@@ -668,25 +1059,28 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
   }, [formCantidad, formCostoUnitario, formCostoEnvio])
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 bg-background text-foreground min-h-screen">
+      {/* ========================================================================= */}
+      {/* 1. Header con Navegación Temporal y Acciones                               */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-accent border border-border text-accent-foreground shadow-xs">
               <ArrowDownRight className="h-6 w-6 stroke-[2.5]" />
             </div>
             <span>{isBG ? 'Registro de Egresos & Compras' : 'Registro de Egresos & Insumos'}</span>
           </h1>
-          <p className="text-sm text-[#75695D] mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {isBG 
               ? 'Control de compra de juegos de mesa, gastos bancarios (ITF), logística y servicios.' 
               : 'Control de compras de insumos, maquinaria, fletes y servicios del taller.'}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          <DateFilterControl
+        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+          {/* Paginador de meses en un control segmentado único */}
+          <MonthSegmentedControl
             value={dateRange}
             onChange={(newRange) => {
               setDateRange(newRange)
@@ -696,562 +1090,422 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
             maxDate={maxFechaData}
           />
 
+          {/* Botón secundario Tags */}
           <Link href="/finanzas/tags">
-            <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-9 shadow-2xs font-medium px-3">
-              <Tag className="h-3.5 w-3.5 mr-1.5 text-[#A36F4C]" />
+            <Button 
+              variant="outline" 
+              className="border-border text-foreground hover:bg-secondary rounded-xl h-10 px-3.5 text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+            >
+              <Tag className="h-3.5 w-3.5 text-primary" />
               Tags
             </Button>
           </Link>
 
-          {/* Quick ITF button specifically for Board Games store */}
+          {/* Botón rápido ITF para juegos de mesa */}
           {isBG && (
             <Button 
               onClick={handleOpenCreateITF}
-              className="bg-emerald-700 hover:bg-emerald-800 text-[#FFFFFF] font-bold shadow-xs transition-all cursor-pointer rounded-xl px-3 h-9 text-xs active:scale-[0.98] flex items-center gap-1.5"
+              className="border border-emerald-500/30 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold text-xs h-10 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
             >
-              <Landmark className="h-3.5 w-3.5 stroke-[2.5]" />
-              + Registrar ITF
+              <Landmark className="h-3.5 w-3.5 stroke-[2.5] text-emerald-700" />
+              + ITF
             </Button>
           )}
 
+          {/* Botón primario + Registrar Egreso */}
           <Button 
             onClick={handleOpenCreate}
-            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-xs transition-all cursor-pointer rounded-xl px-3.5 h-9 text-xs active:scale-[0.98]"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-10 px-4 rounded-xl shadow-md shadow-primary/20 flex items-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
-            {isBG ? 'Registrar Compra / Egreso' : 'Registrar Egreso'}
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            {isBG ? 'Registrar Compra / Egreso' : '+ Registrar Egreso'}
           </Button>
         </div>
       </div>
 
-      {/* KPI Overview Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Total Egresos */}
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">Total Egresos</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+      {/* ========================================================================= */}
+      {/* 2. Tarjetas KPI Superiores (4 tarjetas en grid h-[104px])                 */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* KPI 1: Total Egresos */}
+        <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px]">
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>Total Egresos</span>
+            <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-primary">
               <Receipt className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#A36F4C] font-mono tabular-nums">
+          <div>
+            <div className="text-2xl font-extrabold text-foreground tracking-tight font-mono tabular-nums">
               {formatCurrency(totalEgresosTotales)}
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+            <div className="text-xs text-muted-foreground truncate">
               {isFiltered ? `${filteredEgresos.length} de ${items.length} registros` : `${items.length} registros`}
-            </span>
+            </div>
           </div>
         </div>
 
-        {/* Card 2: Compra de Juegos (BG) o Insumos (3D) */}
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">{isBG ? 'Compra de Juegos & Stock' : 'Insumos & Materiales'}</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#245D99]">
+        {/* KPI 2: Compra de Juegos (BG) o Insumos (3D) */}
+        <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px]">
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>{isBG ? 'Compra de Juegos & Stock' : 'Insumos & Materiales'}</span>
+            <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-primary">
               {isBG ? <Dice5 className="h-3.5 w-3.5" /> : <ShoppingBag className="h-3.5 w-3.5" />}
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+          <div>
+            <div className="text-2xl font-extrabold text-foreground tracking-tight font-mono tabular-nums">
               {formatCurrency(totalInsumosOrJuegos)}
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+            <div className="text-xs text-muted-foreground truncate">
               {isFiltered 
                 ? `${filteredEgresos.filter(e => e.categoria === 'MERCADERIA' || (isBG && e.categoria === 'INSUMO')).length} registros` 
                 : (isBG ? 'Stock, Pedidos Mayoristas' : 'Filamentos, Packaging')}
-            </span>
+            </div>
           </div>
         </div>
 
-        {/* Card 3: Gastos Bancarios & ITF (BG) o Maquinaria (3D) */}
-        {isBG ? (
-          <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Gastos Bancarios & ITF</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
-                <Landmark className="h-3.5 w-3.5" />
-              </div>
-            </div>
-            <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
-                {formatCurrency(totalFinancieroITF)}
-              </div>
-              <span className="text-xs text-[#75695D] mt-0.5 block truncate">
-                {isFiltered 
-                  ? `${filteredEgresos.filter(e => e.categoria === 'FINANCIERO').length} registros` 
-                  : 'ITF, Comisiones Bancarias'}
-              </span>
+        {/* KPI 3: Gastos Bancarios & ITF (BG) o Activos Fijos (3D) */}
+        <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px]">
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>{isBG ? 'Gastos Bancarios & ITF' : 'Activos Fijos / Equipos'}</span>
+            <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-primary">
+              {isBG ? <Landmark className="h-3.5 w-3.5" /> : <Wrench className="h-3.5 w-3.5" />}
             </div>
           </div>
-        ) : (
-          <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Maquinaria & Equipos</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#944917]">
-                <Wrench className="h-3.5 w-3.5" />
-              </div>
+          <div>
+            <div className="text-2xl font-extrabold text-foreground tracking-tight font-mono tabular-nums">
+              {formatCurrency(isBG ? totalFinancieroITF : totalMaquinariaOrEquipamiento)}
             </div>
-            <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
-                {formatCurrency(totalMaquinariaOrEquipamiento)}
-              </div>
-              <span className="text-xs text-[#75695D] mt-0.5 block truncate">
-                {isFiltered 
-                  ? `${filteredEgresos.filter(e => e.categoria === 'ACTIVO_FIJO').length} registros` 
-                  : 'Impresoras 3D, Herramientas'}
-              </span>
+            <div className="text-xs text-muted-foreground truncate">
+              {isFiltered 
+                ? `${filteredEgresos.filter(e => e.categoria === (isBG ? 'FINANCIERO' : 'ACTIVO_FIJO')).length} registros` 
+                : (isBG ? 'ITF, Comisiones Bancarias' : 'Impresoras 3D, Herramientas')}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Card 4: Servicios & Operativos */}
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">Servicios & Op.</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#75695D]">
+        {/* KPI 4: Servicios & Operativos */}
+        <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px]">
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>Servicios & Operativos</span>
+            <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-primary">
               <Truck className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+          <div>
+            <div className="text-2xl font-extrabold text-foreground tracking-tight font-mono tabular-nums">
               {formatCurrency(totalServicios)}
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+            <div className="text-xs text-muted-foreground truncate">
               {isFiltered 
                 ? `${filteredEgresos.filter(e => e.categoria === 'SERVICIO').length} registros` 
                 : (isBG ? 'Envíos, Courier, Publicidad' : 'Fletes, Servicios')}
-            </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Container: Master Card (Toolbar + Zero-Scroll Table) */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-2xs rounded-2xl">
-        {/* Unified Integrated Toolbar */}
-        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col lg:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
-          {/* Lado Izquierdo: Campo de Búsqueda */}
-          <div className="relative w-full lg:w-72 flex-shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
-            <Input 
-              placeholder={isBG ? "Buscar juego, pedido o ITF..." : "Buscar egreso o insumo..."}
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
-            />
-            {search && (
-              <button 
-                onClick={() => { setSearch(''); setCurrentPage(1); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Lado Derecho: Segmented Control Tabs & Dropdown de Tags */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center justify-end gap-2 w-full lg:w-auto">
-            {/* Segmented Control / Tabs */}
-            <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full">
-              <button
-                onClick={() => { setCategoriaFilter('TODOS'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                  categoriaFilter === 'TODOS'
-                    ? 'bg-[#241C15] text-white shadow-2xs'
-                    : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                }`}
-              >
-                Todos ({items.length})
-              </button>
-
-              {isBG ? (
-                <>
-                  <button
-                    onClick={() => { setCategoriaFilter('MERCADERIA'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      categoriaFilter === 'MERCADERIA'
-                        ? 'bg-[#245D99] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                    }`}
-                  >
-                    Juegos / Stock ({items.filter(e => e.categoria === 'MERCADERIA' || e.categoria === 'INSUMO').length})
-                  </button>
-                  <button
-                    onClick={() => { setCategoriaFilter('FINANCIERO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      categoriaFilter === 'FINANCIERO'
-                        ? 'bg-[#1E5E3A] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                    }`}
-                  >
-                    Banco / ITF ({items.filter(e => e.categoria === 'FINANCIERO').length})
-                  </button>
-                  <button
-                    onClick={() => { setCategoriaFilter('SERVICIO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      categoriaFilter === 'SERVICIO'
-                        ? 'bg-[#A36F4C] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                    }`}
-                  >
-                    Servicios ({items.filter(e => e.categoria === 'SERVICIO').length})
-                  </button>
-                  <button
-                    onClick={() => { setCategoriaFilter('ACTIVO_FIJO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      categoriaFilter === 'ACTIVO_FIJO'
-                        ? 'bg-[#633E20] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                    }`}
-                  >
-                    Equipamiento ({items.filter(e => e.categoria === 'ACTIVO_FIJO').length})
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => { setCategoriaFilter('INSUMO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      categoriaFilter === 'INSUMO'
-                        ? 'bg-[#8C6D1F] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                    }`}
-                  >
-                    Insumos
-                  </button>
-                  <button
-                    onClick={() => { setCategoriaFilter('ACTIVO_FIJO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      categoriaFilter === 'ACTIVO_FIJO'
-                        ? 'bg-[#633E20] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                    }`}
-                  >
-                    Activos Fijos
-                  </button>
-                  <button
-                    onClick={() => { setCategoriaFilter('SERVICIO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      categoriaFilter === 'SERVICIO'
-                        ? 'bg-[#A36F4C] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                    }`}
-                  >
-                    Servicios
-                  </button>
-                  <button
-                    onClick={() => { setCategoriaFilter('FINANCIERO'); setTagFilter('TODOS'); setCurrentPage(1); }}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      categoriaFilter === 'FINANCIERO'
-                        ? 'bg-[#1E5E3A] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
-                    }`}
-                  >
-                    Financiero ({items.filter(e => e.categoria === 'FINANCIERO').length})
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Combobox interactivo dinámico para 'Filtrar por Tag' */}
-            <div className="w-full sm:w-48 flex-shrink-0">
-              <SearchableCombobox
-                items={tagsComboboxItems}
-                value={tagFilter}
-                onChange={(val) => {
-                  setTagFilter(val || 'TODOS')
-                  setCurrentPage(1)
-                }}
-                size="sm"
-                icon={Tag}
-                placeholder="Filtrar por Tag..."
-                searchPlaceholder="Buscar etiqueta..."
-                clearable={false}
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile View: Cards */}
-        <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
-          {filteredEgresos.length === 0 ? (
-            <div className="p-8 text-center text-[#75695D] text-xs">
-              No se encontraron egresos con los filtros aplicados.
-            </div>
-          ) : (
-            paginatedEgresos.map((eg) => {
-              const globalIndex = filteredEgresos.findIndex(item => item.id === eg.id)
-              const prevNeighbor = globalIndex > 0 ? filteredEgresos[globalIndex - 1] : null
-              const nextNeighbor = globalIndex < filteredEgresos.length - 1 ? filteredEgresos[globalIndex + 1] : null
-
-              const egDay = eg.createdAt.split('T')[0]
-              const canMoveUp = !!prevNeighbor && prevNeighbor.createdAt.split('T')[0] === egDay
-              const canMoveDown = !!nextNeighbor && nextNeighbor.createdAt.split('T')[0] === egDay
-
-              return (
-                <div 
-                  key={eg.id} 
-                  onClick={() => handleOpenEdit(eg)}
-                  className="p-3.5 space-y-2 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors cursor-pointer"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <span className="font-bold text-xs text-[#241C15] block truncate">{eg.itemConcepto}</span>
-                      <span className="text-[11px] text-[#75695D] font-mono block mt-0.5">
-                        {formatDate(eg.createdAt)} • {eg.persona}
-                      </span>
-                    </div>
-
-                    <span className="text-sm font-mono font-bold text-[#A34335] flex-shrink-0 tabular-nums">
-                      -{formatCurrency(eg.costoTotal)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {renderCategoriaBadge(eg.categoria)}
-                      {eg.subcategoria && renderTagBadge(eg.subcategoria)}
-                    </div>
-
-                    <div className="text-right text-[11px] text-[#75695D] font-mono">
-                      {eg.cantidad > 1 && <span>{eg.cantidad}x </span>}
-                      <span>{formatCurrency(eg.costoUnitario)}</span>
-                      {eg.costoEnvio && eg.costoEnvio > 0 ? (
-                        <span className="text-[10px] text-[#75695D]"> (+{formatCurrency(eg.costoEnvio)} flete)</span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Acciones Móviles */}
-                  <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/40 text-xs" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1 bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        disabled={!canMoveUp}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (prevNeighbor) handleMoveEgreso(eg.id, prevNeighbor.id, 'up')
-                        }}
-                        className="h-6 w-6 text-[#75695D] hover:text-[#241C15] disabled:opacity-20 cursor-pointer"
-                        title="Subir posición"
-                      >
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        disabled={!canMoveDown}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (nextNeighbor) handleMoveEgreso(eg.id, nextNeighbor.id, 'down')
-                        }}
-                        className="h-6 w-6 text-[#75695D] hover:text-[#241C15] disabled:opacity-20 cursor-pointer"
-                        title="Bajar posición"
-                      >
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => handleOpenEdit(eg, e)}
-                        className="h-7 px-2 text-[11px] text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
-                      >
-                        <Pencil className="h-3 w-3 mr-1" />
-                        Editar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
-                        className="h-7 px-2 text-[11px] text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Eliminar
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })
+      {/* ========================================================================= */}
+      {/* 3. Filtros y Búsqueda (Layout horizontal limpio sin estilo cápsula)       */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between mb-4">
+        {/* Izquierda: Buscador de egresos */}
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder={isBG ? "Buscar juego, pedido o ITF..." : "Buscar egreso o insumo..."}
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="w-full h-10 rounded-xl border border-input bg-card pl-9 pr-8 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-xs"
+          />
+          {search && (
+            <button 
+              type="button"
+              onClick={() => { setSearch(''); setCurrentPage(1); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
+              aria-label="Limpiar búsqueda"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
 
-        {/* Desktop View: Clean Zero-Scroll Table (5 Columns / table-fixed) */}
+        {/* Derecha: Pestañas de categorías + Dropdown de Tags */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 justify-end">
+          {/* Pestañas de categorías */}
+          <div className="bg-secondary/80 border border-border/80 p-1 rounded-xl flex items-center gap-1 overflow-x-auto max-w-full">
+            {categoryTabs.map(tab => {
+              const isActive = categoriaFilter === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setCategoriaFilter(tab.id)
+                    setTagFilter('TODOS')
+                    setCurrentPage(1)
+                  }}
+                  className={`whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-card text-foreground font-bold shadow-xs text-xs px-3 py-1.5 rounded-lg'
+                      : 'text-muted-foreground hover:text-foreground text-xs px-3 py-1.5 rounded-lg transition-colors'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Dropdown de Tags: Selector independiente */}
+          <TagSelectorDropdown
+            tags={dropdownTags}
+            value={tagFilter}
+            onChange={(newTag) => {
+              setTagFilter(newTag)
+              setCurrentPage(1)
+            }}
+            items={items}
+            categoriaFilter={categoriaFilter}
+            isBG={isBG}
+          />
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4. Tabla y Vista Móvil de Egresos (Sin scroll horizontal)                 */}
+      {/* ========================================================================= */}
+      <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+        {/* Móvil: Tarjetas Compactas Verticales (block md:hidden) */}
+        <div className="block md:hidden divide-y divide-border/70">
+          {filteredEgresos.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-xs">
+              No se encontraron egresos con los filtros aplicados.
+            </div>
+          ) : (
+            paginatedEgresos.map((eg) => (
+              <div 
+                key={eg.id} 
+                onClick={() => handleOpenEdit(eg)}
+                className="p-3.5 space-y-2 bg-card hover:bg-secondary/35 transition-colors cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-sm text-foreground block truncate">
+                      {eg.itemConcepto}
+                    </span>
+                    <span className="text-xs text-muted-foreground block mt-0.5">
+                      {formatDate(eg.createdAt)} • <span className="text-muted-foreground/70">{eg.persona}</span>
+                    </span>
+                  </div>
+
+                  <span className="text-sm font-extrabold text-destructive font-mono tabular-nums flex-shrink-0">
+                    {formatCurrency(eg.costoTotal)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {renderCategoriaBadge(eg.categoria)}
+                    {renderTagChips(eg.subcategoria)}
+                  </div>
+
+                  <div className="text-right text-xs text-muted-foreground font-mono">
+                    <span className="font-bold text-foreground mr-1">
+                      {eg.categoria === 'FINANCIERO' ? '1 op' : `${eg.cantidad} ${eg.cantidad === 1 ? 'ud' : 'uds'}`}
+                    </span>
+                    <span>{formatCurrency(eg.costoUnitario)}</span>
+                    {eg.costoEnvio && eg.costoEnvio > 0 ? (
+                      <span className="text-[10px] text-muted-foreground block">
+                        (+{formatCurrency(eg.costoEnvio)} flete)
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Acciones Móviles */}
+                <div className="flex items-center justify-end gap-1 pt-1.5 border-t border-border/50 text-xs" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => handleOpenEdit(eg, e)}
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg cursor-pointer"
+                  >
+                    <Pencil className="h-3 w-3 mr-1" />
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Eliminar
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop: Tabla Fija (hidden md:block / table-fixed w-full) */}
         <div className="hidden md:block">
-          <Table className="w-full table-fixed">
-            <TableHeader className="bg-[#FAF8F5]/80 border-b border-[#E2D9CC]">
-              <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-                <TableHead className="w-[105px] px-3 py-3 text-xs font-bold text-[#75695D] text-left">
-                  Fecha
+          <Table className="table-fixed w-full">
+            <TableHeader className="bg-secondary/40 border-y border-border/70">
+              <TableRow className="border-border/70 hover:bg-transparent">
+                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase text-left">
+                  FECHA
                 </TableHead>
-                <TableHead className="w-[130px] px-3 py-3 text-xs font-bold text-[#75695D] text-left">
-                  Categoría
+                <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase text-left">
+                  CATEGORÍA
                 </TableHead>
-                <TableHead className="px-3 py-3 text-xs font-bold text-[#75695D] text-left">
-                  Concepto & Tags
+                <TableHead className="w-[36%] px-4 py-3 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase text-left">
+                  CONCEPTO & TAGS
                 </TableHead>
-                <TableHead className="w-[115px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
-                  Costo Unit. & Cant.
+                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase text-left">
+                  CANTIDAD & P. UNITARIO
                 </TableHead>
-                <TableHead className="w-[115px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
-                  Total Egreso
+                <TableHead className="w-[12%] px-4 py-3 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase text-right">
+                  TOTAL EGRESO
                 </TableHead>
-                <TableHead className="w-[110px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
-                  Acción
+                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase text-right">
+                  ACCIONES
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredEgresos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-[#75695D] text-xs">
+                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground text-xs">
                     No se encontraron egresos con los filtros aplicados.
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedEgresos.map((eg) => {
-                  const globalIndex = filteredEgresos.findIndex(item => item.id === eg.id)
-                  const prevNeighbor = globalIndex > 0 ? filteredEgresos[globalIndex - 1] : null
-                  const nextNeighbor = globalIndex < filteredEgresos.length - 1 ? filteredEgresos[globalIndex + 1] : null
+                paginatedEgresos.map((eg) => (
+                  <TableRow 
+                    key={eg.id} 
+                    onClick={() => handleOpenEdit(eg)}
+                    className="border-b border-border/60 hover:bg-secondary/35 transition-colors duration-150 cursor-pointer group"
+                  >
+                    {/* 1. FECHA (w-[12%]) */}
+                    <TableCell className="w-[12%] px-4 py-3 align-middle whitespace-nowrap">
+                      <span className="text-xs font-medium text-foreground">
+                        {formatDate(eg.createdAt)}
+                      </span>
+                    </TableCell>
 
-                  const egDay = eg.createdAt.split('T')[0]
-                  const canMoveUp = !!prevNeighbor && prevNeighbor.createdAt.split('T')[0] === egDay
-                  const canMoveDown = !!nextNeighbor && nextNeighbor.createdAt.split('T')[0] === egDay
+                    {/* 2. CATEGORÍA (w-[14%]) */}
+                    <TableCell className="w-[14%] px-4 py-3 align-middle">
+                      {renderCategoriaBadge(eg.categoria)}
+                    </TableCell>
 
-                  return (
-                    <TableRow 
-                      key={eg.id} 
-                      onClick={() => handleOpenEdit(eg)}
-                      className="border-b border-[#E2D9CC]/60 hover:bg-[#FAF8F5]/60 transition-colors cursor-pointer group"
-                    >
-                      {/* 1. Fecha */}
-                      <TableCell className="px-3 py-3 align-top whitespace-nowrap">
-                        <span className="text-xs text-[#75695D] font-mono block">
-                          {formatDate(eg.createdAt)}
+                    {/* 3. CONCEPTO & TAGS (w-[36%]) */}
+                    <TableCell className="w-[36%] px-4 py-3 align-middle min-w-0">
+                      <div className="min-w-0">
+                        <span 
+                          title={eg.itemConcepto}
+                          className="text-sm font-bold text-foreground hover:text-primary transition-colors cursor-pointer truncate block"
+                        >
+                          {eg.itemConcepto}
                         </span>
-                      </TableCell>
-
-                      {/* 2. Categoría */}
-                      <TableCell className="px-3 py-3 align-top">
-                        <div>
-                          {renderCategoriaBadge(eg.categoria)}
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          {renderTagChips(eg.subcategoria)}
+                          {eg.persona && (
+                            <span className="text-[11px] text-muted-foreground/70 ml-1">
+                              • {eg.persona}
+                            </span>
+                          )}
                         </div>
-                      </TableCell>
+                      </div>
+                    </TableCell>
 
-                      {/* 2. Concepto & Tags */}
-                      <TableCell className="px-3 py-3 align-top min-w-0">
-                        <div className="min-w-0">
-                          <span 
-                            title={eg.itemConcepto}
-                            className="text-xs font-semibold text-[#241C15] block truncate group-hover:text-[#A36F4C] transition-colors"
-                          >
-                            {eg.itemConcepto}
-                          </span>
-                          <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-[#75695D] flex-wrap">
-                            {eg.subcategoria && renderTagBadge(eg.subcategoria)}
-                            {eg.persona && (
-                              <span className="text-[11px] text-[#75695D]">
-                                • {eg.persona}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* 3. Costo Unitario & Cantidad */}
-                      <TableCell className="px-3 py-3 align-top text-right whitespace-nowrap">
-                        <span className="font-mono text-xs font-semibold text-[#241C15] block">
-                          {eg.cantidad > 1 && <span className="text-xs text-[#75695D] font-normal mr-1">{eg.cantidad}x</span>}
-                          {formatCurrency(eg.costoUnitario)}
-                        </span>
+                    {/* 4. CANTIDAD & P. UNITARIO (w-[16%]) */}
+                    <TableCell className="w-[16%] px-4 py-3 align-middle text-left">
+                      <div className="text-xs font-bold text-foreground">
+                        {eg.categoria === 'FINANCIERO' ? (
+                          '1 op'
+                        ) : (
+                          `${eg.cantidad} ${eg.cantidad === 1 ? 'ud' : 'uds'}`
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {eg.categoria === 'FINANCIERO' || (eg.categoria === 'SERVICIO' && eg.cantidad === 1) ? (
+                          formatCurrency(eg.costoUnitario)
+                        ) : (
+                          `${formatCurrency(eg.costoUnitario)} c/u`
+                        )}
                         {eg.costoEnvio && eg.costoEnvio > 0 ? (
-                          <span className="text-[10px] text-[#75695D] block font-normal">
-                            +{formatCurrency(eg.costoEnvio)} flete
+                          <span className="text-[10px] text-muted-foreground/80 block">
+                            (+{formatCurrency(eg.costoEnvio)} flete)
                           </span>
                         ) : null}
-                      </TableCell>
+                      </div>
+                    </TableCell>
 
-                      {/* 4. Total Egreso */}
-                      <TableCell className="px-4 py-3 align-top text-right whitespace-nowrap">
-                        <span className="font-mono font-bold tabular-nums text-xs sm:text-sm text-[#A34335] block">
-                          -{formatCurrency(eg.costoTotal)}
+                    {/* 5. TOTAL EGRESO (w-[12%], alineado a la derecha) */}
+                    <TableCell className="w-[12%] px-4 py-3 align-middle text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {Boolean(eg.especificacionColor || eg.presentacion || eg.costoEnvio) && (
+                          <span
+                            title={[
+                              eg.especificacionColor ? `Color: ${eg.especificacionColor}` : null,
+                              eg.presentacion ? `Presentación: ${eg.presentacion}` : null,
+                              eg.costoEnvio ? `Flete: ${formatCurrency(eg.costoEnvio)}` : null,
+                            ].filter(Boolean).join(' | ')}
+                            className="text-muted-foreground hover:text-foreground cursor-help p-1 rounded-md hover:bg-secondary transition-colors"
+                          >
+                            <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
+                          </span>
+                        )}
+                        <span className="text-sm font-extrabold text-destructive text-right font-mono tabular-nums">
+                          {formatCurrency(eg.costoTotal)}
                         </span>
-                      </TableCell>
+                      </div>
+                    </TableCell>
 
-                      {/* 5. Acciones */}
-                      <TableCell className="px-3 py-3 align-top text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          {/* Reorder Micro Buttons con espacio reservado invisible para alineación perfecta */}
-                          <div className={`flex items-center bg-[#F4EFEA] border border-[#E2D9CC] rounded-lg p-0.5 ${canMoveUp || canMoveDown ? '' : 'invisible'}`}>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              disabled={!canMoveUp}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (prevNeighbor) handleMoveEgreso(eg.id, prevNeighbor.id, 'up')
-                              }}
-                              className="h-5 w-5 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 cursor-pointer rounded p-0"
-                              title="Subir posición"
-                            >
-                              <ChevronUp className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              disabled={!canMoveDown}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (nextNeighbor) handleMoveEgreso(eg.id, nextNeighbor.id, 'down')
-                              }}
-                              className="h-5 w-5 text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-20 cursor-pointer rounded p-0"
-                              title="Bajar posición"
-                            >
-                              <ChevronDown className="h-3 w-3" />
-                            </Button>
-                          </div>
-
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => handleOpenEdit(eg, e)}
-                            className="h-7 w-7 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
-                            title="Editar egreso"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
-                            className="h-7 w-7 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                            title="Eliminar egreso"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
+                    {/* 6. ACCIONES (w-[10%], alineado al extremo derecho) */}
+                    <TableCell className="w-[10%] px-4 py-3 align-middle text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1 pr-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => handleOpenEdit(eg, e)}
+                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer"
+                          title="Editar egreso"
+                          aria-label="Editar egreso"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => handleDelete(eg.id, eg.itemConcepto, e)}
+                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                          title="Eliminar egreso"
+                          aria-label="Eliminar egreso"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
         </div>
 
-        {/* Pagination Footer */}
+        {/* Footer de Paginación */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#FAF8F5]/80 text-xs text-[#75695D]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-border/70 bg-secondary/30 text-xs text-muted-foreground">
             <div>
-              Mostrando <span className="text-[#241C15] font-bold">{paginatedEgresos.length}</span> de <span className="text-[#241C15] font-bold">{filteredEgresos.length}</span> egresos (Página {currentPage} de {totalPages})
+              Mostrando <span className="text-foreground font-bold">{paginatedEgresos.length}</span> de <span className="text-foreground font-bold">{filteredEgresos.length}</span> egresos (Página {currentPage} de {totalPages})
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -1260,7 +1514,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-2xs"
+                className="h-8 px-2.5 border-border bg-card text-foreground hover:bg-secondary disabled:opacity-40 cursor-pointer shadow-xs rounded-xl"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Anterior
@@ -1273,10 +1527,10 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                     variant={currentPage === page ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 w-8 p-0 cursor-pointer shadow-2xs ${
+                    className={`h-8 w-8 p-0 cursor-pointer rounded-xl ${
                       currentPage === page 
-                        ? "bg-[#241C15] text-white hover:bg-[#3D332A] font-bold" 
-                        : "border-[#E2D9CC] bg-[#FFFFFF] text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15]"
+                        ? "bg-primary text-primary-foreground font-bold shadow-xs hover:bg-primary/90" 
+                        : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
                     }`}
                   >
                     {page}
@@ -1289,7 +1543,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-2xs"
+                className="h-8 px-2.5 border-border bg-card text-foreground hover:bg-secondary disabled:opacity-40 cursor-pointer shadow-xs rounded-xl"
               >
                 Siguiente
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -1297,28 +1551,30 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
             </div>
           </div>
         )}
-      </Card>
+      </div>
 
-      {/* Modal: Registrar Nuevo Egreso */}
+      {/* ========================================================================= */}
+      {/* 5. Modal: Registrar Nuevo Egreso                                          */}
+      {/* ========================================================================= */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
+        <DialogContent className="bg-card border-border text-foreground w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
           <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            <div className="p-5 sm:p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
+            <div className="p-5 sm:p-6 pb-4 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl border shadow-sm ${formCategoria === 'FINANCIERO' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-[#EFE5D8] border-[#D4BEA7] text-[#A36F4C]'}`}>
+                <div className={`p-2.5 rounded-xl border shadow-xs ${formCategoria === 'FINANCIERO' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700' : 'bg-accent border-border text-primary'}`}>
                   {formCategoria === 'FINANCIERO' ? <Landmark className="h-5 w-5 stroke-[2.5]" /> : <Plus className="h-5 w-5 stroke-[2.5]" />}
                 </div>
                 <div>
-                  <DialogTitle className="text-base sm:text-lg font-extrabold text-[#241C15]">
+                  <DialogTitle className="text-base sm:text-lg font-extrabold text-foreground">
                     {formCategoria === 'FINANCIERO' 
                       ? 'Registrar Gasto Bancario / ITF' 
                       : isBG 
                         ? 'Registrar Compra / Egreso' 
                         : 'Registrar Nuevo Egreso'}
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                     {formCategoria === 'FINANCIERO' 
-                      ? 'Registro rápido del ITF o comisiones cobradas por el banco.' 
+                      ? 'Registro rápido del ITF o comisiones cobradas por la entidad bancaria.' 
                       : isBG 
                         ? 'Añade compras de juegos de mesa, pedidos a distribuidoras o gastos operativos.' 
                         : 'Añade compras de insumos, fletes o activos para el taller.'}
@@ -1328,7 +1584,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               <button
                 type="button"
                 onClick={() => setOpenModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1337,7 +1593,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
               {/* Selector de Categoría Principal */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
+                <Label className="text-xs font-bold uppercase tracking-wider text-foreground">
                   Categoría Principal *
                 </Label>
                 <div className={`grid gap-2 ${activeCategoriasConfig.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
@@ -1351,17 +1607,17 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         onClick={() => handleSelectCategoria(cat.id as any)}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                           isSelected
-                            ? 'bg-[#FFFFFF] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-xs'
-                            : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
+                            ? 'bg-card border-primary ring-1 ring-primary/40 text-foreground shadow-xs'
+                            : 'bg-secondary border-border text-muted-foreground hover:border-input hover:text-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-                          {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
+                          <Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                          {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-[#241C15] leading-tight">{cat.label}</div>
-                          <div className="text-[10px] text-[#75695D] line-clamp-1 mt-0.5">{cat.desc}</div>
+                          <div className="text-xs font-bold text-foreground leading-tight">{cat.label}</div>
+                          <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{cat.desc}</div>
                         </div>
                       </button>
                     )
@@ -1372,37 +1628,37 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               {/* Fecha y Persona */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Egreso *</Label>
+                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">Fecha del Egreso *</Label>
                   <Input 
                     type="date"
                     value={formFecha}
                     onChange={(e) => setFormFecha(e.target.value)}
                     required
-                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    className="bg-secondary/40 border-input text-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Responsable / Persona *</Label>
+                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">Responsable / Persona *</Label>
                   <Input 
                     value={formPersona}
                     onChange={(e) => setFormPersona(e.target.value)}
                     placeholder="Víctor"
                     required
-                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    className="bg-secondary/40 border-input text-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
                   />
                 </div>
               </div>
 
               {/* Helper específico para Gasto Bancario / ITF */}
               {formCategoria === 'FINANCIERO' && (
-                <div className="space-y-3 p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200">
+                <div className="space-y-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#1E5E3A] flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
                       <Landmark className="h-3.5 w-3.5" />
                       Banco o Entidad Financiera
                     </span>
-                    <span className="text-[10px] text-[#1E5E3A] font-semibold">Selección rápida de Banco</span>
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Selección rápida</span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
@@ -1418,8 +1674,8 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                           }}
                           className={`px-2.5 py-1 text-xs rounded-lg font-bold border transition-all cursor-pointer ${
                             isBankSelected
-                              ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs'
-                              : 'bg-white text-[#75695D] border-emerald-200 hover:border-emerald-400 hover:text-[#1E5E3A]'
+                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                              : 'bg-card text-muted-foreground border-emerald-500/30 hover:border-emerald-500 hover:text-emerald-800'
                           }`}
                         >
                           {b.name}
@@ -1432,17 +1688,17 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
               {/* Helper específico para Compra de Juegos de Mesa */}
               {formCategoria === 'MERCADERIA' && productos && productos.length > 0 && (
-                <div className="space-y-2 p-3 rounded-xl bg-[#EBF3FC]/60 border border-[#B9D5F3]">
-                  <div className="flex items-center justify-between text-xs font-bold text-[#245D99]">
+                <div className="space-y-2 p-3 rounded-xl bg-sky-500/10 border border-sky-500/20">
+                  <div className="flex items-center justify-between text-xs font-bold text-sky-800 dark:text-sky-300">
                     <span className="flex items-center gap-1.5">
                       <Dice5 className="h-3.5 w-3.5" />
                       Vincular Juego del Catálogo (Opcional)
                     </span>
-                    <span className="text-[10px] text-[#245D99]/80 font-normal">Autocompleta nombre y costo</span>
+                    <span className="text-[10px] text-sky-700/80 dark:text-sky-400 font-normal">Autocompleta costo base</span>
                   </div>
 
                   <select
-                    className="w-full text-xs bg-white border border-[#B9D5F3] rounded-lg p-2 text-[#241C15] focus:ring-1 focus:ring-[#245D99]"
+                    className="w-full text-xs bg-card border border-input rounded-xl p-2 text-foreground focus:ring-1 focus:ring-primary"
                     defaultValue=""
                     onChange={(e) => {
                       const sel = productos.find(p => p.id === e.target.value)
@@ -1467,7 +1723,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               {/* Concepto del Gasto */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">
                     {formCategoria === 'FINANCIERO' 
                       ? 'Concepto Financiero *' 
                       : formCategoria === 'MERCADERIA' 
@@ -1487,7 +1743,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         }}
                         className="px-2 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer font-bold transition-colors"
                       >
-                        Cuota Préstamo BCP
+                        Cuota Préstamo
                       </button>
                       <button
                         type="button"
@@ -1502,13 +1758,6 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 cursor-pointer font-medium"
                       >
                         Comisión
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormConcepto('Mantenimiento Cuenta')}
-                        className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 cursor-pointer font-medium"
-                      >
-                        Mantenimiento
                       </button>
                     </div>
                   )}
@@ -1525,20 +1774,20 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         : 'Ej: Filamento PLA Hyper Creality Negro 1kg...'
                   }
                   required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  className="bg-secondary/40 border-input text-foreground placeholder:text-muted-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
                 />
               </div>
 
               {/* Multi-Tags */}
-              <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
+              <div className="space-y-2 p-3.5 rounded-xl bg-secondary/50 border border-border">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
-                    <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5 text-primary" />
                     {formCategoria === 'FINANCIERO' ? 'Etiqueta del Banco (Tag)' : 'Tags / Etiquetas'}
                   </span>
                   <Link 
                     href="/finanzas/tags" 
-                    className="text-[11px] text-[#A36F4C] font-semibold hover:underline flex items-center gap-1"
+                    className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-1"
                   >
                     Gestionar tags <ExternalLink className="h-2.5 w-2.5" />
                   </Link>
@@ -1547,7 +1796,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 {/* Distributor quick chips for board games */}
                 {formCategoria === 'MERCADERIA' && (
                   <div className="flex flex-wrap items-center gap-1 mb-1.5">
-                    <span className="text-[10px] text-[#75695D] font-bold mr-1">Distribuidor:</span>
+                    <span className="text-[10px] text-muted-foreground font-bold mr-1">Distribuidor:</span>
                     {DISTRIBUIDORAS_JUEGOS.map(dist => (
                       <button
                         key={dist}
@@ -1558,7 +1807,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                             setFormSubcategoria([...current, dist].join(', '))
                           }
                         }}
-                        className="px-2 py-0.5 text-[10px] rounded-md font-semibold bg-white border border-[#DCD3C6] text-[#75695D] hover:text-[#241C15] hover:border-[#A36F4C] cursor-pointer"
+                        className="px-2 py-0.5 text-[10px] rounded-md font-semibold bg-card border border-input text-muted-foreground hover:text-foreground hover:border-primary cursor-pointer"
                       >
                         +{dist}
                       </button>
@@ -1575,11 +1824,11 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               </div>
 
               {/* Costos y Cantidades */}
-              <div className="p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
+              <div className="p-3.5 rounded-xl bg-secondary/50 border border-border space-y-3">
                 {/* Montos rápidos para ITF */}
                 {formCategoria === 'FINANCIERO' && (
                   <div className="flex items-center gap-1.5 flex-wrap pb-1">
-                    <span className="text-[11px] text-[#1E5E3A] font-bold">Monto rápido ITF:</span>
+                    <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-bold">Monto rápido ITF:</span>
                     {MONTOS_ITF_COMUNES.map(m => (
                       <button
                         key={m}
@@ -1587,8 +1836,8 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         onClick={() => setFormCostoUnitario(m)}
                         className={`px-2 py-0.5 text-xs rounded-md font-mono font-bold border transition-all cursor-pointer ${
                           formCostoUnitario === m
-                            ? 'bg-[#1E5E3A] text-white border-[#1E5E3A]'
-                            : 'bg-white text-[#1E5E3A] border-emerald-200 hover:bg-emerald-50'
+                            ? 'bg-emerald-700 text-white border-emerald-700'
+                            : 'bg-card text-emerald-800 border-emerald-500/30 hover:bg-emerald-50'
                         }`}
                       >
                         S/ {m}
@@ -1599,13 +1848,13 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">Cantidad *</Label>
+                    <Label className="text-xs text-foreground font-bold">Cantidad *</Label>
                     <div className="flex items-center">
                       <button
                         type="button"
                         disabled={formCategoria === 'FINANCIERO'}
                         onClick={handleDecrementCantidad}
-                        className="h-9 px-2.5 bg-[#FFFFFF] border border-r-0 border-[#DCD3C6] rounded-l-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        className="h-9 px-2.5 bg-card border border-r-0 border-input rounded-l-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
@@ -1616,13 +1865,13 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         value={formCantidad}
                         onChange={(e) => setFormCantidad(e.target.value)}
                         required
-                        className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-center font-mono font-bold text-sm h-9 rounded-none focus:border-[#A36F4C] disabled:bg-gray-100"
+                        className="bg-card border-input text-foreground text-center font-mono font-bold text-sm h-9 rounded-none focus:border-primary disabled:bg-muted"
                       />
                       <button
                         type="button"
                         disabled={formCategoria === 'FINANCIERO'}
                         onClick={handleIncrementCantidad}
-                        className="h-9 px-2.5 bg-[#FFFFFF] border border-l-0 border-[#DCD3C6] rounded-r-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        className="h-9 px-2.5 bg-card border border-l-0 border-input rounded-r-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -1630,11 +1879,11 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">
+                    <Label className="text-xs text-foreground font-bold">
                       {formCategoria === 'FINANCIERO' ? 'Monto Cobrado (S/) *' : 'Costo Unit. (S/) *'}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
                       <Input 
                         type="number"
                         step="0.01"
@@ -1643,15 +1892,15 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         onChange={(e) => setFormCostoUnitario(e.target.value)}
                         placeholder="0.00"
                         required
-                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono font-bold h-9 rounded-xl focus:border-[#A36F4C]"
+                        className="pl-8 bg-card border-input text-foreground text-sm font-mono font-bold h-9 rounded-xl focus:border-primary"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">Flete / Envío (S/)</Label>
+                    <Label className="text-xs text-foreground font-bold">Flete / Envío (S/)</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
                       <Input 
                         type="number"
                         step="0.01"
@@ -1660,43 +1909,43 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         value={formCostoEnvio}
                         onChange={(e) => setFormCostoEnvio(e.target.value)}
                         placeholder="0.00"
-                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono h-9 rounded-xl focus:border-[#A36F4C] disabled:bg-gray-100"
+                        className="pl-8 bg-card border-input text-foreground text-sm font-mono h-9 rounded-xl focus:border-primary disabled:bg-muted"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Live Preview */}
-              <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex items-center justify-between">
+              {/* Previsualización en Vivo */}
+              <div className="p-3.5 rounded-xl bg-card border border-border flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold block">Total a Registrar</span>
-                  <span className="text-xl font-extrabold text-[#A34335] font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Total a Registrar</span>
+                  <span className="text-xl font-extrabold text-destructive font-mono">
                     {formatCurrency(liveCostMetrics.totalCalculado)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold block">Costo Real / Unidad</span>
-                  <span className="text-sm font-bold text-[#241C15] font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Costo Real / Unidad</span>
+                  <span className="text-sm font-bold text-foreground font-mono">
                     {formatCurrency(liveCostMetrics.costoRealUnitario)}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-end gap-3 flex-shrink-0">
+            <div className="px-5 sm:px-6 py-4 border-t border-border bg-card flex items-center justify-end gap-3 flex-shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                className="text-muted-foreground hover:text-foreground hover:bg-secondary text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>
@@ -1712,20 +1961,22 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
         </DialogContent>
       </Dialog>
 
-      {/* Modal: Editar Egreso */}
+      {/* ========================================================================= */}
+      {/* 6. Modal: Editar Egreso                                                   */}
+      {/* ========================================================================= */}
       <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card border-border text-foreground w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
           <form onSubmit={handleEditSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            <div className="p-5 sm:p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
+            <div className="p-5 sm:p-6 pb-4 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C]">
+                <div className="p-2.5 rounded-xl bg-accent border border-border text-primary">
                   <Pencil className="h-5 w-5" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base sm:text-lg font-extrabold text-[#241C15]">
+                  <DialogTitle className="text-base sm:text-lg font-extrabold text-foreground">
                     {formCategoria === 'FINANCIERO' ? 'Editar Gasto Bancario / ITF' : 'Editar Egreso'}
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                     Modifica los detalles, categoría, tags, costos o cantidades adquiridas.
                   </DialogDescription>
                 </div>
@@ -1733,7 +1984,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               <button
                 type="button"
                 onClick={() => setOpenEditModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1742,7 +1993,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
             <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
               {/* Selector de Categoría */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
+                <Label className="text-xs font-bold uppercase tracking-wider text-foreground">
                   Categoría Principal *
                 </Label>
                 <div className={`grid gap-2 ${activeCategoriasConfig.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
@@ -1756,17 +2007,17 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         onClick={() => handleSelectCategoria(cat.id as any)}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                           isSelected
-                            ? 'bg-[#FFFFFF] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-xs'
-                            : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
+                            ? 'bg-card border-primary ring-1 ring-primary/40 text-foreground shadow-xs'
+                            : 'bg-secondary border-border text-muted-foreground hover:border-input hover:text-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-                          {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
+                          <Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                          {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
                         </div>
                         <div>
-                          <div className="text-xs font-bold text-[#241C15] leading-tight">{cat.label}</div>
-                          <div className="text-[10px] text-[#75695D] line-clamp-1 mt-0.5">{cat.desc}</div>
+                          <div className="text-xs font-bold text-foreground leading-tight">{cat.label}</div>
+                          <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{cat.desc}</div>
                         </div>
                       </button>
                     )
@@ -1777,37 +2028,37 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               {/* Fecha y Persona */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Fecha del Egreso *</Label>
+                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">Fecha del Egreso *</Label>
                   <Input 
                     type="date"
                     value={formFecha}
                     onChange={(e) => setFormFecha(e.target.value)}
                     required
-                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    className="bg-secondary/40 border-input text-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">Responsable / Persona *</Label>
+                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">Responsable / Persona *</Label>
                   <Input 
                     value={formPersona}
                     onChange={(e) => setFormPersona(e.target.value)}
                     placeholder="Víctor"
                     required
-                    className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                    className="bg-secondary/40 border-input text-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
                   />
                 </div>
               </div>
 
               {/* Helper específico para Gasto Bancario / ITF */}
               {formCategoria === 'FINANCIERO' && (
-                <div className="space-y-3 p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200">
+                <div className="space-y-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-[#1E5E3A] flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
                       <Landmark className="h-3.5 w-3.5" />
                       Banco o Entidad Financiera
                     </span>
-                    <span className="text-[10px] text-[#1E5E3A] font-semibold">Selección rápida de Banco</span>
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Selección rápida</span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
@@ -1823,8 +2074,8 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                           }}
                           className={`px-2.5 py-1 text-xs rounded-lg font-bold border transition-all cursor-pointer ${
                             isBankSelected
-                              ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs'
-                              : 'bg-white text-[#75695D] border-emerald-200 hover:border-emerald-400 hover:text-[#1E5E3A]'
+                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                              : 'bg-card text-muted-foreground border-emerald-500/30 hover:border-emerald-500 hover:text-emerald-800'
                           }`}
                         >
                           {b.name}
@@ -1837,7 +2088,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
               {/* Concepto */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-[#241C15] font-bold uppercase tracking-wider">
+                <Label className="text-xs text-foreground font-bold uppercase tracking-wider">
                   {formCategoria === 'FINANCIERO' 
                     ? 'Concepto Financiero *' 
                     : formCategoria === 'MERCADERIA' 
@@ -1855,20 +2106,20 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         : 'Ej: Filamento PLA Hyper Creality Negro 1kg...'
                   }
                   required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  className="bg-secondary/40 border-input text-foreground placeholder:text-muted-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
                 />
               </div>
 
               {/* Multi-Tags */}
-              <div className="space-y-2 p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6]">
+              <div className="space-y-2 p-3.5 rounded-xl bg-secondary/50 border border-border">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
-                    <Tag className="h-3.5 w-3.5 text-[#A36F4C]" />
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5 text-primary" />
                     Tags / Etiquetas
                   </span>
                   <Link 
                     href="/finanzas/tags" 
-                    className="text-[11px] text-[#A36F4C] font-semibold hover:underline flex items-center gap-1"
+                    className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-1"
                   >
                     Gestionar tags <ExternalLink className="h-2.5 w-2.5" />
                   </Link>
@@ -1883,10 +2134,10 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               </div>
 
               {/* Costos y Cantidades */}
-              <div className="p-3.5 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] space-y-3">
+              <div className="p-3.5 rounded-xl bg-secondary/50 border border-border space-y-3">
                 {formCategoria === 'FINANCIERO' && (
                   <div className="flex items-center gap-1.5 flex-wrap pb-1">
-                    <span className="text-[11px] text-[#1E5E3A] font-bold">Monto rápido ITF:</span>
+                    <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-bold">Monto rápido ITF:</span>
                     {MONTOS_ITF_COMUNES.map(m => (
                       <button
                         key={m}
@@ -1894,8 +2145,8 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         onClick={() => setFormCostoUnitario(m)}
                         className={`px-2 py-0.5 text-xs rounded-md font-mono font-bold border transition-all cursor-pointer ${
                           formCostoUnitario === m
-                            ? 'bg-[#1E5E3A] text-white border-[#1E5E3A]'
-                            : 'bg-white text-[#1E5E3A] border-emerald-200 hover:bg-emerald-50'
+                            ? 'bg-emerald-700 text-white border-emerald-700'
+                            : 'bg-card text-emerald-800 border-emerald-500/30 hover:bg-emerald-50'
                         }`}
                       >
                         S/ {m}
@@ -1906,13 +2157,13 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">Cantidad *</Label>
+                    <Label className="text-xs text-foreground font-bold">Cantidad *</Label>
                     <div className="flex items-center">
                       <button
                         type="button"
                         disabled={formCategoria === 'FINANCIERO'}
                         onClick={handleDecrementCantidad}
-                        className="h-9 px-2.5 bg-[#FFFFFF] border border-r-0 border-[#DCD3C6] rounded-l-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        className="h-9 px-2.5 bg-card border border-r-0 border-input rounded-l-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
@@ -1923,13 +2174,13 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         value={formCantidad}
                         onChange={(e) => setFormCantidad(e.target.value)}
                         required
-                        className="bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-center font-mono font-bold text-sm h-9 rounded-none focus:border-[#A36F4C] disabled:bg-gray-100"
+                        className="bg-card border-input text-foreground text-center font-mono font-bold text-sm h-9 rounded-none focus:border-primary disabled:bg-muted"
                       />
                       <button
                         type="button"
                         disabled={formCategoria === 'FINANCIERO'}
                         onClick={handleIncrementCantidad}
-                        className="h-9 px-2.5 bg-[#FFFFFF] border border-l-0 border-[#DCD3C6] rounded-r-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        className="h-9 px-2.5 bg-card border border-l-0 border-input rounded-r-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -1937,11 +2188,11 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">
+                    <Label className="text-xs text-foreground font-bold">
                       {formCategoria === 'FINANCIERO' ? 'Monto Cobrado (S/) *' : 'Costo Unit. (S/) *'}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
                       <Input 
                         type="number"
                         step="0.01"
@@ -1950,15 +2201,15 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         onChange={(e) => setFormCostoUnitario(e.target.value)}
                         placeholder="0.00"
                         required
-                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono font-bold h-9 rounded-xl focus:border-[#A36F4C]"
+                        className="pl-8 bg-card border-input text-foreground text-sm font-mono font-bold h-9 rounded-xl focus:border-primary"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-[#241C15] font-bold">Flete / Envío (S/)</Label>
+                    <Label className="text-xs text-foreground font-bold">Flete / Envío (S/)</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#75695D]">S/</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
                       <Input 
                         type="number"
                         step="0.01"
@@ -1967,37 +2218,37 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         value={formCostoEnvio}
                         onChange={(e) => setFormCostoEnvio(e.target.value)}
                         placeholder="0.00"
-                        className="pl-8 bg-[#FFFFFF] border-[#DCD3C6] text-[#241C15] text-sm font-mono h-9 rounded-xl focus:border-[#A36F4C] disabled:bg-gray-100"
+                        className="pl-8 bg-card border-input text-foreground text-sm font-mono h-9 rounded-xl focus:border-primary disabled:bg-muted"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Live Preview */}
-              <div className="p-3.5 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex items-center justify-between">
+              {/* Previsualización en Vivo */}
+              <div className="p-3.5 rounded-xl bg-card border border-border flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold block">Total a Registrar</span>
-                  <span className="text-xl font-extrabold text-[#A34335] font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Total a Registrar</span>
+                  <span className="text-xl font-extrabold text-destructive font-mono">
                     {formatCurrency(liveCostMetrics.totalCalculado)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-[#75695D] uppercase font-bold block">Costo Real / Unidad</span>
-                  <span className="text-sm font-bold text-[#241C15] font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Costo Real / Unidad</span>
+                  <span className="text-sm font-bold text-foreground font-mono">
                     {formatCurrency(liveCostMetrics.costoRealUnitario)}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
+            <div className="px-5 sm:px-6 py-4 border-t border-border bg-card flex items-center justify-between flex-shrink-0">
               {editingItem && (
                 <Button 
                   type="button" 
                   variant="ghost" 
                   onClick={() => handleDelete(editingItem.id, editingItem.itemConcepto)}
-                  className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs rounded-xl cursor-pointer font-bold active:scale-[0.98]"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs rounded-xl cursor-pointer font-bold active:scale-[0.98]"
                 >
                   <Trash2 className="h-4 w-4 mr-1.5" />
                   Eliminar Egreso
@@ -2009,14 +2260,14 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                   type="button" 
                   variant="ghost" 
                   onClick={() => setOpenEditModal(false)}
-                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                  className="text-muted-foreground hover:text-foreground hover:bg-secondary text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   {isSubmitting ? (
                     <>
