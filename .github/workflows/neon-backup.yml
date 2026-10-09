@@ -19,14 +19,14 @@ jobs:
           sudo apt-get install -y postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y postgresql-client-18
-          pg_dump --version
+          echo "/usr/lib/postgresql/18/bin" >> $GITHUB_PATH
 
       - name: Generate Database Dump
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           BACKUP_NAME="neondb_backup_$(date +'%Y%m%d_%H%M%S').dump"
-          pg_dump "$DATABASE_URL" -Fc -f "$BACKUP_NAME"
+          /usr/lib/postgresql/18/bin/pg_dump "$DATABASE_URL" -Fc -f "$BACKUP_NAME"
           echo "BACKUP_FILE=$BACKUP_NAME" >> $GITHUB_ENV
 
       - name: Set up Python
