@@ -235,3 +235,226 @@ export async function deleteProducto(id: string) {
   safeRevalidate()
   return { deleted: true, message: 'Producto eliminado correctamente.' }
 }
+
+export interface VariantInputData {
+  id?: string
+  nombreVersion: string
+  costoBase: number
+  precioMenor: number
+  precioMayor: number
+}
+
+export async function saveProductoConVariantes(data: {
+  negocio?: TipoNegocio
+  baseName: string
+  lineaCategoria: string
+  fechaRegistro?: string | Date
+  activo?: boolean
+  variantes: VariantInputData[]
+  deletedVariantIds?: string[]
+}) {
+  const targetNegocio = data.negocio || await getActiveNegocioServer()
+  const parsedFecha = parseFechaRegistro(data.fechaRegistro)
+  const baseNameTrimmed = data.baseName.trim()
+  const lineaCategoriaTrimmed = data.lineaCategoria.trim() || 'General'
+
+  if (!baseNameTrimmed) {
+    throw new Error('El nombre base del modelo es obligatorio')
+  }
+
+  if (!data.variantes || data.variantes.length === 0) {
+    throw new Error('Debe especificar al menos una versión o set')
+  }
+
+  // Ejecutamos en una transacción para atomicidad
+  const savedVariants = await prisma.$transaction(async (tx) => {
+    // 1. Procesar eliminaciones si existen
+    if (data.deletedVariantIds && data.deletedVariantIds.length > 0) {
+      for (const delId of data.deletedVariantIds) {
+        const ventasCount = await tx.venta.count({ where: { productoId: delId } })
+        if (ventasCount > 0) {
+          await tx.producto.update({
+            where: { id: delId },
+            data: { activo: false }
+          })
+        } else {
+          await tx.producto.delete({ where: { id: delId } })
+        }
+      }
+    }
+
+    // 2. Guardar o actualizar cada variante
+    const results = []
+    for (const v of data.variantes) {
+      let variantName = v.nombreVersion.trim()
+      if (!variantName) variantName = 'Estándar'
+      
+      // Aseguramos que el nombre en DB sea: "BaseName - VariantName"
+      const nombreFinal = variantName.startsWith(`${baseNameTrimmed} - `)
+        ? variantName
+        : `${baseNameTrimmed} - ${variantName}`
+
+      if (v.id) {
+        const updated = await tx.producto.update({
+          where: { id: v.id },
+          data: {
+            nombreModelo: nombreFinal,
+            lineaCategoria: lineaCategoriaTrimmed,
+            costoBase: v.costoBase,
+            precioMenor: v.precioMenor,
+            precioMayor: v.precioMayor,
+            ...(data.activo !== undefined ? { activo: data.activo } : {}),
+            ...(parsedFecha ? { createdAt: parsedFecha } : {}),
+          }
+        })
+        results.push(updated)
+      } else {
+        const created = await tx.producto.create({
+          data: {
+            negocio: targetNegocio,
+            nombreModelo: nombreFinal,
+            lineaCategoria: lineaCategoriaTrimmed,
+            costoBase: v.costoBase,
+            precioMenor: v.precioMenor,
+            precioMayor: v.precioMayor,
+            activo: data.activo ?? true,
+            ...(parsedFecha ? { createdAt: parsedFecha } : {}),
+          }
+        })
+        results.push(created)
+      }
+    }
+
+    return results
+  })
+
+  safeRevalidate()
+
+  return {
+    saved: savedVariants.map(p => ({
+      ...p,
+      costoBase: Number(p.costoBase),
+      precioMayor: Number(p.precioMayor),
+      precioMenor: Number(p.precioMenor),
+      precioOferta: p.precioOferta != null ? Number(p.precioOferta) : null,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+    })),
+    deletedIds: data.deletedVariantIds || []
+  }
+}
+
+export async function duplicarModeloConVariantes(variantIds: string[], baseName: string) {
+  if (!variantIds || variantIds.length === 0) {
+    throw new Error('No se especificaron productos para duplicar')
+  }
+
+  const productos = await prisma.producto.findMany({
+    where: { id: { in: variantIds } }
+  })
+
+  if (productos.length === 0) {
+    throw new Error('Modelos no encontrados')
+  }
+
+  const targetNegocio = productos[0].negocio
+
+  // Buscar un nombre único para el nuevo modelo base
+  let nuevoBaseName = `${baseName.trim()} (Copia)`
+  let count = 1
+  while (await prisma.producto.findFirst({
+    where: {
+      nombreModelo: { startsWith: nuevoBaseName },
+      negocio: targetNegocio
+    }
+  })) {
+    count++
+    nuevoBaseName = `${baseName.trim()} (Copia ${count})`
+  }
+
+  const duplicados = await prisma.$transaction(async (tx) => {
+    const results = []
+    for (const p of productos) {
+      let nuevoNombreModelo: string
+      if (p.nombreModelo.includes(' - ')) {
+        const vPart = p.nombreModelo.substring(p.nombreModelo.indexOf(' - ') + 3).trim()
+        nuevoNombreModelo = `${nuevoBaseName} - ${vPart}`
+      } else {
+        nuevoNombreModelo = nuevoBaseName
+      }
+
+      const dup = await tx.producto.create({
+        data: {
+          negocio: p.negocio,
+          lineaCategoria: p.lineaCategoria,
+          nombreModelo: nuevoNombreModelo,
+          costoBase: p.costoBase,
+          precioMayor: p.precioMayor,
+          precioMenor: p.precioMenor,
+          activo: true,
+          stock: 0,
+          controlarStock: p.controlarStock,
+          enOferta: p.enOferta,
+          precioOferta: p.precioOferta,
+          imagenUrl: p.imagenUrl,
+          descripcionWeb: p.descripcionWeb,
+          destacadoWeb: p.destacadoWeb
+        }
+      })
+      results.push(dup)
+    }
+    return results
+  })
+
+  safeRevalidate()
+
+  return duplicados.map(p => ({
+    ...p,
+    costoBase: Number(p.costoBase),
+    precioMayor: Number(p.precioMayor),
+    precioMenor: Number(p.precioMenor),
+    precioOferta: p.precioOferta != null ? Number(p.precioOferta) : null,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  }))
+}
+
+export async function deleteModeloConVariantes(variantIds: string[]) {
+  if (!variantIds || variantIds.length === 0) {
+    throw new Error('No se especificaron productos para eliminar')
+  }
+
+  const deletedIds: string[] = []
+  const discontinuedIds: string[] = []
+
+  await prisma.$transaction(async (tx) => {
+    for (const id of variantIds) {
+      const ventasCount = await tx.venta.count({ where: { productoId: id } })
+      if (ventasCount > 0) {
+        await tx.producto.update({
+          where: { id },
+          data: { activo: false }
+        })
+        discontinuedIds.push(id)
+      } else {
+        await tx.producto.delete({ where: { id } })
+        deletedIds.push(id)
+      }
+    }
+  })
+
+  safeRevalidate()
+
+  let message = ''
+  if (deletedIds.length > 0 && discontinuedIds.length > 0) {
+    message = `Se eliminaron ${deletedIds.length} versión(es) y se marcaron ${discontinuedIds.length} como descontinuadas por tener ventas históricas.`
+  } else if (discontinuedIds.length > 0) {
+    message = `Las versiones tienen ventas históricas asociadas, por lo que fueron marcadas como Descontinuadas.`
+  } else {
+    message = `El modelo y sus versiones fueron eliminados correctamente.`
+  }
+
+  return { deletedIds, discontinuedIds, message }
+}
+
+

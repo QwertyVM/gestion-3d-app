@@ -34,16 +34,24 @@ import { useBusiness } from '@/context/BusinessContext'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { 
-  createProducto, 
-  updateProducto, 
   toggleEstadoProducto, 
   duplicarProducto, 
-  deleteProducto 
+  deleteProducto,
+  duplicarModeloConVariantes,
+  deleteModeloConVariantes
 } from '@/actions/productos'
+import { 
+  ProductsTableView, 
+  groupProducts, 
+  extractBaseAndVariant,
+  ProductGroupRow, 
+  OrdenCatalogType, 
+  CategoryCountItem 
+} from './ProductsTableView'
+import { ProductFormModal } from './ProductFormModal'
+import { ProductDetailsModal } from './ProductDetailsModal'
 
 export interface ProductoItem {
   id: string
@@ -109,10 +117,24 @@ export function CatalogoClient({
   const menuRef = useRef<HTMLDivElement>(null)
   const [isPending, startTransition] = useTransition()
 
-  // Paginación: 5 productos por página
-  const ITEMS_PER_PAGE = 5
+  // Persistencia de expansión de padres con variantes
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
+  const handleToggleExpand = (id: string) => {
+    setExpandedParents(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  // Paginación: 8 modelos/filas maestras por página
+  const ITEMS_PER_PAGE = 8
   const [currentPage, setCurrentPage] = useState(1)
-  const [ordenFilter, setOrdenFilter] = useState<'RECIENTES' | 'NOMBRE_ASC' | 'ANTIGUOS' | 'NOMBRE_DESC'>('RECIENTES')
+  const [ordenFilter, setOrdenFilter] = useState<OrdenCatalogType>('RECIENTES')
 
   useEffect(() => {
     setCurrentPage(1)
@@ -156,25 +178,16 @@ export function CatalogoClient({
 
   // Modal State
   const [openModal, setOpenModal] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
-    nombreModelo: '',
-    lineaCategoria: '',
-    costoBase: '',
-    precioMayor: '',
-    precioMenor: '',
-    activo: true,
-    stock: '0',
-    controlarStock: false,
-    enOferta: false,
-    precioOferta: '',
-    porcentajeDescuento: '',
-    imagenUrl: '',
-    descripcionWeb: '',
-    destacadoWeb: false,
-    fechaRegistro: getTodayDateString()
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<ProductoItem | null>(null)
+  const [editingGroup, setEditingGroup] = useState<ProductGroupRow | null>(null)
+  const [presetBaseName, setPresetBaseName] = useState<string | undefined>(undefined)
+  const [presetCategoria, setPresetCategoria] = useState<string | undefined>(undefined)
+  const [presetVariantName, setPresetVariantName] = useState<string | undefined>(undefined)
+
+  // Ficha Técnica Read-Only Modal State
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [selectedDetailGroup, setSelectedDetailGroup] = useState<ProductGroupRow | null>(null)
+  const [selectedDetailProduct, setSelectedDetailProduct] = useState<ProductoItem | null>(null)
 
   // Close context menu on click outside
   useEffect(() => {
@@ -248,38 +261,68 @@ export function CatalogoClient({
     return list.sort((a, b) => {
       if (a.activo && !b.activo) return -1
       if (!a.activo && b.activo) return 1
-
-      if (ordenFilter === 'RECIENTES') {
-        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
-        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
-        if (timeB !== timeA) return timeB - timeA
-        return a.nombreModelo.localeCompare(b.nombreModelo, 'es', { sensitivity: 'base' })
-      }
-
-      if (ordenFilter === 'ANTIGUOS') {
-        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
-        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
-        if (timeA !== timeB) return timeA - timeB
-        return a.nombreModelo.localeCompare(b.nombreModelo, 'es', { sensitivity: 'base' })
-      }
-
-      if (ordenFilter === 'NOMBRE_DESC') {
-        return b.nombreModelo.localeCompare(a.nombreModelo, 'es', { sensitivity: 'base' })
-      }
-
-      // 'NOMBRE_ASC'
       return a.nombreModelo.localeCompare(b.nombreModelo, 'es', { sensitivity: 'base' })
     })
-  }, [productos, estadoFilter, categoriaFilter, search, ordenFilter])
+  }, [productos, estadoFilter, categoriaFilter, search])
 
-  // Paginación calculada
-  const totalPages = Math.max(1, Math.ceil(filteredProductos.length / ITEMS_PER_PAGE))
+  // Agrupación total del catálogo para conteos de modelos por familia
+  const allCatalogRows = useMemo(() => {
+    return groupProducts(productos, productos)
+  }, [productos])
+
+  const totalCatalogModelos = allCatalogRows.length
+
+  const categoriesWithCounts = useMemo<CategoryCountItem[]>(() => {
+    return categoryNamesList.map(name => ({
+      name,
+      count: allCatalogRows.filter(r => (r.lineaCategoria || '').toLowerCase() === name.toLowerCase()).length
+    }))
+  }, [categoryNamesList, allCatalogRows])
+
+  // Agrupación Inteligente en Frontend (Smart Variant Grouping) sobre la lista filtrada
+  const groupedRows = useMemo(() => {
+    return groupProducts(filteredProductos, productos)
+  }, [filteredProductos, productos])
+
+  // Ordenamiento Dinámico Reactivo sobre los Modelos Agrupados
+  const sortedGroupedRows = useMemo(() => {
+    const list = [...groupedRows]
+    return list.sort((a, b) => {
+      if (ordenFilter === 'RECIENTES') {
+        const timeA = a.latestCreatedAt ? new Date(a.latestCreatedAt).getTime() : 0
+        const timeB = b.latestCreatedAt ? new Date(b.latestCreatedAt).getTime() : 0
+        if (timeB !== timeA) return timeB - timeA
+        return a.baseName.localeCompare(b.baseName, 'es', { sensitivity: 'base' })
+      }
+      if (ordenFilter === 'NOMBRE_ASC') {
+        return a.baseName.localeCompare(b.baseName, 'es', { sensitivity: 'base' })
+      }
+      if (ordenFilter === 'NOMBRE_DESC') {
+        return b.baseName.localeCompare(a.baseName, 'es', { sensitivity: 'base' })
+      }
+      if (ordenFilter === 'MARGEN_DESC') {
+        const margA = a.minCosto > 0 ? ((a.minPrecioMenor - a.minCosto) / a.minCosto) : 0
+        const margB = b.minCosto > 0 ? ((b.minPrecioMenor - b.minCosto) / b.minCosto) : 0
+        return margB - margA
+      }
+      if (ordenFilter === 'COSTO_ASC') {
+        return a.minCosto - b.minCosto
+      }
+      if (ordenFilter === 'COSTO_DESC') {
+        return b.maxCosto - a.maxCosto
+      }
+      return 0
+    })
+  }, [groupedRows, ordenFilter])
+
+  // Paginación calculada sobre los Modelos/Filas Maestras
+  const totalPages = Math.max(1, Math.ceil(sortedGroupedRows.length / ITEMS_PER_PAGE))
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages)
 
-  const paginatedProductos = useMemo(() => {
+  const paginatedGroupedRows = useMemo(() => {
     const start = (safeCurrentPage - 1) * ITEMS_PER_PAGE
-    return filteredProductos.slice(start, start + ITEMS_PER_PAGE)
-  }, [filteredProductos, safeCurrentPage])
+    return sortedGroupedRows.slice(start, start + ITEMS_PER_PAGE)
+  }, [sortedGroupedRows, safeCurrentPage, ITEMS_PER_PAGE])
 
   // Copy Quotation to Clipboard for WhatsApp: "[Nombre] - Menor: S/ [X] | Mayor: S/ [Y]"
   const handleCopiarCotizacion = (p: ProductoItem) => {
@@ -288,6 +331,28 @@ export function CatalogoClient({
     setCopiedId(p.id)
     setTimeout(() => setCopiedId(null), 2000)
     toast.success(`Cotización de "${p.nombreModelo}" copiada`)
+  }
+
+  // Copiar cotizaciones consolidadas de todas las variantes del producto padre
+  const handleCopiarCotizacionGrupo = (group: ProductGroupRow) => {
+    const lines = [
+      `📦 ${group.baseName} (${group.lineaCategoria || 'General'}):`,
+      ...group.variants.map(v => 
+        `• ${v.variantName} - Menor: ${formatCurrency(v.producto.precioMenor)} | Mayor: ${formatCurrency(v.producto.precioMayor)}`
+      )
+    ]
+    navigator.clipboard.writeText(lines.join('\n'))
+    toast.success(`Cotización consolidada de "${group.baseName}" copiada al portapapeles`)
+  }
+
+  // Acción rápida: Abrir modal para registrar nueva variante del modelo base
+  const handleOpenCreateVariant = (baseName: string, categoria: string) => {
+    setEditingProduct(null)
+    setEditingGroup(null)
+    setPresetBaseName(baseName)
+    setPresetCategoria(categoria)
+    setPresetVariantName('')
+    setOpenModal(true)
   }
 
   // Toggle Active/Discontinued
@@ -336,103 +401,108 @@ export function CatalogoClient({
     }
   }
 
+  // Ver Detalle del Modelo (Ficha Técnica Read-Only)
+  const handleViewDetail = (group?: ProductGroupRow, single?: ProductoItem) => {
+    setSelectedDetailGroup(group || null)
+    setSelectedDetailProduct(single || null)
+    setDetailModalOpen(true)
+  }
+
+  // Duplicar Modelo con todas sus versiones
+  const handleDuplicarGroup = async (group: ProductGroupRow) => {
+    const variantIds = group.variants.map(v => v.producto.id)
+    try {
+      const duplicados = await duplicarModeloConVariantes(variantIds, group.baseName)
+      setProductos(prev => [...duplicados, ...prev])
+      toast.success(`Modelo "${group.baseName}" y sus ${duplicados.length} versiones fueron duplicados`)
+    } catch (e: any) {
+      toast.error('Error al duplicar modelo con versiones: ' + e.message)
+    }
+  }
+
+  // Eliminar Modelo con todas sus versiones
+  const handleDeleteGroup = async (group: ProductGroupRow) => {
+    if (!confirm(`¿Estás seguro de eliminar el modelo "${group.baseName}" y sus ${group.totalVariants} versiones asociadas?`)) {
+      return
+    }
+    const variantIds = group.variants.map(v => v.producto.id)
+    try {
+      const res = await deleteModeloConVariantes(variantIds)
+      if (res.deletedIds.length > 0) {
+        setProductos(prev => prev.filter(p => !res.deletedIds.includes(p.id)))
+      }
+      if (res.discontinuedIds.length > 0) {
+        setProductos(prev => prev.map(p => res.discontinuedIds.includes(p.id) ? { ...p, activo: false } : p))
+      }
+      toast.success(res.message)
+    } catch (e: any) {
+      toast.error('Error al eliminar modelo: ' + e.message)
+    }
+  }
+
   // Open Create Modal
   const handleOpenCreate = () => {
-    setEditingId(null)
-    setFormData({
-      nombreModelo: '',
-      lineaCategoria: categoryNamesList[0] || 'General',
-      costoBase: is3D ? '10.00' : '0.00',
-      precioMayor: is3D ? '20.00' : '0.00',
-      precioMenor: is3D ? '30.00' : '0.00',
-      activo: true,
-      stock: '0',
-      controlarStock: false,
-      enOferta: false,
-      precioOferta: '',
-      porcentajeDescuento: '',
-      imagenUrl: '',
-      descripcionWeb: '',
-      destacadoWeb: false,
-      fechaRegistro: getTodayDateString()
-    })
+    setEditingProduct(null)
+    setEditingGroup(null)
+    setPresetBaseName(undefined)
+    setPresetCategoria(undefined)
+    setPresetVariantName(undefined)
     setOpenModal(true)
   }
 
-  // Open Edit Modal
+  // Open Edit Modal for Single Product or Specific Variant
   const handleOpenEdit = (p: ProductoItem) => {
-    setEditingId(p.id)
-    setFormData({
-      nombreModelo: p.nombreModelo,
-      lineaCategoria: p.lineaCategoria || 'General',
-      costoBase: p.costoBase.toString(),
-      precioMayor: p.precioMayor.toString(),
-      precioMenor: p.precioMenor.toString(),
-      activo: p.activo,
-      stock: p.stock?.toString() || '0',
-      controlarStock: p.controlarStock || false,
-      enOferta: p.enOferta || false,
-      precioOferta: p.precioOferta ? p.precioOferta.toString() : '',
-      porcentajeDescuento: (p as any).porcentajeDescuento ? (p as any).porcentajeDescuento.toString() : '',
-      imagenUrl: p.imagenUrl || '',
-      descripcionWeb: p.descripcionWeb || '',
-      destacadoWeb: p.destacadoWeb || false,
-      fechaRegistro: getDateInputString(p.createdAt)
-    })
+    setEditingProduct(p)
+    setEditingGroup(null)
+    setPresetBaseName(undefined)
+    setPresetCategoria(undefined)
+    setPresetVariantName(undefined)
     setOpenModal(true)
   }
 
-  // Submit Modal
-  const handleSubmitModal = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.nombreModelo.trim()) {
-      toast.error('El nombre del modelo es obligatorio')
-      return
-    }
+  // Open Edit Modal for Entire Group with all variants
+  const handleOpenEditGroup = (group: ProductGroupRow) => {
+    setEditingProduct(null)
+    setEditingGroup(group)
+    setPresetBaseName(undefined)
+    setPresetCategoria(undefined)
+    setPresetVariantName(undefined)
+    setOpenModal(true)
+  }
 
-    const costoBase = parseFloat(formData.costoBase) || 0
-    const precioMayor = parseFloat(formData.precioMayor) || 0
-    const precioMenor = parseFloat(formData.precioMenor) || 0
-    const precioOferta = formData.precioOferta ? parseFloat(formData.precioOferta) : 0
-    if (formData.enOferta && precioOferta > 0 && precioOferta < costoBase) {
-      toast.error('El precio de oferta no puede ser menor al costo base')
-      return
-    }
+  // Callback reactivo al guardar producto(s)
+  const handleSavedProduct = (savedProducts: ProductoItem[], deletedIds: string[], baseName: string) => {
+    setProductos(prev => {
+      let updated = prev.filter(p => !deletedIds.includes(p.id))
+      savedProducts.forEach(saved => {
+        const idx = updated.findIndex(p => p.id === saved.id)
+        if (idx >= 0) {
+          updated[idx] = saved
+        } else {
+          updated = [saved, ...updated]
+        }
+      })
+      return updated
+    })
 
-    const payload = {
-      nombreModelo: formData.nombreModelo.trim(),
-      lineaCategoria: formData.lineaCategoria.trim() || 'General',
-      costoBase: costoBase,
-      precioMayor: precioMayor,
-      precioMenor: precioMenor,
-      activo: formData.activo,
-      stock: parseInt(formData.stock) || 0,
-      controlarStock: formData.controlarStock,
-      enOferta: formData.enOferta,
-      precioOferta: formData.enOferta ? (parseFloat(formData.precioOferta) || null) : null,
-      porcentajeDescuento: formData.enOferta ? (parseInt(formData.porcentajeDescuento) || 0) : 0,
-      imagenUrl: formData.imagenUrl.trim() || null,
-      descripcionWeb: formData.descripcionWeb.trim() || null,
-      destacadoWeb: formData.destacadoWeb,
-      fechaRegistro: formData.fechaRegistro
-    }
-
-    setIsSubmitting(true)
-    try {
-      if (editingId) {
-        const updated = await updateProducto(editingId, payload)
-        setProductos(prev => prev.map(p => p.id === editingId ? updated : p))
-        toast.success(`Modelo "${payload.nombreModelo}" actualizado`)
-      } else {
-        const created = await createProducto(payload)
-        setProductos(prev => [created, ...prev])
-        toast.success(`Modelo "${payload.nombreModelo}" registrado en catálogo`)
-      }
-      setOpenModal(false)
-    } catch (e: any) {
-      toast.error('Error al guardar: ' + e.message)
-    } finally {
-      setIsSubmitting(false)
+    // Expandir automáticamente el producto padre en expandedParents para desplegar subfilas
+    if (baseName) {
+      const { baseName: cleanBase } = extractBaseAndVariant(baseName)
+      setTimeout(() => {
+        setExpandedParents(prev => {
+          const next = new Set(prev)
+          const targetGroup = allCatalogRows.find(
+            r => r.baseName.toLowerCase().trim() === cleanBase.toLowerCase().trim()
+          )
+          if (targetGroup) {
+            next.add(targetGroup.id)
+          } else {
+            const cat = savedProducts[0]?.lineaCategoria || 'general'
+            next.add(`group_${cleanBase.toLowerCase().trim()}:::${cat.toLowerCase().trim()}`)
+          }
+          return next
+        })
+      }, 50)
     }
   }
 
@@ -592,128 +662,175 @@ export function CatalogoClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. BARRA DE HERRAMIENTAS Y FILTROS (SINGLE-ROW TOOLBAR)                   */}
+      {/* 3. BARRA DE HERRAMIENTAS Y FILTROS INTEGRAL (TOOLBAR UNIFICADA)           */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-3 sm:p-4 shadow-xs space-y-3">
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          
-          {/* Lado Izquierdo: Buscador + Dropdown Categorías */}
-          <div className="flex items-center gap-2.5 flex-1 min-w-0 flex-wrap sm:flex-nowrap">
-            {/* Buscador */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
-              <Input 
-                placeholder="Buscar modelo o categoría..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-2xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
-              />
-              {search && (
-                <button 
-                  onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-1 rounded-md cursor-pointer"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Dropdown de Categorías */}
-            <select
-              value={categoriaFilter}
-              onChange={(e) => setCategoriaFilter(e.target.value)}
-              className="h-10 px-3 bg-[#F8F6F2] border border-[#E2D9CC] text-xs font-bold text-[#241C15] rounded-2xl focus:border-[#A36F4C] focus:bg-white cursor-pointer min-w-[150px]"
-            >
-              <option value="TODAS">Todas las Categorías</option>
-              {categoryNamesList.map(cat => (
-                <option key={cat} value={cat}>
-                  {cat} ({productos.filter(p => p.lineaCategoria.toLowerCase() === cat.toLowerCase()).length})
-                </option>
-              ))}
-            </select>
-
-            {/* Dropdown de Orden */}
-            <select
-              value={ordenFilter}
-              onChange={(e) => setOrdenFilter(e.target.value as any)}
-              className="h-10 px-3 bg-[#F8F6F2] border border-[#E2D9CC] text-xs font-bold text-[#241C15] rounded-2xl focus:border-[#A36F4C] focus:bg-white cursor-pointer min-w-[140px]"
-            >
-              <option value="RECIENTES">Más recientes</option>
-              <option value="ANTIGUOS">Más antiguos</option>
-              <option value="NOMBRE_ASC">Nombre (A - Z)</option>
-              <option value="NOMBRE_DESC">Nombre (Z - A)</option>
-            </select>
+      <div className="bg-card border border-border rounded-2xl p-4 shadow-xs mb-6 space-y-3.5">
+        {/* Nivel 1 (Búsqueda y Orden) */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Izquierda: Input de búsqueda integrado */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Buscar modelo o categoría..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 rounded-xl border-input bg-background pl-10 pr-9 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer transition-colors"
+                title="Limpiar búsqueda"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Lado Derecho: Segmented Control Estado */}
-          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-between sm:justify-end">
-            <div className="bg-[#EAE4DC] p-1 rounded-2xl border border-[#D4BEA7] flex items-center gap-1 shadow-2xs">
+          {/* Derecha: Controles agrupados */}
+          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap justify-between md:justify-end">
+            {/* Segmented control para Estado */}
+            <div className="bg-secondary/70 p-1 rounded-xl border border-border/80 flex items-center gap-1 shadow-2xs">
               <button
                 type="button"
                 onClick={() => setEstadoFilter('TODOS')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   estadoFilter === 'TODOS'
-                    ? 'bg-[#FFFFFF] text-[#241C15] shadow-xs'
-                    : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+                    ? 'bg-card text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Todos ({productos.length})
+                Todos
               </button>
-
               <button
                 type="button"
                 onClick={() => setEstadoFilter('ACTIVOS')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                   estadoFilter === 'ACTIVOS'
-                    ? 'bg-[#FFFFFF] text-[#1E5E3A] shadow-xs'
-                    : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+                    ? 'bg-card text-emerald-800 dark:text-emerald-300 shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <span className="h-2 w-2 rounded-full bg-[#1E5E3A]" />
-                <span>Activos ({activosCount})</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                <span>Activos</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setEstadoFilter('DESCONTINUADOS')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   estadoFilter === 'DESCONTINUADOS'
-                    ? 'bg-[#FFFFFF] text-[#75695D] shadow-xs'
-                    : 'text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF]/40'
+                    ? 'bg-card text-muted-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                Archivados ({descontinuadosCount})
+                Archivados
               </button>
             </div>
+
+            {/* Dropdown de ordenamiento */}
+            <select
+              value={ordenFilter}
+              onChange={(e) => setOrdenFilter(e.target.value as OrdenCatalogType)}
+              className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold text-foreground shadow-2xs hover:bg-secondary/40 focus:border-primary focus:outline-none transition-colors cursor-pointer"
+            >
+              <option value="RECIENTES">Más recientes</option>
+              <option value="NOMBRE_ASC">Nombre (A - Z)</option>
+              <option value="NOMBRE_DESC">Nombre (Z - A)</option>
+              <option value="MARGEN_DESC">Mayor Margen (%)</option>
+              <option value="COSTO_ASC">Menor Costo Base</option>
+              <option value="COSTO_DESC">Mayor Costo Base</option>
+            </select>
+
+            {/* Contador de catálogo */}
+            <div className="bg-secondary text-muted-foreground text-xs font-semibold px-3 py-2 rounded-xl whitespace-nowrap border border-border/60 shadow-2xs">
+              <span className="font-bold text-foreground">{filteredProductos.length}</span> {filteredProductos.length === 1 ? 'modelo' : 'modelos'}
+            </div>
+          </div>
+        </div>
+
+        {/* Nivel 2 (Filtro por Categorías con Scroll Elástico) */}
+        <div className="pt-2 border-t border-border/70">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <button
+              type="button"
+              onClick={() => setCategoriaFilter('TODAS')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-2 shrink-0 cursor-pointer ${
+                categoriaFilter.toUpperCase() === 'TODAS'
+                  ? 'bg-primary text-primary-foreground shadow-xs font-bold'
+                  : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60'
+              }`}
+            >
+              <span>Todas las Categorías</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                categoriaFilter.toUpperCase() === 'TODAS'
+                  ? 'bg-primary-foreground/20 text-primary-foreground'
+                  : 'bg-card text-muted-foreground border border-border/60'
+              }`}>
+                {totalCatalogModelos}
+              </span>
+            </button>
+
+            {categoriesWithCounts.map((cat) => {
+              const isSelected = categoriaFilter.toLowerCase() === cat.name.toLowerCase()
+              return (
+                <button
+                  key={cat.name}
+                  type="button"
+                  onClick={() => setCategoriaFilter(cat.name)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-2 shrink-0 cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary text-primary-foreground shadow-xs font-bold'
+                      : 'bg-secondary/80 text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60'
+                  }`}
+                >
+                  <span>{cat.name}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    isSelected
+                      ? 'bg-primary-foreground/20 text-primary-foreground'
+                      : 'bg-card text-muted-foreground border border-border/60'
+                  }`}>
+                    {cat.count}
+                  </span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
         {/* Barra de Filtros Activos & Reset si hay búsqueda o filtros aplicados */}
         {(search || estadoFilter !== 'TODOS' || categoriaFilter !== 'TODAS' || ordenFilter !== 'RECIENTES') && (
-          <div className="flex items-center justify-between pt-2 border-t border-[#E2D9CC]/60 text-xs text-[#75695D]">
+          <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs text-muted-foreground">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium">Mostrando:</span>
-              <span className="font-bold text-[#241C15] bg-[#FAF8F5] px-2 py-0.5 rounded-lg border border-[#E2D9CC]">
+              <span className="font-medium">Filtrado por:</span>
+              <span className="font-bold text-foreground bg-secondary px-2 py-0.5 rounded-lg border border-border">
                 {filteredProductos.length} {filteredProductos.length === 1 ? 'modelo' : 'modelos'}
               </span>
               {search && (
-                <span className="text-[#75695D]">
-                  para &ldquo;<strong className="text-[#241C15]">{search}</strong>&rdquo;
+                <span className="text-muted-foreground">
+                  búsqueda &ldquo;<strong className="text-foreground">{search}</strong>&rdquo;
                 </span>
               )}
               {categoriaFilter !== 'TODAS' && (
-                <span className="text-[#75695D]">
-                  en <strong>{categoriaFilter}</strong>
+                <span className="text-muted-foreground">
+                  categoría <strong className="text-foreground">{categoriaFilter}</strong>
                 </span>
               )}
               {estadoFilter !== 'TODOS' && (
-                <span className="text-[#75695D]">
-                  estado <strong>{estadoFilter}</strong>
+                <span className="text-muted-foreground">
+                  estado <strong className="text-foreground">{estadoFilter}</strong>
                 </span>
               )}
               {ordenFilter !== 'RECIENTES' && (
-                <span className="text-[#75695D]">
-                  orden <strong>{ordenFilter === 'NOMBRE_ASC' ? 'A - Z' : ordenFilter === 'ANTIGUOS' ? 'Más antiguos' : 'Z - A'}</strong>
+                <span className="text-muted-foreground">
+                  orden <strong className="text-foreground">{
+                    ordenFilter === 'NOMBRE_ASC' ? 'Nombre (A - Z)' :
+                    ordenFilter === 'NOMBRE_DESC' ? 'Nombre (Z - A)' :
+                    ordenFilter === 'MARGEN_DESC' ? 'Mayor Margen (%)' :
+                    ordenFilter === 'COSTO_ASC' ? 'Menor Costo Base' :
+                    ordenFilter === 'COSTO_DESC' ? 'Mayor Costo Base' : 'Más recientes'
+                  }</strong>
                 </span>
               )}
             </div>
@@ -725,7 +842,7 @@ export function CatalogoClient({
                 setCategoriaFilter('TODAS')
                 setOrdenFilter('RECIENTES')
               }}
-              className="text-xs text-[#A36F4C] hover:text-[#8E5E3E] font-bold underline flex items-center gap-1 cursor-pointer"
+              className="text-xs text-primary hover:text-primary/80 font-bold underline flex items-center gap-1 cursor-pointer shrink-0"
             >
               <X className="h-3.5 w-3.5" />
               <span>Limpiar filtros</span>
@@ -735,270 +852,43 @@ export function CatalogoClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. TABLA OPERATIVA PRINCIPAL (EXCLUSIVA Y 100% RESPONSIVE)               */}
+      {/* 4. TABLA OPERATIVA PRINCIPAL: MASTER-DETAIL COLLAPSIBLE TABLE             */}
       {/* ========================================================================= */}
-      
-      {/* VISTA ESCRITORIO (>= lg): Tabla ejecutiva table-fixed sin scroll horizontal */}
-      <div className="hidden lg:block w-full bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xs overflow-hidden">
-        <table className="w-full text-left border-collapse table-fixed text-xs">
-          <colgroup>
-            <col className="w-[30%]" />
-            <col className="w-[14%]" />
-            <col className="w-[14%]" />
-            <col className="w-[18%]" />
-            <col className="w-[14%]" />
-            <col className="w-[10%]" />
-          </colgroup>
-          <thead>
-            <tr className="bg-[#FAF8F5] border-b border-[#E2D9CC] text-[#75695D] text-[11px] font-semibold">
-              <th className="py-3.5 px-4 font-bold text-left">Modelo & Familia</th>
-              <th className="py-3.5 px-3 font-bold text-center">Fecha Registro</th>
-              <th className="py-3.5 px-3 font-bold text-right">Costo Base</th>
-              <th className="py-3.5 px-3 font-bold text-center">Precio por Menor</th>
-              <th className="py-3.5 px-3 font-bold text-center">Precio por Mayor</th>
-              <th className="py-3.5 px-3 font-bold text-center">Estado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#E2D9CC]">
-            {filteredProductos.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-[#75695D] italic bg-[#FFFFFF]">
-                  No se encontraron productos con ese criterio de búsqueda
-                </td>
-              </tr>
-            ) : (
-              paginatedProductos.map((p) => {
-                const costo = p.costoBase || 0
+      <ProductsTableView
+        rows={paginatedGroupedRows}
+        allCatalogProductos={productos}
+        expandedParents={expandedParents}
+        onToggleExpand={handleToggleExpand}
+        onViewDetail={handleViewDetail}
+        onEdit={handleOpenEdit}
+        onEditGroup={handleOpenEditGroup}
+        onAddVariant={handleOpenCreateVariant}
+        onCopiarCotizacion={handleCopiarCotizacion}
+        onCopyGroupQuotation={handleCopiarCotizacionGrupo}
+        onToggleEstado={handleToggleEstado}
+        onDuplicar={handleDuplicar}
+        onDuplicarGroup={handleDuplicarGroup}
+        onDeleteProduct={handleDelete}
+        onDeleteGroup={handleDeleteGroup}
+        copiedId={copiedId}
+        formatCurrency={formatCurrency}
+        calcMargen={calcMargen}
+        formatFechaRegistro={formatFechaRegistro}
+        categoriaFilter={categoriaFilter}
+        onCategoriaFilterChange={(cat) => setCategoriaFilter(cat)}
+        categoriesWithCounts={categoriesWithCounts}
+        totalCatalogModelos={totalCatalogModelos}
+        ordenFilter={ordenFilter}
+        onOrdenFilterChange={(o) => setOrdenFilter(o)}
+      />
 
-                return (
-                  <tr 
-                    key={p.id} 
-                    onClick={() => handleOpenEdit(p)}
-                    className={`h-16 transition-colors cursor-pointer ${
-                      !p.activo ? 'bg-[#FAF8F5]/60 opacity-80' : 'hover:bg-[#FAF8F5]'
-                    }`}
-                  >
-                    {/* Columna 1: Modelo & Familia */}
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-2xl bg-[#F5EBE1] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center flex-shrink-0 shadow-2xs">
-                          <Package className="h-4.5 w-4.5 stroke-[2.2]" />
-                        </div>
-                        <div className="min-w-0">
-                          <span className="font-bold text-sm text-[#241C15] block truncate" title={p.nombreModelo}>
-                            {p.nombreModelo}
-                          </span>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC]">
-                              {p.lineaCategoria || 'General'}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Columna 2: Fecha de Registro */}
-                    <td className="py-3 px-3 text-center">
-                      {p.createdAt ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] text-[11px] font-mono text-[#5C5046] font-medium" title={`Fecha de registro: ${formatFechaRegistro(p.createdAt)}`}>
-                          <Calendar className="h-3 w-3 text-[#A36F4C]" />
-                          <span>{formatFechaRegistro(p.createdAt)}</span>
-                        </span>
-                      ) : (
-                        <span className="text-[#A89F91] text-[11px] font-mono">-</span>
-                      )}
-                    </td>
-
-                    {/* Columna 3: Costo Base */}
-                    <td className="py-3 px-3 text-right font-mono font-semibold text-[#241C15] text-xs tabular-nums">
-                      {formatCurrency(costo)}
-                    </td>
-
-                    {/* Columna 4: Precio al por Menor */}
-                    <td className="py-3 px-3">
-                      <div className="flex justify-center text-center font-mono text-xs tabular-nums">
-                        <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#A36F4C]/40 shadow-2xs ring-1 ring-[#A36F4C]/10 w-full max-w-[130px]">
-                          <span className="text-[9px] text-[#A36F4C] block font-sans font-bold">Por Menor</span>
-                          <span className="font-black text-[#A36F4C] block">
-                            {formatCurrency(p.precioMenor)}
-                          </span>
-                          <span className="text-[9px] text-[#1E5E3A] font-bold block">
-                            {calcMargen(p.precioMenor, costo)}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Columna 5: Precio al por Mayor */}
-                    <td className="py-3 px-3">
-                      <div className="flex justify-center text-center font-mono text-xs tabular-nums">
-                        <div className="p-1.5 rounded-xl bg-[#FFFFFF] border border-[#2563EB]/40 shadow-2xs ring-1 ring-[#2563EB]/10 w-full max-w-[130px]">
-                          <span className="text-[9px] text-[#2563EB] block font-sans font-bold">Por Mayor</span>
-                          <span className="font-black text-[#2563EB] block">
-                            {formatCurrency(p.precioMayor)}
-                          </span>
-                          <span className="text-[9px] text-[#1E5E3A] font-bold block">
-                            {calcMargen(p.precioMayor, costo)}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Columna 6: Estado */}
-                    <td className="py-3 px-3 text-center">
-                      {p.activo ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] border border-[#B4E3C0] text-[#1E5E3A] text-[11px] font-bold">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
-                          <span>Activo</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] text-[11px] font-medium">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#75695D]" />
-                          <span>Archivado</span>
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* VISTA MÓVIL Y TABLET (< lg): Tarjetas táctiles limpias */}
-      <div className="block lg:hidden space-y-3">
-        {filteredProductos.length === 0 ? (
-          <div className="p-8 text-center bg-[#FFFFFF] rounded-3xl border border-dashed border-[#E2D9CC] text-[#75695D] italic text-xs">
-            No se encontraron productos
-          </div>
-        ) : (
-          paginatedProductos.map((p) => {
-            const costo = p.costoBase || 0
-
-            return (
-              <div
-                key={p.id}
-                className={`bg-[#FFFFFF] border rounded-3xl p-4 shadow-2xs space-y-3 ${
-                  !p.activo ? 'border-[#E2D9CC] opacity-85 bg-[#FAF8F5]' : 'border-[#E2D9CC]'
-                }`}
-              >
-                {/* Fila 1: Header móvil con Avatar, Título y Estado */}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <div className="h-9 w-9 rounded-2xl bg-[#F5EBE1] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center flex-shrink-0 shadow-2xs">
-                      <Package className="h-4.5 w-4.5 stroke-[2.2]" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-sm text-[#241C15] block truncate" title={p.nombreModelo}>
-                        {p.nombreModelo}
-                      </span>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        <Badge variant="outline" className="text-[10px] px-2 py-0 bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC]">
-                          {p.lineaCategoria || 'General'}
-                        </Badge>
-                        {p.createdAt && (
-                          <span className="text-[10px] text-[#75695D] font-mono flex items-center gap-1 bg-[#FAF8F5] px-1.5 py-0.5 rounded border border-[#E2D9CC]">
-                            <Calendar className="h-2.5 w-2.5 text-[#A36F4C]" />
-                            <span>{formatFechaRegistro(p.createdAt)}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {p.activo ? (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#ECFDF5] border border-[#B4E3C0] text-[#1E5E3A] text-[10px] font-bold shrink-0">
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
-                      <span>Activo</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] text-[#75695D] text-[10px] shrink-0 font-medium">
-                      Archivado
-                    </span>
-                  )}
-                </div>
-
-                {/* Fila 2: Grid Financiero Móvil (Costo Base, Menor, Mayor) */}
-                <div className="grid grid-cols-3 gap-2 bg-[#FAF8F5] p-2.5 rounded-2xl border border-[#E2D9CC]/70 text-center font-mono">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] text-[#75695D] block font-sans font-semibold">Costo Base</span>
-                    <span className="text-xs font-bold text-[#241C15] block">{formatCurrency(costo)}</span>
-                  </div>
-                  <div className="space-y-0.5 border-x border-[#E2D9CC]/80 px-1">
-                    <span className="text-[10px] text-[#A36F4C] block font-sans font-bold">Por Menor</span>
-                    <span className="text-xs font-black text-[#A36F4C] block">{formatCurrency(p.precioMenor)}</span>
-                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioMenor, costo)}</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] text-[#2563EB] block font-sans font-bold">Por Mayor</span>
-                    <span className="text-xs font-black text-[#2563EB] block">{formatCurrency(p.precioMayor)}</span>
-                    <span className="text-[9px] text-[#1E5E3A] font-bold block">{calcMargen(p.precioMayor, costo)}</span>
-                  </div>
-                </div>
-
-                {/* Fila 3: Acciones Móvil */}
-                <div className="pt-2 border-t border-[#E2D9CC]/70 flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleCopiarCotizacion(p)}
-                    className="flex-1 h-8 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#241C15] font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
-                  >
-                    {copiedId === p.id ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-[#1E5E3A]" />
-                        <span className="text-[#1E5E3A]">¡Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Share2 className="h-3.5 w-3.5 text-[#A36F4C]" />
-                        <span>Copiar Precios</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEdit(p)}
-                    className="h-8 px-3 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#75695D] hover:text-[#A36F4C] font-bold text-xs flex items-center gap-1 shadow-2xs cursor-pointer"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    <span>Editar</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDuplicar(p)}
-                    className="h-8 w-8 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#F4EFEA] text-[#75695D] flex items-center justify-center shadow-2xs cursor-pointer"
-                    title="Duplicar"
-                  >
-                    <CopyPlus className="h-3.5 w-3.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleToggleEstado(p)}
-                    className={`h-8 w-8 rounded-xl border flex items-center justify-center shadow-2xs cursor-pointer ${
-                      p.activo ? 'border-[#E2D9CC] text-[#75695D]' : 'border-[#B4E3C0] bg-[#EBF7EE] text-[#1E5E3A]'
-                    }`}
-                    title={p.activo ? 'Descontinuar' : 'Reactivar'}
-                  >
-                    {p.activo ? <Archive className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                  </button>
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-
-      {/* Controles de Paginación de Productos (5 por página) */}
-      {filteredProductos.length > 0 && (
+      {/* Controles de Paginación de Productos y Modelos */}
+      {sortedGroupedRows.length > 0 && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-2xs">
           <div className="text-xs text-[#75695D] font-medium text-center sm:text-left">
             Mostrando <span className="font-bold text-[#241C15]">{(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> -{' '}
-            <span className="font-bold text-[#241C15]">{Math.min(safeCurrentPage * ITEMS_PER_PAGE, filteredProductos.length)}</span> de{' '}
-            <span className="font-bold text-[#241C15]">{filteredProductos.length}</span> modelos 3D
+            <span className="font-bold text-[#241C15]">{Math.min(safeCurrentPage * ITEMS_PER_PAGE, sortedGroupedRows.length)}</span> de{' '}
+            <span className="font-bold text-[#241C15]">{sortedGroupedRows.length}</span> modelos en catálogo ({filteredProductos.length} versiones)
           </div>
 
           {totalPages > 1 && (
@@ -1049,283 +939,55 @@ export function CatalogoClient({
       )}
 
       {/* ========================================================================= */}
-      {/* 5. MODAL: REGISTRAR / EDITAR PRODUCTO (REDISEÑADO)                        */}
+      {/* 5. MODAL: REGISTRAR / EDITAR PRODUCTO & VERSIONES (PRODUCT FORM MODAL)    */}
       {/* ========================================================================= */}
-      <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[580px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
-          <form onSubmit={handleSubmitModal} className="p-5 sm:p-6 space-y-4">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-[#E2D9CC] pb-3.5">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-[#F5EBE1] border border-[#D4BEA7] text-[#A36F4C] flex items-center justify-center flex-shrink-0 shadow-2xs">
-                  {editingId ? <Pencil className="h-5 w-5" /> : <Boxes className="h-5 w-5" />}
-                </div>
-                <div>
-                  <DialogTitle className="text-base sm:text-lg font-black text-[#241C15]">
-                    {editingId ? (is3D ? 'Editar Modelo 3D' : 'Editar Juego de Mesa') : (is3D ? 'Registrar Nuevo Producto 3D' : 'Registrar Juego de Mesa')}
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                    Define costos base y precios de venta al por mayor y menor
-                  </DialogDescription>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpenModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-xl hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+      <ProductFormModal
+        isOpen={openModal}
+        onClose={() => setOpenModal(false)}
+        onSaved={handleSavedProduct}
+        onDeleteProduct={handleDelete}
+        editingProduct={editingProduct}
+        editingGroup={editingGroup}
+        initialBaseName={presetBaseName}
+        initialCategoria={presetCategoria}
+        initialVariantName={presetVariantName}
+        categoryNamesList={categoryNamesList}
+        allCatalogProductos={productos}
+        is3D={is3D}
+      />
 
-            {/* Formulario */}
-            <div className="space-y-4">
-              
-              {/* Fila 1: Nombre, Categoría & Fecha de Registro */}
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                    {is3D ? 'Nombre del Modelo *' : 'Nombre del Juego *'}
-                  </Label>
-                  <Input 
-                    value={formData.nombreModelo}
-                    onChange={(e) => setFormData(prev => ({ ...prev, nombreModelo: e.target.value }))}
-                    placeholder={is3D ? "Ej: Maceta Hexagonal XL" : "Ej: Catan, Fantasma Blitz..."}
-                    required
-                    autoFocus
-                    className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                      Categoría / Familia *
-                    </Label>
-                    <Input 
-                      value={formData.lineaCategoria}
-                      onChange={(e) => setFormData(prev => ({ ...prev, lineaCategoria: e.target.value }))}
-                      placeholder="Ej: Macetas & Jardín, Decoración, Figuras"
-                      required
-                      list="categorias-list"
-                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
-                    />
-                    <datalist id="categorias-list">
-                      {categoryNamesList.map(cat => (
-                        <option key={cat} value={cat} />
-                      ))}
-                    </datalist>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1">
-                      <Calendar className="h-3 w-3 text-[#A36F4C]" />
-                      Fecha de Registro
-                    </Label>
-                    <Input 
-                      type="date"
-                      value={formData.fechaRegistro}
-                      onChange={(e) => setFormData(prev => ({ ...prev, fechaRegistro: e.target.value }))}
-                      className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10 cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Fila 2: Estructura Financiera (Costo Base, Por Menor, Por Mayor) */}
-              <div className="p-4 bg-[#FAF8F5] border border-[#E2D9CC] rounded-2xl space-y-3.5 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
-                    <Calculator className="h-3.5 w-3.5 text-[#A36F4C]" />
-                    Estructura Financiera & Precios
-                  </span>
-                  <span className="text-[10px] font-medium text-[#75695D] bg-white px-2 py-0.5 rounded-full border border-[#E2D9CC]">
-                    Márgenes en tiempo real
-                  </span>
-                </div>
-
-                {/* Costo Base */}
-                <div className="space-y-1.5 p-3 bg-white rounded-xl border border-[#B4E3C0]/80 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-[#1E5E3A] uppercase tracking-wider flex items-center gap-1">
-                      <span>Costo Base (S/) *</span>
-                    </Label>
-                    <span className="text-[10px] text-[#75695D]">
-                      {is3D ? 'Costo unitario directo' : 'Costo de compra o importación'}
-                    </span>
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#1E5E3A]">S/</span>
-                    <Input 
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.costoBase}
-                      onChange={(e) => setFormData(prev => ({ ...prev, costoBase: e.target.value }))}
-                      placeholder="0.00"
-                      required
-                      className="pl-8 bg-[#FAF8F5] border-[#B4E3C0] text-[#1E5E3A] rounded-xl text-sm font-mono font-black h-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Precios de Venta: Por Menor & Por Mayor */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  
-                  {/* Precio al por Menor */}
-                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#A36F4C]/40 ring-1 ring-[#A36F4C]/10 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#A36F4C] uppercase tracking-wider">Por Menor</span>
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-[#F5EBE1] text-[#A36F4C] border-[#D4BEA7]">
-                        Detal / PVP
-                      </Badge>
-                    </div>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#A36F4C]">S/</span>
-                      <Input 
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        value={formData.precioMenor}
-                        onChange={(e) => setFormData(prev => ({ ...prev, precioMenor: e.target.value }))}
-                        placeholder="0.00"
-                        required
-                        className="pl-8 bg-[#FAF8F5] border-[#A36F4C]/50 rounded-xl text-sm font-mono font-black h-10 text-[#A36F4C]"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-[#E2D9CC]/60">
-                      <span className="text-[#75695D]">Margen:</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-[#1E5E3A]">
-                          {calcMargen(parseFloat(formData.precioMenor) || 0, parseFloat(formData.costoBase) || 0)}
-                        </span>
-                        <span className="text-[#75695D]">
-                          ({calcGanancia(parseFloat(formData.precioMenor) || 0, parseFloat(formData.costoBase) || 0)})
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Precio al por Mayor */}
-                  <div className="space-y-2 p-3 bg-white rounded-xl border border-[#2563EB]/40 ring-1 ring-[#2563EB]/10 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#2563EB] uppercase tracking-wider">Por Mayor</span>
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200">
-                        Volumen / B2B
-                      </Badge>
-                    </div>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#2563EB]">S/</span>
-                      <Input 
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        value={formData.precioMayor}
-                        onChange={(e) => setFormData(prev => ({ ...prev, precioMayor: e.target.value }))}
-                        placeholder="0.00"
-                        required
-                        className="pl-8 bg-[#FAF8F5] border-[#2563EB]/50 rounded-xl text-sm font-mono font-black h-10 text-[#2563EB]"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-[#E2D9CC]/60">
-                      <span className="text-[#75695D]">Margen:</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-[#1E5E3A]">
-                          {calcMargen(parseFloat(formData.precioMayor) || 0, parseFloat(formData.costoBase) || 0)}
-                        </span>
-                        <span className="text-[#75695D]">
-                          ({calcGanancia(parseFloat(formData.precioMayor) || 0, parseFloat(formData.costoBase) || 0)})
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Validaciones de precio en vivo */}
-                {(parseFloat(formData.precioMayor) || 0) > (parseFloat(formData.precioMenor) || 0) && (parseFloat(formData.precioMenor) || 0) > 0 && (
-                  <div className="p-2 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 flex items-center gap-1.5">
-                    <span>💡 Nota: El precio por mayor (S/ {formData.precioMayor}) suele ser menor o igual al precio por menor (S/ {formData.precioMenor}).</span>
-                  </div>
-                )}
-                {(parseFloat(formData.costoBase) || 0) > (parseFloat(formData.precioMenor) || 0) && (parseFloat(formData.precioMenor) || 0) > 0 && (
-                  <div className="p-2 bg-red-50 rounded-xl border border-red-200 text-[11px] text-red-800 flex items-center gap-1.5">
-                    <span>⚠️ Alerta: El precio por menor está por debajo del costo base.</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Fila 3: Estado Inicial */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                  Estado del Producto
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, activo: true }))}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      formData.activo
-                        ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] shadow-2xs ring-1 ring-[#1E5E3A]/20'
-                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC] hover:bg-[#F4EFEA]'
-                    }`}
-                  >
-                    <span className="h-2 w-2 rounded-full bg-[#1E5E3A]" />
-                    <span>Activo en Venta</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, activo: false }))}
-                    className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      !formData.activo
-                        ? 'bg-[#FAF8F5] text-[#75695D] border-[#D4BEA7] shadow-2xs ring-1 ring-[#75695D]/20'
-                        : 'bg-[#F8F6F2] text-[#75695D] border-[#E2D9CC] hover:bg-[#F4EFEA]'
-                    }`}
-                  >
-                    <Archive className="h-3.5 w-3.5 text-[#75695D]" />
-                    <span>Descontinuado</span>
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-end gap-2 pt-4 mt-2 border-t border-[#E2D9CC]/50">
-              {editingId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const p = productos.find(x => x.id === editingId)
-                    if (p) handleDelete(p)
-                  }}
-                  className="bg-white border-[#DC2626] text-[#DC2626] hover:bg-red-50 text-xs rounded-xl cursor-pointer mr-auto"
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />
-                  Eliminar
-                </Button>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpenModal(false)}
-                className="text-xs rounded-xl cursor-pointer text-[#75695D]"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                size="sm"
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-5 rounded-xl cursor-pointer shadow-xs"
-              >
-                {isSubmitting ? 'Guardando...' : (editingId ? 'Guardar Cambios' : 'Guardar Producto')}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* ========================================================================= */}
+      {/* 6. MODAL: FICHA TÉCNICA DETALLADA (PRODUCT DETAILS MODAL)                 */}
+      {/* ========================================================================= */}
+      <ProductDetailsModal
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        group={selectedDetailGroup}
+        singleProduct={selectedDetailProduct}
+        onEdit={() => {
+          setDetailModalOpen(false)
+          if (selectedDetailGroup) {
+            handleOpenEditGroup(selectedDetailGroup)
+          } else if (selectedDetailProduct) {
+            handleOpenEdit(selectedDetailProduct)
+          }
+        }}
+        onCreateOrder={(producto) => {
+          setDetailModalOpen(false)
+          if (producto) {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('nova_preselected_product_id', producto.id)
+            }
+            router.push(`/pedidos?productoId=${producto.id}`)
+            toast.info(`Iniciando pedido para "${producto.nombreModelo}"`)
+          } else {
+            router.push('/pedidos')
+          }
+        }}
+        formatCurrency={formatCurrency}
+        calcMargen={calcMargen}
+        formatFechaRegistro={formatFechaRegistro}
+      />
     </div>
   )
 }
