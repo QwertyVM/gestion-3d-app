@@ -2,7 +2,7 @@
 
 import React from 'react'
 
-interface ProductionKpiCardProps {
+export interface ProductionKpiCardProps {
   label: string
   value: React.ReactNode
   sublabel?: React.ReactNode
@@ -21,31 +21,31 @@ export function ProductionKpiCard({
 }: ProductionKpiCardProps) {
   return (
     <div
-      className={`h-24 py-3.5 px-4 rounded-xl border border-border bg-card shadow-xs hover:border-primary/40 transition-all flex flex-col justify-between ${className}`}
+      className={`bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px] hover:border-primary/40 transition-all ${className}`}
     >
-      {/* Fila superior: Título en mayúsculas pequeñas con icono sutil a la derecha */}
-      <div className="flex items-center justify-between text-muted-foreground">
-        <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+      {/* Encabezado: Título en mayúsculas pequeñas e ícono temático a la derecha */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
           {label}
         </span>
         {icon && (
-          <div className="w-3.5 h-3.5 text-muted-foreground/80 shrink-0 flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5">
+          <div className="w-4 h-4 text-primary/70 shrink-0 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
             {icon}
           </div>
         )}
       </div>
 
-      {/* Fila inferior: Cifra y subtexto */}
-      <div>
+      {/* Valor principal y subtítulo operativo */}
+      <div className="min-w-0">
         <div
-          className={`text-2xl font-bold font-mono tabular-nums tracking-tight leading-tight ${
+          className={`text-2xl font-extrabold tracking-tight leading-none ${
             isDestructive ? 'text-destructive' : 'text-foreground'
           }`}
         >
           {value}
         </div>
         {sublabel && (
-          <div className="text-[11px] text-muted-foreground font-normal mt-0.5 truncate">
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1 min-w-0">
             {sublabel}
           </div>
         )}

@@ -86,6 +86,12 @@ export interface GrupoColorTaller {
   nombreColor: string
   codigoHex: string
   tipoMaterial: string
+  colores?: {
+    id?: string
+    nombreColor: string
+    codigoHex: string
+    tipoMaterial: string
+  }[]
   stockGramosActual: number
   stockBobinasActual: number
   alertaCritica: boolean
@@ -101,6 +107,7 @@ export interface GrupoColorTaller {
     codigoRef: string
     estado: string
     personalizacion: string | null
+    canalVenta?: string | null
   }[]
 }
 
@@ -201,9 +208,13 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           return null
         }).filter(Boolean) as { id: string; nombreColor: string; codigoHex: string; tipoMaterial: string }[]
 
-        const primaryCol = resolvedColores[0] || item.colorFilamento || (item.colorFilamentoId ? filamentoMap.get(item.colorFilamentoId) : null)
-        const displayNombreColor = resolvedColores.length > 1
-          ? resolvedColores.map(c => c.nombreColor).join(' + ')
+        const sortedColores = resolvedColores.length > 0
+          ? [...resolvedColores].sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
+          : []
+
+        const primaryCol = sortedColores[0] || item.colorFilamento || (item.colorFilamentoId ? filamentoMap.get(item.colorFilamentoId) : null)
+        const displayNombreColor = sortedColores.length > 1
+          ? sortedColores.map(c => c.nombreColor).join(' + ')
           : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
 
         piezas.push({
@@ -222,7 +233,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           cantidad: cant,
           colorFilamentoId: primaryCol?.id || item.colorFilamentoId || null,
           coloresIds: rawColores,
-          colores: resolvedColores,
+          colores: sortedColores,
           nombreColor: displayNombreColor,
           codigoHex: primaryCol?.codigoHex || '#94A3B8',
           tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
@@ -275,9 +286,13 @@ export async function getTallerData(): Promise<TallerDataResponse> {
         return null
       }).filter(Boolean) as { id: string; nombreColor: string; codigoHex: string; tipoMaterial: string }[]
 
-      const primaryCol = resolvedColores[0] || v.colorFilamento || (v.colorFilamentoId ? filamentoMap.get(v.colorFilamentoId) : null)
-      const displayNombreColor = resolvedColores.length > 1
-        ? resolvedColores.map(c => c.nombreColor).join(' + ')
+      const sortedColores = resolvedColores.length > 0
+        ? [...resolvedColores].sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
+        : []
+
+      const primaryCol = sortedColores[0] || v.colorFilamento || (v.colorFilamentoId ? filamentoMap.get(v.colorFilamentoId) : null)
+      const displayNombreColor = sortedColores.length > 1
+        ? sortedColores.map(c => c.nombreColor).join(' + ')
         : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
 
       piezas.push({
@@ -296,7 +311,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
         cantidad: cant,
         colorFilamentoId: primaryCol?.id || v.colorFilamentoId || null,
         coloresIds: rawColores,
-        colores: resolvedColores,
+        colores: sortedColores,
         nombreColor: displayNombreColor,
         codigoHex: primaryCol?.codigoHex || '#94A3B8',
         tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
@@ -374,22 +389,39 @@ export async function getTallerData(): Promise<TallerDataResponse> {
 
     const gruposPorModelo = Array.from(modeloMap.values()).sort((a, b) => b.totalUnidades - a.totalUnidades)
 
-    // 4. Agrupación por Color de Filamento
+    // 4. Agrupación por Color / Combinación de Filamentos (Clave Normalizada Alfabéticamente)
     const colorGroupMap = new Map<string, GrupoColorTaller>()
 
     piezas.forEach((p) => {
-      const colorKey = p.colorFilamentoId || p.nombreColor
-      if (!colorGroupMap.has(colorKey)) {
+      const sortedColores = (p.colores && p.colores.length > 0)
+        ? [...p.colores].sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
+        : (p.nombreColor ? p.nombreColor.split(' + ').map(s => s.trim()).sort().map(name => ({
+            id: p.colorFilamentoId || undefined,
+            nombreColor: name,
+            codigoHex: p.codigoHex || '#94A3B8',
+            tipoMaterial: p.tipoMaterial || 'PLA'
+          })) : [])
+
+      const normalizedColorKey = sortedColores.length > 0
+        ? sortedColores.map(c => c.nombreColor.trim().toLowerCase()).join(' + ')
+        : (p.nombreColor || 'sin-especificar').toLowerCase()
+
+      const displayTitle = sortedColores.length > 0
+        ? sortedColores.map(c => c.nombreColor).join(' + ')
+        : (p.nombreColor || 'Sin especificar')
+
+      if (!colorGroupMap.has(normalizedColorKey)) {
         const inv = p.colorFilamentoId ? filamentoMap.get(p.colorFilamentoId) : null
         const stockGramos = inv?.stockGramos ? Number(inv.stockGramos) : 0
-        const stockBobinas = inv?.stockBobinas ? Number(inv.stockBobinas) : 0
+        const stockBobinas = inv?.stockBobinas ? Number(inv.stockBobinas) : (sortedColores.length > 0 ? sortedColores.length : 1)
         const alertaCritica = Boolean(inv?.alertaCritica || (stockGramos < 300 && stockGramos > 0))
 
-        colorGroupMap.set(colorKey, {
+        colorGroupMap.set(normalizedColorKey, {
           colorId: p.colorFilamentoId,
-          nombreColor: p.nombreColor,
+          nombreColor: displayTitle,
           codigoHex: p.codigoHex,
           tipoMaterial: p.tipoMaterial,
+          colores: sortedColores,
           stockGramosActual: stockGramos,
           stockBobinasActual: stockBobinas,
           alertaCritica,
@@ -400,7 +432,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
         })
       }
 
-      const cGrp = colorGroupMap.get(colorKey)!
+      const cGrp = colorGroupMap.get(normalizedColorKey)!
       cGrp.totalUnidades += p.cantidad
       cGrp.totalGramosRequeridos = Number((cGrp.totalGramosRequeridos + p.pesoGramosTotal).toFixed(1))
       cGrp.deficitGramos = Number(Math.max(0, cGrp.totalGramosRequeridos - cGrp.stockGramosActual).toFixed(1))
@@ -413,7 +445,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
         cliente: p.cliente,
         codigoRef: p.codigoRef,
         estado: p.estado,
-        personalizacion: p.personalizacion
+        personalizacion: p.personalizacion,
+        canalVenta: p.canalVenta
       })
     })
 
@@ -528,4 +561,18 @@ export async function updateEstadoPieza(
     console.error('Error updating taller item status:', error)
     return { success: false, error: error.message || 'Error al actualizar estado' }
   }
+}
+
+export async function iniciarPieza(
+  tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
+  registroId: string
+) {
+  return updateEstadoPieza(tipoRegistro, registroId, 'EN_PRODUCCION')
+}
+
+export async function reabrirPieza(
+  tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
+  registroId: string
+) {
+  return updateEstadoPieza(tipoRegistro, registroId, 'PENDIENTE')
 }

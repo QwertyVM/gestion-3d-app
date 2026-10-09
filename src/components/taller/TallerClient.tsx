@@ -15,7 +15,8 @@ import {
   Sparkles,
   ChevronDown,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  CheckCircle2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -37,7 +38,8 @@ import {
   updateEstadoPieza
 } from '@/actions/taller'
 import { ProductionKpiCard } from './ProductionKpiCard'
-import { ProductionRow } from './ProductionRow'
+import { ProductionQueueView } from './ProductionQueueView'
+import { ProductionByColorView } from './ProductionByColorView'
 
 type ModoVista = 'COLA' | 'MODELO' | 'COLOR'
 type OrdenPrioridad = 'LIFO_RECIENTES' | 'FIFO_ANTIGUOS' | 'ENTREGA_URGENTE' | 'MAYOR_CANTIDAD' | 'NOMBRE_AZ'
@@ -85,17 +87,46 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
     })
   }, [data.piezas, piezasOpt])
 
-  // Métricas dinámicas calculadas en tiempo real
+  // Métricas dinámicas calculadas en tiempo real para el ciclo operativo de taller
   const metricasActivas = useMemo(() => {
     const pendientes = todasPiezas.filter(p => p.estado === 'PENDIENTE').reduce((sum, p) => sum + p.cantidad, 0)
     const enProduccion = todasPiezas.filter(p => p.estado === 'EN_PRODUCCION').reduce((sum, p) => sum + p.cantidad, 0)
     const listos = todasPiezas.filter(p => p.estado === 'LISTO_ENTREGA').reduce((sum, p) => sum + p.cantidad, 0)
+
+    // Piezas por fabricar / en proceso en taller
+    const piezasTaller = todasPiezas.filter(p => p.estado === 'PENDIENTE' || p.estado === 'EN_PRODUCCION')
+
+    // Modelos distintos de las piezas activas a fabricar
+    const modelosSet = new Set<string>()
+    piezasTaller.forEach(p => modelosSet.add(p.productoId || p.nombreModelo))
+    const totalModelosDistintos = modelosSet.size > 0 ? modelosSet.size : data.metricas.totalModelosUnicos
+
+    // Colores distintos asignados a la tanda activa
+    const coloresMap = new Map<string, { nombreColor: string; codigoHex: string }>()
+    piezasTaller.forEach(p => {
+      if (p.colores && p.colores.length > 0) {
+        p.colores.forEach(c => {
+          const key = c.nombreColor || c.id
+          if (!coloresMap.has(key)) coloresMap.set(key, { nombreColor: c.nombreColor, codigoHex: c.codigoHex })
+        })
+      } else if (p.nombreColor) {
+        if (!coloresMap.has(p.nombreColor)) {
+          coloresMap.set(p.nombreColor, { nombreColor: p.nombreColor, codigoHex: p.codigoHex || '#94A3B8' })
+        }
+      }
+    })
+    const coloresList = Array.from(coloresMap.values())
+    const totalColoresAsignados = coloresList.length > 0 ? coloresList.length : data.metricas.totalColoresRequeridos
+
     return {
       ...data.metricas,
       totalPiezasPendientes: pendientes,
       totalPiezasEnProduccion: enProduccion,
       totalPiezasListas: listos,
-      totalPiezasActivas: pendientes + enProduccion + listos
+      totalPiezasActivas: pendientes + enProduccion + listos,
+      totalModelosDistintos,
+      totalColoresAsignados,
+      coloresPreview: coloresList.slice(0, 4)
     }
   }, [todasPiezas, data.metricas])
 
@@ -248,21 +279,47 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
     return Array.from(map.values()).sort((a, b) => b.totalUnidades - a.totalUnidades)
   }, [piezasProcesadas])
 
-  // Recalcular Grupos por Color filtrados
+  // Recalcular Grupos por Color filtrados con clave normalizada alfabéticamente
   const gruposPorColorFiltrados = useMemo(() => {
     const map = new Map<string, GrupoColorTaller>()
 
     piezasProcesadas.forEach(p => {
-      const colorKey = p.colorFilamentoId || p.nombreColor
-      if (!map.has(colorKey)) {
-        const orig = data.gruposPorColor.find(g => (g.colorId || g.nombreColor) === colorKey)
-        map.set(colorKey, {
+      // Normalizar lista de colores ordenados alfabéticamente
+      const sortedColores = (p.colores && p.colores.length > 0)
+        ? [...p.colores].sort((a, b) => a.nombreColor.localeCompare(b.nombreColor))
+        : (p.nombreColor ? p.nombreColor.split(' + ').map(s => s.trim()).sort().map(name => ({
+            id: p.colorFilamentoId || undefined,
+            nombreColor: name,
+            codigoHex: p.codigoHex || '#94A3B8',
+            tipoMaterial: p.tipoMaterial || 'PLA'
+          })) : [])
+
+      const normalizedColorKey = sortedColores.length > 0
+        ? sortedColores.map(c => c.nombreColor.trim().toLowerCase()).join(' + ')
+        : (p.nombreColor || 'sin-especificar').toLowerCase()
+
+      const displayTitle = sortedColores.length > 0
+        ? sortedColores.map(c => c.nombreColor).join(' + ')
+        : (p.nombreColor || 'Sin especificar')
+
+      if (!map.has(normalizedColorKey)) {
+        const orig = data.gruposPorColor.find(g => {
+          const gKey = (g.colores && g.colores.length > 0)
+            ? g.colores.map(c => c.nombreColor.trim().toLowerCase()).sort().join(' + ')
+            : (g.nombreColor || '').split(' + ').map(s => s.trim().toLowerCase()).sort().join(' + ')
+          return gKey === normalizedColorKey || (g.colorId && g.colorId === p.colorFilamentoId)
+        })
+
+        const stockBobinas = orig?.stockBobinasActual || (p.colorFilamentoId ? 1 : sortedColores.length)
+
+        map.set(normalizedColorKey, {
           colorId: p.colorFilamentoId,
-          nombreColor: p.nombreColor,
+          nombreColor: displayTitle,
           codigoHex: p.codigoHex,
           tipoMaterial: p.tipoMaterial,
+          colores: sortedColores,
           stockGramosActual: orig?.stockGramosActual || 0,
-          stockBobinasActual: orig?.stockBobinasActual || 0,
+          stockBobinasActual: stockBobinas,
           alertaCritica: orig?.alertaCritica || false,
           totalUnidades: 0,
           totalGramosRequeridos: 0,
@@ -271,7 +328,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         })
       }
 
-      const cGrp = map.get(colorKey)!
+      const cGrp = map.get(normalizedColorKey)!
       cGrp.totalUnidades += p.cantidad
       cGrp.totalGramosRequeridos = Number((cGrp.totalGramosRequeridos + p.pesoGramosTotal).toFixed(1))
       cGrp.deficitGramos = Number(Math.max(0, cGrp.totalGramosRequeridos - cGrp.stockGramosActual).toFixed(1))
@@ -284,7 +341,8 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         cliente: p.cliente,
         codigoRef: p.codigoRef,
         estado: p.estado,
-        personalizacion: p.personalizacion
+        personalizacion: p.personalizacion,
+        canalVenta: p.canalVenta
       })
     })
 
@@ -341,83 +399,6 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
     setTimeout(() => setIsRefreshing(false), 500)
   }
 
-  // Renderizador de Tabla Estructurada de Piezas con CERO SCROLL HORIZONTAL
-  const renderTablaDePiezas = (
-    piezasLista: PiezaTaller[],
-    titulo: string,
-    subtitulo: string,
-    badgeCount: number
-  ) => {
-    if (piezasLista.length === 0) return null
-
-    const totalUds = piezasLista.reduce((acc, p) => acc + p.cantidad, 0)
-    const totalGramos = piezasLista.reduce((acc, p) => acc + p.pesoGramosTotal, 0).toFixed(1)
-
-    return (
-      <div className="bg-card border border-border rounded-xl shadow-xs overflow-hidden">
-        {/* Cabecera de Sección */}
-        <div className="p-3.5 sm:p-4 border-b border-border bg-muted/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-bold text-foreground">
-                {titulo}
-              </h2>
-              <span className="bg-muted text-muted-foreground text-xs font-semibold px-2 py-0.5 rounded-full border border-border">
-                {badgeCount}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {subtitulo}
-            </p>
-          </div>
-
-          <div className="text-xs text-muted-foreground font-medium self-end sm:self-auto">
-            <span className="font-semibold text-foreground">
-              {totalUds} {totalUds === 1 ? 'unidad' : 'unidades'}
-            </span>
-            <span className="mx-1.5">•</span>
-            <span>{totalGramos}g estimados</span>
-          </div>
-        </div>
-
-        {/* Tabla Fixed w-full (Cero scroll horizontal) */}
-        <div className="w-full overflow-hidden">
-          <Table className="w-full table-fixed">
-            <TableHeader className="bg-muted/40 border-b border-border">
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="w-[36%] px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                  Pieza & Especificación Técnica
-                </TableHead>
-                <TableHead className="w-[20%] px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                  Cliente & Referencia
-                </TableHead>
-                <TableHead className="w-[16%] px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                  Entrega & Antigüedad
-                </TableHead>
-                <TableHead className="w-[14%] px-4 py-3 text-center text-xs font-semibold text-muted-foreground">
-                  Estado
-                </TableHead>
-                <TableHead className="w-[14%] px-4 py-3 text-right text-xs font-semibold text-muted-foreground">
-                  Acción Operativa
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {piezasLista.map((pieza) => (
-                <ProductionRow
-                  key={pieza.id}
-                  pieza={pieza}
-                  isLoading={loadingPieceId === pieza.id}
-                  onCambiarEstado={handleCambiarEstado}
-                />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
       {/* ========================================================================= */}
@@ -459,109 +440,160 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. TARJETAS KPI COMPACTAS Y UNIFORMES (4 EN CUADRÍCULA SIMÉTRICA)          */}
+      {/* 2. CICLO OPERATIVO DE TALLER: 4 KPIS EN CUADRÍCULA BALANCEADA              */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* KPI 1 - POR FABRICAR */}
         <ProductionKpiCard
-          label="Total por Fabricar"
+          label="POR FABRICAR"
           value={
             <span className="flex items-baseline gap-1.5">
-              <span>{data.metricas.totalPiezasActivas}</span>
-              <span className="text-xs text-muted-foreground font-normal font-sans">uds</span>
+              <span>{metricasActivas.totalPiezasPendientes}</span>
+              <span className="text-xs text-muted-foreground font-normal font-sans">
+                {metricasActivas.totalPiezasPendientes === 1 ? 'pza' : 'uds'}
+              </span>
             </span>
           }
           sublabel={
             <div className="flex items-center gap-1.5">
-              <span>{data.metricas.totalPiezasPendientes} pend.</span>
-              <span>•</span>
-              <span>{data.metricas.totalPiezasEnProduccion} en cama</span>
+              <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span>En espera de impresión</span>
             </div>
           }
-          icon={<Boxes className="w-3.5 h-3.5" />}
+          icon={<Clock className="w-4 h-4 text-primary/70" />}
         />
 
+        {/* KPI 2 - MODELOS DISTINTOS */}
         <ProductionKpiCard
-          label="Modelos Distintos"
+          label="MODELOS DISTINTOS"
           value={
             <span className="flex items-baseline gap-1.5">
-              <span>{data.metricas.totalModelosUnicos}</span>
-              <span className="text-xs text-muted-foreground font-normal font-sans">diseños</span>
+              <span>{metricasActivas.totalModelosDistintos}</span>
+              <span className="text-xs text-muted-foreground font-normal font-sans">
+                {metricasActivas.totalModelosDistintos === 1 ? 'diseño' : 'diseños'}
+              </span>
             </span>
           }
-          sublabel="Agrupados por tandas"
-          icon={<Layers className="w-3.5 h-3.5" />}
+          sublabel={
+            <div className="flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span>Agrupados para lote</span>
+            </div>
+          }
+          icon={<Layers className="w-4 h-4 text-primary/70" />}
         />
 
+        {/* KPI 3 (Nuevo) - COLORES ASIGNADOS */}
         <ProductionKpiCard
-          label="Material Requerido"
+          label="COLORES ASIGNADOS"
           value={
             <span className="flex items-baseline gap-1.5">
-              <span>{data.metricas.totalGramosRequeridos}</span>
-              <span className="text-xs text-muted-foreground font-normal font-sans">g</span>
+              <span>{metricasActivas.totalColoresAsignados}</span>
+              <span className="text-xs text-muted-foreground font-normal font-sans">
+                {metricasActivas.totalColoresAsignados === 1 ? 'color' : 'colores'}
+              </span>
             </span>
           }
-          sublabel={`En ${data.metricas.totalColoresRequeridos} ${
-            data.metricas.totalColoresRequeridos === 1 ? 'color de bobina' : 'colores de bobina'
-          }`}
-          icon={<Palette className="w-3.5 h-3.5" />}
+          sublabel={
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Palette className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="truncate">Carretes requeridos</span>
+              {metricasActivas.coloresPreview.length > 0 && (
+                <div className="flex items-center -space-x-1 ml-1 shrink-0">
+                  {metricasActivas.coloresPreview.slice(0, 3).map((col, idx) => (
+                    <span
+                      key={idx}
+                      className="w-2.5 h-2.5 rounded-full border border-black/15 shadow-2xs inline-block shrink-0"
+                      style={{ backgroundColor: col.codigoHex }}
+                      title={col.nombreColor}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          }
+          icon={<Palette className="w-4 h-4 text-primary/70" />}
         />
 
+        {/* KPI 4 (Nuevo) - LISTAS PARA DESPACHO */}
         <ProductionKpiCard
-          label="Entregas Críticas"
+          label="LISTAS PARA DESPACHO"
+          className="p-4.5 pr-5"
           value={
             <span className="flex items-baseline gap-1.5">
-              <span>{data.metricas.entregasUrgentes}</span>
-              <span className="text-xs text-muted-foreground font-normal font-sans">urgentes</span>
+              <span>{metricasActivas.totalPiezasListas}</span>
+              <span className="text-xs text-muted-foreground font-normal font-sans">
+                {metricasActivas.totalPiezasListas === 1 ? 'pieza lista' : 'piezas listas'}
+              </span>
             </span>
           }
-          isDestructive={data.metricas.entregasUrgentes > 0}
-          sublabel={data.metricas.entregasUrgentes > 0 ? 'Priorizar hoy' : 'Sin pedidos vencidos'}
-          icon={<Clock className="w-3.5 h-3.5" />}
+          sublabel={
+            <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-400 min-w-0">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span className="whitespace-nowrap">Listas para empaque o recojo</span>
+            </div>
+          }
+          icon={<CheckCircle2 className="w-4 h-4 text-emerald-600" />}
         />
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. FILTROS Y BÚSQUEDA (TOOLBAR SIMÉTRICA)                                 */}
+      {/* 3. SELECTOR DE MODO DE VISTA Y CONTROLES                                   */}
       {/* ========================================================================= */}
-      <div className="bg-card border border-border rounded-xl p-1.5 flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5 shadow-xs">
-        {/* Segmented Control de Estados a la izquierda (shrink-0 para evitar colapso de pestañas) */}
-        <div className="bg-muted/60 p-0.5 rounded-lg flex items-center gap-0.5 shrink-0 overflow-x-auto max-w-full">
-          {[
-            { id: 'PENDIENTE', label: 'Pendientes', count: metricasActivas.totalPiezasPendientes },
-            { id: 'EN_PRODUCCION', label: 'En Impresión', count: metricasActivas.totalPiezasEnProduccion },
-            { id: 'LISTO_ENTREGA', label: 'Listos', count: metricasActivas.totalPiezasListas },
-            { id: 'TODOS', label: 'Todos', count: metricasActivas.totalPiezasActivas }
-          ].map((st) => {
-            const isSelected = filtroEstado === st.id
-            return (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => setFiltroEstado(st.id as FiltroEstado)}
-                className={`flex items-center gap-1.5 text-xs py-1 transition-all cursor-pointer whitespace-nowrap rounded-md shrink-0 ${
-                  isSelected
-                    ? 'bg-card text-foreground font-semibold px-3 shadow-2xs'
-                    : 'text-muted-foreground hover:text-foreground px-2.5 transition-colors'
-                }`}
-              >
-                <span>{st.label}</span>
-                <span className="font-mono text-[10px] opacity-75">({st.count})</span>
-              </button>
-            )
-          })}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+        <div className="bg-card border border-border rounded-xl p-1 flex items-center gap-1 shadow-2xs self-start overflow-x-auto max-w-full">
+          <button
+            type="button"
+            onClick={() => setModoVista('COLA')}
+            className={`flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              modoVista === 'COLA'
+                ? 'bg-primary text-primary-foreground shadow-2xs'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Cola de Producción</span>
+            <span className="font-mono text-[10px] opacity-80">({metricasActivas.totalPiezasActivas})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setModoVista('MODELO')}
+            className={`flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              modoVista === 'MODELO'
+                ? 'bg-primary text-primary-foreground shadow-2xs'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+            }`}
+          >
+            <Boxes className="w-3.5 h-3.5" />
+            <span>Por Modelo ({gruposPorModeloFiltrados.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setModoVista('COLOR')}
+            className={`flex items-center gap-1.5 text-xs py-1.5 px-3 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+              modoVista === 'COLOR'
+                ? 'bg-primary text-primary-foreground shadow-2xs'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+            }`}
+          >
+            <Palette className="w-3.5 h-3.5" />
+            <span>Por Color ({gruposPorColorFiltrados.length})</span>
+          </button>
         </div>
 
-        {/* Lado Derecho: Buscador Integrado */}
-        <div className="relative w-full sm:w-72 md:w-80">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <Input
-            type="text"
-            placeholder="Buscar pieza..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="h-8 text-xs bg-background border-input rounded-lg pl-8 pr-3 w-full focus-visible:ring-1 focus-visible:ring-primary text-foreground placeholder:text-muted-foreground"
-          />
-        </div>
+        {/* Buscador secundario para vista por modelo / color */}
+        {modoVista !== 'COLA' && (
+          <div className="relative w-full sm:w-72">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Buscar en vista agrupada..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="h-9 text-xs bg-card border-input rounded-xl pl-8 pr-3 w-full focus-visible:ring-1 focus-visible:ring-primary text-foreground placeholder:text-muted-foreground shadow-2xs"
+            />
+          </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -569,92 +601,15 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       {/* ========================================================================= */}
 
       {/* ------------------------------------------------------------------------- */}
-      {/* VISTA 1: COLA DE PRODUCCIÓN EN TABLA                                      */}
+      {/* VISTA 1: COLA DE PRODUCCIÓN ELEVADA (ProductionQueueView)                 */}
       {/* ------------------------------------------------------------------------- */}
       {modoVista === 'COLA' && (
-        <div className="space-y-4">
-          {piezasProcesadas.length === 0 ? (
-            <div className="bg-card border border-border rounded-xl p-12 text-center shadow-xs">
-              <div className="w-12 h-12 rounded-xl bg-muted text-muted-foreground/40 flex items-center justify-center mx-auto mb-3 border border-border">
-                <Boxes className="w-6 h-6 stroke-[1.5]" />
-              </div>
-              <h3 className="font-semibold text-foreground text-sm">
-                {filtroEstado === 'PENDIENTE'
-                  ? 'No hay piezas pendientes de fabricar'
-                  : filtroEstado === 'EN_PRODUCCION'
-                  ? 'No hay piezas en impresión en este momento'
-                  : filtroEstado === 'LISTO_ENTREGA'
-                  ? 'No hay piezas listas para entrega'
-                  : 'Taller al día'}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                {filtroEstado === 'PENDIENTE'
-                  ? 'Todas las piezas solicitadas ya están en impresión o listas para entrega.'
-                  : 'No hay piezas con los filtros activos actualmente.'}
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-                {filtroEstado !== 'TODOS' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setFiltroEstado('TODOS')
-                      setBusqueda('')
-                      setFiltroColor('TODOS')
-                      setFiltroCategoria('TODOS')
-                    }}
-                    className="rounded-lg border-border bg-card text-foreground hover:bg-muted text-xs font-medium cursor-pointer h-8"
-                  >
-                    <span>Revisar la cola completa</span>
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : filtroEstado === 'TODOS' ? (
-            <div className="space-y-4">
-              {/* Tabla 1: Pendientes */}
-              {renderTablaDePiezas(
-                piezasPendientes,
-                'Piezas Pendientes',
-                'Piezas en cola esperando asignación de cama de impresión.',
-                piezasPendientes.length
-              )}
-
-              {/* Tabla 2: En Impresión */}
-              {renderTablaDePiezas(
-                piezasEnProduccion,
-                'Piezas en Impresión',
-                'Piezas actualmente en proceso activo de impresión 3D en taller.',
-                piezasEnProduccion.length
-              )}
-
-              {/* Tabla 3: Listos */}
-              {renderTablaDePiezas(
-                piezasListas,
-                'Piezas Listas para Entrega',
-                'Piezas impresas y verificadas listas para despacho o recojo.',
-                piezasListas.length
-              )}
-            </div>
-          ) : (
-            <div>
-              {renderTablaDePiezas(
-                piezasProcesadas,
-                filtroEstado === 'PENDIENTE'
-                  ? 'Piezas Pendientes'
-                  : filtroEstado === 'EN_PRODUCCION'
-                  ? 'Piezas en Impresión'
-                  : 'Piezas Listas para Entrega',
-                filtroEstado === 'PENDIENTE'
-                  ? 'Listado ordenado de piezas que requieren fabricación en taller.'
-                  : filtroEstado === 'EN_PRODUCCION'
-                  ? 'Piezas en proceso activo de impresión 3D.'
-                  : 'Piezas terminadas listas para entrega al cliente.',
-                piezasProcesadas.length
-              )}
-            </div>
-          )}
-        </div>
+        <ProductionQueueView
+          piezas={todasPiezas}
+          loadingPieceId={loadingPieceId}
+          onCambiarEstado={handleCambiarEstado}
+          metricasActivas={metricasActivas}
+        />
       )}
 
       {/* ------------------------------------------------------------------------- */}
@@ -798,106 +753,15 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       {/* VISTA 3: AGRUPACIÓN POR COLOR (OPTIMIZACIÓN DE BOBINAS)                   */}
       {/* ------------------------------------------------------------------------- */}
       {modoVista === 'COLOR' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-semibold text-muted-foreground">
-              {gruposPorColorFiltrados.length} colores requeridos en producción
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Agrupa impresiones por bobina para optimizar cambios de filamento
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {gruposPorColorFiltrados.map((grupo) => {
-              const expandido = coloresExpandidos[grupo.colorId || grupo.nombreColor] || false
-              const faltaStock = grupo.deficitGramos > 0
-
-              return (
-                <Card
-                  key={grupo.colorId || grupo.nombreColor}
-                  className={`bg-card border rounded-xl shadow-xs overflow-hidden flex flex-col justify-between ${
-                    faltaStock ? 'border-destructive/40 ring-1 ring-destructive/20' : 'border-border'
-                  }`}
-                >
-                  <CardHeader className="p-4 pb-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-8 h-8 rounded-lg border border-black/15 shadow-xs flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: grupo.codigoHex }}
-                        />
-                        <div>
-                          <CardTitle className="text-sm font-bold text-foreground">
-                            {grupo.nombreColor}
-                          </CardTitle>
-                          <CardDescription className="text-xs text-muted-foreground">
-                            Material: {grupo.tipoMaterial} • Stock: {grupo.stockGramosActual}g ({grupo.stockBobinasActual} bobinas)
-                          </CardDescription>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="text-base font-bold text-foreground font-mono tabular-nums block">
-                          {grupo.totalUnidades} uds
-                        </span>
-                        <span className="text-[11px] font-mono text-muted-foreground">
-                          {grupo.totalGramosRequeridos}g req.
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Alerta de Stock insuficiente si aplica */}
-                    {faltaStock && (
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium mt-2">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                        <span>Faltan {grupo.deficitGramos}g para completar todas las piezas.</span>
-                      </div>
-                    )}
-                  </CardHeader>
-
-                  <CardContent className="p-4 pt-0 space-y-3">
-                    {/* Lista de Modelos que usan este color */}
-                    <div className="space-y-1.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                        Piezas que usan este color:
-                      </span>
-
-                      <div className="space-y-1">
-                        {grupo.modelos.slice(0, expandido ? undefined : 3).map((mod, mIdx) => (
-                          <div key={mIdx} className="flex items-center justify-between text-xs p-2 rounded-lg bg-muted/30 border border-border/40">
-                            <span className="font-medium text-foreground truncate pr-2">
-                              {mod.cantidad}× {mod.nombreModelo}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[11px] text-muted-foreground font-mono">
-                                {mod.gramos}g
-                              </span>
-                              <Badge variant="outline" className="text-[9px] font-mono px-1.5 py-0 border-border text-muted-foreground">
-                                {mod.codigoRef}
-                              </Badge>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {grupo.modelos.length > 3 && (
-                        <button
-                          type="button"
-                          onClick={() => toggleColorExpandido(grupo.colorId || grupo.nombreColor)}
-                          className="text-xs font-medium text-primary hover:underline cursor-pointer pt-1 block"
-                        >
-                          {expandido ? 'Mostrar menos' : `+ Ver ${grupo.modelos.length - 3} piezas más`}
-                        </button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </div>
+        <ProductionByColorView
+          grupos={gruposPorColorFiltrados}
+          coloresExpandidos={coloresExpandidos}
+          onToggleExpandido={toggleColorExpandido}
+        />
       )}
     </div>
   )
 }
+
+// Aliases para máxima compatibilidad con las especificaciones de arquitectura
+export { TallerClient as ProductionDashboardView, TallerClient as TallerProduccionPage }
