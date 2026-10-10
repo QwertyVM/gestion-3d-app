@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { 
   X, 
   Boxes, 
@@ -130,11 +130,12 @@ export function ProductFormModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Detección automática al escribir enlace
-  const handleEnlaceMakerworldChange = (val: string) => {
-    setEnlaceMakerworld(val)
-    const trimmed = val.trim()
-    // Si el usuario pegó directamente el link de una imagen
+  // Detección y extracción automática de portada MakerWorld
+  const triggerMakerworldFetch = useCallback(async (urlToTest: string) => {
+    const trimmed = urlToTest.trim()
+    if (!trimmed) return
+
+    // 1. Si el usuario pegó directamente una URL de imagen
     if (
       trimmed.match(/\.(jpeg|jpg|png|webp|gif)($|\?)/i) || 
       trimmed.includes('bblmw.com') ||
@@ -142,29 +143,64 @@ export function ProductFormModal({
     ) {
       setImagenUrl(trimmed)
       toast.info('Se detectó y asignó la URL de imagen directamente')
+      return
+    }
+
+    // 2. Si es un enlace de MakerWorld
+    if (trimmed.includes('makerworld.com') || trimmed.match(/models\/[0-9]+/i)) {
+      setIsFetchingMakerworld(true)
+      try {
+        const res = await obtenerMetadataMakerworld(trimmed)
+        if (res.success && res.imagenUrl) {
+          setImagenUrl(res.imagenUrl)
+          if (res.titulo && !nombreModelo.trim()) {
+            setNombreModelo(res.titulo)
+          }
+          toast.success('¡Portada de MakerWorld obtenida automáticamente!')
+        } else {
+          toast.info(res.error || 'Copia la dirección de imagen desde MakerWorld y pégala abajo')
+        }
+      } catch {
+        toast.error('Error al consultar MakerWorld')
+      } finally {
+        setIsFetchingMakerworld(false)
+      }
+    }
+  }, [nombreModelo])
+
+  // Al pegar en el campo de enlace de MakerWorld
+  const handlePasteEnlaceMakerworld = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text')
+    if (pastedText && pastedText.trim()) {
+      setEnlaceMakerworld(pastedText)
+      triggerMakerworldFetch(pastedText)
     }
   }
 
-  // Extraer portada de MakerWorld
+  // Al tipear en el campo
+  const handleEnlaceMakerworldChange = (val: string) => {
+    setEnlaceMakerworld(val)
+    const trimmed = val.trim()
+    if (
+      trimmed.match(/\.(jpeg|jpg|png|webp|gif)($|\?)/i) || 
+      trimmed.includes('bblmw.com') ||
+      trimmed.includes('bblamb.com')
+    ) {
+      setImagenUrl(trimmed)
+      return
+    }
+    // Si contiene la estructura del modelo MakerWorld
+    if (
+      (trimmed.includes('makerworld.com') && trimmed.includes('/models/'))
+    ) {
+      triggerMakerworldFetch(trimmed)
+    }
+  }
+
+  // Extraer portada manual si el usuario pulsa el botón
   const handleAutoObtenerPortada = async () => {
     if (!enlaceMakerworld.trim()) return
-    setIsFetchingMakerworld(true)
-    try {
-      const res = await obtenerMetadataMakerworld(enlaceMakerworld)
-      if (res.success && res.imagenUrl) {
-        setImagenUrl(res.imagenUrl)
-        if (res.titulo && !nombreModelo.trim()) {
-          setNombreModelo(res.titulo)
-        }
-        toast.success('¡Portada de MakerWorld obtenida!')
-      } else {
-        toast.info(res.error || 'Copia la dirección de imagen desde MakerWorld y pégala abajo')
-      }
-    } catch {
-      toast.error('Error al consultar MakerWorld')
-    } finally {
-      setIsFetchingMakerworld(false)
-    }
+    await triggerMakerworldFetch(enlaceMakerworld)
   }
 
   // Inicialización cuando cambia el modal o el producto/grupo a editar
@@ -423,6 +459,20 @@ export function ProductFormModal({
     setIsSubmitting(true)
 
     try {
+      let finalImagenUrl = imagenUrl.trim() || null
+      // Si se ingresó link de MakerWorld pero la portada no se cargó aún, obtenerla antes de guardar
+      if (!finalImagenUrl && enlaceMakerworld.trim()) {
+        try {
+          const meta = await obtenerMetadataMakerworld(enlaceMakerworld)
+          if (meta.success && meta.imagenUrl) {
+            finalImagenUrl = meta.imagenUrl
+            setImagenUrl(meta.imagenUrl)
+          }
+        } catch {
+          // Continuar sin bloquear si falla
+        }
+      }
+
       if (!hasVariants) {
         // =========================================================================
         // PRODUCTO SIMPLE (hasVariants === false)
@@ -440,7 +490,7 @@ export function ProductFormModal({
             precioMayor: precioMayorNum,
             activo: activo,
             fechaRegistro: fechaRegistro,
-            imagenUrl: imagenUrl.trim() || null,
+            imagenUrl: finalImagenUrl,
             enlaceMakerworld: enlaceMakerworld.trim() || null,
           })
           toast.success(`Modelo "${trimmedBase}" actualizado correctamente`)
@@ -454,7 +504,7 @@ export function ProductFormModal({
             precioMayor: precioMayorNum,
             activo: activo,
             fechaRegistro: fechaRegistro,
-            imagenUrl: imagenUrl.trim() || null,
+            imagenUrl: finalImagenUrl,
             enlaceMakerworld: enlaceMakerworld.trim() || null,
           })
           toast.success(`Modelo "${trimmedBase}" registrado en catálogo`)
@@ -492,7 +542,7 @@ export function ProductFormModal({
           lineaCategoria: trimmedCat,
           fechaRegistro: fechaRegistro,
           activo: activo,
-          imagenUrl: imagenUrl.trim() || null,
+          imagenUrl: finalImagenUrl,
           enlaceMakerworld: enlaceMakerworld.trim() || null,
           variantes: payloadVariantes,
           deletedVariantIds: deletedVariantIds,
@@ -624,7 +674,12 @@ export function ProductFormModal({
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
                   {/* Vista previa miniatura */}
                   <div className="sm:col-span-1 flex flex-col items-center justify-center p-2 rounded-xl border border-dashed border-border bg-background/60 text-center min-h-[96px]">
-                    {imagenUrl ? (
+                    {isFetchingMakerworld ? (
+                      <div className="flex flex-col items-center justify-center text-primary py-2 px-1 text-center animate-pulse">
+                        <Loader2 className="h-6 w-6 mb-1.5 animate-spin text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-[10px] font-bold text-foreground">Obteniendo portada...</span>
+                      </div>
+                    ) : imagenUrl ? (
                       <div className="relative group w-18 h-18 rounded-lg overflow-hidden border border-border shadow-xs">
                         <img
                           src={imagenUrl}
@@ -651,13 +706,26 @@ export function ProductFormModal({
                   {/* Inputs */}
                   <div className="sm:col-span-3 space-y-2.5">
                     <div className="space-y-1">
-                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">
-                        Link de MakerWorld
-                      </Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                          Link de MakerWorld
+                        </Label>
+                        {isFetchingMakerworld && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 animate-pulse">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Auto-cargando portada...
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5">
                         <Input
                           value={enlaceMakerworld}
                           onChange={(e) => handleEnlaceMakerworldChange(e.target.value)}
+                          onPaste={handlePasteEnlaceMakerworld}
+                          onBlur={() => {
+                            if (enlaceMakerworld.trim() && !imagenUrl.trim() && !isFetchingMakerworld) {
+                              triggerMakerworldFetch(enlaceMakerworld)
+                            }
+                          }}
                           placeholder="https://makerworld.com/es/models/..."
                           className="bg-background text-xs font-medium h-9 flex-1"
                         />

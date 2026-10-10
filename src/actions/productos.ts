@@ -452,15 +452,27 @@ export async function obtenerMetadataMakerworld(inputUrl: string) {
   const matchModel = urlTrimmed.match(/models\/([0-9]+)/i)
   const modelId = matchModel ? matchModel[1] : null
 
-  // 3. Intentar obtener metadata mediante microlink
+  // Normalizar a URL canónica limpia para evitar parámetros de rastreo y hashes pesados
+  const cleanUrl = modelId 
+    ? `https://makerworld.com/en/models/${modelId}`
+    : urlTrimmed.split('#')[0].split('?')[0]
+
+  // 3. Estrategia A: Microlink con URL normalizada
   try {
-    const fetchUrl = `https://api.microlink.io?url=${encodeURIComponent(urlTrimmed)}`
-    const res = await fetch(fetchUrl, { next: { revalidate: 3600 } })
+    const fetchUrl = `https://api.microlink.io?url=${encodeURIComponent(cleanUrl)}`
+    const res = await fetch(fetchUrl, {
+      signal: AbortSignal.timeout(10000),
+      next: { revalidate: 86400 }
+    })
     if (res.ok) {
       const data = await res.json()
       const imgUrl = data?.data?.image?.url
-      const title = data?.data?.title
-      if (imgUrl && !imgUrl.includes('og-icon.jpeg')) {
+      let title = data?.data?.title
+      if (title) {
+        title = title.replace(/\s*-\s*Free\s*3D\s*Print\s*Model\s*-\s*MakerWorld/i, '').trim()
+        title = title.replace(/\s*-\s*MakerWorld/i, '').trim()
+      }
+      if (imgUrl && !imgUrl.includes('og-icon.jpeg') && !imgUrl.includes('favicon')) {
         return {
           success: true,
           imagenUrl: imgUrl,
@@ -469,13 +481,39 @@ export async function obtenerMetadataMakerworld(inputUrl: string) {
       }
     }
   } catch (e) {
-    // Silencioso
+    // Continuar a estrategia fallback
+  }
+
+  // 4. Estrategia B: Jina Reader como fallback si Microlink está limitado
+  try {
+    const jinaRes = await fetch(`https://r.jina.ai/${cleanUrl}`, {
+      headers: { 'Accept': 'text/plain' },
+      signal: AbortSignal.timeout(8000)
+    })
+    if (jinaRes.ok) {
+      const text = await jinaRes.text()
+      const imgMatch = text.match(/!\[.*?\]\((https:\/\/makerworld\.bblmw\.com\/makerworld\/model\/[^\s\)]+)\)/i) ||
+                       text.match(/!\[.*?\]\((https:\/\/makerworld\.bblmw\.com\/[^\s\)]+)\)/i)
+      if (imgMatch && imgMatch[1]) {
+        const titleMatch = text.match(/Title:\s*(.+)/i)
+        const title = titleMatch 
+          ? titleMatch[1].replace(/\s*-\s*Free\s*3D\s*Print\s*Model\s*-\s*MakerWorld/i, '').replace(/\s*-\s*MakerWorld/i, '').trim() 
+          : undefined
+        return {
+          success: true,
+          imagenUrl: imgMatch[1],
+          titulo: title
+        }
+      }
+    }
+  } catch (e) {
+    // Continuar
   }
 
   return {
     success: false,
     modelId,
-    error: 'No se pudo extraer automáticamente debido a las políticas de MakerWorld. Puedes hacer clic derecho en la portada en MakerWorld -> "Copiar dirección de la imagen" y pegarla en el campo de Imagen.'
+    error: 'No se pudo extraer la portada automáticamente. Puedes hacer clic derecho en la portada en MakerWorld -> "Copiar dirección de la imagen" y pegarla en el campo de Imagen.'
   }
 }
 
