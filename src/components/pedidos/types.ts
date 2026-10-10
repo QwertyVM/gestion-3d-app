@@ -85,6 +85,8 @@ export interface ProductoVarianteOption {
   precioMenor: number
   precioMayor: number
   activo?: boolean
+  imagenUrl?: string | null
+  imageUrl?: string | null
 }
 
 export interface ProductoOption {
@@ -97,6 +99,9 @@ export interface ProductoOption {
   activo: boolean
   tieneVariantes?: boolean
   variantes?: ProductoVarianteOption[]
+  imagenUrl?: string | null
+  imageUrl?: string | null
+  enlaceMakerworld?: string | null
 }
 
 export interface FilamentoOption {
@@ -138,4 +143,5 @@ export interface FormItemState {
   costoPackaging: number | string
   porcentajeAdicional: number
   gramosConsumidos: number
+  imageUrl?: string | null
 }

@@ -11,6 +11,7 @@ export interface ProductVariantItem {
   precioMenor: number
   precioMayor: number
   activo: boolean
+  imagenUrl?: string | null
 }
 
 export interface ProductGroupItem {
@@ -21,6 +22,7 @@ export interface ProductGroupItem {
   hasVariants: boolean
   variants: ProductVariantItem[]
   singleVariant?: ProductVariantItem
+  imagenUrl?: string | null
 }
 
 /**
@@ -51,11 +53,14 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
       baseName: string
       categoria: string
       productoId: string
+      imagenUrl?: string | null
       items: ProductVariantItem[]
     }
   >()
 
   productos.forEach(p => {
+    const rawImg = p.imagenUrl || p.imageUrl || null
+
     // Si el producto ya cuenta con la estructura anidada de variantes
     if (Array.isArray(p.variantes) && p.variantes.length > 0) {
       const groupKey = `${p.nombreModelo.toLowerCase().trim()}:::${(p.lineaCategoria || '').toLowerCase().trim()}`
@@ -64,10 +69,15 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
           baseName: p.nombreModelo,
           categoria: p.lineaCategoria || 'General',
           productoId: p.id,
+          imagenUrl: rawImg,
           items: []
         })
+      } else if (!groupsMap.get(groupKey)!.imagenUrl && rawImg) {
+        groupsMap.get(groupKey)!.imagenUrl = rawImg
       }
+
       p.variantes.forEach(v => {
+        const vImg = v.imagenUrl || v.imageUrl || rawImg
         groupsMap.get(groupKey)!.items.push({
           id: v.id,
           productoId: p.id,
@@ -77,7 +87,8 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
           costoBase: Number(v.costoBase || 0),
           precioMenor: Number(v.precioMenor || 0),
           precioMayor: Number(v.precioMayor || 0),
-          activo: v.activo ?? true
+          activo: v.activo ?? true,
+          imagenUrl: vImg
         })
       })
       return
@@ -92,8 +103,11 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
         baseName,
         categoria: p.lineaCategoria || 'General',
         productoId: p.id,
+        imagenUrl: rawImg,
         items: []
       })
+    } else if (!groupsMap.get(groupKey)!.imagenUrl && rawImg) {
+      groupsMap.get(groupKey)!.imagenUrl = rawImg
     }
 
     groupsMap.get(groupKey)!.items.push({
@@ -105,7 +119,8 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
       costoBase: Number(p.costoBase || 0),
       precioMenor: Number(p.precioMenor || 0),
       precioMayor: Number(p.precioMayor || 0),
-      activo: p.activo ?? true
+      activo: p.activo ?? true,
+      imagenUrl: rawImg
     })
   })
 
@@ -113,6 +128,7 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
 
   groupsMap.forEach((group, key) => {
     const totalCount = familyCounts.get(key) || group.items.length
+    const groupImg = group.items.find(i => i.imagenUrl)?.imagenUrl || group.imagenUrl || null
 
     if (totalCount <= 1 || group.items.length === 1) {
       // Caso 2: Producto Simple
@@ -124,7 +140,8 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
         categoria: group.categoria,
         hasVariants: false,
         variants: [single],
-        singleVariant: single
+        singleVariant: single,
+        imagenUrl: single.imagenUrl || groupImg
       })
     } else {
       // Caso 1: Producto Padre con Variantes
@@ -136,7 +153,8 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
         baseName: group.baseName,
         categoria: group.categoria,
         hasVariants: true,
-        variants: group.items
+        variants: group.items,
+        imagenUrl: groupImg
       })
     }
   })

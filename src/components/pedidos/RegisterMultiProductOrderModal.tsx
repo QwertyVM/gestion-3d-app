@@ -83,36 +83,51 @@ export function RegisterMultiProductOrderModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const getDefaultItemState = (suffix: string = '1', presetProductId?: string): FormItemState => {
-    const catalogGroups = groupCatalogProducts(productos)
-    let selectedGroup = catalogGroups[0]
-    let selectedVariant = selectedGroup?.variants[0] || selectedGroup?.singleVariant
-
+    const defaultFilId = getDefaultFilamentoId(filamentos)
     const targetPresetId = presetProductId || initialProductoId
+
     if (targetPresetId) {
+      const catalogGroups = groupCatalogProducts(productos)
       const match = findVariantInGroups(catalogGroups, targetPresetId)
       if (match) {
-        selectedGroup = match.group
-        selectedVariant = match.variant
+        return {
+          id: `item-${Date.now()}-${suffix}`,
+          productoId: match.group.productoId,
+          varianteId: match.variant.id,
+          nombreDisplay: match.group.hasVariants
+            ? `${match.group.baseName} - ${match.variant.nombreVariante}`
+            : match.group.baseName,
+          costoBase: match.variant.costoBase,
+          colorFilamentoId: defaultFilId,
+          coloresIds: defaultFilId ? [defaultFilId] : [],
+          personalizacion: '',
+          cantidad: 1,
+          tipoPrecio: 'MENOR',
+          precioUnitario: match.variant.precioMenor,
+          costoPackaging: '',
+          porcentajeAdicional: 0,
+          gramosConsumidos: 0,
+          imageUrl: match.variant.imagenUrl || match.group.imagenUrl || null
+        }
       }
     }
 
-    const defaultFilId = getDefaultFilamentoId(filamentos)
-
     return {
       id: `item-${Date.now()}-${suffix}`,
-      productoId: selectedGroup?.productoId || selectedVariant?.productoId || (productos[0]?.id || ''),
-      varianteId: selectedVariant?.id || (productos[0]?.id || ''),
-      nombreDisplay: selectedVariant?.nombreCompleto || (productos[0]?.nombreModelo || ''),
-      costoBase: selectedVariant?.costoBase || (productos[0]?.costoBase || 0),
+      productoId: '',
+      varianteId: '',
+      nombreDisplay: '',
+      costoBase: 0,
       colorFilamentoId: defaultFilId,
       coloresIds: defaultFilId ? [defaultFilId] : [],
       personalizacion: '',
       cantidad: 1,
       tipoPrecio: 'MENOR',
-      precioUnitario: selectedVariant ? selectedVariant.precioMenor : (productos[0]?.precioMenor || ''),
+      precioUnitario: '',
       costoPackaging: '',
       porcentajeAdicional: 0,
-      gramosConsumidos: 0
+      gramosConsumidos: 0,
+      imageUrl: null
     }
   }
 
@@ -279,10 +294,19 @@ export function RegisterMultiProductOrderModal({
         if (match) {
           merged.varianteId = match.variant.id
           merged.productoId = match.group.productoId
-          merged.nombreDisplay = match.group.hasVariants
-            ? `${match.group.baseName} - ${match.variant.nombreVariante}`
-            : match.group.baseName
-          merged.costoBase = match.variant.costoBase
+          if (!updates.nombreDisplay) {
+            merged.nombreDisplay = match.group.hasVariants
+              ? `${match.group.baseName} - ${match.variant.nombreVariante}`
+              : match.group.baseName
+          }
+          if (updates.costoBase === undefined) {
+            merged.costoBase = match.variant.costoBase
+          }
+          if (updates.imageUrl !== undefined) {
+            merged.imageUrl = updates.imageUrl
+          } else {
+            merged.imageUrl = match.variant.imagenUrl || match.group.imagenUrl || null
+          }
           let pUnit = match.variant.precioMenor
           if (merged.tipoPrecio === 'MAYOR' || (merged.tipoPrecio as string) === 'AMIGOS') {
             pUnit = match.variant.precioMayor

@@ -20,8 +20,8 @@ import { Label } from '@/components/ui/label'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { TipoPrecio } from '@prisma/client'
 import { FormItemState, ProductoOption, FilamentoOption } from './types'
-import { GroupedProductCombobox } from './GroupedProductCombobox'
 import { groupCatalogProducts, findVariantInGroups } from './productHierarchy'
+import { ProductPickerModal } from './ProductPickerModal'
 
 interface OrderItemCardProps {
   item: FormItemState
@@ -46,10 +46,63 @@ export function OrderItemCard({
   onRemoveItem,
   formatCurrency
 }: OrderItemCardProps) {
+  const [isPickerOpen, setIsPickerOpen] = useState(false)
   const [isFilamentOpen, setIsFilamentOpen] = useState(false)
   const [filamentSearch, setFilamentSearch] = useState('')
   const filamentDropdownRef = useRef<HTMLDivElement>(null)
   const quantityInputRef = useRef<HTMLInputElement>(null)
+
+  // Información visual del modelo seleccionado
+  const selectedProductInfo = useMemo(() => {
+    if (!item.productoId && !item.varianteId) return null
+    const catalogGroups = groupCatalogProducts(productos)
+    const match = findVariantInGroups(catalogGroups, item.varianteId || item.productoId)
+    const rawProduct = productos.find(p => p.id === item.productoId)
+
+    const name =
+      item.nombreDisplay ||
+      (match?.group.hasVariants
+        ? `${match.group.baseName} - ${match.variant.nombreVariante}`
+        : match?.group.baseName) ||
+      rawProduct?.nombreModelo ||
+      'Modelo 3D'
+
+    const imageUrl =
+      item.imageUrl ||
+      match?.variant.imagenUrl ||
+      match?.group.imagenUrl ||
+      rawProduct?.imagenUrl ||
+      (rawProduct as any)?.imageUrl ||
+      null
+
+    const tierName =
+      item.tipoPrecio === 'MAYOR'
+        ? 'PVP Mayor'
+        : item.tipoPrecio === 'MENOR'
+        ? 'PVP Menor'
+        : 'Personalizado'
+
+    const priceNum = Number(item.precioUnitario)
+    const priceFormatted = !isNaN(priceNum) && priceNum > 0 ? formatCurrency(priceNum) : ''
+    const tierSubtext = priceFormatted ? `${tierName} • ${priceFormatted}` : tierName
+
+    return {
+      name,
+      imageUrl,
+      tierSubtext
+    }
+  }, [
+    item.productoId,
+    item.varianteId,
+    item.nombreDisplay,
+    item.imageUrl,
+    item.tipoPrecio,
+    item.precioUnitario,
+    productos,
+    formatCurrency
+  ])
+
+  const isSelected = Boolean(item.productoId || item.varianteId)
 
   // Subtotal calculado para este ítem
   const itemSubtotal = useMemo(() => {
@@ -145,28 +198,86 @@ export function OrderItemCard({
 
       {/* Fila 1: Modelo 3D (flexible) y Filamento(s) (multi-select compacto) */}
       <div className="flex flex-col sm:flex-row gap-2.5 items-start">
-        {/* Selección de Modelo 3D (flexible) */}
+        {/* Selección de Modelo 3D (visual picker trigger) */}
         <div className="flex-1 w-full sm:min-w-0 space-y-1">
           <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
             <Boxes className="h-3 w-3 text-primary" />
             Modelo 3D *
           </Label>
-          <GroupedProductCombobox
+          {!isSelected ? (
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen(true)}
+              className="w-full h-12 rounded-xl border border-dashed border-primary/50 bg-secondary/30 hover:bg-secondary/60 hover:border-primary text-foreground text-xs font-semibold flex items-center justify-between px-4 transition-all group cursor-pointer"
+            >
+              <div className="flex items-center min-w-0">
+                <Sparkles className="text-primary w-4 h-4 mr-2 group-hover:scale-110 transition-transform shrink-0" />
+                <span className="truncate">Seleccionar modelo 3D (Explorar galería)...</span>
+              </div>
+              <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0">
+                Catálogo Visual
+              </span>
+            </button>
+          ) : (
+            <div className="w-full bg-card border border-border rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {selectedProductInfo?.imageUrl ? (
+                  <img
+                    src={selectedProductInfo.imageUrl}
+                    alt={selectedProductInfo.name}
+                    className="w-11 h-11 rounded-lg object-cover border border-border/70 shrink-0"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-lg bg-secondary/70 border border-border/70 flex items-center justify-center shrink-0 text-primary/60">
+                    <Boxes className="w-5 h-5 stroke-[1.5]" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div
+                    className="text-xs font-bold text-foreground truncate"
+                    title={selectedProductInfo?.name}
+                  >
+                    {selectedProductInfo?.name}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground truncate font-mono">
+                    {selectedProductInfo?.tierSubtext}
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPickerOpen(true)}
+                className="text-primary hover:bg-primary/10 text-xs font-semibold h-8 px-3 rounded-lg flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Cambiar</span>
+              </Button>
+            </div>
+          )}
+
+          {/* Modal de Selección Visual de Productos */}
+          <ProductPickerModal
+            isOpen={isPickerOpen}
+            onClose={() => setIsPickerOpen(false)}
             productos={productos}
-            selectedProductoId={item.productoId}
-            selectedVarianteId={item.varianteId}
-            tipoPrecio={item.tipoPrecio}
+            formatCurrency={formatCurrency}
             onSelect={(payload) => {
               onUpdateItem(item.id, {
                 productoId: payload.productoId,
                 varianteId: payload.varianteId,
                 nombreDisplay: payload.nombreDisplay,
+                imageUrl: payload.imageUrl,
                 costoBase: payload.costoBase,
-                precioUnitario: payload.precioUnitario
+                precioUnitario: payload.precioUnitario,
+                tipoPrecio: payload.tierPrecio
               })
-            }}
-            onAfterSelect={() => {
-              quantityInputRef.current?.focus()
+              setIsPickerOpen(false)
+              setTimeout(() => {
+                quantityInputRef.current?.focus()
+              }, 80)
             }}
           />
         </div>
