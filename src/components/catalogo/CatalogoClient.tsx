@@ -28,7 +28,9 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Calendar
+  Calendar,
+  LayoutGrid,
+  Table2
 } from 'lucide-react'
 import { useBusiness } from '@/context/BusinessContext'
 import { Badge } from '@/components/ui/badge'
@@ -52,6 +54,7 @@ import {
 } from './ProductsTableView'
 import { ProductFormModal } from './ProductFormModal'
 import { ProductDetailsModal } from './ProductDetailsModal'
+import { ProductCardGrid } from './ProductCardGrid'
 
 export interface ProductoItem {
   id: string
@@ -117,6 +120,25 @@ export function CatalogoClient({
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [isPending, startTransition] = useTransition()
+
+  // Modo de visualización: Cuadrícula (Cards) vs. Tabla
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('nova_catalog_view_mode')
+      if (saved === 'grid' || saved === 'table') {
+        setViewMode(saved)
+      }
+    }
+  }, [])
+
+  const handleViewModeChange = (mode: 'grid' | 'table') => {
+    setViewMode(mode)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nova_catalog_view_mode', mode)
+    }
+  }
 
   // Persistencia de expansión de padres con variantes
   const [expandedParents, setExpandedParents] = useState<Set<string>>(new Set())
@@ -748,6 +770,36 @@ export function CatalogoClient({
             <div className="bg-secondary text-muted-foreground text-xs font-semibold px-3 py-2 rounded-xl whitespace-nowrap border border-border/60 shadow-2xs">
               <span className="font-bold text-foreground">{filteredProductos.length}</span> {filteredProductos.length === 1 ? 'modelo' : 'modelos'}
             </div>
+
+            {/* Selector de Alternancia de Vista: Grid ⊞ vs. Tabla ☰ */}
+            <div className="bg-secondary/80 border border-border/80 p-1 rounded-xl flex items-center gap-1 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => handleViewModeChange('grid')}
+                className={`size-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-card text-foreground shadow-xs font-bold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Vista Cuadrícula (Cards)"
+                aria-label="Vista Cuadrícula"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleViewModeChange('table')}
+                className={`size-8 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                  viewMode === 'table'
+                    ? 'bg-card text-foreground shadow-xs font-bold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Vista Tabla"
+                aria-label="Vista Tabla"
+              >
+                <Table2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -853,35 +905,54 @@ export function CatalogoClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. TABLA OPERATIVA PRINCIPAL: MASTER-DETAIL COLLAPSIBLE TABLE             */}
+      {/* 4. PRESENTACIÓN DEL CATÁLOGO: CUADRÍCULA DE CARDS O TABLA MASTER-DETAIL  */}
       {/* ========================================================================= */}
-      <ProductsTableView
-        rows={paginatedGroupedRows}
-        allCatalogProductos={productos}
-        expandedParents={expandedParents}
-        onToggleExpand={handleToggleExpand}
-        onViewDetail={handleViewDetail}
-        onEdit={handleOpenEdit}
-        onEditGroup={handleOpenEditGroup}
-        onAddVariant={handleOpenCreateVariant}
-        onCopiarCotizacion={handleCopiarCotizacion}
-        onCopyGroupQuotation={handleCopiarCotizacionGrupo}
-        onToggleEstado={handleToggleEstado}
-        onDuplicar={handleDuplicar}
-        onDuplicarGroup={handleDuplicarGroup}
-        onDeleteProduct={handleDelete}
-        onDeleteGroup={handleDeleteGroup}
-        copiedId={copiedId}
-        formatCurrency={formatCurrency}
-        calcMargen={calcMargen}
-        formatFechaRegistro={formatFechaRegistro}
-        categoriaFilter={categoriaFilter}
-        onCategoriaFilterChange={(cat) => setCategoriaFilter(cat)}
-        categoriesWithCounts={categoriesWithCounts}
-        totalCatalogModelos={totalCatalogModelos}
-        ordenFilter={ordenFilter}
-        onOrdenFilterChange={(o) => setOrdenFilter(o)}
-      />
+      {viewMode === 'grid' ? (
+        <ProductCardGrid
+          rows={paginatedGroupedRows}
+          allCatalogProductos={productos}
+          onViewDetail={handleViewDetail}
+          onEdit={handleOpenEdit}
+          onEditGroup={handleOpenEditGroup}
+          onDuplicar={handleDuplicar}
+          onDuplicarGroup={handleDuplicarGroup}
+          onDeleteProduct={handleDelete}
+          onDeleteGroup={handleDeleteGroup}
+          onToggleEstado={handleToggleEstado}
+          onCopiarCotizacion={handleCopiarCotizacion}
+          onCopyGroupQuotation={handleCopiarCotizacionGrupo}
+          formatCurrency={formatCurrency}
+          calcMargen={calcMargen}
+        />
+      ) : (
+        <ProductsTableView
+          rows={paginatedGroupedRows}
+          allCatalogProductos={productos}
+          expandedParents={expandedParents}
+          onToggleExpand={handleToggleExpand}
+          onViewDetail={handleViewDetail}
+          onEdit={handleOpenEdit}
+          onEditGroup={handleOpenEditGroup}
+          onAddVariant={handleOpenCreateVariant}
+          onCopiarCotizacion={handleCopiarCotizacion}
+          onCopyGroupQuotation={handleCopiarCotizacionGrupo}
+          onToggleEstado={handleToggleEstado}
+          onDuplicar={handleDuplicar}
+          onDuplicarGroup={handleDuplicarGroup}
+          onDeleteProduct={handleDelete}
+          onDeleteGroup={handleDeleteGroup}
+          copiedId={copiedId}
+          formatCurrency={formatCurrency}
+          calcMargen={calcMargen}
+          formatFechaRegistro={formatFechaRegistro}
+          categoriaFilter={categoriaFilter}
+          onCategoriaFilterChange={(cat) => setCategoriaFilter(cat)}
+          categoriesWithCounts={categoriesWithCounts}
+          totalCatalogModelos={totalCatalogModelos}
+          ordenFilter={ordenFilter}
+          onOrdenFilterChange={(o) => setOrdenFilter(o)}
+        />
+      )}
 
       {/* Controles de Paginación de Productos y Modelos */}
       {sortedGroupedRows.length > 0 && (
@@ -992,3 +1063,5 @@ export function CatalogoClient({
     </div>
   )
 }
+
+export { CatalogoClient as ProductsPage }
