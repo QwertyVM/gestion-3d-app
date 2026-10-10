@@ -153,9 +153,6 @@ export function ProductFormModal({
         const res = await obtenerMetadataMakerworld(trimmed)
         if (res.success && res.imagenUrl) {
           setImagenUrl(res.imagenUrl)
-          if (res.titulo && !nombreModelo.trim()) {
-            setNombreModelo(res.titulo)
-          }
           toast.success('¡Portada de MakerWorld obtenida automáticamente!')
         } else {
           toast.info(res.error || 'Copia la dirección de imagen desde MakerWorld y pégala abajo')
@@ -166,7 +163,7 @@ export function ProductFormModal({
         setIsFetchingMakerworld(false)
       }
     }
-  }, [nombreModelo])
+  }, [])
 
   // Al pegar en el campo de enlace de MakerWorld
   const handlePasteEnlaceMakerworld = (e: React.ClipboardEvent<HTMLInputElement>) => {
