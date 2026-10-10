@@ -6,7 +6,8 @@ import {
   Palette,
   TrendingUp,
   ChevronDown,
-  Inbox
+  Inbox,
+  ExternalLink
 } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { cn } from '@/lib/utils'
@@ -40,6 +41,7 @@ export function ProductionInsightsSection({ piezas }: ProductionInsightsSectionP
         totalUnidades: number
         pedidosSet: Set<string>
         categoria?: string
+        enlaceMakerworld?: string | null
       }
     >()
     let totalUnidades = 0
@@ -54,10 +56,14 @@ export function ProductionInsightsSection({ piezas }: ProductionInsightsSectionP
           nombreModelo: nombre,
           totalUnidades: 0,
           pedidosSet: new Set(),
-          categoria: p.lineaCategoria
+          categoria: p.lineaCategoria,
+          enlaceMakerworld: p.enlaceMakerworld
         })
       }
       const entry = map.get(nombre)!
+      if (!entry.enlaceMakerworld && p.enlaceMakerworld) {
+        entry.enlaceMakerworld = p.enlaceMakerworld
+      }
       entry.totalUnidades += cant
       if (p.codigoRef || p.registroId) {
         entry.pedidosSet.add(p.codigoRef || p.registroId)
@@ -245,6 +251,18 @@ export function ProductionInsightsSection({ piezas }: ProductionInsightsSectionP
                                     <span className="text-xs font-bold text-foreground truncate max-w-[200px] sm:max-w-[260px]">
                                       {modelo.nombreModelo}
                                     </span>
+                                    {modelo.enlaceMakerworld && (
+                                      <a
+                                        href={modelo.enlaceMakerworld}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 p-0.5 rounded transition-colors inline-flex items-center shrink-0"
+                                        title={`Abrir modelo: ${modelo.enlaceMakerworld}`}
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                      </a>
+                                    )}
                                   </div>
                                   <span className="text-xs font-bold text-foreground text-right shrink-0 font-mono">
                                     {modelo.totalUnidades} {modelo.totalUnidades === 1 ? 'unidad' : 'unidades'}

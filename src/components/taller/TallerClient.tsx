@@ -15,7 +15,8 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
   TallerDataResponse,
-  updateEstadoPieza
+  updateEstadoPieza,
+  updateEnlaceModelo
 } from '@/actions/taller'
 import { ProductionKpiCard } from './ProductionKpiCard'
 import { ProductionQueueView } from './ProductionQueueView'
@@ -28,20 +29,27 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
 
   // Estado optimista local y loader individual para feedback instantáneo (<50ms)
   const [piezasOpt, setPiezasOpt] = useState<Record<string, 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'>>({})
+  const [enlacesOpt, setEnlacesOpt] = useState<Record<string, string | null>>({})
   const [loadingPieceId, setLoadingPieceId] = useState<string | null>(null)
 
   // Reset de estado optimista al recibir nuevos datos del servidor
   useEffect(() => {
     setPiezasOpt({})
+    setEnlacesOpt({})
   }, [data])
 
-  // Piezas con estado optimista integrado
+  // Piezas con estado optimista integrado (incluyendo enlace del modelo)
   const todasPiezas = useMemo(() => {
     return data.piezas.map(p => {
       const opt = piezasOpt[p.id]
-      return opt ? { ...p, estado: opt } : p
+      const optEnlace = enlacesOpt[p.productoId] !== undefined ? enlacesOpt[p.productoId] : p.enlaceMakerworld
+      return {
+        ...p,
+        ...(opt ? { estado: opt } : {}),
+        enlaceMakerworld: optEnlace
+      }
     })
-  }, [data.piezas, piezasOpt])
+  }, [data.piezas, piezasOpt, enlacesOpt])
 
   // Métricas dinámicas calculadas en tiempo real para el ciclo operativo de taller
   const metricasActivas = useMemo(() => {
@@ -138,6 +146,34 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       toast.error(err.message || 'Error de conexión')
     } finally {
       setLoadingPieceId(null)
+    }
+  }
+
+  // Acción instantánea con optimistic update para vincular o actualizar enlace de modelo 3D
+  const handleActualizarEnlace = async (productoId: string, nuevoEnlace: string | null) => {
+    setEnlacesOpt(prev => ({ ...prev, [productoId]: nuevoEnlace }))
+    try {
+      const res = await updateEnlaceModelo(productoId, nuevoEnlace)
+      if (res.success) {
+        toast.success(nuevoEnlace ? 'Enlace del modelo vinculado exitosamente' : 'Enlace del modelo eliminado')
+        startTransition(() => {
+          router.refresh()
+        })
+      } else {
+        setEnlacesOpt(prev => {
+          const next = { ...prev }
+          delete next[productoId]
+          return next
+        })
+        toast.error(res.error || 'Error al actualizar enlace')
+      }
+    } catch (err: any) {
+      setEnlacesOpt(prev => {
+        const next = { ...prev }
+        delete next[productoId]
+        return next
+      })
+      toast.error(err.message || 'Error de conexión')
     }
   }
 
@@ -297,6 +333,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         piezas={todasPiezas}
         loadingPieceId={loadingPieceId}
         onCambiarEstado={handleCambiarEstado}
+        onActualizarEnlace={handleActualizarEnlace}
         metricasActivas={metricasActivas}
       />
     </div>

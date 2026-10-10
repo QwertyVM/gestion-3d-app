@@ -12,6 +12,7 @@ export {
 export { ProductionRow } from './ProductionRow'
 export { ProductionCardMobile } from './ProductionCardMobile'
 export { ConfirmarAccionPiezaModal } from './ConfirmarAccionPiezaModal'
+export { VincularModeloModal } from './VincularModeloModal'
 export { FilamentDotsGroup } from './FilamentDotsGroup'
 export { ProductionKpiCard } from './ProductionKpiCard'
 export { ProductionByColorView } from './ProductionByColorView'

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { PiezaTaller } from '@/actions/taller'
 import { PrintJobsQueueTable } from './PrintJobsQueueTable'
 import { ConfirmarAccionPiezaModal } from './ConfirmarAccionPiezaModal'
+import { VincularModeloModal } from './VincularModeloModal'
 
 export interface ProductionQueueViewProps {
   piezas: PiezaTaller[]
@@ -16,6 +17,7 @@ export interface ProductionQueueViewProps {
     piezaId: string,
     nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'
   ) => Promise<void> | void
+  onActualizarEnlace?: (productoId: string, nuevoEnlace: string | null) => Promise<void> | void
   metricasActivas: {
     totalPiezasPendientes: number
     totalPiezasEnProduccion: number
@@ -30,6 +32,7 @@ export function ProductionQueueView({
   piezas,
   loadingPieceId,
   onCambiarEstado,
+  onActualizarEnlace,
   metricasActivas
 }: ProductionQueueViewProps) {
   const [busqueda, setBusqueda] = useState('')
@@ -41,6 +44,11 @@ export function ProductionQueueView({
   const [modalPieza, setModalPieza] = useState<PiezaTaller | null>(null)
   const [modalModo, setModalModo] = useState<'INICIAR' | 'REABRIR'>('INICIAR')
   const [isModalSubmitting, setIsModalSubmitting] = useState(false)
+
+  // Estado para el modal de vincular enlace del modelo 3D
+  const [vincularModalOpen, setVincularModalOpen] = useState(false)
+  const [piezaParaVincular, setPiezaParaVincular] = useState<PiezaTaller | null>(null)
+  const [isVincularSubmitting, setIsVincularSubmitting] = useState(false)
 
   // Extraer lista única de materiales reales presentes en las piezas
   const materialesDisponibles = useMemo(() => {
@@ -123,6 +131,24 @@ export function ProductionQueueView({
       setModalOpen(false)
     } finally {
       setIsModalSubmitting(false)
+    }
+  }
+
+  // Handlers para modal de vincular enlace del modelo 3D
+  const handleRequestVincular = (pieza: PiezaTaller) => {
+    setPiezaParaVincular(pieza)
+    setVincularModalOpen(true)
+  }
+
+  const handleConfirmVincular = async (productoId: string, nuevoEnlace: string | null) => {
+    setIsVincularSubmitting(true)
+    try {
+      if (onActualizarEnlace) {
+        await onActualizarEnlace(productoId, nuevoEnlace)
+      }
+      setVincularModalOpen(false)
+    } finally {
+      setIsVincularSubmitting(false)
     }
   }
 
@@ -266,6 +292,7 @@ export function ProductionQueueView({
             onCambiarEstado={onCambiarEstado}
             onRequestIniciar={handleRequestIniciar}
             onRequestReabrir={handleRequestReabrir}
+            onVincularUrl={handleRequestVincular}
           />
 
           {/* 2. Etapa En Impresión (Terracota NOVA) */}
@@ -279,6 +306,7 @@ export function ProductionQueueView({
             onCambiarEstado={onCambiarEstado}
             onRequestIniciar={handleRequestIniciar}
             onRequestReabrir={handleRequestReabrir}
+            onVincularUrl={handleRequestVincular}
           />
 
           {/* 3. Etapa Lista para Entrega (Verde salvia artesanal) */}
@@ -292,6 +320,7 @@ export function ProductionQueueView({
             onCambiarEstado={onCambiarEstado}
             onRequestIniciar={handleRequestIniciar}
             onRequestReabrir={handleRequestReabrir}
+            onVincularUrl={handleRequestVincular}
           />
         </div>
       ) : (
@@ -307,6 +336,7 @@ export function ProductionQueueView({
               onCambiarEstado={onCambiarEstado}
               onRequestIniciar={handleRequestIniciar}
               onRequestReabrir={handleRequestReabrir}
+              onVincularUrl={handleRequestVincular}
             />
           )}
 
@@ -321,6 +351,7 @@ export function ProductionQueueView({
               onCambiarEstado={onCambiarEstado}
               onRequestIniciar={handleRequestIniciar}
               onRequestReabrir={handleRequestReabrir}
+              onVincularUrl={handleRequestVincular}
             />
           )}
 
@@ -335,6 +366,7 @@ export function ProductionQueueView({
               onCambiarEstado={onCambiarEstado}
               onRequestIniciar={handleRequestIniciar}
               onRequestReabrir={handleRequestReabrir}
+              onVincularUrl={handleRequestVincular}
             />
           )}
         </div>
@@ -350,6 +382,17 @@ export function ProductionQueueView({
         modo={modalModo}
         isLoading={isModalSubmitting}
         onConfirm={handleModalConfirm}
+      />
+
+      {/* ========================================================================= */}
+      {/* MODAL PARA VINCULAR / EDITAR ENLACE DEL MODELO 3D                         */}
+      {/* ========================================================================= */}
+      <VincularModeloModal
+        open={vincularModalOpen}
+        onOpenChange={setVincularModalOpen}
+        pieza={piezaParaVincular}
+        isLoading={isVincularSubmitting}
+        onConfirm={handleConfirmVincular}
       />
     </div>
   )

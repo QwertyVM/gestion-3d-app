@@ -28,6 +28,7 @@ export interface PrintJobsQueueTableProps {
   onRequestIniciar?: (pieza: PiezaTaller) => void
   onRequestReabrir?: (pieza: PiezaTaller) => void
   onSelectPieza?: (pieza: PiezaTaller) => void
+  onVincularUrl?: (pieza: PiezaTaller) => void
 }
 
 export function PrintJobsQueueTable({
@@ -40,7 +41,8 @@ export function PrintJobsQueueTable({
   onCambiarEstado,
   onRequestIniciar,
   onRequestReabrir,
-  onSelectPieza
+  onSelectPieza,
+  onVincularUrl
 }: PrintJobsQueueTableProps) {
   if (piezas.length === 0) return null
 
@@ -125,6 +127,7 @@ export function PrintJobsQueueTable({
                 onRequestIniciar={onRequestIniciar}
                 onRequestReabrir={onRequestReabrir}
                 onSelectPieza={onSelectPieza}
+                onVincularUrl={onVincularUrl}
               />
             ))}
           </TableBody>
@@ -142,6 +145,7 @@ export function PrintJobsQueueTable({
             onRequestIniciar={onRequestIniciar}
             onRequestReabrir={onRequestReabrir}
             onSelectPieza={onSelectPieza}
+            onVincularUrl={onVincularUrl}
           />
         ))}
       </div>

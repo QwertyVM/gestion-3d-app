@@ -9,7 +9,7 @@ import {
   TooltipContent,
   TooltipProvider
 } from '@/components/ui/tooltip'
-import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame } from 'lucide-react'
+import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 import { formatDate } from '@/lib/utils'
@@ -25,6 +25,22 @@ interface ProductionCardMobileProps {
   onRequestIniciar?: (pieza: PiezaTaller) => void
   onRequestReabrir?: (pieza: PiezaTaller) => void
   onSelectPieza?: (pieza: PiezaTaller) => void
+  onVincularUrl?: (pieza: PiezaTaller) => void
+}
+
+function getDomainBadgeLabel(url: string | null | undefined): string {
+  if (!url) return 'Modelo 3D'
+  try {
+    const host = new URL(url).hostname.toLowerCase()
+    if (host.includes('makerworld')) return 'MakerWorld'
+    if (host.includes('printables')) return 'Printables'
+    if (host.includes('thingiverse')) return 'Thingiverse'
+    if (host.includes('drive.google')) return 'Drive'
+    if (host.includes('cults3d')) return 'Cults3D'
+    return 'Modelo 3D'
+  } catch {
+    return 'Modelo 3D'
+  }
 }
 
 function getTiempoTranscurrido(rawFecha: string) {
@@ -172,7 +188,8 @@ export function ProductionCardMobile({
   onCambiarEstado,
   onRequestIniciar,
   onRequestReabrir,
-  onSelectPieza
+  onSelectPieza,
+  onVincularUrl
 }: ProductionCardMobileProps) {
   const tiempoTxt = getTiempoTranscurrido(pieza.fechaSolicitud)
 
@@ -210,16 +227,61 @@ export function ProductionCardMobile({
     >
       {/* Cabecera de la tarjeta: Modelo + Multiplicador y Badge de estado */}
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h4
-            className="text-sm font-bold text-foreground truncate cursor-pointer hover:text-primary transition-colors"
-            title={pieza.nombreModelo}
-          >
-            {pieza.nombreModelo}
-          </h4>
-          <span className="font-mono text-xs font-semibold text-muted-foreground">
-            x{pieza.cantidad}
-          </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <h4
+              className="text-sm font-bold text-foreground truncate cursor-pointer hover:text-primary transition-colors"
+              title={pieza.nombreModelo}
+            >
+              {pieza.nombreModelo}
+            </h4>
+            <span className="font-mono text-xs font-semibold text-muted-foreground">
+              x{pieza.cantidad}
+            </span>
+          </div>
+
+          {/* Enlace o botón para modelo 3D en móvil */}
+          <div className="mt-1 flex items-center gap-1.5">
+            {pieza.enlaceMakerworld ? (
+              <div className="inline-flex items-center shrink-0">
+                <a
+                  href={pieza.enlaceMakerworld}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 px-2 py-0.5 rounded-l-md border border-emerald-500/25 transition-all active:scale-95 group/link"
+                  title={`Abrir modelo: ${pieza.enlaceMakerworld}`}
+                >
+                  <ExternalLink className="w-3 h-3 shrink-0 group-hover/link:translate-x-0.5 transition-transform" />
+                  <span className="font-sans">{getDomainBadgeLabel(pieza.enlaceMakerworld)}</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onVincularUrl?.(pieza)
+                  }}
+                  className="inline-flex items-center justify-center text-[11px] text-emerald-700/80 hover:text-emerald-700 dark:text-emerald-400/80 dark:hover:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 px-1.5 py-0.5 rounded-r-md border-y border-r border-emerald-500/25 transition-colors cursor-pointer"
+                  title="Editar enlace del modelo"
+                >
+                  <Pencil className="w-2.5 h-2.5 shrink-0" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onVincularUrl?.(pieza)
+                }}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80 px-2 py-0.5 rounded-md border border-border/70 transition-colors shrink-0 cursor-pointer shadow-2xs"
+                title="Vincular URL del modelo 3D"
+              >
+                <Link2 className="w-3 h-3 shrink-0" />
+                <span>+ Vincular URL</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Badge de estado con contraste semántico */}

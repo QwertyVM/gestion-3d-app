@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select'
-import { Play, RotateCcw, Loader2, Sparkles, Printer, AlertCircle } from 'lucide-react'
+import { Play, RotateCcw, Loader2, Sparkles, Printer, AlertCircle, ExternalLink, Boxes } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 
@@ -123,6 +123,26 @@ export function ConfirmarAccionPiezaModal({
               </span>
             )}
           </div>
+
+          {/* Enlace al modelo 3D para acceso instantáneo antes de imprimir */}
+          {pieza.enlaceMakerworld && (
+            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                <Boxes className="w-3.5 h-3.5 text-muted-foreground" />
+                Modelo 3D:
+              </span>
+              <a
+                href={pieza.enlaceMakerworld}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/20 transition-all hover:scale-105"
+                title="Abrir enlace del modelo 3D en nueva pestaña"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Abrir en MakerWorld / 3D</span>
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Sección específica según modo */}

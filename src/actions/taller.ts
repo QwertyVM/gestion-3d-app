@@ -9,6 +9,7 @@ function safeRevalidate() {
     revalidatePath('/taller')
     revalidatePath('/pedidos')
     revalidatePath('/ventas')
+    revalidatePath('/catalogo')
     revalidatePath('/')
   } catch (e) {
     // Ignore outside request context
@@ -46,6 +47,8 @@ export interface PiezaTaller {
   costoBaseUnitario: number
   estado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO' | 'CANCELADO'
   notas?: string | null
+  enlaceMakerworld?: string | null
+  imagenUrl?: string | null
 }
 
 export interface GrupoModeloTaller {
@@ -58,6 +61,8 @@ export interface GrupoModeloTaller {
   pendientes: number
   enProduccion: number
   listos: number
+  enlaceMakerworld?: string | null
+  imagenUrl?: string | null
   colores: {
     colorId: string | null
     nombreColor: string
@@ -131,7 +136,8 @@ export interface TallerDataResponse {
 function mapDataToPiezas(
   pedidosList: any[],
   ventasList: any[],
-  filamentoMap: Map<string, any>
+  filamentoMap: Map<string, any>,
+  enlaceMap?: Map<string, string>
 ): PiezaTaller[] {
   const result: PiezaTaller[] = []
 
@@ -183,6 +189,11 @@ function mapDataToPiezas(
         ? sortedColores.map(c => c.nombreColor).join(' + ')
         : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
 
+      const enlaceDirecto = item.producto?.enlaceMakerworld || null
+      const enlaceFallback = enlaceMap
+        ? (enlaceMap.get(item.productoId) || enlaceMap.get((item.producto?.nombreModelo || '').toLowerCase().trim()) || null)
+        : null
+
       result.push({
         id: item.id,
         registroId: ped.id,
@@ -208,7 +219,9 @@ function mapDataToPiezas(
         pesoGramosTotal: Number(pesoTotal.toFixed(1)),
         costoBaseUnitario: item.costoBaseSnapshot != null ? Number(item.costoBaseSnapshot) : (item.producto ? Number(item.producto.costoBase) : 0),
         estado: (item.estado || ped.estado) as any,
-        notas: ped.notas || null
+        notas: ped.notas || null,
+        enlaceMakerworld: enlaceDirecto || enlaceFallback || null,
+        imagenUrl: item.producto?.imagenUrl || null
       })
     })
   })
@@ -259,6 +272,11 @@ function mapDataToPiezas(
       ? sortedColores.map(c => c.nombreColor).join(' + ')
       : (primaryCol ? primaryCol.nombreColor : 'Sin especificar')
 
+    const enlaceDirecto = v.producto?.enlaceMakerworld || null
+    const enlaceFallback = enlaceMap
+      ? (enlaceMap.get(v.productoId) || enlaceMap.get((v.producto?.nombreModelo || '').toLowerCase().trim()) || null)
+      : null
+
     result.push({
       id: v.id,
       registroId: v.id,
@@ -284,7 +302,9 @@ function mapDataToPiezas(
       pesoGramosTotal: Number(pesoTotal.toFixed(1)),
       costoBaseUnitario: v.costoBaseSnapshot != null ? Number(v.costoBaseSnapshot) : (v.producto ? Number(v.producto.costoBase) : 0),
       estado: v.estado as any,
-      notas: null
+      notas: null,
+      enlaceMakerworld: enlaceDirecto || enlaceFallback || null,
+      imagenUrl: v.producto?.imagenUrl || null
     })
   })
 
@@ -293,7 +313,7 @@ function mapDataToPiezas(
 
 export async function getTallerData(): Promise<TallerDataResponse> {
   try {
-    const [pedidos, ventas, filamentos, todosPedidos, todasVentas] = await Promise.all([
+    const [pedidos, ventas, filamentos, todosPedidos, todasVentas, productosConEnlace] = await Promise.all([
       // Cola activa en taller
       prisma.pedido.findMany({
         where: {
@@ -350,6 +370,19 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           colorFilamento: true
         },
         orderBy: { fecha: 'desc' }
+      }),
+      // Productos con enlace registrado para propagar a cualquier ítem del modelo
+      prisma.producto.findMany({
+        where: {
+          negocio: '3D',
+          enlaceMakerworld: { not: null }
+        },
+        select: {
+          id: true,
+          nombreModelo: true,
+          enlaceMakerworld: true,
+          imagenUrl: true
+        }
       })
     ])
 
@@ -358,8 +391,24 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       filamentoMap.set(f.id, f)
     })
 
-    const piezas = mapDataToPiezas(pedidos, ventas, filamentoMap)
-    const historicoPiezas = mapDataToPiezas(todosPedidos, todasVentas, filamentoMap)
+    // Mapa de enlaces por ID y nombre base para que cualquier variante herede el enlace
+    const enlaceMap = new Map<string, string>()
+    productosConEnlace.forEach((p) => {
+      if (p.enlaceMakerworld) {
+        enlaceMap.set(p.id, p.enlaceMakerworld)
+        const nameLower = p.nombreModelo.toLowerCase().trim()
+        enlaceMap.set(nameLower, p.enlaceMakerworld)
+        if (nameLower.includes(' - ')) {
+          const baseName = nameLower.split(' - ')[0].trim()
+          if (!enlaceMap.has(baseName)) {
+            enlaceMap.set(baseName, p.enlaceMakerworld)
+          }
+        }
+      }
+    })
+
+    const piezas = mapDataToPiezas(pedidos, ventas, filamentoMap, enlaceMap)
+    const historicoPiezas = mapDataToPiezas(todosPedidos, todasVentas, filamentoMap, enlaceMap)
 
     // 3. Agrupación por Modelo / Producto
     const modeloMap = new Map<string, GrupoModeloTaller>()
@@ -377,6 +426,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           pendientes: 0,
           enProduccion: 0,
           listos: 0,
+          enlaceMakerworld: p.enlaceMakerworld || null,
+          imagenUrl: p.imagenUrl || null,
           colores: [],
           pedidos: []
         })
@@ -615,3 +666,48 @@ export async function reabrirPieza(
 ) {
   return updateEstadoPieza(tipoRegistro, registroId, 'PENDIENTE')
 }
+
+export async function updateEnlaceModelo(
+  productoId: string,
+  enlaceMakerworld: string | null
+): Promise<{ success: boolean; enlaceMakerworld?: string | null; error?: string }> {
+  try {
+    const trimmed = enlaceMakerworld && enlaceMakerworld.trim() ? enlaceMakerworld.trim() : null
+
+    // 1. Obtener producto para identificar su contexto y variantes
+    const prod = await prisma.producto.findUnique({
+      where: { id: productoId }
+    })
+
+    if (!prod) {
+      return { success: false, error: 'Producto no encontrado' }
+    }
+
+    // 2. Extraer nombre base si tiene variante con guion (ej: "Pikachu - Grande" -> "Pikachu")
+    const baseName = prod.nombreModelo.includes(' - ')
+      ? prod.nombreModelo.split(' - ')[0].trim()
+      : prod.nombreModelo.trim()
+
+    // 3. Actualizar producto y sincronizar con sus variantes con el mismo nombre base
+    await prisma.producto.updateMany({
+      where: {
+        negocio: prod.negocio,
+        OR: [
+          { id: productoId },
+          { nombreModelo: prod.nombreModelo },
+          ...(baseName.length >= 3 ? [{ nombreModelo: { startsWith: `${baseName} - ` } }] : [])
+        ]
+      },
+      data: {
+        enlaceMakerworld: trimmed
+      }
+    })
+
+    safeRevalidate()
+    return { success: true, enlaceMakerworld: trimmed }
+  } catch (error: any) {
+    console.error('Error al actualizar enlace del modelo:', error)
+    return { success: false, error: error.message || 'Error al actualizar enlace' }
+  }
+}
+

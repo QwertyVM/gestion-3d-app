@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipProvider
 } from '@/components/ui/tooltip'
-import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame } from 'lucide-react'
+import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 import { formatDate } from '@/lib/utils'
@@ -26,6 +26,22 @@ export interface ProductionRowProps {
   onRequestIniciar?: (pieza: PiezaTaller) => void
   onRequestReabrir?: (pieza: PiezaTaller) => void
   onSelectPieza?: (pieza: PiezaTaller) => void
+  onVincularUrl?: (pieza: PiezaTaller) => void
+}
+
+function getDomainBadgeLabel(url: string | null | undefined): string {
+  if (!url) return 'Modelo 3D'
+  try {
+    const host = new URL(url).hostname.toLowerCase()
+    if (host.includes('makerworld')) return 'MakerWorld'
+    if (host.includes('printables')) return 'Printables'
+    if (host.includes('thingiverse')) return 'Thingiverse'
+    if (host.includes('drive.google')) return 'Drive'
+    if (host.includes('cults3d')) return 'Cults3D'
+    return 'Modelo 3D'
+  } catch {
+    return 'Modelo 3D'
+  }
 }
 
 // Helper para calcular días transcurridos o antigüedad relativa
@@ -207,7 +223,8 @@ export function ProductionRow({
   onCambiarEstado,
   onRequestIniciar,
   onRequestReabrir,
-  onSelectPieza
+  onSelectPieza,
+  onVincularUrl
 }: ProductionRowProps) {
   const tiempoTxt = getTiempoTranscurrido(pieza.fechaSolicitud)
 
@@ -245,18 +262,59 @@ export function ProductionRow({
       {/* 1. Pieza & Especificación (w-[28%], con pl-6) */}
       <TableCell className="w-[28%] pl-6 pr-4 py-3 align-middle overflow-hidden min-w-0">
         <div className="space-y-1 min-w-0">
-          {/* Título del modelo con hover primario */}
-          <div className="flex items-center gap-1.5 min-w-0">
+          {/* Título del modelo con hover primario y acceso directo al modelo 3D */}
+          <div className="flex items-center justify-between gap-1.5 min-w-0">
             <span
               onClick={(e) => {
                 e.stopPropagation()
                 onSelectPieza?.(pieza)
               }}
-              className="text-sm font-bold text-foreground hover:text-primary transition-colors cursor-pointer truncate block"
+              className="text-sm font-bold text-foreground hover:text-primary transition-colors cursor-pointer truncate flex-1 min-w-0"
               title={pieza.nombreModelo}
             >
               {pieza.nombreModelo}
             </span>
+
+            {/* Enlace o botón para modelo 3D */}
+            {pieza.enlaceMakerworld ? (
+              <div className="inline-flex items-center shrink-0">
+                <a
+                  href={pieza.enlaceMakerworld}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 px-1.5 py-0.5 rounded-l-md border border-emerald-500/25 transition-all hover:shadow-2xs active:scale-95 group/link"
+                  title={`Abrir modelo en nueva pestaña: ${pieza.enlaceMakerworld}`}
+                >
+                  <ExternalLink className="w-2.5 h-2.5 shrink-0 group-hover/link:translate-x-0.5 transition-transform" />
+                  <span className="font-sans">{getDomainBadgeLabel(pieza.enlaceMakerworld)}</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onVincularUrl?.(pieza)
+                  }}
+                  className="inline-flex items-center justify-center text-[10px] text-emerald-700/80 hover:text-emerald-700 dark:text-emerald-400/80 dark:hover:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/25 px-1 py-0.5 rounded-r-md border-y border-r border-emerald-500/25 transition-colors cursor-pointer"
+                  title="Editar enlace del modelo"
+                >
+                  <Pencil className="w-2.5 h-2.5 shrink-0" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onVincularUrl?.(pieza)
+                }}
+                className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80 px-1.5 py-0.5 rounded-md border border-border/70 transition-colors shrink-0 cursor-pointer shadow-2xs"
+                title="Vincular URL del modelo 3D (MakerWorld, Printables, etc.)"
+              >
+                <Link2 className="w-2.5 h-2.5 shrink-0" />
+                <span>+ Link</span>
+              </button>
+            )}
           </div>
 
           {/* Fila secundaria: Multiplicador x1, Swatches circulares nítidos y Chip de Material (CERO gramos) */}
