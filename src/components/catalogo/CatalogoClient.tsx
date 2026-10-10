@@ -67,6 +67,7 @@ export interface ProductoItem {
   precioOferta?: number | null
   porcentajeDescuento?: number | null
   imagenUrl?: string | null
+  enlaceMakerworld?: string | null
   descripcionWeb?: string | null
   destacadoWeb?: boolean
   createdAt?: string

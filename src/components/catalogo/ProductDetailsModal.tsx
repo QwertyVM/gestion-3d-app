@@ -11,7 +11,8 @@ import {
   Check,
   PlusCircle,
   Wrench,
-  DollarSign
+  DollarSign,
+  ExternalLink
 } from 'lucide-react'
 import {
   Dialog,
@@ -71,6 +72,11 @@ export function ProductDetailsModal({
   const imageUrl = isGroup && group
     ? group.variants.find((v) => v.producto.imagenUrl)?.producto.imagenUrl || null
     : singleProduct?.imagenUrl || null
+
+  // Link de MakerWorld
+  const makerworldUrl = isGroup && group
+    ? group.variants.find((v) => v.producto.enlaceMakerworld)?.producto.enlaceMakerworld || null
+    : singleProduct?.enlaceMakerworld || null
 
   // Notas de laminado / taller
   const notasTaller = isGroup && group
@@ -192,6 +198,19 @@ export function ProductDetailsModal({
                   Modelo 3D sin fotografía asignada
                 </span>
               </div>
+            )}
+
+            {/* Botón flotante "MakerWorld" */}
+            {makerworldUrl && (
+              <a
+                href={makerworldUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-card/90 backdrop-blur-xs border border-border/80 text-foreground hover:bg-card text-xs font-semibold h-7 px-2.5 rounded-lg flex items-center gap-1.5 shadow-xs absolute bottom-3 left-3 cursor-pointer transition-colors"
+              >
+                <ExternalLink className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Ver en MakerWorld</span>
+              </a>
             )}
 
             {/* Botón flotante "Copiar Ficha" */}

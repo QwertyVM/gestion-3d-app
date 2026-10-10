@@ -16,7 +16,8 @@ import {
   Check,
   ArrowUpDown,
   Eye,
-  Trash2
+  Trash2,
+  ExternalLink
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -444,10 +445,23 @@ export function ProductsTableView({
                                     {row.totalVariants} versiones
                                   </span>
                                 </div>
-                                <div className="mt-0.5">
+                                <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
                                   <span className="bg-secondary text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md inline-block border border-border/70">
                                     {row.lineaCategoria}
                                   </span>
+                                  {row.variants.find((v) => v.producto.enlaceMakerworld)?.producto.enlaceMakerworld && (
+                                    <a
+                                      href={row.variants.find((v) => v.producto.enlaceMakerworld)!.producto.enlaceMakerworld!}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-500/20 transition-colors"
+                                      title="Abrir modelo en MakerWorld"
+                                    >
+                                      <ExternalLink className="h-2.5 w-2.5" />
+                                      <span>MakerWorld</span>
+                                    </a>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -709,10 +723,23 @@ export function ProductsTableView({
                             <span className="text-sm font-bold text-foreground block line-clamp-2 leading-snug break-words" title={product.nombreModelo}>
                               {product.nombreModelo}
                             </span>
-                            <div className="mt-0.5">
+                            <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
                               <span className="bg-secondary text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md inline-block border border-border/70">
                                 {product.lineaCategoria || 'General'}
                               </span>
+                              {product.enlaceMakerworld && (
+                                <a
+                                  href={product.enlaceMakerworld}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-500/20 transition-colors"
+                                  title="Abrir modelo en MakerWorld"
+                                >
+                                  <ExternalLink className="h-2.5 w-2.5" />
+                                  <span>MakerWorld</span>
+                                </a>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1045,10 +1072,23 @@ export function ProductsTableView({
                         <span className="font-bold text-sm text-foreground block line-clamp-2 leading-snug break-words" title={product.nombreModelo}>
                           {product.nombreModelo}
                         </span>
-                        <div className="mt-0.5">
+                        <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
                           <span className="bg-secondary text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md inline-block border border-border/70">
                             {product.lineaCategoria || 'General'}
                           </span>
+                          {product.enlaceMakerworld && (
+                            <a
+                              href={product.enlaceMakerworld}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-500/20 transition-colors"
+                              title="Abrir modelo en MakerWorld"
+                            >
+                              <ExternalLink className="h-2.5 w-2.5" />
+                              <span>MakerWorld</span>
+                            </a>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -134,6 +134,7 @@ model Producto {
   destacadoWeb        Boolean              @default(false)
   enOferta            Boolean              @default(false)
   imagenUrl           String?
+  enlaceMakerworld    String?
   porcentajeDescuento Int?                 @default(0)
   precioOferta        Decimal?             @db.Decimal(10, 2)
   stock               Int                  @default(0)

@@ -68,6 +68,7 @@ export async function createProducto(data: {
   enOferta?: boolean
   precioOferta?: number | null
   imagenUrl?: string | null
+  enlaceMakerworld?: string | null
   descripcionWeb?: string | null
   destacadoWeb?: boolean
   fechaRegistro?: string | Date
@@ -89,6 +90,7 @@ export async function createProducto(data: {
       enOferta: data.enOferta ?? false,
       precioOferta: data.precioOferta ?? null,
       imagenUrl: data.imagenUrl ?? null,
+      enlaceMakerworld: data.enlaceMakerworld ?? null,
       descripcionWeb: data.descripcionWeb ?? null,
       destacadoWeb: data.destacadoWeb ?? false,
       ...(parsedFecha ? { createdAt: parsedFecha } : {}),
@@ -119,6 +121,7 @@ export async function updateProducto(id: string, data: {
   enOferta?: boolean
   precioOferta?: number | null
   imagenUrl?: string | null
+  enlaceMakerworld?: string | null
   descripcionWeb?: string | null
   destacadoWeb?: boolean
   fechaRegistro?: string | Date
@@ -139,6 +142,7 @@ export async function updateProducto(id: string, data: {
       ...(data.enOferta !== undefined ? { enOferta: data.enOferta } : {}),
       ...(data.precioOferta !== undefined ? { precioOferta: data.precioOferta } : {}),
       ...(data.imagenUrl !== undefined ? { imagenUrl: data.imagenUrl } : {}),
+      ...(data.enlaceMakerworld !== undefined ? { enlaceMakerworld: data.enlaceMakerworld } : {}),
       ...(data.descripcionWeb !== undefined ? { descripcionWeb: data.descripcionWeb } : {}),
       ...(data.destacadoWeb !== undefined ? { destacadoWeb: data.destacadoWeb } : {}),
       ...(parsedFecha ? { createdAt: parsedFecha } : {}),
@@ -203,6 +207,7 @@ export async function duplicarProducto(id: string) {
       enOferta: current.enOferta,
       precioOferta: current.precioOferta,
       imagenUrl: current.imagenUrl,
+      enlaceMakerworld: current.enlaceMakerworld,
       descripcionWeb: current.descripcionWeb,
       destacadoWeb: current.destacadoWeb
     }
@@ -250,6 +255,8 @@ export async function saveProductoConVariantes(data: {
   lineaCategoria: string
   fechaRegistro?: string | Date
   activo?: boolean
+  imagenUrl?: string | null
+  enlaceMakerworld?: string | null
   variantes: VariantInputData[]
   deletedVariantIds?: string[]
 }) {
@@ -304,6 +311,8 @@ export async function saveProductoConVariantes(data: {
             precioMenor: v.precioMenor,
             precioMayor: v.precioMayor,
             ...(data.activo !== undefined ? { activo: data.activo } : {}),
+            ...(data.imagenUrl !== undefined ? { imagenUrl: data.imagenUrl } : {}),
+            ...(data.enlaceMakerworld !== undefined ? { enlaceMakerworld: data.enlaceMakerworld } : {}),
             ...(parsedFecha ? { createdAt: parsedFecha } : {}),
           }
         })
@@ -318,6 +327,8 @@ export async function saveProductoConVariantes(data: {
             precioMenor: v.precioMenor,
             precioMayor: v.precioMayor,
             activo: data.activo ?? true,
+            imagenUrl: data.imagenUrl ?? null,
+            enlaceMakerworld: data.enlaceMakerworld ?? null,
             ...(parsedFecha ? { createdAt: parsedFecha } : {}),
           }
         })
@@ -397,6 +408,7 @@ export async function duplicarModeloConVariantes(variantIds: string[], baseName:
           enOferta: p.enOferta,
           precioOferta: p.precioOferta,
           imagenUrl: p.imagenUrl,
+          enlaceMakerworld: p.enlaceMakerworld,
           descripcionWeb: p.descripcionWeb,
           destacadoWeb: p.destacadoWeb
         }
@@ -417,6 +429,54 @@ export async function duplicarModeloConVariantes(variantIds: string[], baseName:
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   }))
+}
+
+export async function obtenerMetadataMakerworld(inputUrl: string) {
+  const urlTrimmed = inputUrl.trim()
+  if (!urlTrimmed) return { success: false, error: 'URL vacía' }
+
+  // 1. Si el usuario ya pegó un link directo de imagen (ej. CDN de MakerWorld o imagen web)
+  if (
+    urlTrimmed.match(/\.(jpeg|jpg|png|webp|gif)($|\?)/i) || 
+    urlTrimmed.includes('bblmw.com') ||
+    urlTrimmed.includes('bblamb.com')
+  ) {
+    return {
+      success: true,
+      imagenUrl: urlTrimmed,
+      isDirectImage: true
+    }
+  }
+
+  // 2. Extraer ID del modelo si es URL de makerworld.com
+  const matchModel = urlTrimmed.match(/models\/([0-9]+)/i)
+  const modelId = matchModel ? matchModel[1] : null
+
+  // 3. Intentar obtener metadata mediante microlink
+  try {
+    const fetchUrl = `https://api.microlink.io?url=${encodeURIComponent(urlTrimmed)}`
+    const res = await fetch(fetchUrl, { next: { revalidate: 3600 } })
+    if (res.ok) {
+      const data = await res.json()
+      const imgUrl = data?.data?.image?.url
+      const title = data?.data?.title
+      if (imgUrl && !imgUrl.includes('og-icon.jpeg')) {
+        return {
+          success: true,
+          imagenUrl: imgUrl,
+          titulo: title && title !== modelId ? title : undefined
+        }
+      }
+    }
+  } catch (e) {
+    // Silencioso
+  }
+
+  return {
+    success: false,
+    modelId,
+    error: 'No se pudo extraer automáticamente debido a las políticas de MakerWorld. Puedes hacer clic derecho en la portada en MakerWorld -> "Copiar dirección de la imagen" y pegarla en el campo de Imagen.'
+  }
 }
 
 export async function deleteModeloConVariantes(variantIds: string[]) {

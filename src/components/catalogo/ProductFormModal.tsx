@@ -11,7 +11,12 @@ import {
   Calculator, 
   Archive, 
   Layers,
-  Sparkles
+  Sparkles,
+  Link,
+  ExternalLink,
+  Globe,
+  Image as ImageIcon,
+  Loader2
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -20,7 +25,12 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
-import { createProducto, updateProducto, saveProductoConVariantes } from '@/actions/productos'
+import { 
+  createProducto, 
+  updateProducto, 
+  saveProductoConVariantes, 
+  obtenerMetadataMakerworld 
+} from '@/actions/productos'
 import type { ProductoItem } from './CatalogoClient'
 import { extractBaseAndVariant, ProductGroupRow } from './ProductsTableView'
 
@@ -101,6 +111,11 @@ export function ProductFormModal({
   const [fechaRegistro, setFechaRegistro] = useState(getTodayDateString())
   const [activo, setActivo] = useState(true)
 
+  // MakerWorld & Portada
+  const [imagenUrl, setImagenUrl] = useState('')
+  const [enlaceMakerworld, setEnlaceMakerworld] = useState('')
+  const [isFetchingMakerworld, setIsFetchingMakerworld] = useState(false)
+
   // Switch de versiones
   const [hasVariants, setHasVariants] = useState(false)
 
@@ -115,6 +130,43 @@ export function ProductFormModal({
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Detección automática al escribir enlace
+  const handleEnlaceMakerworldChange = (val: string) => {
+    setEnlaceMakerworld(val)
+    const trimmed = val.trim()
+    // Si el usuario pegó directamente el link de una imagen
+    if (
+      trimmed.match(/\.(jpeg|jpg|png|webp|gif)($|\?)/i) || 
+      trimmed.includes('bblmw.com') ||
+      trimmed.includes('bblamb.com')
+    ) {
+      setImagenUrl(trimmed)
+      toast.info('Se detectó y asignó la URL de imagen directamente')
+    }
+  }
+
+  // Extraer portada de MakerWorld
+  const handleAutoObtenerPortada = async () => {
+    if (!enlaceMakerworld.trim()) return
+    setIsFetchingMakerworld(true)
+    try {
+      const res = await obtenerMetadataMakerworld(enlaceMakerworld)
+      if (res.success && res.imagenUrl) {
+        setImagenUrl(res.imagenUrl)
+        if (res.titulo && !nombreModelo.trim()) {
+          setNombreModelo(res.titulo)
+        }
+        toast.success('¡Portada de MakerWorld obtenida!')
+      } else {
+        toast.info(res.error || 'Copia la dirección de imagen desde MakerWorld y pégala abajo')
+      }
+    } catch {
+      toast.error('Error al consultar MakerWorld')
+    } finally {
+      setIsFetchingMakerworld(false)
+    }
+  }
+
   // Inicialización cuando cambia el modal o el producto/grupo a editar
   useEffect(() => {
     if (!isOpen) return
@@ -128,6 +180,8 @@ export function ProductFormModal({
       setFechaRegistro(getDateInputString(editingGroup.latestCreatedAt))
       setActivo(editingGroup.hasActive)
       setHasVariants(true)
+      setImagenUrl(editingGroup.variants.find((v) => v.producto.imagenUrl)?.producto.imagenUrl || '')
+      setEnlaceMakerworld(editingGroup.variants.find((v) => v.producto.enlaceMakerworld)?.producto.enlaceMakerworld || '')
 
       setVariants(
         editingGroup.variants.map((v) => ({
@@ -161,6 +215,8 @@ export function ProductFormModal({
         setFechaRegistro(getDateInputString(editingProduct.createdAt))
         setActivo(editingProduct.activo)
         setHasVariants(true)
+        setImagenUrl(editingProduct.imagenUrl || siblingProducts.find((p) => p.imagenUrl)?.imagenUrl || '')
+        setEnlaceMakerworld(editingProduct.enlaceMakerworld || siblingProducts.find((p) => p.enlaceMakerworld)?.enlaceMakerworld || '')
 
         // Ordenamos las variantes por costo base ascendente
         const sortedSiblings = [...siblingProducts].sort((a, b) => (a.costoBase || 0) - (b.costoBase || 0))
@@ -183,6 +239,8 @@ export function ProductFormModal({
         setFechaRegistro(getDateInputString(editingProduct.createdAt))
         setActivo(editingProduct.activo)
         setHasVariants(false)
+        setImagenUrl(editingProduct.imagenUrl || '')
+        setEnlaceMakerworld(editingProduct.enlaceMakerworld || '')
 
         setSimpleCostoBase(Number(editingProduct.costoBase || 0).toFixed(2))
         setSimplePrecioMenor(Number(editingProduct.precioMenor || 0).toFixed(2))
@@ -209,6 +267,8 @@ export function ProductFormModal({
       setFechaRegistro(getTodayDateString())
       setActivo(true)
       setHasVariants(true)
+      setImagenUrl(allCatalogProductos.find((p) => extractBaseAndVariant(p.nombreModelo).baseName.toLowerCase().trim() === initialBaseName.toLowerCase().trim() && p.imagenUrl)?.imagenUrl || '')
+      setEnlaceMakerworld(allCatalogProductos.find((p) => extractBaseAndVariant(p.nombreModelo).baseName.toLowerCase().trim() === initialBaseName.toLowerCase().trim() && p.enlaceMakerworld)?.enlaceMakerworld || '')
 
       // Buscar si ya existen variantes de ese modelo base
       const existingSiblings = allCatalogProductos.filter((p) => {
@@ -257,6 +317,8 @@ export function ProductFormModal({
     setFechaRegistro(getTodayDateString())
     setActivo(true)
     setHasVariants(false)
+    setImagenUrl('')
+    setEnlaceMakerworld('')
 
     setSimpleCostoBase(is3D ? '10.00' : '0.00')
     setSimplePrecioMenor(is3D ? '30.00' : '0.00')
@@ -378,6 +440,8 @@ export function ProductFormModal({
             precioMayor: precioMayorNum,
             activo: activo,
             fechaRegistro: fechaRegistro,
+            imagenUrl: imagenUrl.trim() || null,
+            enlaceMakerworld: enlaceMakerworld.trim() || null,
           })
           toast.success(`Modelo "${trimmedBase}" actualizado correctamente`)
           onSaved([updated], [], trimmedBase)
@@ -390,6 +454,8 @@ export function ProductFormModal({
             precioMayor: precioMayorNum,
             activo: activo,
             fechaRegistro: fechaRegistro,
+            imagenUrl: imagenUrl.trim() || null,
+            enlaceMakerworld: enlaceMakerworld.trim() || null,
           })
           toast.success(`Modelo "${trimmedBase}" registrado en catálogo`)
           onSaved([created], [], trimmedBase)
@@ -426,6 +492,8 @@ export function ProductFormModal({
           lineaCategoria: trimmedCat,
           fechaRegistro: fechaRegistro,
           activo: activo,
+          imagenUrl: imagenUrl.trim() || null,
+          enlaceMakerworld: enlaceMakerworld.trim() || null,
           variantes: payloadVariantes,
           deletedVariantIds: deletedVariantIds,
         })
@@ -529,6 +597,102 @@ export function ProductFormModal({
                     onChange={(e) => setFechaRegistro(e.target.value)}
                     className="bg-background border-input rounded-xl text-sm font-bold text-foreground h-10 cursor-pointer"
                   />
+                </div>
+              </div>
+
+              {/* ========================================================================= */}
+              {/* SECCIÓN MAKERWORLD & PORTADA / MINIATURA                                  */}
+              {/* ========================================================================= */}
+              <div className="p-3.5 bg-secondary/35 border border-border/80 rounded-xl space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Globe className="h-3.5 w-3.5 text-primary" />
+                    MakerWorld & Imagen de Portada
+                  </span>
+                  {enlaceMakerworld && (
+                    <a
+                      href={enlaceMakerworld}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      Abrir enlace <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
+                  {/* Vista previa miniatura */}
+                  <div className="sm:col-span-1 flex flex-col items-center justify-center p-2 rounded-xl border border-dashed border-border bg-background/60 text-center min-h-[96px]">
+                    {imagenUrl ? (
+                      <div className="relative group w-18 h-18 rounded-lg overflow-hidden border border-border shadow-xs">
+                        <img
+                          src={imagenUrl}
+                          alt="Portada del modelo"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImagenUrl('')}
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity cursor-pointer"
+                          title="Quitar miniatura"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-muted-foreground py-1">
+                        <ImageIcon className="h-6 w-6 mb-1 text-muted-foreground/60 stroke-[1.8]" />
+                        <span className="text-[10px] font-medium">Sin miniatura</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Inputs */}
+                  <div className="sm:col-span-3 space-y-2.5">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                        Link de MakerWorld
+                      </Label>
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          value={enlaceMakerworld}
+                          onChange={(e) => handleEnlaceMakerworldChange(e.target.value)}
+                          placeholder="https://makerworld.com/es/models/..."
+                          className="bg-background text-xs font-medium h-9 flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAutoObtenerPortada}
+                          disabled={!enlaceMakerworld.trim() || isFetchingMakerworld}
+                          className="h-9 text-xs font-bold shrink-0 cursor-pointer"
+                        >
+                          {isFetchingMakerworld ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            'Obtener Portada'
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                        URL Directa de la Imagen
+                      </Label>
+                      <Input
+                        value={imagenUrl}
+                        onChange={(e) => setImagenUrl(e.target.value)}
+                        placeholder="https://makerworld.bblmw.com/... o pega URL directa"
+                        className="bg-background text-xs font-mono h-9"
+                      />
+                      <p className="text-[10px] text-muted-foreground leading-tight">
+                        Tip: Haz clic derecho en la foto del modelo en MakerWorld → <em>Copiar dirección de la imagen</em> y pégala aquí.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
