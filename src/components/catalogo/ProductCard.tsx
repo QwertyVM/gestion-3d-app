@@ -75,18 +75,47 @@ export function ProductCard({
   // Estado consolidado
   const isActive = row.hasActive
 
-  // Formatos de precio y costo
-  const baseCostFormatted = isMultiVariant && row.minCosto !== row.maxCosto
-    ? `${formatCurrency(row.minCosto)} – ${formatCurrency(row.maxCosto)}`
-    : formatCurrency(row.minCosto)
+  // Helper de redondeo limpio sin decimales innecesarios
+  const formatNum = (n: number) =>
+    n % 1 === 0 ? n.toString() : n.toFixed(2).replace(/\.?0+$/, '')
 
-  const menorPriceFormatted = isMultiVariant && row.minPrecioMenor !== row.maxPrecioMenor
-    ? `${formatCurrency(row.minPrecioMenor)} – ${formatCurrency(row.maxPrecioMenor)}`
-    : formatCurrency(row.minPrecioMenor)
+  // Costo Base (rango simplificado ej: S/ 96 – S/ 106)
+  const baseCostFormatted = useMemo(() => {
+    if (isMultiVariant && row.minCosto !== row.maxCosto) {
+      return `S/ ${formatNum(row.minCosto)} – S/ ${formatNum(row.maxCosto)}`
+    }
+    return formatCurrency(row.minCosto)
+  }, [isMultiVariant, row.minCosto, row.maxCosto, formatCurrency])
 
-  const mayorPriceFormatted = isMultiVariant && row.minPrecioMayor !== row.maxPrecioMayor
-    ? `${formatCurrency(row.minPrecioMayor)} – ${formatCurrency(row.maxPrecioMayor)}`
-    : formatCurrency(row.minPrecioMayor)
+  // Precio Menor comercial compacto (ej: S/ 160 – 190)
+  const menorPriceFormatted = useMemo(() => {
+    if (isMultiVariant && row.minPrecioMenor !== row.maxPrecioMenor) {
+      return `S/ ${formatNum(row.minPrecioMenor)} – ${formatNum(row.maxPrecioMenor)}`
+    }
+    return formatCurrency(row.minPrecioMenor)
+  }, [isMultiVariant, row.minPrecioMenor, row.maxPrecioMenor, formatCurrency])
+
+  // Precio Mayor comercial compacto (ej: S/ 130 – 150)
+  const mayorPriceFormatted = useMemo(() => {
+    if (isMultiVariant && row.minPrecioMayor !== row.maxPrecioMayor) {
+      return `S/ ${formatNum(row.minPrecioMayor)} – ${formatNum(row.maxPrecioMayor)}`
+    }
+    return formatCurrency(row.minPrecioMayor)
+  }, [isMultiVariant, row.minPrecioMayor, row.maxPrecioMayor, formatCurrency])
+
+  const menorPriceTooltip = useMemo(() => {
+    if (isMultiVariant && row.minPrecioMenor !== row.maxPrecioMenor) {
+      return `${formatCurrency(row.minPrecioMenor)} a ${formatCurrency(row.maxPrecioMenor)}`
+    }
+    return menorPriceFormatted
+  }, [isMultiVariant, row.minPrecioMenor, row.maxPrecioMenor, formatCurrency, menorPriceFormatted])
+
+  const mayorPriceTooltip = useMemo(() => {
+    if (isMultiVariant && row.minPrecioMayor !== row.maxPrecioMayor) {
+      return `${formatCurrency(row.minPrecioMayor)} a ${formatCurrency(row.maxPrecioMayor)}`
+    }
+    return mayorPriceFormatted
+  }, [isMultiVariant, row.minPrecioMayor, row.maxPrecioMayor, formatCurrency, mayorPriceFormatted])
 
   // Margen Por Menor
   const menorMargen = useMemo(() => {
@@ -105,9 +134,7 @@ export function ProductCard({
     if (Math.round(minM) === Math.round(maxM)) {
       return minM >= 0 ? `+${Math.round(minM)}%` : `${Math.round(minM)}%`
     }
-    const minStr = minM >= 0 ? `+${Math.round(minM)}%` : `${Math.round(minM)}%`
-    const maxStr = maxM >= 0 ? `+${Math.round(maxM)}%` : `${Math.round(maxM)}%`
-    return `${minStr} ~ ${maxStr}`
+    return maxM >= 0 ? `Hasta +${Math.round(maxM)}%` : `Hasta ${Math.round(maxM)}%`
   }, [isGroup, row.variants, primaryProduct, calcMargen])
 
   // Margen Por Mayor
@@ -127,10 +154,32 @@ export function ProductCard({
     if (Math.round(minM) === Math.round(maxM)) {
       return minM >= 0 ? `+${Math.round(minM)}%` : `${Math.round(minM)}%`
     }
-    const minStr = minM >= 0 ? `+${Math.round(minM)}%` : `${Math.round(minM)}%`
-    const maxStr = maxM >= 0 ? `+${Math.round(maxM)}%` : `${Math.round(maxM)}%`
-    return `${minStr} ~ ${maxStr}`
+    return maxM >= 0 ? `Hasta +${Math.round(maxM)}%` : `Hasta ${Math.round(maxM)}%`
   }, [isGroup, row.variants, primaryProduct, calcMargen])
+
+  const menorMargenTooltip = useMemo(() => {
+    if (!isGroup || row.variants.length <= 1) return menorMargen
+    const margenes = row.variants.map((v) => {
+      const c = v.producto.costoBase || 0
+      const p = v.producto.precioMenor || 0
+      return c > 0 ? ((p - c) / c) * 100 : (p > 0 ? 100 : 0)
+    })
+    const minM = Math.round(Math.min(...margenes))
+    const maxM = Math.round(Math.max(...margenes))
+    return `Margen menor: ${minM}% a ${maxM}%`
+  }, [isGroup, row.variants, menorMargen])
+
+  const mayorMargenTooltip = useMemo(() => {
+    if (!isGroup || row.variants.length <= 1) return mayorMargen
+    const margenes = row.variants.map((v) => {
+      const c = v.producto.costoBase || 0
+      const p = v.producto.precioMayor || 0
+      return c > 0 ? ((p - c) / c) * 100 : (p > 0 ? 100 : 0)
+    })
+    const minM = Math.round(Math.min(...margenes))
+    const maxM = Math.round(Math.max(...margenes))
+    return `Margen mayor: ${minM}% a ${maxM}%`
+  }, [isGroup, row.variants, mayorMargen])
 
   const handleCardClick = () => {
     if (row.isGroup) {
@@ -166,8 +215,8 @@ export function ProductCard({
           </div>
         )}
 
-        {/* Overlays Flotantes en Esquinas */}
-        {/* Top-Left: Badge de Estado */}
+        {/* Overlays Flotantes en Esquinas (Descongestionados) */}
+        {/* Top-Left: Badge único de Estado */}
         <div className="absolute top-2.5 left-2.5 z-10">
           {isActive ? (
             <span className="bg-card/90 backdrop-blur-xs text-emerald-800 dark:text-emerald-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-border/80 shadow-2xs flex items-center gap-1">
@@ -182,14 +231,15 @@ export function ProductCard({
           )}
         </div>
 
-        {/* Top-Right: Variantes y Chip MakerWorld */}
-        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
-          {isMultiVariant && (
+        {/* Top-Right: Badge de Versiones o Chip MakerWorld (Sin saturar) */}
+        {isMultiVariant ? (
+          <div className="absolute top-2.5 right-2.5 z-10">
             <span className="bg-accent/90 backdrop-blur-xs text-accent-foreground text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/80 shadow-2xs">
               {row.totalVariants} {row.totalVariants === 1 ? 'versión' : 'versiones'}
             </span>
-          )}
-          {enlaceMakerworld && (
+          </div>
+        ) : enlaceMakerworld ? (
+          <div className="absolute top-2.5 right-2.5 z-10">
             <a
               href={enlaceMakerworld}
               target="_blank"
@@ -201,87 +251,94 @@ export function ProductCard({
               <ExternalLink className="w-2.5 h-2.5 text-primary" />
               <span>MakerWorld</span>
             </a>
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {/* ========================================================================= */}
       {/* ZONA CENTRAL: Información y Tiers Financieros                             */}
       {/* ========================================================================= */}
-      <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+      <div className="p-4 space-y-2.5 flex-1 flex flex-col justify-between">
         {/* Identidad */}
         <div className="space-y-1.5">
+          {/* Fila Superior: Categoría & Métricas */}
           <div className="flex items-center justify-between gap-1.5">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+            <span
+              className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate max-w-[70%]"
+              title={row.lineaCategoria || 'ACCESORIOS'}
+            >
               {row.lineaCategoria || 'ACCESORIOS'}
             </span>
             <span
-              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 transition-colors ${
-                pedidosCount > 0
-                  ? 'bg-primary/10 text-primary border-primary/20 dark:bg-primary/15'
-                  : 'bg-secondary/70 text-muted-foreground border-border/70'
-              }`}
-              title={
-                isMultiVariant
-                  ? `${pedidosCount} ${pedidosCount === 1 ? 'pedido asociado' : 'pedidos asociados'} (entre todas las versiones)`
-                  : `Asociado a ${pedidosCount} ${pedidosCount === 1 ? 'pedido' : 'pedidos'}`
-              }
+              className="bg-secondary text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md border border-border/60 ml-auto flex items-center gap-1 shrink-0"
+              title={`Asociado a ${pedidosCount} ${pedidosCount === 1 ? 'pedido' : 'pedidos'}`}
             >
-              <ShoppingBag className="w-3 h-3 shrink-0" />
+              <ShoppingBag className="w-3 h-3 text-muted-foreground" />
               <span>
                 {pedidosCount} {pedidosCount === 1 ? 'pedido' : 'pedidos'}
               </span>
             </span>
           </div>
+
+          {/* Título del Modelo (Soporte Multilínea) */}
           <h3
-            className="text-sm font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors"
+            className="text-sm font-bold text-foreground leading-snug line-clamp-2 min-h-[2.5rem] group-hover:text-primary transition-colors"
             title={row.baseName}
           >
             {row.baseName}
           </h3>
+
+          {/* Costo Base */}
           <div className="text-xs text-muted-foreground flex items-center justify-between pt-0.5">
             <span>Costo Base:</span>
-            <span className="font-semibold text-foreground font-mono">
+            <span
+              className="font-semibold text-foreground font-mono"
+              title={
+                isMultiVariant && row.minCosto !== row.maxCosto
+                  ? `${formatCurrency(row.minCosto)} a ${formatCurrency(row.maxCosto)}`
+                  : undefined
+              }
+            >
               {baseCostFormatted}
             </span>
           </div>
         </div>
 
-        {/* Cajas de Precio y Margen (Tiers Menor & Mayor) */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        {/* Cajas de Precio (Cero Truncamiento, rounded-xl) */}
+        <div className="grid grid-cols-2 gap-2 mt-1">
           {/* Caja Por Menor */}
-          <div className="bg-secondary/40 border border-border/70 rounded-xl p-2 text-center shadow-2xs">
+          <div className="bg-secondary/40 border border-border/80 rounded-xl p-2.5 text-center flex flex-col justify-between shadow-2xs">
             <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider block">
               MENOR
             </span>
             <span
-              className="text-xs font-extrabold text-foreground mt-0.5 block font-mono truncate"
-              title={menorPriceFormatted}
+              className="text-xs font-extrabold text-foreground mt-0.5 whitespace-nowrap block font-mono"
+              title={menorPriceTooltip}
             >
               {menorPriceFormatted}
             </span>
             <span
-              className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block font-mono truncate"
-              title={menorMargen}
+              className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 mt-0.5 block font-mono"
+              title={menorMargenTooltip}
             >
               {menorMargen}
             </span>
           </div>
 
           {/* Caja Por Mayor */}
-          <div className="bg-secondary/40 border border-border/70 rounded-xl p-2 text-center shadow-2xs">
+          <div className="bg-secondary/40 border border-border/80 rounded-xl p-2.5 text-center flex flex-col justify-between shadow-2xs">
             <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider block">
               MAYOR
             </span>
             <span
-              className="text-xs font-extrabold text-foreground mt-0.5 block font-mono truncate"
-              title={mayorPriceFormatted}
+              className="text-xs font-extrabold text-foreground mt-0.5 whitespace-nowrap block font-mono"
+              title={mayorPriceTooltip}
             >
               {mayorPriceFormatted}
             </span>
             <span
-              className="text-[10px] font-bold text-primary block font-mono truncate"
-              title={mayorMargen}
+              className="text-[10px] font-bold text-primary mt-0.5 block font-mono"
+              title={mayorMargenTooltip}
             >
               {mayorMargen}
             </span>
@@ -290,9 +347,9 @@ export function ProductCard({
       </div>
 
       {/* ========================================================================= */}
-      {/* ZONA INFERIOR: Acciones de la Tarjeta                                     */}
+      {/* ZONA INFERIOR: Pie de Tarjeta y Acciones                                  */}
       {/* ========================================================================= */}
-      <div className="px-4 pb-3.5 pt-2 border-t border-border/50 flex items-center justify-between mt-auto">
+      <div className="px-4 pb-3.5 pt-2.5 border-t border-border/50 flex items-center justify-between mt-auto">
         <button
           type="button"
           onClick={(e) => {

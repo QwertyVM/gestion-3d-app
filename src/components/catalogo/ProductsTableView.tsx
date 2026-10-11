@@ -49,6 +49,12 @@ export interface CategoryCountItem {
   count: number
 }
 
+// Modelos agrupados manualmente de forma explícita
+export const KNOWN_MANUAL_GROUPS = [
+  { prefix: 'Mansiones de la Locura', baseName: 'Mansiones de la Locura' },
+  { prefix: 'SETI Organizador', baseName: 'SETI Organizador' },
+]
+
 // Sufijos conocidos de fabricación según especificaciones (Regla 2)
 const KNOWN_SUFFIX_RULES = [
   { regex: /^(.*?)(?:[\s\-_]+)(1\s*color)$/i, label: '1 Color' },
@@ -62,24 +68,27 @@ const KNOWN_SUFFIX_RULES = [
 
 /**
  * Función pura de extracción de baseName y variantName
- * Aplica:
- * - Regla 1: Separador por guión (" - ")
- * - Regla 2: Sufijos de versión y acabado ("1 Color", "Multicolor", "Con Tapa", "Sin Tapa", "V1", "V2")
+ * Se elimina la división arbitraria por guión (" - ") para evitar agrupar modelos independientes
+ * (como "Torre de dados - Calavera", "Torre de dados - Observatorio", "Torre de dados - Castillo Escalera").
+ * Las versiones se gestionan de forma manual (grupos explícitos como Mansiones de la Locura y SETI Organizador)
+ * o mediante sufijos conocidos de acabado (1 Color, Multicolor, etc.).
  */
 export function extractBaseAndVariant(nombre: string): { baseName: string; variantName: string } {
   const raw = (nombre || '').trim()
 
-  // Regla 1 (Separador por guión):
-  if (raw.includes(' - ')) {
-    const idx = raw.indexOf(' - ')
-    const base = raw.substring(0, idx).trim()
-    const variant = raw.substring(idx + 3).trim()
-    if (base && variant) {
-      return { baseName: base, variantName: variant }
+  // 1. Grupos configurados manualmente (ej. Mansiones de la Locura, SETI Organizador)
+  for (const group of KNOWN_MANUAL_GROUPS) {
+    const prefixWithDash = `${group.prefix.toLowerCase()} - `
+    if (raw.toLowerCase().startsWith(prefixWithDash)) {
+      const variant = raw.substring(group.prefix.length + 3).trim()
+      return { baseName: group.baseName, variantName: variant || 'Estándar' }
+    }
+    if (raw.toLowerCase() === group.prefix.toLowerCase()) {
+      return { baseName: group.baseName, variantName: 'Estándar' }
     }
   }
 
-  // Regla 2 (Sufijos de versión y acabado):
+  // 2. Sufijos conocidos de versión y acabado
   for (const rule of KNOWN_SUFFIX_RULES) {
     const match = raw.match(rule.regex)
     if (match && match[1] && match[1].trim()) {
