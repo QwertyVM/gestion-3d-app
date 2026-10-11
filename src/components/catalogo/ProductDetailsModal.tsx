@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import type { ProductGroupRow } from './ProductsTableView'
 import type { ProductoItem } from './CatalogoClient'
+import { getDomainBadgeLabel } from '@/components/taller/ProductionRow'
 
 export interface ProductDetailsModalProps {
   isOpen: boolean
@@ -209,16 +210,17 @@ export function ProductDetailsModal({
               </div>
             )}
 
-            {/* Botón flotante "MakerWorld" */}
+            {/* Botón flotante para abrir modelo 3D */}
             {makerworldUrl && (
               <a
                 href={makerworldUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                title={`Abrir en ${getDomainBadgeLabel(makerworldUrl)}`}
                 className="bg-card/90 backdrop-blur-xs border border-border/80 text-foreground hover:bg-card text-xs font-semibold h-7 px-2.5 rounded-lg flex items-center gap-1.5 shadow-xs absolute bottom-3 left-3 cursor-pointer transition-colors"
               >
                 <ExternalLink className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Ver en MakerWorld</span>
+                <span>Ver en {getDomainBadgeLabel(makerworldUrl)}</span>
               </a>
             )}
 

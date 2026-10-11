@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { ProductGroupRow } from './ProductsTableView'
 import type { ProductoItem } from './CatalogoClient'
+import { getDomainBadgeLabel } from '@/components/taller/ProductionRow'
 
 export interface ProductCardProps {
   row: ProductGroupRow
@@ -246,10 +247,10 @@ export function ProductCard({
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               className="bg-card/90 backdrop-blur-xs text-foreground text-[10px] font-semibold px-2 py-0.5 rounded-md border border-border/80 flex items-center gap-1 hover:text-primary transition-colors shadow-2xs cursor-pointer"
-              title="Abrir en MakerWorld"
+              title={`Abrir en ${getDomainBadgeLabel(enlaceMakerworld)}`}
             >
               <ExternalLink className="w-2.5 h-2.5 text-primary" />
-              <span>MakerWorld</span>
+              <span>{getDomainBadgeLabel(enlaceMakerworld)}</span>
             </a>
           </div>
         ) : null}

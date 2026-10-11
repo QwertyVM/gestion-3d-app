@@ -139,26 +139,28 @@ export function ProductFormModal({
     if (
       trimmed.match(/\.(jpeg|jpg|png|webp|gif)($|\?)/i) || 
       trimmed.includes('bblmw.com') ||
-      trimmed.includes('bblamb.com')
+      trimmed.includes('bblamb.com') ||
+      trimmed.includes('images.cults3d.com') ||
+      trimmed.includes('fbi.cults3d.com')
     ) {
       setImagenUrl(trimmed)
       toast.info('Se detectó y asignó la URL de imagen directamente')
       return
     }
 
-    // 2. Si es un enlace de MakerWorld
-    if (trimmed.includes('makerworld.com') || trimmed.match(/models\/[0-9]+/i)) {
+    // 2. Si es un enlace de modelo (MakerWorld, Cults3D, etc.)
+    if (trimmed.includes('makerworld.com') || trimmed.includes('cults3d.com') || trimmed.match(/models\/[0-9]+/i)) {
       setIsFetchingMakerworld(true)
       try {
         const res = await obtenerMetadataMakerworld(trimmed)
         if (res.success && res.imagenUrl) {
           setImagenUrl(res.imagenUrl)
-          toast.success('¡Portada de MakerWorld obtenida automáticamente!')
+          toast.success('¡Portada del modelo obtenida automáticamente!')
         } else {
-          toast.info(res.error || 'Copia la dirección de imagen desde MakerWorld y pégala abajo')
+          toast.info(res.error || 'Copia la dirección de la foto del modelo y pégala abajo')
         }
       } catch {
-        toast.error('Error al consultar MakerWorld')
+        toast.error('Error al consultar enlace del modelo')
       } finally {
         setIsFetchingMakerworld(false)
       }
@@ -181,14 +183,17 @@ export function ProductFormModal({
     if (
       trimmed.match(/\.(jpeg|jpg|png|webp|gif)($|\?)/i) || 
       trimmed.includes('bblmw.com') ||
-      trimmed.includes('bblamb.com')
+      trimmed.includes('bblamb.com') ||
+      trimmed.includes('images.cults3d.com') ||
+      trimmed.includes('fbi.cults3d.com')
     ) {
       setImagenUrl(trimmed)
       return
     }
-    // Si contiene la estructura del modelo MakerWorld
+    // Si contiene la estructura del modelo MakerWorld o Cults3D
     if (
-      (trimmed.includes('makerworld.com') && trimmed.includes('/models/'))
+      (trimmed.includes('makerworld.com') && trimmed.includes('/models/')) ||
+      (trimmed.includes('cults3d.com') && trimmed.includes('/3d-model/'))
     ) {
       triggerMakerworldFetch(trimmed)
     }
@@ -705,7 +710,7 @@ export function ProductFormModal({
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
                         <Label className="text-[10px] font-bold text-muted-foreground uppercase">
-                          Link de MakerWorld
+                          Enlace del Modelo 3D (MakerWorld, Cults3D, etc.)
                         </Label>
                         {isFetchingMakerworld && (
                           <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 animate-pulse">
@@ -723,7 +728,7 @@ export function ProductFormModal({
                               triggerMakerworldFetch(enlaceMakerworld)
                             }
                           }}
-                          placeholder="https://makerworld.com/es/models/..."
+                          placeholder="https://cults3d.com/... o https://makerworld.com/..."
                           className="bg-background text-xs font-medium h-9 flex-1"
                         />
                         <Button
@@ -750,11 +755,11 @@ export function ProductFormModal({
                       <Input
                         value={imagenUrl}
                         onChange={(e) => setImagenUrl(e.target.value)}
-                        placeholder="https://makerworld.bblmw.com/... o pega URL directa"
+                        placeholder="https://images.cults3d.com/... o https://makerworld.bblmw.com/..."
                         className="bg-background text-xs font-mono h-9"
                       />
                       <p className="text-[10px] text-muted-foreground leading-tight">
-                        Tip: Haz clic derecho en la foto del modelo en MakerWorld → <em>Copiar dirección de la imagen</em> y pégala aquí.
+                        Tip: Haz clic derecho en la foto del modelo en Cults3D o MakerWorld → <em>Copiar dirección de la imagen</em> y pégala aquí.
                       </p>
                     </div>
                   </div>

@@ -29,7 +29,7 @@ export interface ProductionRowProps {
   onVincularUrl?: (pieza: PiezaTaller) => void
 }
 
-function getDomainBadgeLabel(url: string | null | undefined): string {
+export function getDomainBadgeLabel(url: string | null | undefined): string {
   if (!url) return 'Modelo 3D'
   try {
     const host = new URL(url).hostname.toLowerCase()

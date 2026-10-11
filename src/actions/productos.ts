@@ -462,16 +462,27 @@ export async function obtenerMetadataMakerworld(inputUrl: string) {
   const urlTrimmed = inputUrl.trim()
   if (!urlTrimmed) return { success: false, error: 'URL vacía' }
 
-  // 1. Si el usuario ya pegó un link directo de imagen (ej. CDN de MakerWorld o imagen web)
+  // 1. Si el usuario ya pegó un link directo de imagen (ej. CDN de MakerWorld, Cults3D o imagen web)
   if (
     urlTrimmed.match(/\.(jpeg|jpg|png|webp|gif)($|\?)/i) || 
     urlTrimmed.includes('bblmw.com') ||
-    urlTrimmed.includes('bblamb.com')
+    urlTrimmed.includes('bblamb.com') ||
+    urlTrimmed.includes('images.cults3d.com') ||
+    urlTrimmed.includes('fbi.cults3d.com')
   ) {
     return {
       success: true,
       imagenUrl: urlTrimmed,
       isDirectImage: true
+    }
+  }
+
+  // 2. Si es enlace de Cults3D (Cults3D bloquea scrapers por Cloudflare Bot Protection)
+  if (urlTrimmed.includes('cults3d.com')) {
+    return {
+      success: false,
+      isCults3D: true,
+      error: 'Enlace de Cults3D detectado. Por la protección anti-bot de Cults3D, para asignar la portada: haz clic derecho en la foto del modelo en Cults3D → "Copiar dirección de la imagen" y pégala en el campo de Imagen.'
     }
   }
 

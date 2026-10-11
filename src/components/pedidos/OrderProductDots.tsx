@@ -37,7 +37,7 @@ export function OrderProductDots({ colores = [], className = '' }: OrderProductD
                     tabIndex={0}
                     role="img"
                     aria-label={label}
-                    className="w-2 h-2 rounded-full border border-black/15 shadow-2xs mr-1 inline-block hover:scale-125 transition-transform duration-150 cursor-pointer shrink-0"
+                    className="w-3 h-3 rounded-full border border-border/60 shadow-2xs mr-1 inline-block hover:scale-125 transition-transform duration-150 cursor-pointer shrink-0"
                     style={{ backgroundColor: filamento.codigoHex || '#1E1E1E' }}
                   />
                 }

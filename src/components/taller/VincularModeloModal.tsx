@@ -64,6 +64,7 @@ export function VincularModeloModal({
 
   const baseName = extractBaseName(pieza.nombreModelo)
   const makerworldSearchUrl = `https://makerworld.com/es/search/models?keyword=${encodeURIComponent(baseName)}`
+  const cults3dSearchUrl = `https://cults3d.com/en/search?q=${encodeURIComponent(baseName)}`
   const catalogoSearchUrl = `/catalogo?search=${encodeURIComponent(baseName)}`
 
   const handlePasteClipboard = async () => {
@@ -177,7 +178,7 @@ export function VincularModeloModal({
           <div className="relative">
             <Input
               type="url"
-              placeholder="https://makerworld.com/es/models/..."
+              placeholder="https://makerworld.com/..., https://cults3d.com/..."
               value={enlace}
               onChange={(e) => setEnlace(e.target.value)}
               className="h-10 text-xs bg-card border-border rounded-xl pr-8"
@@ -206,6 +207,16 @@ export function VincularModeloModal({
             >
               <Search className="w-3 h-3" />
               <span>En MakerWorld</span>
+            </a>
+            <a
+              href={cults3dSearchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-700 dark:text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/20 transition-colors"
+              title={`Buscar "${baseName}" directamente en Cults3D`}
+            >
+              <Search className="w-3 h-3" />
+              <span>En Cults3D</span>
             </a>
             <a
               href={catalogoSearchUrl}

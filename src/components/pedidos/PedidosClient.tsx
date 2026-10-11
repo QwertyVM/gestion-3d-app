@@ -63,6 +63,7 @@ import { MultiColorPicker } from '@/components/ui/MultiColorPicker'
 import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { RegisterMultiProductOrderModal } from './RegisterMultiProductOrderModal'
 import { EditOrderModal } from './EditOrderModal'
+import { OrdersFilterBar } from './OrdersFilterBar'
 import { OrderDetailModal } from './OrderDetailModal'
 import { KpiCard } from './KpiCard'
 import { OrderRow } from './OrderRow'
@@ -1029,7 +1030,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
             <h1 className="text-2xl font-bold text-foreground tracking-tight">
               Gestión de Pedidos
             </h1>
-            <span className="bg-muted text-muted-foreground text-xs font-semibold px-2 py-0.5 rounded-full border border-border">
+            <span className="bg-muted text-muted-foreground text-xs font-semibold px-2 py-0.5 rounded-lg border border-border">
               {kpis.totalPedidos}
             </span>
           </div>
@@ -1088,115 +1089,32 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. FILTROS Y BÚSQUEDA (TOOLBAR SIMÉTRICA)                                 */}
+      {/* 3. FILTROS Y BÚSQUEDA (ORDERS FILTER BAR)                                 */}
       {/* ========================================================================= */}
-      <div className="bg-card border border-border rounded-xl p-1.5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
-        {/* Buscador Integrado */}
-        <div className="relative w-full lg:w-72">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Buscar por cliente, código o modelo..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="h-8 text-xs bg-background border-input rounded-lg pl-8 pr-7 w-full lg:w-72 focus-visible:ring-1 focus-visible:ring-primary text-foreground placeholder:text-muted-foreground"
-          />
-          {search && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearch('')
-                setCurrentPage(1)
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 cursor-pointer"
-              title="Borrar búsqueda"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Controles a la derecha */}
-        <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap justify-between lg:justify-end">
-          {/* Segmented Control de Estados (Desktop) */}
-          <div className="hidden sm:inline-flex bg-muted/60 p-0.5 rounded-lg items-center gap-0.5">
-            {[
-              { value: 'TODOS', label: 'Todos' },
-              { value: 'EN_PRODUCCION', label: 'Preparando' },
-              { value: 'LISTO_ENTREGA', label: 'Por Entregar' },
-              { value: 'ENTREGADO', label: 'Entregado' }
-            ].map((opt) => {
-              const isSelected = selectedEstadoFilter === opt.value
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => {
-                    setSelectedEstadoFilter(opt.value)
-                    setCurrentPage(1)
-                  }}
-                  className={`text-xs px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'bg-card text-foreground font-semibold shadow-2xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Selector Dropdown de Estados (Mobile) */}
-          <select
-            value={selectedEstadoFilter}
-            onChange={(e) => {
-              setSelectedEstadoFilter(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="sm:hidden h-8 rounded-lg border border-input bg-background px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value="TODOS">Todos los estados</option>
-            <option value="EN_PRODUCCION">Preparando</option>
-            <option value="LISTO_ENTREGA">Por Entregar</option>
-            <option value="ENTREGADO">Entregado</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="PAGO_VALIDADO">Pago Validado</option>
-            <option value="CANCELADO">Cancelado</option>
-          </select>
-
-          {/* Selector de Pagos */}
-          <select
-            value={selectedPagoFilter}
-            onChange={(e) => {
-              setSelectedPagoFilter(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="h-8 text-xs bg-background border border-input rounded-lg px-2.5 text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
-            title="Filtrar por cobranza"
-          >
-            <option value="TODOS">Pagos: Todos</option>
-            <option value="PENDIENTE">Con Saldo</option>
-            <option value="PAGADO">100% Pagado</option>
-          </select>
-
-          {/* Navegador temporal compacto [ < ] [ 📅 Histórico ▾ ] [ > ] */}
-          <DateFilterControl
-            value={dateRange}
-            onChange={(range) => {
-              setDateRange(range)
-              setCurrentPage(1)
-            }}
-            label="Fecha"
-            align="right"
-            size="sm"
-            minDate={minFechaData}
-            maxDate={maxFechaData}
-          />
-        </div>
-      </div>
+      <OrdersFilterBar
+        search={search}
+        onSearchChange={(val) => {
+          setSearch(val)
+          setCurrentPage(1)
+        }}
+        selectedEstadoFilter={selectedEstadoFilter}
+        onEstadoFilterChange={(val) => {
+          setSelectedEstadoFilter(val)
+          setCurrentPage(1)
+        }}
+        selectedPagoFilter={selectedPagoFilter}
+        onPagoFilterChange={(val) => {
+          setSelectedPagoFilter(val)
+          setCurrentPage(1)
+        }}
+        dateRange={dateRange}
+        onDateRangeChange={(range) => {
+          setDateRange(range)
+          setCurrentPage(1)
+        }}
+        minDate={minFechaData}
+        maxDate={maxFechaData}
+      />
 
       {/* ========================================================================= */}
       {/* 4. TABLA DE PEDIDOS (CERO SCROLL HORIZONTAL, TABLE-FIXED W-FULL)          */}
@@ -1232,16 +1150,17 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         ) : (
           <div className="w-full overflow-hidden">
             <Table className="w-full table-fixed">
-              <TableHeader className="bg-muted/40 border-b border-border">
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="w-[22%] px-4 py-3 text-left">
+              <TableHeader className="bg-secondary/40 border-y border-border/70 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                <TableRow className="border-none hover:bg-transparent">
+                  {/* 1. PEDIDO (14% / pl-5) */}
+                  <TableHead className="w-[14%] pl-5 pr-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleSort('fecha')}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
                     >
-                      <span>Pedido & Cliente</span>
-                      {sortField === 'fecha' || sortField === 'codigo' || sortField === 'cliente' ? (
+                      <span>PEDIDO</span>
+                      {sortField === 'fecha' || sortField === 'codigo' ? (
                         sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
                       ) : (
                         <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
@@ -1249,13 +1168,30 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                     </button>
                   </TableHead>
 
-                  <TableHead className="w-[32%] px-4 py-3 text-left">
+                  {/* 2. CLIENTE (18% / px-3) */}
+                  <TableHead className="w-[18%] px-3 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleSort('cliente')}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                    >
+                      <span>CLIENTE</span>
+                      {sortField === 'cliente' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
+                      )}
+                    </button>
+                  </TableHead>
+
+                  {/* 3. PRODUCTOS & FILAMENTOS (22% / px-3) */}
+                  <TableHead className="w-[22%] px-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleSort('cantidad')}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
                     >
-                      <span>Productos & Filamentos</span>
+                      <span>PRODUCTOS & FILAMENTOS</span>
                       {sortField === 'cantidad' ? (
                         sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
                       ) : (
@@ -1264,17 +1200,19 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                     </button>
                   </TableHead>
 
-                  <TableHead className="w-[18%] px-4 py-3 text-left text-xs font-semibold text-muted-foreground">
-                    Entrega & Destino
+                  {/* 4. ENTREGA & DESTINO (18% / px-3) */}
+                  <TableHead className="w-[18%] px-3 py-3 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                    <span>ENTREGA & DESTINO</span>
                   </TableHead>
 
-                  <TableHead className="w-[14%] px-4 py-3 text-center">
+                  {/* 5. ESTADO & POSTVENTA (14% / px-3) */}
+                  <TableHead className="w-[14%] px-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleSort('estado')}
-                      className="flex items-center justify-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer mx-auto"
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
                     >
-                      <span>Estado & Postventa</span>
+                      <span>ESTADO & POSTVENTA</span>
                       {sortField === 'estado' ? (
                         sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
                       ) : (
@@ -1283,13 +1221,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                     </button>
                   </TableHead>
 
-                  <TableHead className="w-[14%] px-4 py-3 text-right">
+                  {/* 6. TOTAL & BALANCE (14% / pr-5) */}
+                  <TableHead className="w-[14%] pl-3 pr-5 py-3 text-right">
                     <button
                       type="button"
                       onClick={() => handleSort('total')}
-                      className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer ml-auto"
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase ml-auto"
                     >
-                      <span>Total & Balance</span>
+                      <span>TOTAL & BALANCE</span>
                       {sortField === 'total' || sortField === 'saldoPendiente' ? (
                         sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
                       ) : (

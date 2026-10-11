@@ -574,6 +574,8 @@ export async function updateEstadoPedido(id: string, nuevoEstado: EstadoPedido) 
   }
 }
 
+export const actualizarEstadoPedido = updateEstadoPedido
+
 export async function addPagoPedido(pedidoId: string, data: {
   monto: number
   metodoPago?: string

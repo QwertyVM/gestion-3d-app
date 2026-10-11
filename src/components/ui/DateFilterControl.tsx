@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight, Check, RotateCcw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { 
   DatePreset, 
   DateRange, 
@@ -22,6 +23,7 @@ interface DateFilterControlProps {
   size?: 'sm' | 'md'
   maxDate?: string | Date | null
   minDate?: string | Date | null
+  variant?: 'pills' | 'unified'
 }
 
 function parseDateToYearMonth(d: string | Date | null | undefined): { year: number; month: number } | null {
@@ -54,6 +56,7 @@ export function DateFilterControl({
   size = 'md',
   maxDate,
   minDate,
+  variant = 'pills',
 }: DateFilterControlProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -216,86 +219,154 @@ export function DateFilterControl({
   const semanaAnteriorRange = getPresetDateRange('SEMANA_ANTERIOR')
 
   return (
-    <div className={`relative inline-flex items-center gap-1 text-left ${className}`} ref={dropdownRef}>
-      {/* Botón Mes Anterior */}
-      {showMonthSwitcher && (
-        <button
-          type="button"
-          onClick={() => handleNavigateMonth(-1)}
-          disabled={isPrevDisabled}
-          title={
-            isPrevDisabled
-              ? 'No hay registros de meses anteriores'
-              : value.preset === 'TODO'
-              ? `Ver ${MESES_ES[maxLimit.month]} ${maxLimit.year}`
-              : `Mes anterior (${prevMonthLabel})`
-          }
-          aria-label={
-            isPrevDisabled
-              ? 'No hay registros de meses anteriores'
-              : value.preset === 'TODO'
-              ? `Ver ${MESES_ES[maxLimit.month]} ${maxLimit.year}`
-              : `Mes anterior (${prevMonthLabel})`
-          }
-          className={`${
-            size === 'sm' ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-full'
-          } border flex items-center justify-center transition-all shrink-0 ${
-            isPrevDisabled
-              ? 'opacity-35 cursor-not-allowed bg-[#FAF8F5] border-[#E2D9CC] text-[#B0A495] shadow-none'
-              : !isAllActive
-              ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF] cursor-pointer shadow-2xs'
-              : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
-          }`}
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </button>
-      )}
+    <div className={`relative inline-flex items-center text-left ${variant === 'unified' ? '' : 'gap-1'} ${className}`} ref={dropdownRef}>
+      {variant === 'unified' ? (
+        <div className="bg-background border border-border rounded-xl h-10 inline-flex items-center shadow-2xs overflow-hidden">
+          {showMonthSwitcher && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => handleNavigateMonth(-1)}
+              disabled={isPrevDisabled}
+              title={
+                isPrevDisabled
+                  ? 'No hay registros de meses anteriores'
+                  : value.preset === 'TODO'
+                  ? `Ver ${MESES_ES[maxLimit.month]} ${maxLimit.year}`
+                  : `Mes anterior (${prevMonthLabel})`
+              }
+              aria-label={
+                isPrevDisabled
+                  ? 'No hay registros de meses anteriores'
+                  : value.preset === 'TODO'
+                  ? `Ver ${MESES_ES[maxLimit.month]} ${maxLimit.year}`
+                  : `Mes anterior (${prevMonthLabel})`
+              }
+              className="h-full w-8 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-none disabled:opacity-35 disabled:cursor-not-allowed shrink-0"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+          )}
 
-      {/* Trigger Button (Abre el menú desplegable con opciones) */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`${
-          size === 'sm' ? 'h-8 px-3 rounded-full' : 'h-9 px-3.5 rounded-full'
-        } border flex items-center gap-1.5 sm:gap-2 text-xs font-medium transition-all shadow-2xs cursor-pointer ${
-          !isAllActive
-            ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF]'
-            : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40'
-        }`}
-      >
-        <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-[#A36F4C]' : 'text-muted-foreground'}`} />
-        <span className="truncate max-w-[170px] sm:max-w-[220px]">{getDisplayLabel()}</span>
-        <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className={`px-3 text-xs font-semibold text-foreground flex items-center gap-1.5 hover:bg-secondary/60 h-full ${
+              showMonthSwitcher ? 'border-x border-border/70' : ''
+            } cursor-pointer transition-colors whitespace-nowrap`}
+          >
+            <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className="truncate max-w-[150px] sm:max-w-[200px]">{getDisplayLabel()}</span>
+            <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-      {/* Botón Mes Siguiente */}
-      {showMonthSwitcher && (
-        <button
-          type="button"
-          onClick={() => handleNavigateMonth(1)}
-          disabled={isNextDisabled}
-          title={
-            isNextDisabled
-              ? 'No hay datos disponibles en meses posteriores'
-              : `Mes siguiente (${nextMonthLabel})`
-          }
-          aria-label={
-            isNextDisabled
-              ? 'No hay datos disponibles en meses posteriores'
-              : `Mes siguiente (${nextMonthLabel})`
-          }
-          className={`${
-            size === 'sm' ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-full'
-          } border flex items-center justify-center transition-all shrink-0 ${
-            isNextDisabled
-              ? 'opacity-35 cursor-not-allowed bg-[#FAF8F5] border-[#E2D9CC] text-[#B0A495] shadow-none'
-              : !isAllActive
-              ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF] cursor-pointer shadow-2xs'
-              : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
-          }`}
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
+          {showMonthSwitcher && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => handleNavigateMonth(1)}
+              disabled={isNextDisabled}
+              title={
+                isNextDisabled
+                  ? 'No hay datos disponibles en meses posteriores'
+                  : `Mes siguiente (${nextMonthLabel})`
+              }
+              aria-label={
+                isNextDisabled
+                  ? 'No hay datos disponibles en meses posteriores'
+                  : `Mes siguiente (${nextMonthLabel})`
+              }
+              className="h-full w-8 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-none disabled:opacity-35 disabled:cursor-not-allowed shrink-0"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Botón Mes Anterior */}
+          {showMonthSwitcher && (
+            <button
+              type="button"
+              onClick={() => handleNavigateMonth(-1)}
+              disabled={isPrevDisabled}
+              title={
+                isPrevDisabled
+                  ? 'No hay registros de meses anteriores'
+                  : value.preset === 'TODO'
+                  ? `Ver ${MESES_ES[maxLimit.month]} ${maxLimit.year}`
+                  : `Mes anterior (${prevMonthLabel})`
+              }
+              aria-label={
+                isPrevDisabled
+                  ? 'No hay registros de meses anteriores'
+                  : value.preset === 'TODO'
+                  ? `Ver ${MESES_ES[maxLimit.month]} ${maxLimit.year}`
+                  : `Mes anterior (${prevMonthLabel})`
+              }
+              className={`${
+                size === 'sm' ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-full'
+              } border flex items-center justify-center transition-all shrink-0 ${
+                isPrevDisabled
+                  ? 'opacity-35 cursor-not-allowed bg-[#FAF8F5] border-[#E2D9CC] text-[#B0A495] shadow-none'
+                  : !isAllActive
+                  ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF] cursor-pointer shadow-2xs'
+                  : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
+              }`}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+          )}
+
+          {/* Trigger Button (Abre el menú desplegable con opciones) */}
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className={`${
+              size === 'sm' ? 'h-8 px-3 rounded-full' : 'h-9 px-3.5 rounded-full'
+            } border flex items-center gap-1.5 sm:gap-2 text-xs font-medium transition-all shadow-2xs cursor-pointer ${
+              !isAllActive
+                ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF]'
+                : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            }`}
+          >
+            <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-[#A36F4C]' : 'text-muted-foreground'}`} />
+            <span className="truncate max-w-[170px] sm:max-w-[220px]">{getDisplayLabel()}</span>
+            <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Botón Mes Siguiente */}
+          {showMonthSwitcher && (
+            <button
+              type="button"
+              onClick={() => handleNavigateMonth(1)}
+              disabled={isNextDisabled}
+              title={
+                isNextDisabled
+                  ? 'No hay datos disponibles en meses posteriores'
+                  : `Mes siguiente (${nextMonthLabel})`
+              }
+              aria-label={
+                isNextDisabled
+                  ? 'No hay datos disponibles en meses posteriores'
+                  : `Mes siguiente (${nextMonthLabel})`
+              }
+              className={`${
+                size === 'sm' ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-full'
+              } border flex items-center justify-center transition-all shrink-0 ${
+                isNextDisabled
+                  ? 'opacity-35 cursor-not-allowed bg-[#FAF8F5] border-[#E2D9CC] text-[#B0A495] shadow-none'
+                  : !isAllActive
+                  ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF] cursor-pointer shadow-2xs'
+                  : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
+              }`}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </>
       )}
 
       {/* Dropdown Menu */}

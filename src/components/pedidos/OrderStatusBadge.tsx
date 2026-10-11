@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { EstadoPedido } from '@prisma/client'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
@@ -21,19 +21,19 @@ export const ESTADO_PEDIDO_CONFIG: Record<EstadoPedido, EstadoConfig> = {
   EN_PRODUCCION: {
     label: 'Preparando',
     badgeClass:
-      'bg-blue-50/80 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 border-blue-200/80 dark:border-blue-800/40',
+      'bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-500/20',
     dotClass: 'bg-blue-600'
   },
   LISTO_ENTREGA: {
     label: 'Por Entregar',
     badgeClass:
-      'bg-amber-50/80 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border-amber-200/80 dark:border-amber-800/40',
+      'bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-500/20',
     dotClass: 'bg-amber-500'
   },
   ENTREGADO: {
     label: 'Entregado',
     badgeClass:
-      'bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 border-emerald-200/80 dark:border-emerald-800/40',
+      'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border-emerald-500/20',
     dotClass: 'bg-emerald-600'
   },
   CANCELADO: {
@@ -51,7 +51,7 @@ export const ESTADO_PEDIDO_CONFIG: Record<EstadoPedido, EstadoConfig> = {
   PAGO_VALIDADO: {
     label: 'Pago Validado',
     badgeClass:
-      'bg-indigo-50/80 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/40',
+      'bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border-indigo-500/20',
     dotClass: 'bg-indigo-500'
   }
 }
@@ -68,18 +68,21 @@ export const ESTADOS_ORDENADOS: EstadoPedido[] = [
 
 export interface OrderStatusBadgeProps {
   value: EstadoPedido
-  onChange?: (nuevoEstado: EstadoPedido) => void
+  onChange?: (nuevoEstado: EstadoPedido) => void | Promise<any>
   disabled?: boolean
   className?: string
+  loading?: boolean
 }
 
 export function OrderStatusBadge({
   value,
   onChange,
   disabled = false,
-  className = ''
+  className = '',
+  loading = false
 }: OrderStatusBadgeProps) {
   const [optimisticValue, setOptimisticValue] = React.useState<EstadoPedido>(value)
+  const [isUpdating, setIsUpdating] = React.useState<boolean>(false)
 
   // Sincronizar estado cuando cambie la prop externa
   React.useEffect(() => {
@@ -88,11 +91,22 @@ export function OrderStatusBadge({
 
   const currentConfig = ESTADO_PEDIDO_CONFIG[optimisticValue] || ESTADO_PEDIDO_CONFIG.PENDIENTE
   const isInteractive = Boolean(onChange && !disabled)
+  const showSpinner = isUpdating || loading
 
-  const handleSelect = (nuevo: EstadoPedido) => {
-    if (nuevo === optimisticValue) return
+  const handleSelect = async (nuevo: EstadoPedido) => {
+    if (nuevo === optimisticValue || isUpdating || disabled) return
+    const prev = optimisticValue
     setOptimisticValue(nuevo)
-    onChange?.(nuevo)
+    setIsUpdating(true)
+    try {
+      if (onChange) {
+        await Promise.resolve(onChange(nuevo))
+      }
+    } catch {
+      setOptimisticValue(prev)
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
   // Si no es interactivo, renderizar solo la pastilla estática
@@ -100,12 +114,16 @@ export function OrderStatusBadge({
     return (
       <div
         className={cn(
-          'rounded-lg px-2.5 py-1 text-xs font-medium border inline-flex items-center gap-1.5 select-none shadow-2xs',
+          'rounded-lg px-2.5 py-1 text-xs font-semibold border inline-flex items-center gap-1.5 select-none shadow-2xs',
           currentConfig.badgeClass,
           className
         )}
       >
-        <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', currentConfig.dotClass)} />
+        {showSpinner ? (
+          <Loader2 className="w-3 h-3 animate-spin shrink-0 text-current" />
+        ) : (
+          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', currentConfig.dotClass)} />
+        )}
         <span className="truncate">{currentConfig.label}</span>
       </div>
     )
@@ -118,20 +136,25 @@ export function OrderStatusBadge({
     >
       <DropdownMenu>
         <DropdownMenuTrigger
-          disabled={disabled}
+          disabled={disabled || showSpinner}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            'rounded-lg px-2.5 py-1 text-xs font-medium border inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-all select-none shadow-2xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
-            currentConfig.badgeClass
+            'rounded-lg px-2.5 py-1 text-xs font-semibold border inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-all select-none shadow-2xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+            currentConfig.badgeClass,
+            showSpinner && 'opacity-85 pointer-events-none'
           )}
         >
-          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', currentConfig.dotClass)} />
+          {showSpinner ? (
+            <Loader2 className="w-3 h-3 animate-spin shrink-0 text-current opacity-80" />
+          ) : (
+            <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', currentConfig.dotClass)} />
+          )}
           <span className="truncate">{currentConfig.label}</span>
           <ChevronDown className="w-3 h-3 opacity-60 ml-0.5 shrink-0" />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
-          align="center"
+          align="start"
           side="bottom"
           sideOffset={4}
           className="min-w-[155px] p-1 bg-popover text-popover-foreground border border-border shadow-md rounded-lg z-50"

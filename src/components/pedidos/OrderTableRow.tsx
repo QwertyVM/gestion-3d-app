@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { TableRow, TableCell } from '@/components/ui/table'
-import { Calendar, Clock, MapPin, MessageCircle } from 'lucide-react'
+import { Calendar, Check, Clock, MapPin, MessageCircle } from 'lucide-react'
 import { EstadoPedido } from '@prisma/client'
 import { PedidoView, FilamentoOption } from './types'
 import { consolidateOrderItems, formatCurrency } from './orderUtils'
@@ -10,7 +10,7 @@ import { OrderStatusBadge } from './OrderStatusBadge'
 import { OrderProductDots } from './OrderProductDots'
 import { formatDate } from '@/lib/utils'
 
-function InstagramIcon({ className = 'h-3 w-3' }: { className?: string }) {
+function InstagramIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -46,7 +46,7 @@ export interface OrderTableRowProps {
   pedido: PedidoView
   filamentos: FilamentoOption[]
   onSelectPedido: (p: PedidoView) => void
-  onCambiarEstado: (id: string, nuevoEstado: EstadoPedido) => void
+  onCambiarEstado: (id: string, nuevoEstado: EstadoPedido) => void | Promise<void>
   onTogglePostventa: (id: string, nuevoEstado: boolean, e?: React.MouseEvent) => void
 }
 
@@ -67,173 +67,175 @@ export function OrderTableRow({
   return (
     <TableRow
       onClick={() => onSelectPedido(pedido)}
-      className="border-b border-border/50 hover:bg-muted/30 transition-colors duration-150 cursor-pointer group min-h-[58px]"
+      className="h-18 border-b border-border/60 hover:bg-secondary/35 transition-colors cursor-pointer group"
     >
-      {/* 1. Pedido & Cliente (w-[22%]) */}
-      <TableCell className="w-[22%] px-4 py-3 align-middle overflow-hidden min-w-0">
-        <div className="space-y-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span
-              className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors truncate block"
-              title={pedido.cliente}
-            >
-              {pedido.cliente}
-            </span>
-            <span className="font-mono text-[10px] font-medium text-muted-foreground bg-secondary px-1.5 py-0.5 rounded border border-border/70 shrink-0">
-              {codigoLabel}
-            </span>
-          </div>
+      {/* 1. PEDIDO (w-[14%] / text-left pl-5) */}
+      <TableCell className="w-[14%] pl-5 pr-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
+        <div className="flex flex-col items-start min-w-0">
+          <span className="font-mono text-xs font-extrabold text-foreground tracking-tight">
+            {codigoLabel}
+          </span>
+          <span className="text-[11px] text-muted-foreground mt-0.5">
+            {formatDate(pedido.fecha)}
+          </span>
+          <span className="text-[10px] font-semibold bg-secondary border border-border/70 text-foreground px-2 py-0.5 rounded-md w-fit mt-1">
+            {pedido.canalVenta || 'Directo'}
+          </span>
+        </div>
+      </TableCell>
 
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground flex-wrap mt-0.5">
-            <span>{formatDate(pedido.fecha)}</span>
-            {pedido.canalVenta && (
-              <>
-                <span className="text-border">•</span>
-                <span className="text-[10px] text-muted-foreground">{pedido.canalVenta}</span>
-              </>
-            )}
+      {/* 2. CLIENTE (w-[18%] / text-left px-3) */}
+      <TableCell className="w-[18%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
+        <div className="flex flex-col items-start min-w-0">
+          <span className="text-sm font-bold text-foreground leading-snug break-words">
+            {pedido.cliente}
+          </span>
+
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
             {pedido.handleSocial && (
-              <>
-                <span className="text-border">•</span>
-                <a
-                  href={getInstagramUrl(pedido.handleSocial)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                  title="Abrir perfil de Instagram"
-                >
-                  <InstagramIcon className="h-2.5 w-2.5" />
-                  <span>@{pedido.handleSocial.replace(/^@/, '')}</span>
-                </a>
-              </>
+              <a
+                href={getInstagramUrl(pedido.handleSocial)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs font-medium text-primary hover:underline flex items-center gap-1 mt-0.5 max-w-full"
+                title="Abrir perfil de Instagram"
+              >
+                <InstagramIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="break-all">@{pedido.handleSocial.replace(/^@/, '')}</span>
+              </a>
             )}
+
             {pedido.telefono && (
-              <>
-                <span className="text-border">•</span>
-                <a
-                  href={getWhatsAppUrl(pedido.telefono, pedido.cliente, pedido.codigo)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-0.5 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                  title="Escribir por WhatsApp"
-                >
-                  <MessageCircle className="h-2.5 w-2.5" />
-                  <span>{pedido.telefono}</span>
-                </a>
-              </>
+              <a
+                href={getWhatsAppUrl(pedido.telefono, pedido.cliente, pedido.codigo)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-xs font-medium text-emerald-700 dark:text-emerald-500 hover:underline flex items-center gap-1 mt-0.5 max-w-full"
+                title="Escribir por WhatsApp"
+              >
+                <MessageCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{pedido.telefono}</span>
+              </a>
             )}
           </div>
         </div>
       </TableCell>
 
-      {/* 2. Productos & Filamentos (w-[32%]) */}
-      <TableCell className="w-[32%] px-4 py-3 align-middle overflow-hidden min-w-0">
-        <div className="space-y-1 min-w-0">
-          {consolidatedItems.length > 1 && (
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="font-semibold text-foreground">
-                {pedido.totalItemsCount} {pedido.totalItemsCount === 1 ? 'pieza' : 'piezas'}
-              </span>
-              <span>•</span>
-              <span>
-                {consolidatedItems.length} {consolidatedItems.length === 1 ? 'modelo' : 'modelos'}
-              </span>
-            </div>
-          )}
+      {/* 3. PRODUCTOS & FILAMENTOS (w-[22%] / text-left px-3) */}
+      <TableCell className="w-[22%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
+        <div className="space-y-1.5 min-w-0">
+          {consolidatedItems.length > 0 ? (
+            <>
+              {consolidatedItems.slice(0, 2).map((item) => (
+                <div key={item.key} className="text-xs min-w-0">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <span
+                      className="text-xs font-bold text-foreground truncate block"
+                      title={item.nombre}
+                    >
+                      {item.nombre}
+                    </span>
+                    <span className="font-mono text-xs font-bold text-foreground shrink-0 ml-1">
+                      ×{item.cantidadTotal}
+                    </span>
+                  </div>
 
-          <div className="space-y-1 min-w-0">
-            {consolidatedItems.slice(0, 2).map((item) => (
-              <div key={item.key} className="text-xs min-w-0">
-                <div className="flex items-center gap-1 min-w-0">
-                  <span
-                    className="text-xs font-medium text-foreground truncate block"
-                    title={item.nombre}
-                  >
-                    {item.nombre}
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground shrink-0 ml-1">
-                    ×{item.cantidadTotal}
-                  </span>
+                  <OrderProductDots colores={item.colores} />
                 </div>
+              ))}
 
-                <OrderProductDots colores={item.colores} />
-              </div>
-            ))}
-
-            {consolidatedItems.length > 2 && (
-              <span className="text-[10px] font-medium text-muted-foreground block">
-                +{consolidatedItems.length - 2} más
-              </span>
-            )}
-          </div>
+              {consolidatedItems.length > 2 && (
+                <span className="text-[10px] font-semibold text-muted-foreground block">
+                  +{consolidatedItems.length - 2} más
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-xs italic text-muted-foreground/60">Sin productos</span>
+          )}
         </div>
       </TableCell>
 
-      {/* 3. Entrega & Destino (w-[18%]) */}
-      <TableCell className="w-[18%] px-4 py-3 align-middle overflow-hidden min-w-0">
-        <div className="space-y-1 text-xs min-w-0">
+      {/* 4. ENTREGA & DESTINO (w-[18%] / text-left px-3) */}
+      <TableCell className="w-[18%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
+        <div className="flex flex-col items-start min-w-0">
           {pedido.diaEntregaPrometida ? (
             <div
-              className="flex items-center gap-1.5 font-medium text-foreground truncate"
+              className="flex items-center gap-1.5 text-xs font-medium text-foreground truncate max-w-full"
               title={pedido.diaEntregaPrometida}
             >
-              <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <span className="truncate">{pedido.diaEntregaPrometida}</span>
             </div>
           ) : (
-            <div className="text-[11px] text-muted-foreground/50">Sin fecha</div>
+            <div className="flex items-center gap-1.5 text-xs italic text-muted-foreground/60">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+              <span>Sin programar</span>
+            </div>
           )}
 
           {pedido.destinoEnvio && (
             <div
-              className="flex items-center gap-1 text-xs font-medium text-foreground mt-0.5 truncate max-w-[170px]"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 truncate max-w-full"
               title={pedido.destinoEnvio}
             >
-              <MapPin className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <span className="truncate">{pedido.destinoEnvio}</span>
             </div>
           )}
         </div>
       </TableCell>
 
-      {/* 4. Estado & Postventa (w-[14%]) */}
+      {/* 5. ESTADO & POSTVENTA (w-[14%] / text-left px-3) */}
       <TableCell
-        className="w-[14%] px-4 py-3 align-middle text-center overflow-hidden min-w-0"
+        className="w-[14%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-col items-center justify-center gap-1 w-full max-w-[130px] mx-auto min-w-0">
+        <div className="flex flex-col items-start min-w-0">
           <OrderStatusBadge
             value={pedido.estado}
             onChange={(nuevoEstado) => onCambiarEstado(pedido.id, nuevoEstado)}
           />
 
-          {/* Indicador de Postventa sutil: exclusivo 'Postventa pend.' */}
-          {hasPendingPostventa && (
+          {/* Indicador de Postventa */}
+          {hasPendingPostventa ? (
             <button
               type="button"
-              onClick={(e) => onTogglePostventa(pedido.id, true, e)}
-              className="text-amber-700 dark:text-amber-400 text-[10px] font-medium flex items-center justify-center gap-1 mt-1 hover:underline cursor-pointer truncate max-w-full"
+              onClick={(e) => {
+                e.stopPropagation()
+                onTogglePostventa(pedido.id, true, e)
+              }}
+              className="text-amber-700 dark:text-amber-400 text-[10px] font-medium flex items-center gap-1 mt-1 hover:underline cursor-pointer truncate max-w-full"
               title="Postventa pendiente. Clic para marcar como realizada."
             >
               <Clock className="w-2.5 h-2.5 shrink-0 text-amber-600 dark:text-amber-400" />
               <span>Postventa pend.</span>
             </button>
-          )}
+          ) : pedido.seguimientoPostventa ? (
+            <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
+              <Check className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+              <span>Postventa realizada</span>
+            </span>
+          ) : null}
         </div>
       </TableCell>
 
-      {/* 5. Total & Balance (w-[14%]) */}
-      <TableCell className="w-[14%] px-4 py-3 text-right align-middle overflow-hidden min-w-0">
+      {/* 6. TOTAL & BALANCE (w-[14%] / text-right pr-5) */}
+      <TableCell className="w-[14%] pl-3 pr-5 py-3 align-middle overflow-hidden min-w-0 text-right whitespace-normal">
         <div className="flex flex-col items-end gap-0.5 min-w-0">
-          <span className="font-mono font-semibold text-sm text-foreground text-right">
+          <span className="font-mono text-sm font-extrabold text-foreground text-right">
             {formatCurrency(pedido.total)}
           </span>
 
-          {pedido.saldoPendiente > 0 && (
-            <span className="text-destructive font-medium text-[11px] font-mono block text-right">
+          {pedido.saldoPendiente > 0 ? (
+            <span className="font-mono text-xs font-bold text-destructive text-right">
               Pendiente: S/ {pedido.saldoPendiente.toFixed(2)}
+            </span>
+          ) : (
+            <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 text-right">
+              ✓ Saldado
             </span>
           )}
         </div>
