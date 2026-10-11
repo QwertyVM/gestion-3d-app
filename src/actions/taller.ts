@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma'
 import { EstadoPedido, EstadoVenta } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
+import { parseDiaPromesa } from '@/lib/date-utils'
 
 function safeRevalidate() {
   try {
@@ -552,8 +553,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
     const entregasUrgentes = piezas.filter((p) => {
       if (!p.diaEntregaPrometida) return false
       try {
-        const d = new Date(p.diaEntregaPrometida)
-        return !isNaN(d.getTime()) && d <= dosDias
+        const d = parseDiaPromesa(p.diaEntregaPrometida)
+        return d !== null && !isNaN(d.getTime()) && d <= dosDias
       } catch {
         return false
       }

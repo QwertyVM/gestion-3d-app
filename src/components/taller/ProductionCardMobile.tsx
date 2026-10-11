@@ -13,6 +13,7 @@ import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, Exte
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 import { formatDate } from '@/lib/utils'
+import { parseDiaPromesa } from '@/lib/date-utils'
 
 interface ProductionCardMobileProps {
   pieza: PiezaTaller
@@ -82,14 +83,7 @@ function renderEntregaInfo(diaPromesa: string | null) {
   }
 
   try {
-    const match = diaPromesa.match(/^(\d{4})-(\d{2})-(\d{2})/)
-    let d: Date | null = null
-    if (match) {
-      d = new Date(parseInt(match[1], 10), parseInt(match[2], 10) - 1, parseInt(match[3], 10))
-    } else {
-      const parsed = new Date(diaPromesa)
-      if (!isNaN(parsed.getTime())) d = parsed
-    }
+    const d = parseDiaPromesa(diaPromesa)
 
     if (!d || isNaN(d.getTime())) {
       return (
@@ -117,7 +111,10 @@ function renderEntregaInfo(diaPromesa: string | null) {
     const diffDias = Math.round((promesaMidnight - hoyMidnight) / (1000 * 60 * 60 * 24))
 
     let textoRender: React.ReactNode
-    let textoCompleto = formatDate(diaPromesa)
+    const day = String(d.getDate()).padStart(2, '0')
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const year = d.getFullYear()
+    const textoCompleto = `${day}/${month}/${year}`
 
     if (diffDias < 0) {
       textoRender = (
@@ -167,7 +164,7 @@ function renderEntregaInfo(diaPromesa: string | null) {
             }
           />
           <TooltipContent sideOffset={4} className="text-xs max-w-xs font-medium">
-            <span>Fecha prometida: {textoCompleto}</span>
+            <span>Fecha prometida: {diaPromesa}</span>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

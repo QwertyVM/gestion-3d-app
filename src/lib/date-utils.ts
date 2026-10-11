@@ -180,3 +180,101 @@ export function formatFechaEvolucion(rawDate: string, conAnio = false) {
   return rawDate
 }
 
+/**
+ * Intenta interpretar de manera inteligente la fecha prometida de entrega
+ * admitiendo formatos ISO (YYYY-MM-DD), numéricos (DD/MM, DD/MM/YYYY) o lenguaje natural
+ * en español (ej: "Martes 13 octubre", "13 de octubre", "15 de Octubre 2026").
+ * Retorna un objeto Date con la fecha a medianoche local, o null si es texto libre no determinable.
+ */
+export function parseDiaPromesa(diaPromesa: string | null | undefined): Date | null {
+  if (!diaPromesa) return null
+  const trimmed = diaPromesa.trim()
+  if (!trimmed) return null
+
+  // 1. Rango explícito o texto con alternativas ("Entre ...", "... o ...") -> tratar como texto descriptivo
+  if (/^entre\s+/i.test(trimmed) || /\s+o\s+/i.test(trimmed)) {
+    return null
+  }
+
+  // 2. Formato ISO YYYY-MM-DD
+  const matchIso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (matchIso) {
+    const d = new Date(parseInt(matchIso[1], 10), parseInt(matchIso[2], 10) - 1, parseInt(matchIso[3], 10))
+    return isNaN(d.getTime()) ? null : d
+  }
+
+  // 3. Formato DD/MM/YYYY o DD-MM-YYYY o DD/MM
+  const matchDmy = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?$/)
+  if (matchDmy) {
+    const d = parseInt(matchDmy[1], 10)
+    const m = parseInt(matchDmy[2], 10) - 1
+    let y = matchDmy[3] ? parseInt(matchDmy[3], 10) : new Date().getFullYear()
+    if (y < 100) y += 2000
+    const parsed = new Date(y, m, d)
+    return isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  // 4. Formato en español: [Día semana opcional] [DD] [de]? [Mes] [de]? [YYYY opcional]
+  const MESES: Record<string, number> = {
+    enero: 0, ene: 0,
+    febrero: 1, feb: 1,
+    marzo: 2, mar: 2,
+    abril: 3, abr: 3,
+    mayo: 4, may: 4,
+    junio: 5, jun: 5,
+    julio: 6, jul: 6,
+    agosto: 7, ago: 7,
+    septiembre: 8, setiembre: 8, sep: 8, set: 8,
+    octubre: 9, oct: 9,
+    noviembre: 10, nov: 10,
+    diciembre: 11, dic: 11
+  }
+
+  const regexMes = /(?:^|\b)(\d{1,2})\s*(?:de|\/|-)?\s*(enero|ene|febrero|feb|marzo|mar|abril|abr|mayo|may|junio|jun|julio|jul|agosto|ago|septiembre|setiembre|sep|set|octubre|oct|noviembre|nov|diciembre|dic)\b(?:\s*(?:de)?\s*(\d{4}))?/i
+  const matchMes = trimmed.match(regexMes)
+  if (matchMes) {
+    const day = parseInt(matchMes[1], 10)
+    const mesNombre = matchMes[2].toLowerCase()
+    const month = MESES[mesNombre]
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    let year = matchMes[3] ? parseInt(matchMes[3], 10) : currentYear
+
+    // Si no tiene año especificado y estamos en dic y la fecha es enero, pasar al año siguiente
+    if (!matchMes[3] && now.getMonth() === 11 && month === 0) {
+      year = currentYear + 1
+    }
+
+    const parsed = new Date(year, month, day)
+    return isNaN(parsed.getTime()) ? null : parsed
+  }
+
+  return null
+}
+
+/**
+ * Formatea una fecha prometida para visualización compacta y amigable.
+ * Si es formato ISO (YYYY-MM-DD), lo convierte en "Mar 13 Oct".
+ * Si es texto libre, conserva el texto original.
+ */
+export function formatDiaPromesaDisplay(dia: string | null | undefined): string {
+  if (!dia) return ''
+  const trimmed = dia.trim()
+  if (!trimmed) return ''
+
+  const matchIso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (matchIso) {
+    const d = new Date(parseInt(matchIso[1], 10), parseInt(matchIso[2], 10) - 1, parseInt(matchIso[3], 10))
+    if (!isNaN(d.getTime())) {
+      const weekday = d.toLocaleDateString('es-PE', { weekday: 'short' }).replace('.', '')
+      const day = d.getDate()
+      const month = d.toLocaleDateString('es-PE', { month: 'short' }).replace('.', '')
+      const capWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1)
+      const capMonth = month.charAt(0).toUpperCase() + month.slice(1)
+      return `${capWeekday} ${day} ${capMonth}`
+    }
+  }
+
+  return trimmed
+}
+
