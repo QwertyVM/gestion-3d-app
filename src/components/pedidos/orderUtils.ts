@@ -1,4 +1,5 @@
 import { ItemPedidoView, FilamentoOption, PedidoView } from './types'
+import { formatDiaPromesaDisplay } from '@/lib/date-utils'
 
 export function getItemColors(it: ItemPedidoView, allFilamentos?: FilamentoOption[]): FilamentoOption[] {
   if (Array.isArray(it.colores) && it.colores.length > 0) {
@@ -105,7 +106,7 @@ export function generateWhatsAppOrderTicket(p: PedidoView, filamentos?: Filament
   return `*RESUMEN DE PEDIDO 3D — ${p.codigo}*\n` +
     `👤 *Cliente:* ${p.cliente}\n` +
     `📅 *Fecha:* ${formattedDate}\n` +
-    (p.diaEntregaPrometida ? `📦 *Entrega Pactada:* ${p.diaEntregaPrometida}\n` : '') +
+    (p.diaEntregaPrometida ? `📦 *Entrega Pactada:* ${formatDiaPromesaDisplay(p.diaEntregaPrometida)}\n` : '') +
     `\n*PRODUCTOS:* \n${itemsText}${envioText}\n\n` +
     `💳 *Medio de Pago:* ${p.metodoPago || (p.pagos?.[0]?.metodoPago) || 'YAPE'}\n` +
     `💰 *Total Pedido:* S/ ${p.total.toFixed(2)}\n` +

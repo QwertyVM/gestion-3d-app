@@ -9,6 +9,7 @@ import { consolidateOrderItems, formatCurrency } from './orderUtils'
 import { OrderStatusBadge } from './OrderStatusBadge'
 import { OrderProductDots } from './OrderProductDots'
 import { formatDate } from '@/lib/utils'
+import { formatDiaPromesaDisplay } from '@/lib/date-utils'
 
 function InstagramIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   return (
@@ -167,7 +168,7 @@ export function OrderTableRow({
               title={pedido.diaEntregaPrometida}
             >
               <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span className="truncate">{pedido.diaEntregaPrometida}</span>
+              <span className="truncate">{formatDiaPromesaDisplay(pedido.diaEntregaPrometida)}</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 text-xs italic text-muted-foreground/60">

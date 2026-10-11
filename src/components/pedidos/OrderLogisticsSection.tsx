@@ -6,6 +6,7 @@ import { EstadoPedido } from '@prisma/client'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import { DeliveryDatePicker } from './DeliveryDatePicker'
 
 interface OrderLogisticsSectionProps {
   formFecha: string
@@ -177,11 +178,10 @@ export function OrderLogisticsSection({
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             Fecha / Hora Pactada de Entrega
           </Label>
-          <Input
-            placeholder="Ej: Sábado 18:00, Mañana en Shalom..."
+          <DeliveryDatePicker
             value={formDiaEntrega}
-            onChange={(e) => setFormDiaEntrega(e.target.value)}
-            className="h-9 bg-card border-input text-xs sm:text-sm rounded-xl focus-visible:ring-1 focus-visible:ring-primary transition-all duration-150 shadow-2xs"
+            onChange={setFormDiaEntrega}
+            placeholder="Seleccionar fecha pactada..."
           />
         </div>
 

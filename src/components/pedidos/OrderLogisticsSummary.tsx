@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { formatDiaPromesaDisplay } from '@/lib/date-utils'
 
 interface OrderLogisticsSummaryProps {
   metodoPago?: string | null
@@ -41,7 +42,7 @@ export function OrderLogisticsSummary({
         <span className="text-muted-foreground">Fecha pactada:</span>
         <span className="font-medium text-foreground">
           {diaEntregaPrometida && diaEntregaPrometida.trim() !== '' ? (
-            diaEntregaPrometida
+            formatDiaPromesaDisplay(diaEntregaPrometida)
           ) : (
             <span className="text-muted-foreground/60">—</span>
           )}

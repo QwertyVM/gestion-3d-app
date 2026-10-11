@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ClienteOption } from './types'
+import { DeliveryDatePicker } from './DeliveryDatePicker'
 
 interface OrderCustomerSectionProps {
   clientSelectMode: 'EXISTING' | 'NEW'
@@ -411,11 +412,10 @@ export function OrderCustomerSection({
             <Clock className="h-3 w-3 text-primary" />
             Entrega Pactada
           </Label>
-          <Input
-            placeholder="Ej: Sábado 18:00, Mañana en Shalom..."
+          <DeliveryDatePicker
             value={formDiaEntrega}
-            onChange={(e) => setFormDiaEntrega(e.target.value)}
-            className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+            onChange={setFormDiaEntrega}
+            placeholder="Seleccionar fecha pactada..."
           />
         </div>
 
