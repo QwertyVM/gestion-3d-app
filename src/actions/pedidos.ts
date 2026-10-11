@@ -28,8 +28,11 @@ function safeRevalidate() {
 }
 
 export interface ItemPedidoInput {
+  id?: string
   productoId: string
   varianteId?: string | null
+  nombreProductoSnapshot?: string | null
+  costoBaseSnapshot?: number | null
   colorFilamentoId?: string | null
   coloresIds?: string[]
   personalizacion?: string | null
@@ -111,7 +114,9 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
       pedidoId: it.pedidoId,
       productoId: it.productoId,
       nombreProductoSnapshot: it.nombreProductoSnapshot || it.producto?.nombreModelo || '',
-      costoBaseSnapshot: it.costoBaseSnapshot != null ? Number(it.costoBaseSnapshot) : (it.producto ? Number(it.producto.costoBase) : 0),
+      costoBaseSnapshot: it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+        ? Number(it.costoBaseSnapshot)
+        : (it.producto ? Number(it.producto.costoBase) : 0),
       colorFilamentoId: it.colorFilamentoId || rawColoresIds[0] || null,
       coloresIds: rawColoresIds,
       colores: resolvedColores.length > 0 ? resolvedColores : (primaryColorFilamento ? [primaryColorFilamento] : []),
@@ -309,7 +314,9 @@ export async function createPedido(data: CreatePedidoInput) {
       return {
         productoId: resolvedId,
         nombreProductoSnapshot: prod?.nombreModelo || (targetNegocio === 'BG' ? 'Juego de Mesa' : 'Modelo 3D'),
-        costoBaseSnapshot: prod ? Number(prod.costoBase) : 0,
+        costoBaseSnapshot: (item.costoBaseSnapshot != null && Number(item.costoBaseSnapshot) > 0)
+          ? Number(item.costoBaseSnapshot)
+          : (prod ? Number(prod.costoBase) : 0),
         colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
         coloresIds: rawColores,
         personalizacion: item.personalizacion?.trim() || null,
@@ -819,7 +826,7 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
 
     const current = await prisma.pedido.findUnique({
       where: { id },
-      include: { pagos: true }
+      include: { items: true, pagos: true }
     })
 
     if (!current) {
@@ -848,11 +855,22 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
         ? item.coloresIds
         : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
 
+      // Preservar snapshot histórico si el ítem ya existía en el pedido
+      const existingItem = current.items.find(ci => (item.id && ci.id === item.id) || ci.productoId === resolvedId)
+      
+      const preservedCostoSnapshot = (item.costoBaseSnapshot != null && Number(item.costoBaseSnapshot) > 0)
+        ? Number(item.costoBaseSnapshot)
+        : (existingItem && existingItem.costoBaseSnapshot != null && Number(existingItem.costoBaseSnapshot) > 0
+            ? Number(existingItem.costoBaseSnapshot)
+            : (prod ? Number(prod.costoBase) : 0))
+
+      const preservedNombreSnapshot = item.nombreProductoSnapshot || existingItem?.nombreProductoSnapshot || prod?.nombreModelo || 'Modelo 3D'
+
       return {
         pedidoId: id,
         productoId: resolvedId,
-        nombreProductoSnapshot: prod?.nombreModelo || 'Modelo 3D',
-        costoBaseSnapshot: prod ? Number(prod.costoBase) : 0,
+        nombreProductoSnapshot: preservedNombreSnapshot,
+        costoBaseSnapshot: preservedCostoSnapshot,
         colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
         coloresIds: rawColores,
         personalizacion: item.personalizacion?.trim() || null,

@@ -132,6 +132,8 @@ export function EditOrderModal({
           cantidad: it.cantidad,
           tipoPrecio: it.tipoPrecio,
           precioUnitario: it.precioUnitario !== undefined && it.precioUnitario !== null ? it.precioUnitario : '',
+          costoBase: it.costoBaseSnapshot != null ? Number(it.costoBaseSnapshot) : undefined,
+          costoBaseSnapshot: it.costoBaseSnapshot != null ? Number(it.costoBaseSnapshot) : undefined,
           costoPackaging: it.costoPackaging ? it.costoPackaging : '',
           porcentajeAdicional: it.porcentajeAdicional || 0,
           gramosConsumidos: it.gramosConsumidos || 0
@@ -286,6 +288,7 @@ export function EditOrderModal({
         notasPostventa: editNotasPostventa.trim() || undefined,
         costoEnvio: Number(formCostoEnvio) || 0,
         items: formItems.map(it => ({
+          id: it.id && !it.id.startsWith('item-') && !it.id.startsWith('edit-item-') ? it.id : undefined,
           productoId: it.productoId,
           varianteId: it.varianteId || it.productoId,
           colorFilamentoId: it.coloresIds?.[0] || it.colorFilamentoId || undefined,
@@ -294,6 +297,9 @@ export function EditOrderModal({
           cantidad: Number(it.cantidad) || 1,
           tipoPrecio: it.tipoPrecio,
           precioUnitario: Number(it.precioUnitario) || 0,
+          costoBaseSnapshot: it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+            ? Number(it.costoBaseSnapshot)
+            : (it.costoBase != null && Number(it.costoBase) > 0 ? Number(it.costoBase) : undefined),
           costoPackaging: Number(it.costoPackaging) || 0,
           porcentajeAdicional: Number(it.porcentajeAdicional) || 0,
           gramosConsumidos: Number(it.gramosConsumidos) || 0

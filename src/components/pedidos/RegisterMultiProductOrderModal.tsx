@@ -397,6 +397,7 @@ export function RegisterMultiProductOrderModal({
           cantidad: Number(it.cantidad) || 1,
           tipoPrecio: it.tipoPrecio,
           precioUnitario: Number(it.precioUnitario) || 0,
+          costoBaseSnapshot: it.costoBase != null && Number(it.costoBase) > 0 ? Number(it.costoBase) : undefined,
           costoPackaging: Number(it.costoPackaging) || 0,
           porcentajeAdicional: Number(it.porcentajeAdicional) || 0,
           gramosConsumidos: Number(it.gramosConsumidos) || 0

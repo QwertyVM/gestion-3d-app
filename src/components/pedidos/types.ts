@@ -138,6 +138,7 @@ export interface FormItemState {
   varianteId?: string
   nombreDisplay?: string
   costoBase?: number
+  costoBaseSnapshot?: number
   colorFilamentoId: string
   coloresIds: string[]
   personalizacion: string
