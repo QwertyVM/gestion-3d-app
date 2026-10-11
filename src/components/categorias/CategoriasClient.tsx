@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
-  Layers,
+  Boxes,
   Package,
   Plus,
   FolderOpen,
@@ -12,10 +13,13 @@ import {
 import { toast } from 'sonner'
 import {
   CategoriaItem,
+  CategoriaProductoSummary,
   createCategoria,
   updateCategoria,
   deleteCategoria
 } from '@/actions/categorias'
+import { ProductDetailDialog } from '@/components/catalogo/ProductDetailModal'
+import type { ProductoItem } from '@/components/catalogo/CatalogoClient'
 import { CategoryStatsCards, CategoryFilterTab } from './CategoryStatsCards'
 import { CategorySearchBar } from './CategorySearchBar'
 import { CategoryRowItem } from './CategoryRowItem'
@@ -26,15 +30,23 @@ export interface CategoriasClientProps {
 }
 
 export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps) {
+  const router = useRouter()
   const [categorias, setCategorias] = useState<CategoriaItem[]>(categoriasIniciales)
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState<CategoryFilterTab>('todas')
   const [expandedCatIds, setExpandedCatIds] = useState<Record<string, boolean>>({})
 
-  // Modal State
+  // Modal Category Form State
   const [openModal, setOpenModal] = useState(false)
   const [editingCategory, setEditingCategory] = useState<CategoriaItem | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Product Detail Dialog State
+  const [selectedProduct, setSelectedProduct] = useState<{
+    summary: CategoriaProductoSummary
+    categoriaNombre: string
+  } | null>(null)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
 
   // KPIs
   const totalRegistradas = categorias.length
@@ -91,6 +103,59 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
   const handleOpenEdit = (cat: CategoriaItem) => {
     setEditingCategory(cat)
     setOpenModal(true)
+  }
+
+  // Select Product to open ProductDetailDialog
+  const handleSelectProduct = (prod: CategoriaProductoSummary, cat: CategoriaItem) => {
+    setSelectedProduct({
+      summary: prod,
+      categoriaNombre: cat.nombre
+    })
+    setDetailModalOpen(true)
+  }
+
+  // Map to ProductoItem for ProductDetailDialog
+  const singleProductForModal: ProductoItem | null = useMemo(() => {
+    if (!selectedProduct) return null
+    const { summary, categoriaNombre } = selectedProduct
+    return {
+      id: summary.id,
+      nombreModelo: summary.nombreModelo,
+      lineaCategoria: categoriaNombre,
+      costoBase: summary.costoBase,
+      precioMenor: summary.precioMenor,
+      precioMayor: summary.precioMayor || 0,
+      activo: summary.activo,
+      imagenUrl: summary.imagenUrl || null,
+      enlaceMakerworld: summary.enlaceMakerworld || null,
+      descripcionWeb: summary.descripcionWeb || null,
+      createdAt: summary.createdAt,
+      pedidosCount: summary.pedidosCount || 0
+    }
+  }, [selectedProduct])
+
+  // Formatting helpers for ProductDetailDialog
+  const formatCurrency = (val: number) =>
+    `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  const calcMargen = (precio: number, costo: number) => {
+    if (costo <= 0) return precio > 0 ? '+100%' : '+0%'
+    const margen = ((precio - costo) / costo) * 100
+    return margen >= 0 ? `+${margen.toFixed(0)}%` : `${margen.toFixed(0)}%`
+  }
+
+  const formatFechaRegistro = (rawDate: string | Date | null | undefined) => {
+    if (!rawDate) return '-'
+    const dateStr = String(rawDate).split('T')[0]
+    const parts = dateStr.split('-')
+    if (parts.length === 3) {
+      const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'set', 'oct', 'nov', 'dic']
+      const day = parts[2]
+      const month = months[Number(parts[1]) - 1] || ''
+      const year = parts[0]
+      return `${day} ${month}. ${year}`
+    }
+    return dateStr
   }
 
   // Submit Modal (Create or Edit)
@@ -173,7 +238,7 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <Layers className="w-5 h-5" />
+              <Boxes className="w-5 h-5" />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
@@ -189,7 +254,7 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
             {/* Ver Productos */}
             <Link
               href="/catalogo"
-              className="border border-border bg-card text-foreground hover:bg-secondary rounded-xl h-10 px-4 text-xs font-semibold shadow-xs flex items-center gap-2 transition-colors cursor-pointer flex-1 sm:flex-initial justify-center"
+              className="border border-border bg-card text-foreground hover:bg-secondary rounded-xl h-10 px-4 text-xs font-semibold shadow-2xs flex items-center gap-2 transition-colors cursor-pointer flex-1 sm:flex-initial justify-center"
             >
               <Package className="w-4 h-4 text-primary" />
               <span>Ver Productos ({totalModelosSum})</span>
@@ -199,7 +264,7 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
             <button
               type="button"
               onClick={handleOpenCreate}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-10 px-4 text-xs font-semibold shadow-md shadow-primary/20 flex items-center gap-2 transition-all active:scale-[0.98] cursor-pointer flex-1 sm:flex-initial justify-center"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-10 px-4 text-xs font-semibold shadow-sm flex items-center gap-2 transition-all active:scale-[0.98] cursor-pointer flex-1 sm:flex-initial justify-center"
             >
               <Plus className="w-4 h-4" />
               <span>Nueva Categoría</span>
@@ -234,11 +299,11 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
       />
 
       {/* ========================================================================= */}
-      {/* 4. LISTA MODULAR DE CATEGORÍAS                                            */}
+      {/* 4. LISTA MODULAR DE TARJETAS DE CATEGORÍA                                 */}
       {/* ========================================================================= */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         {filteredCategorias.length === 0 ? (
-          <div className="p-12 text-center bg-card rounded-xl border border-dashed border-border shadow-sm space-y-3">
+          <div className="p-12 text-center bg-card rounded-2xl border border-dashed border-border shadow-2xs space-y-3">
             <div className="w-12 h-12 rounded-xl bg-secondary text-muted-foreground flex items-center justify-center mx-auto">
               {hasActiveFilters ? (
                 <FilterX className="w-6 h-6 text-muted-foreground" />
@@ -264,7 +329,7 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
                     setSearch('')
                     setActiveTab('todas')
                   }}
-                  className="border border-border bg-card text-foreground hover:bg-secondary rounded-xl h-9 px-3.5 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  className="border border-border bg-card text-foreground hover:bg-secondary rounded-xl h-9 px-3.5 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
                 >
                   Limpiar filtros
                 </button>
@@ -272,7 +337,7 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
               <button
                 type="button"
                 onClick={handleOpenCreate}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-9 px-4 text-xs font-semibold shadow-md shadow-primary/20 flex items-center gap-1.5 transition-all cursor-pointer"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-9 px-4 text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Nueva Categoría</span>
@@ -288,13 +353,14 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
               onToggleExpand={() => toggleExpand(cat.id)}
               onEdit={() => handleOpenEdit(cat)}
               onDelete={() => handleDeleteCategory(cat)}
+              onSelectProduct={(prod) => handleSelectProduct(prod, cat)}
             />
           ))
         )}
       </div>
 
       {/* ========================================================================= */}
-      {/* 5. MODAL DE CREACIÓN / EDICIÓN                                            */}
+      {/* 5. MODAL DE CREACIÓN / EDICIÓN DE CATEGORÍA                               */}
       {/* ========================================================================= */}
       <CategoryFormDialog
         open={openModal}
@@ -302,6 +368,36 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
         categoryToEdit={editingCategory}
         onSubmit={handleSubmitForm}
         isSubmitting={isSubmitting}
+      />
+
+      {/* ========================================================================= */}
+      {/* 6. MODAL: DETALLE CENTRADO DEL PRODUCTO (ProductDetailDialog)              */}
+      {/* ========================================================================= */}
+      <ProductDetailDialog
+        isOpen={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false)
+          setSelectedProduct(null)
+        }}
+        singleProduct={singleProductForModal}
+        onEdit={() => {
+          if (singleProductForModal) {
+            setDetailModalOpen(false)
+            router.push(`/catalogo?search=${encodeURIComponent(singleProductForModal.nombreModelo)}`)
+          }
+        }}
+        onCreateOrder={(prod) => {
+          setDetailModalOpen(false)
+          if (prod) {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('nova_preselected_product_id', prod.id)
+            }
+            router.push(`/pedidos?productoId=${prod.id}`)
+          }
+        }}
+        formatCurrency={formatCurrency}
+        calcMargen={calcMargen}
+        formatFechaRegistro={formatFechaRegistro}
       />
     </div>
   )

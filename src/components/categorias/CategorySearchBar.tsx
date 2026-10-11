@@ -1,6 +1,6 @@
 'use client'
 
-import { Search, X, AlertTriangle } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { CategoryFilterTab } from './CategoryStatsCards'
 
 interface CategorySearchBarProps {
@@ -23,22 +23,22 @@ export function CategorySearchBar({
   vaciasCount
 }: CategorySearchBarProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-4">
-      {/* Buscador ágil */}
+    <div className="w-full bg-card border border-border rounded-2xl p-3 shadow-2xs mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      {/* Izquierda: Buscador elástico */}
       <div className="relative flex-1 max-w-md w-full">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Search className="left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none absolute" />
         <input
           type="text"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Buscar por nombre, descripción o modelo..."
-          className="w-full h-10 rounded-xl border border-input bg-card pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+          className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-9 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-2xs outline-none transition-all"
         />
         {search && (
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-md transition-colors cursor-pointer"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-lg transition-colors cursor-pointer"
             title="Limpiar búsqueda"
             aria-label="Limpiar búsqueda"
           >
@@ -47,26 +47,20 @@ export function CategorySearchBar({
         )}
       </div>
 
-      {/* Segmented Control de Estados */}
-      <div className="bg-secondary/70 border border-border/80 p-1 rounded-xl flex items-center gap-1 w-full sm:w-auto overflow-x-auto">
+      {/* Derecha: Segmented control de estados */}
+      <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl flex items-center gap-1 shrink-0 overflow-x-auto">
         {/* Todas */}
         <button
           type="button"
           onClick={() => onTabChange('todas')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center cursor-pointer flex-1 sm:flex-initial ${
+          className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
             activeTab === 'todas'
-              ? 'bg-card text-foreground font-semibold shadow-xs'
-              : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
+              ? 'bg-card text-foreground font-bold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <span>Todas</span>
-          <span
-            className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'todas'
-                ? 'bg-primary/10 text-primary'
-                : 'bg-muted text-muted-foreground'
-            }`}
-          >
+          <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-foreground">
             {totalCount}
           </span>
         </button>
@@ -75,20 +69,14 @@ export function CategorySearchBar({
         <button
           type="button"
           onClick={() => onTabChange('con_modelos')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center cursor-pointer flex-1 sm:flex-initial ${
+          className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
             activeTab === 'con_modelos'
-              ? 'bg-card text-foreground font-semibold shadow-xs'
-              : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
+              ? 'bg-card text-foreground font-bold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <span>Con Modelos</span>
-          <span
-            className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === 'con_modelos'
-                ? 'bg-primary/10 text-primary'
-                : 'bg-muted text-muted-foreground'
-            }`}
-          >
+          <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-foreground">
             {conModelosCount}
           </span>
         </button>
@@ -97,25 +85,14 @@ export function CategorySearchBar({
         <button
           type="button"
           onClick={() => onTabChange('vacias')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center cursor-pointer flex-1 sm:flex-initial ${
+          className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
             activeTab === 'vacias'
-              ? 'bg-card text-foreground font-semibold shadow-xs'
-              : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
+              ? 'bg-card text-foreground font-bold shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          {vaciasCount > 0 && (
-            <AlertTriangle className="w-3 h-3 mr-1 text-destructive shrink-0" />
-          )}
           <span>Vacías</span>
-          <span
-            className={`ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              vaciasCount > 0
-                ? 'bg-destructive/10 text-destructive'
-                : activeTab === 'vacias'
-                ? 'bg-primary/10 text-primary'
-                : 'bg-muted text-muted-foreground'
-            }`}
-          >
+          <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-foreground">
             {vaciasCount}
           </span>
         </button>

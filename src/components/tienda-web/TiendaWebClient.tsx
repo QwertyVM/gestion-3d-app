@@ -94,31 +94,8 @@ export function TiendaWebClient({
           </div>
         </div>
 
-        {/* Action buttons: Switch business & View Store */}
+        {/* Action buttons: View Store */}
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-          {/* Business switcher tabs */}
-          <div className="flex items-center bg-[#F8F6F2] p-1 rounded-xl border border-[#E2D9CC] text-xs">
-            <button
-              onClick={() => setNegocio('3D')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                is3D
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15]'
-              }`}
-            >
-              Tienda 3D
-            </button>
-            <button
-              onClick={() => setNegocio('BG')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                isBG
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-[#75695D] hover:text-[#241C15]'
-              }`}
-            >
-              Tienda BG
-            </button>
-          </div>
 
           {/* Open Store Link */}
           <a

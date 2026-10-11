@@ -2,6 +2,8 @@
 
 import prisma from '@/lib/prisma'
 import { getVentas } from '@/actions/ventas'
+import { getActiveNegocioServer } from '@/lib/business-server'
+import { TipoNegocio } from '@/lib/business'
 
 export interface ColorRestockItem {
   id: string
@@ -206,12 +208,16 @@ async function ejecutarConReintentoDB<T>(fn: () => Promise<T>, intentos = 2): Pr
   }
 }
 
-export async function getDatosPresupuestoTranquilidad(): Promise<DatosPresupuestoTranquilidad> {
+export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Promise<DatosPresupuestoTranquilidad> {
+  const targetNegocio = negocio || await getActiveNegocioServer()
   const [inversiones, ventas, ingresosDirectos, filamentos] = await ejecutarConReintentoDB(() =>
     Promise.all([
-      prisma.inversion.findMany(),
-      getVentas(),
+      prisma.inversion.findMany({
+        where: { negocio: targetNegocio }
+      }),
+      getVentas(targetNegocio),
       prisma.ingreso.findMany({
+        where: { negocio: targetNegocio },
         orderBy: { fecha: 'desc' }
       }),
       prisma.inventarioFilamento.findMany({
@@ -320,7 +326,7 @@ export async function getDatosPresupuestoTranquilidad(): Promise<DatosPresupuest
   }
 
   // 6. Partidas del Plan Almacenadas en PostgreSQL (Fuente Única de la Verdad)
-  const partidasPlan = await getPartidasPlanDB('3D')
+  const partidasPlan = await getPartidasPlanDB(targetNegocio)
 
   // Sincronizar montoSeptiembreReal para la cuota del préstamo con los egresos reales
   const planActualizado = partidasPlan.map(p => {
@@ -374,8 +380,8 @@ export async function getDatosPresupuestoTranquilidad(): Promise<DatosPresupuest
   }
 }
 
-export async function getResumenBlindadoOficial() {
-  const datos = await getDatosPresupuestoTranquilidad()
+export async function getResumenBlindadoOficial(negocio?: TipoNegocio) {
+  const datos = await getDatosPresupuestoTranquilidad(negocio)
   return {
     saldoActualCaja: datos.saldoActualCaja,
     totalBlindadoMes: datos.totalBlindadoPendiente,

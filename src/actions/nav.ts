@@ -12,10 +12,9 @@ export async function getNavLiveMetrics(negocio?: TipoNegocio) {
       prisma.pedido.count({
         where: {
           negocio: targetNegocio,
-          OR: [
-            { estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] } },
-            { saldoPendiente: { gt: 0 } }
-          ]
+          estado: {
+            notIn: ['ENTREGADO', 'CANCELADO']
+          }
         }
       }),
       targetNegocio === '3D' ? prisma.inventarioFilamento.count({

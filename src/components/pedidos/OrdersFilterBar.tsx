@@ -56,22 +56,22 @@ export function OrdersFilterBar({
   }, [selectedPagoFilter])
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-3 shadow-2xs mb-6 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-      {/* Bloque Izquierdo (Buscador Elástico) */}
-      <div className="relative w-full lg:flex-1 lg:max-w-md">
-        <Search className="left-3 text-muted-foreground w-4 h-4 absolute top-1/2 -translate-y-1/2 pointer-events-none" />
+    <div className="w-full bg-card border border-border rounded-2xl p-3 shadow-2xs mb-6 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+      {/* Bloque 1 - Izquierda (Búsqueda) */}
+      <div className="relative flex-1 min-w-[200px] max-w-sm lg:max-w-md w-full">
+        <Search className="left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none absolute" />
         <Input
           type="text"
           placeholder="Buscar por cliente, código (#PED-XXX) o modelo..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="h-10 pl-9 pr-9 rounded-xl border border-input bg-background text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary w-full"
+          className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-9 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-2xs"
         />
         {search && (
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer p-0.5"
+            className="text-muted-foreground hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer p-0.5 transition-colors"
             title="Borrar búsqueda"
             aria-label="Borrar búsqueda"
           >
@@ -80,10 +80,10 @@ export function OrdersFilterBar({
         )}
       </div>
 
-      {/* Fila 2 en móviles/tablets (< 1024px) / Bloques Central y Derecho en desktop (>= 1024px) */}
-      <div className="flex flex-wrap items-center justify-between gap-2 w-full lg:w-auto lg:flex-1 lg:justify-between lg:gap-3">
-        {/* Bloque Central (Estados del Pedido) */}
-        <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar">
+      {/* Fila 2 en móviles/tablets (< 1024px) / Desenvuelto en 1 sola fila en desktop (>= 1024px) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 w-full lg:contents">
+        {/* Bloque 2 - Centro (Estados de Producción) */}
+        <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl h-10 flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar">
           {STATUS_TABS.map((tab) => {
             const isSelected = selectedEstadoFilter === tab.value
             return (
@@ -91,10 +91,10 @@ export function OrdersFilterBar({
                 key={tab.value}
                 type="button"
                 onClick={() => onEstadoFilterChange(tab.value)}
-                className={`cursor-pointer whitespace-nowrap ${
+                className={`h-full flex items-center cursor-pointer whitespace-nowrap transition-all ${
                   isSelected
-                    ? 'bg-card text-foreground font-bold shadow-xs text-xs px-3 py-1.5 rounded-lg transition-all'
-                    : 'text-muted-foreground hover:text-foreground text-xs px-3 py-1.5 rounded-lg transition-colors'
+                    ? 'bg-card text-foreground font-bold shadow-xs text-xs px-3.5 py-1.5 rounded-lg'
+                    : 'text-muted-foreground hover:text-foreground text-xs px-3 py-1.5 rounded-lg'
                 }`}
               >
                 {tab.label}
@@ -103,18 +103,21 @@ export function OrdersFilterBar({
           })}
         </div>
 
-        {/* Bloque Derecho (Filtro de Pago y Navegador de Fecha) */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Dropdown de Pagos */}
+        {/* Bloque 3 - Derecha (Pagos y Fecha alineados al borde derecho) */}
+        <div className="flex items-center gap-2 shrink-0 lg:ml-auto">
+          {/* Selector de Pagos */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="h-10 px-3 rounded-xl border border-input bg-background text-xs font-semibold text-foreground shadow-2xs flex items-center gap-1.5 hover:bg-secondary/40 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary shrink-0"
+              className="h-10 px-3.5 rounded-xl border border-input bg-background text-xs font-semibold text-foreground shadow-2xs flex items-center gap-1.5 hover:bg-secondary/40 transition-colors whitespace-nowrap cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary shrink-0"
               title="Filtrar por cobranza"
             >
               <span>{currentPaymentLabel}</span>
               <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 bg-card border border-border rounded-xl shadow-lg p-1 z-50">
+            <DropdownMenuContent
+              align="end"
+              className="min-w-[140px] bg-card border border-border rounded-xl shadow-lg p-1 z-50"
+            >
               {PAYMENT_OPTIONS.map((opt) => {
                 const isSelected = selectedPagoFilter === opt.value
                 return (
@@ -135,7 +138,7 @@ export function OrdersFilterBar({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Navegador Temporal Unificado */}
+          {/* Navegador de Histórico Unificado */}
           <DateFilterControl
             value={dateRange}
             onChange={onDateRangeChange}

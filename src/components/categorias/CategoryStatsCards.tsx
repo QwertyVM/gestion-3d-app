@@ -34,10 +34,10 @@ export function CategoryStatsCards({
             onSelectTab('todas')
           }
         }}
-        className={`p-5 rounded-xl border bg-card shadow-sm transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
+        className={`p-5 rounded-2xl border bg-card shadow-2xs transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
           activeTab === 'todas'
-            ? 'border-primary/50 ring-1 ring-primary/30 shadow-md'
-            : 'border-border hover:border-primary/40 hover:shadow-md hover:bg-secondary/20'
+            ? 'border-primary/50 ring-1 ring-primary/30 shadow-xs'
+            : 'border-border hover:border-primary/40 hover:shadow-xs hover:bg-secondary/15'
         }`}
       >
         <div className="flex items-center justify-between">
@@ -70,10 +70,10 @@ export function CategoryStatsCards({
             onSelectTab('con_modelos')
           }
         }}
-        className={`p-5 rounded-xl border bg-card shadow-sm transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
+        className={`p-5 rounded-2xl border bg-card shadow-2xs transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
           activeTab === 'con_modelos'
-            ? 'border-primary/50 ring-1 ring-primary/30 shadow-md'
-            : 'border-border hover:border-primary/40 hover:shadow-md hover:bg-secondary/20'
+            ? 'border-primary/50 ring-1 ring-primary/30 shadow-xs'
+            : 'border-border hover:border-primary/40 hover:shadow-xs hover:bg-secondary/15'
         }`}
       >
         <div className="flex items-center justify-between">
@@ -106,10 +106,10 @@ export function CategoryStatsCards({
             onSelectTab('vacias')
           }
         }}
-        className={`p-5 rounded-xl border bg-card shadow-sm transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
+        className={`p-5 rounded-2xl border bg-card shadow-2xs transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
           activeTab === 'vacias'
-            ? 'border-primary/50 ring-1 ring-primary/30 shadow-md'
-            : 'border-border hover:border-primary/40 hover:shadow-md hover:bg-secondary/20'
+            ? 'border-primary/50 ring-1 ring-primary/30 shadow-xs'
+            : 'border-border hover:border-primary/40 hover:shadow-xs hover:bg-secondary/15'
         }`}
       >
         <div className="flex items-center justify-between">

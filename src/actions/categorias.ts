@@ -12,6 +12,11 @@ export interface CategoriaProductoSummary {
   precioMenor: number
   precioMayor?: number
   activo: boolean
+  imagenUrl?: string | null
+  enlaceMakerworld?: string | null
+  descripcionWeb?: string | null
+  createdAt?: string
+  pedidosCount?: number
 }
 
 export interface CategoriaItem {
@@ -37,7 +42,14 @@ export async function getCategorias(negocio?: TipoNegocio): Promise<CategoriaIte
       costoBase: true,
       precioMenor: true,
       precioMayor: true,
-      activo: true
+      activo: true,
+      imagenUrl: true,
+      enlaceMakerworld: true,
+      descripcionWeb: true,
+      createdAt: true,
+      _count: {
+        select: { itemPedidos: true }
+      }
     },
     orderBy: { nombreModelo: 'asc' }
   })
@@ -78,7 +90,12 @@ export async function getCategorias(negocio?: TipoNegocio): Promise<CategoriaIte
       costoBase: Number(p.costoBase),
       precioMenor: Number(p.precioMenor),
       precioMayor: Number(p.precioMayor),
-      activo: p.activo
+      activo: p.activo,
+      imagenUrl: p.imagenUrl || null,
+      enlaceMakerworld: p.enlaceMakerworld || null,
+      descripcionWeb: p.descripcionWeb || null,
+      createdAt: p.createdAt ? p.createdAt.toISOString() : undefined,
+      pedidosCount: p._count?.itemPedidos || 0
     })
   })
 
@@ -200,7 +217,14 @@ export async function updateCategoria(id: string, data: { nombre: string; descri
       costoBase: true,
       precioMenor: true,
       precioMayor: true,
-      activo: true
+      activo: true,
+      imagenUrl: true,
+      enlaceMakerworld: true,
+      descripcionWeb: true,
+      createdAt: true,
+      _count: {
+        select: { itemPedidos: true }
+      }
     },
     orderBy: { nombreModelo: 'asc' }
   })
@@ -220,7 +244,12 @@ export async function updateCategoria(id: string, data: { nombre: string; descri
       costoBase: Number(p.costoBase),
       precioMenor: Number(p.precioMenor),
       precioMayor: Number(p.precioMayor),
-      activo: p.activo
+      activo: p.activo,
+      imagenUrl: p.imagenUrl || null,
+      enlaceMakerworld: p.enlaceMakerworld || null,
+      descripcionWeb: p.descripcionWeb || null,
+      createdAt: p.createdAt ? p.createdAt.toISOString() : undefined,
+      pedidosCount: p._count?.itemPedidos || 0
     })),
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
@@ -256,4 +285,7 @@ export async function deleteCategoria(id: string) {
   revalidatePath('/catalogo/categorias')
   return { success: true, message: `Categoría "${current.nombre}" eliminada exitosamente.` }
 }
+
+export const actualizarCategoria = updateCategoria
+export const eliminarCategoria = deleteCategoria
 

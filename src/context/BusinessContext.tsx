@@ -32,10 +32,11 @@ export function BusinessProvider({
   const [negocio, setNegocioState] = useState<TipoNegocio>(initialNegocio || DEFAULT_NEGOCIO)
 
   useEffect(() => {
-    const active = getInitialNegocio()
-    if (active !== negocio) {
-      setNegocioState(active)
-    }
+    document.cookie = `${BUSINESS_COOKIE_NAME}=3D; path=/; max-age=31536000; SameSite=Lax`
+    try {
+      localStorage.setItem('nova_business', '3D')
+    } catch {}
+    setNegocioState('3D')
   }, [])
 
   const setNegocio = (nextNegocio: TipoNegocio) => {
