@@ -20,25 +20,52 @@ function safeRevalidate() {
 export async function getProductos(negocio?: TipoNegocio) {
   const targetNegocio = negocio || await getActiveNegocioServer()
 
-  const productos = await prisma.producto.findMany({
-    where: { negocio: targetNegocio },
-    orderBy: [
-      { activo: 'desc' },
-      { lineaCategoria: 'asc' },
-      { nombreModelo: 'asc' }
-    ]
-  })
+  const [productos, itemPedidos] = await Promise.all([
+    prisma.producto.findMany({
+      where: { negocio: targetNegocio },
+      orderBy: [
+        { activo: 'desc' },
+        { lineaCategoria: 'asc' },
+        { nombreModelo: 'asc' }
+      ]
+    }),
+    prisma.itemPedido.findMany({
+      where: {
+        pedido: { negocio: targetNegocio }
+      },
+      select: {
+        productoId: true,
+        pedidoId: true
+      }
+    })
+  ])
 
-  return productos.map(p => ({
-    ...p,
-    activo: p.activo ?? true,
-    costoBase: Number(p.costoBase),
-    precioMayor: Number(p.precioMayor),
-    precioMenor: Number(p.precioMenor),
-    precioOferta: p.precioOferta != null ? Number(p.precioOferta) : null,
-    createdAt: p.createdAt.toISOString(),
-    updatedAt: p.updatedAt.toISOString(),
-  }))
+  const pedidosByProducto = new Map<string, Set<string>>()
+  for (const item of itemPedidos) {
+    if (!item.productoId) continue
+    let set = pedidosByProducto.get(item.productoId)
+    if (!set) {
+      set = new Set()
+      pedidosByProducto.set(item.productoId, set)
+    }
+    set.add(item.pedidoId)
+  }
+
+  return productos.map(p => {
+    const pedidosSet = pedidosByProducto.get(p.id)
+    return {
+      ...p,
+      activo: p.activo ?? true,
+      costoBase: Number(p.costoBase),
+      precioMayor: Number(p.precioMayor),
+      precioMenor: Number(p.precioMenor),
+      precioOferta: p.precioOferta != null ? Number(p.precioOferta) : null,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+      pedidosCount: pedidosSet ? pedidosSet.size : 0,
+      pedidosIds: pedidosSet ? Array.from(pedidosSet) : [],
+    }
+  })
 }
 
 function parseFechaRegistro(fecha?: string | Date): Date | undefined {

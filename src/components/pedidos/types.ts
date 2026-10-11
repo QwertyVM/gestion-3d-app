@@ -87,6 +87,8 @@ export interface ProductoVarianteOption {
   activo?: boolean
   imagenUrl?: string | null
   imageUrl?: string | null
+  pedidosCount?: number
+  pedidosIds?: string[]
 }
 
 export interface ProductoOption {
@@ -102,6 +104,8 @@ export interface ProductoOption {
   imagenUrl?: string | null
   imageUrl?: string | null
   enlaceMakerworld?: string | null
+  pedidosCount?: number
+  pedidosIds?: string[]
 }
 
 export interface FilamentoOption {

@@ -12,6 +12,8 @@ export interface ProductVariantItem {
   precioMayor: number
   activo: boolean
   imagenUrl?: string | null
+  pedidosCount?: number
+  pedidosIds?: string[]
 }
 
 export interface ProductGroupItem {
@@ -23,6 +25,8 @@ export interface ProductGroupItem {
   variants: ProductVariantItem[]
   singleVariant?: ProductVariantItem
   imagenUrl?: string | null
+  pedidosCount?: number
+  pedidosIds?: string[]
 }
 
 /**
@@ -88,7 +92,9 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
           precioMenor: Number(v.precioMenor || 0),
           precioMayor: Number(v.precioMayor || 0),
           activo: v.activo ?? true,
-          imagenUrl: vImg
+          imagenUrl: vImg,
+          pedidosCount: v.pedidosCount ?? p.pedidosCount ?? 0,
+          pedidosIds: v.pedidosIds ?? p.pedidosIds ?? []
         })
       })
       return
@@ -120,7 +126,9 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
       precioMenor: Number(p.precioMenor || 0),
       precioMayor: Number(p.precioMayor || 0),
       activo: p.activo ?? true,
-      imagenUrl: rawImg
+      imagenUrl: rawImg,
+      pedidosCount: p.pedidosCount ?? 0,
+      pedidosIds: p.pedidosIds ?? []
     })
   })
 
@@ -141,12 +149,27 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
         hasVariants: false,
         variants: [single],
         singleVariant: single,
-        imagenUrl: single.imagenUrl || groupImg
+        imagenUrl: single.imagenUrl || groupImg,
+        pedidosCount: single.pedidosCount ?? 0,
+        pedidosIds: single.pedidosIds ?? []
       })
     } else {
       // Caso 1: Producto Padre con Variantes
       // Ordenar las variantes de forma ascendente por costoBase (de menor a mayor)
       group.items.sort((a, b) => a.costoBase - b.costoBase)
+
+      const groupPedidoIds = new Set<string>()
+      let sumFallback = 0
+      let hasAnyIds = false
+      group.items.forEach(i => {
+        if (i.pedidosIds && i.pedidosIds.length > 0) {
+          hasAnyIds = true
+          i.pedidosIds.forEach(id => groupPedidoIds.add(id))
+        }
+        sumFallback += i.pedidosCount || 0
+      })
+      const groupPedidosCount = hasAnyIds ? groupPedidoIds.size : sumFallback
+
       result.push({
         id: `group_${key}`,
         productoId: group.productoId,
@@ -154,7 +177,9 @@ export function groupCatalogProducts(productos: ProductoOption[]): ProductGroupI
         categoria: group.categoria,
         hasVariants: true,
         variants: group.items,
-        imagenUrl: groupImg
+        imagenUrl: groupImg,
+        pedidosCount: groupPedidosCount,
+        pedidosIds: Array.from(groupPedidoIds)
       })
     }
   })

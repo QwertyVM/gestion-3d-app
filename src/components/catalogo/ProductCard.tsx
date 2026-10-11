@@ -11,7 +11,8 @@ import {
   Trash2,
   Share2,
   Archive,
-  RotateCcw
+  RotateCcw,
+  ShoppingBag
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -56,6 +57,7 @@ export function ProductCard({
 }: ProductCardProps) {
   const isGroup = row.isGroup
   const isMultiVariant = isGroup && row.totalVariants > 1
+  const pedidosCount = row.pedidosCount ?? 0
   const primaryProduct = isGroup
     ? row.variants[0]?.producto
     : (row.singleProduct || row.variants[0]?.producto)
@@ -208,9 +210,28 @@ export function ProductCard({
       {/* ========================================================================= */}
       <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
         {/* Identidad */}
-        <div className="space-y-1">
-          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-            {row.lineaCategoria || 'ACCESORIOS'}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+              {row.lineaCategoria || 'ACCESORIOS'}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 transition-colors ${
+                pedidosCount > 0
+                  ? 'bg-primary/10 text-primary border-primary/20 dark:bg-primary/15'
+                  : 'bg-secondary/70 text-muted-foreground border-border/70'
+              }`}
+              title={
+                isMultiVariant
+                  ? `${pedidosCount} ${pedidosCount === 1 ? 'pedido asociado' : 'pedidos asociados'} (entre todas las versiones)`
+                  : `Asociado a ${pedidosCount} ${pedidosCount === 1 ? 'pedido' : 'pedidos'}`
+              }
+            >
+              <ShoppingBag className="w-3 h-3 shrink-0" />
+              <span>
+                {pedidosCount} {pedidosCount === 1 ? 'pedido' : 'pedidos'}
+              </span>
+            </span>
           </div>
           <h3
             className="text-sm font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors"

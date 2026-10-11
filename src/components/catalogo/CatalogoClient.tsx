@@ -76,6 +76,8 @@ export interface ProductoItem {
   createdAt?: string
   updatedAt?: string
   negocio?: string
+  pedidosCount?: number
+  pedidosIds?: string[]
 }
 
 export interface CategoriaItem {
@@ -500,7 +502,12 @@ export function CatalogoClient({
       savedProducts.forEach(saved => {
         const idx = updated.findIndex(p => p.id === saved.id)
         if (idx >= 0) {
-          updated[idx] = saved
+          updated[idx] = {
+            ...updated[idx],
+            ...saved,
+            pedidosCount: saved.pedidosCount ?? updated[idx].pedidosCount ?? 0,
+            pedidosIds: saved.pedidosIds ?? updated[idx].pedidosIds ?? []
+          }
         } else {
           updated = [saved, ...updated]
         }

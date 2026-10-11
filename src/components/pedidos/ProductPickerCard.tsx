@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Box, Layers } from 'lucide-react'
+import { Box, Layers, ShoppingBag } from 'lucide-react'
 import { TipoPrecio } from '@prisma/client'
 import { ProductGroupItem, ProductVariantItem } from './productHierarchy'
 
@@ -119,9 +119,16 @@ export function ProductPickerCard({
         >
           {group.baseName}
         </h4>
-        <p className="text-[10px] text-muted-foreground font-mono">
-          {baseCostText}
-        </p>
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+          <span>{baseCostText}</span>
+          <span
+            className="flex items-center gap-1 text-[9px] font-semibold text-muted-foreground"
+            title={`Asociado a ${group.pedidosCount ?? 0} ${group.pedidosCount === 1 ? 'pedido' : 'pedidos'}`}
+          >
+            <ShoppingBag className="w-2.5 h-2.5 text-primary" />
+            <span>{(group.pedidosCount ?? 0)} {(group.pedidosCount ?? 0) === 1 ? 'pedido' : 'pedidos'}</span>
+          </span>
+        </div>
       </div>
 
       {/* ========================================================================= */}

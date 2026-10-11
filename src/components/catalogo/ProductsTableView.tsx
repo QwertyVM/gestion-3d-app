@@ -114,6 +114,8 @@ export interface ProductGroupRow {
   allActive: boolean
   latestCreatedAt?: string
   singleProduct?: ProductoItem
+  pedidosCount?: number
+  pedidosIds?: string[]
 }
 
 /**
@@ -180,6 +182,8 @@ export function groupProducts(
         allActive: single.activo,
         latestCreatedAt: single.createdAt,
         singleProduct: single,
+        pedidosCount: single.pedidosCount ?? (single.pedidosIds ? single.pedidosIds.length : 0),
+        pedidosIds: single.pedidosIds || [],
       })
     } else {
       // Ordenar las variantes de forma ascendente por costoBase (de menor a mayor)
@@ -195,6 +199,18 @@ export function groupProducts(
       const latestDate = dates.length > 0
         ? dates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
         : undefined
+
+      const groupPedidoIds = new Set<string>()
+      let sumFallback = 0
+      let hasAnyIds = false
+      group.items.forEach(i => {
+        if (i.producto.pedidosIds && i.producto.pedidosIds.length > 0) {
+          hasAnyIds = true
+          i.producto.pedidosIds.forEach(id => groupPedidoIds.add(id))
+        }
+        sumFallback += i.producto.pedidosCount || 0
+      })
+      const groupPedidosCount = hasAnyIds ? groupPedidoIds.size : sumFallback
 
       rows.push({
         id: `group_${groupKey}`,
@@ -212,6 +228,8 @@ export function groupProducts(
         hasActive: group.items.some(i => i.producto.activo),
         allActive: group.items.every(i => i.producto.activo),
         latestCreatedAt: latestDate,
+        pedidosCount: groupPedidosCount,
+        pedidosIds: Array.from(groupPedidoIds),
       })
     }
   })

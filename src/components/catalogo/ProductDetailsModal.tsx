@@ -12,7 +12,8 @@ import {
   PlusCircle,
   Wrench,
   DollarSign,
-  ExternalLink
+  ExternalLink,
+  ShoppingBag
 } from 'lucide-react'
 import {
   Dialog,
@@ -59,6 +60,7 @@ export function ProductDetailsModal({
   const totalVersiones = group ? group.totalVariants : 1
   const fecha = group ? group.latestCreatedAt : singleProduct?.createdAt
   const isActive = group ? group.hasActive : (singleProduct?.activo ?? true)
+  const pedidosCount = group ? (group.pedidosCount ?? 0) : (singleProduct?.pedidosCount ?? 0)
 
   // Precios y costos consolidados
   const minCosto = group ? group.minCosto : (singleProduct?.costoBase || 0)
@@ -147,11 +149,18 @@ export function ProductDetailsModal({
                 </span>
               )}
 
-              {/* Fecha de alta */}
-              <DialogDescription className="text-xs text-muted-foreground flex items-center gap-1 font-mono m-0">
-                <Calendar className="h-3 w-3 text-primary" />
-                <span>{formatFechaRegistro(fecha)}</span>
-              </DialogDescription>
+              {/* Fecha de alta y pedidos asociados */}
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground font-mono m-0">
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3 text-primary" />
+                  <span>{formatFechaRegistro(fecha)}</span>
+                </span>
+                <span className="text-muted-foreground/40">•</span>
+                <span className="flex items-center gap-1 text-foreground font-semibold">
+                  <ShoppingBag className="h-3 w-3 text-primary" />
+                  <span>{pedidosCount} {pedidosCount === 1 ? 'pedido asociado' : 'pedidos asociados'}</span>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -321,6 +330,13 @@ export function ProductDetailsModal({
                             Archivado
                           </span>
                         )}
+                        <span
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-secondary border border-border/60 text-[9px] text-muted-foreground font-mono shrink-0"
+                          title={`Versión asociada a ${p.pedidosCount ?? 0} pedidos`}
+                        >
+                          <ShoppingBag className="w-2.5 h-2.5 text-primary" />
+                          <span>{p.pedidosCount ?? 0} ped.</span>
+                        </span>
                       </div>
 
                       <div className="flex items-center gap-2.5 text-xs font-mono shrink-0">
