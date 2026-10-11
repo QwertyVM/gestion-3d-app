@@ -19,13 +19,19 @@ export interface EstadoConfig {
 
 export const ESTADO_PEDIDO_CONFIG: Record<EstadoPedido, EstadoConfig> = {
   EN_PRODUCCION: {
-    label: 'Preparando',
+    label: 'Imprimiendo',
     badgeClass:
       'bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-500/20',
     dotClass: 'bg-blue-600'
   },
-  LISTO_ENTREGA: {
-    label: 'Por Entregar',
+  EN_TALLER: {
+    label: 'En taller',
+    badgeClass:
+      'bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border-indigo-500/20',
+    dotClass: 'bg-indigo-600'
+  },
+  EMPAQUETANDO: {
+    label: 'Empaquetando',
     badgeClass:
       'bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-500/20',
     dotClass: 'bg-amber-500'
@@ -35,6 +41,12 @@ export const ESTADO_PEDIDO_CONFIG: Record<EstadoPedido, EstadoConfig> = {
     badgeClass:
       'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border-emerald-500/20',
     dotClass: 'bg-emerald-600'
+  },
+  LISTO_ENTREGA: {
+    label: 'Por Entregar',
+    badgeClass:
+      'bg-purple-500/10 text-purple-800 dark:text-purple-200 border-purple-500/20',
+    dotClass: 'bg-purple-500'
   },
   CANCELADO: {
     label: 'Cancelado',
@@ -51,19 +63,20 @@ export const ESTADO_PEDIDO_CONFIG: Record<EstadoPedido, EstadoConfig> = {
   PAGO_VALIDADO: {
     label: 'Pago Validado',
     badgeClass:
-      'bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border-indigo-500/20',
-    dotClass: 'bg-indigo-500'
+      'bg-teal-500/10 text-teal-800 dark:text-teal-300 border-teal-500/20',
+    dotClass: 'bg-teal-500'
   }
 }
 
 // Estados operativos ordenados para el dropdown
 export const ESTADOS_ORDENADOS: EstadoPedido[] = [
   'EN_PRODUCCION',
-  'LISTO_ENTREGA',
+  'EN_TALLER',
+  'EMPAQUETANDO',
   'ENTREGADO',
-  'CANCELADO',
+  'PENDIENTE',
   'PAGO_VALIDADO',
-  'PENDIENTE'
+  'CANCELADO'
 ]
 
 export interface OrderStatusBadgeProps {

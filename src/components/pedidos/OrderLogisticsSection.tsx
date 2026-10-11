@@ -33,20 +33,30 @@ const ESTADOS_DISPLAY: Record<
   EstadoPedido,
   { label: string; badgeStyle: string; dotColor: string }
 > = {
-  LISTO_ENTREGA: {
-    label: 'Por Entregar',
-    badgeStyle: 'bg-accent/60 text-accent-foreground border-accent/80',
-    dotColor: 'bg-accent-foreground'
-  },
   EN_PRODUCCION: {
-    label: 'Preparando',
+    label: 'Imprimiendo',
     badgeStyle: 'bg-primary/10 text-primary border-primary/20',
     dotColor: 'bg-primary'
+  },
+  EN_TALLER: {
+    label: 'En taller',
+    badgeStyle: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20',
+    dotColor: 'bg-indigo-600'
+  },
+  EMPAQUETANDO: {
+    label: 'Empaquetando',
+    badgeStyle: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+    dotColor: 'bg-amber-500'
   },
   ENTREGADO: {
     label: 'Entregado',
     badgeStyle: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
     dotColor: 'bg-emerald-600'
+  },
+  LISTO_ENTREGA: {
+    label: 'Por Entregar',
+    badgeStyle: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20',
+    dotColor: 'bg-purple-500'
   },
   PENDIENTE: {
     label: 'Pendiente',
@@ -55,8 +65,8 @@ const ESTADOS_DISPLAY: Record<
   },
   PAGO_VALIDADO: {
     label: 'Pago Validado',
-    badgeStyle: 'bg-muted text-muted-foreground border-border',
-    dotColor: 'bg-muted-foreground'
+    badgeStyle: 'bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20',
+    dotColor: 'bg-teal-600'
   },
   CANCELADO: {
     label: 'Cancelado',

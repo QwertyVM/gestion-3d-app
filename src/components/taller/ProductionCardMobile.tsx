@@ -9,7 +9,7 @@ import {
   TooltipContent,
   TooltipProvider
 } from '@/components/ui/tooltip'
-import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil } from 'lucide-react'
+import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil, Package } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 import { formatDate } from '@/lib/utils'
@@ -21,7 +21,7 @@ interface ProductionCardMobileProps {
   onCambiarEstado: (
     tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
     piezaId: string,
-    nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'
+    nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'
   ) => void
   onRequestIniciar?: (pieza: PiezaTaller) => void
   onRequestReabrir?: (pieza: PiezaTaller) => void
@@ -195,6 +195,10 @@ export function ProductionCardMobile({
       ? 'border-l-4 border-l-amber-500'
       : pieza.estado === 'EN_PRODUCCION'
       ? 'border-l-4 border-l-primary'
+      : pieza.estado === 'EN_TALLER'
+      ? 'border-l-4 border-l-indigo-600'
+      : pieza.estado === 'EMPAQUETANDO'
+      ? 'border-l-4 border-l-amber-600'
       : 'border-l-4 border-l-emerald-600'
 
   const handleIniciarClick = (e: React.MouseEvent) => {
@@ -204,17 +208,40 @@ export function ProductionCardMobile({
     else onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_PRODUCCION')
   }
 
+  const handleATallerClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isLoading) return
+    onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_TALLER')
+  }
+
+  const handleEmpaquetarClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isLoading) return
+    onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EMPAQUETANDO')
+  }
+
+  const handleEntregarClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isLoading) return
+    onCambiarEstado(pieza.tipoRegistro, pieza.id, 'ENTREGADO')
+  }
+
   const handleReabrirClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (isLoading) return
-    if (onRequestReabrir) onRequestReabrir(pieza)
-    else onCambiarEstado(pieza.tipoRegistro, pieza.id, 'PENDIENTE')
-  }
-
-  const handleListoClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (isLoading) return
-    onCambiarEstado(pieza.tipoRegistro, pieza.id, 'LISTO_ENTREGA')
+    if (pieza.estado === 'EN_TALLER') {
+      onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_PRODUCCION')
+    } else if (pieza.estado === 'EMPAQUETANDO') {
+      onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_TALLER')
+    } else if (pieza.estado === 'LISTO_ENTREGA') {
+      onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_TALLER')
+    } else if (pieza.estado === 'ENTREGADO') {
+      onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EMPAQUETANDO')
+    } else if (onRequestReabrir) {
+      onRequestReabrir(pieza)
+    } else {
+      onCambiarEstado(pieza.tipoRegistro, pieza.id, 'PENDIENTE')
+    }
   }
 
   return (
@@ -292,7 +319,19 @@ export function ProductionCardMobile({
           {pieza.estado === 'EN_PRODUCCION' && (
             <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-primary/10 text-primary border border-primary/20 whitespace-nowrap shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
-              En Impresión
+              Imprimiendo
+            </span>
+          )}
+          {pieza.estado === 'EN_TALLER' && (
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border border-indigo-500/20 whitespace-nowrap shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
+              En taller
+            </span>
+          )}
+          {pieza.estado === 'EMPAQUETANDO' && (
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-200 border border-amber-500/20 whitespace-nowrap shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              Empaquetando
             </span>
           )}
           {pieza.estado === 'LISTO_ENTREGA' && (
@@ -302,7 +341,8 @@ export function ProductionCardMobile({
             </span>
           )}
           {pieza.estado === 'ENTREGADO' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-muted text-muted-foreground border border-border whitespace-nowrap">
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 whitespace-nowrap">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
               Entregado
             </span>
           )}
@@ -383,8 +423,9 @@ export function ProductionCardMobile({
             <Button
               size="sm"
               disabled={isLoading}
-              onClick={handleListoClick}
-              className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 hover:shadow-sm cursor-pointer shrink-0 ml-auto"
+              onClick={handleATallerClick}
+              className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 hover:shadow-sm cursor-pointer shrink-0 ml-auto"
+              title="Mover a En Taller (terminar impresión)"
             >
               {isLoading ? (
                 <>
@@ -394,32 +435,111 @@ export function ProductionCardMobile({
               ) : (
                 <>
                   <Check className="w-3.5 h-3.5 shrink-0" />
-                  <span>Listo</span>
+                  <span>A taller</span>
                 </>
               )}
             </Button>
           )}
 
+          {pieza.estado === 'EN_TALLER' && (
+            <div className="flex items-center gap-1.5 ml-auto">
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={isLoading}
+                onClick={handleReabrirClick}
+                className="h-8 w-8 p-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center shrink-0"
+                title="Volver a En Impresión"
+              >
+                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+              </Button>
+              <Button
+                size="sm"
+                disabled={isLoading}
+                onClick={handleEmpaquetarClick}
+                className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 hover:shadow-sm cursor-pointer shrink-0"
+                title="Mover a Empaquetando"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Package className="w-3.5 h-3.5 shrink-0" />
+                    <span>Empaquetar</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {pieza.estado === 'EMPAQUETANDO' && (
+            <div className="flex items-center gap-1.5 ml-auto">
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={isLoading}
+                onClick={handleReabrirClick}
+                className="h-8 w-8 p-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center shrink-0"
+                title="Volver a En taller"
+              >
+                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+              </Button>
+              <Button
+                size="sm"
+                disabled={isLoading}
+                onClick={handleEntregarClick}
+                className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 hover:shadow-sm cursor-pointer shrink-0"
+                title="Marcar como Entregado"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>Entregar</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
           {pieza.estado === 'LISTO_ENTREGA' && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isLoading}
-              onClick={handleReabrirClick}
-              className="h-8 px-3.5 rounded-xl text-xs font-semibold border-border text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1.5 whitespace-nowrap transition-all hover:shadow-sm cursor-pointer shrink-0 ml-auto"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Reabriendo...</span>
-                </>
-              ) : (
-                <>
-                  <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-                  <span>Reabrir</span>
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isLoading}
+                onClick={handleReabrirClick}
+                className="h-8 px-2.5 rounded-xl text-xs font-semibold border-border text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1 whitespace-nowrap transition-all hover:shadow-sm cursor-pointer shrink-0"
+                title="Volver a En taller"
+              >
+                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+              </Button>
+              <Button
+                size="sm"
+                disabled={isLoading}
+                onClick={handleEntregarClick}
+                className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 hover:shadow-sm cursor-pointer shrink-0"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>Entregar</span>
+                  </>
+                )}
+              </Button>
+            </div>
           )}
         </div>
       </div>

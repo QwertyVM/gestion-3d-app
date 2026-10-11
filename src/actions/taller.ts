@@ -46,7 +46,7 @@ export interface PiezaTaller {
   pesoGramosUnitario: number
   pesoGramosTotal: number
   costoBaseUnitario: number
-  estado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO' | 'CANCELADO'
+  estado: 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO' | 'CANCELADO'
   notas?: string | null
   enlaceMakerworld?: string | null
   imagenUrl?: string | null
@@ -61,6 +61,8 @@ export interface GrupoModeloTaller {
   totalGramos: number
   pendientes: number
   enProduccion: number
+  enTaller: number
+  empaquetando: number
   listos: number
   enlaceMakerworld?: string | null
   imagenUrl?: string | null
@@ -125,6 +127,8 @@ export interface TallerDataResponse {
   metricas: {
     totalPiezasPendientes: number
     totalPiezasEnProduccion: number
+    totalPiezasEnTaller: number
+    totalPiezasEmpaquetando: number
     totalPiezasListas: number
     totalPiezasActivas: number
     totalModelosUnicos: number
@@ -319,7 +323,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       prisma.pedido.findMany({
         where: {
           negocio: '3D',
-          estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'LISTO_ENTREGA'] }
+          estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'EN_TALLER', 'EMPAQUETANDO', 'LISTO_ENTREGA'] }
         },
         include: {
           items: {
@@ -334,7 +338,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       prisma.venta.findMany({
         where: {
           negocio: '3D',
-          estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] }
+          estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'EN_TALLER', 'EMPAQUETANDO'] }
         },
         include: {
           producto: true,
@@ -426,6 +430,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           totalGramos: 0,
           pendientes: 0,
           enProduccion: 0,
+          enTaller: 0,
+          empaquetando: 0,
           listos: 0,
           enlaceMakerworld: p.enlaceMakerworld || null,
           imagenUrl: p.imagenUrl || null,
@@ -440,6 +446,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
 
       if (p.estado === 'PENDIENTE') grp.pendientes += p.cantidad
       else if (p.estado === 'EN_PRODUCCION') grp.enProduccion += p.cantidad
+      else if (p.estado === 'EN_TALLER') grp.enTaller = (grp.enTaller || 0) + p.cantidad
+      else if (p.estado === 'EMPAQUETANDO') grp.empaquetando = (grp.empaquetando || 0) + p.cantidad
       else if (p.estado === 'LISTO_ENTREGA') grp.listos += p.cantidad
 
       // Desglose por color dentro del modelo
@@ -544,6 +552,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
     // 5. Métricas Generales
     const totalPiezasPendientes = piezas.filter((p) => p.estado === 'PENDIENTE').reduce((sum, p) => sum + p.cantidad, 0)
     const totalPiezasEnProduccion = piezas.filter((p) => p.estado === 'EN_PRODUCCION').reduce((sum, p) => sum + p.cantidad, 0)
+    const totalPiezasEnTaller = piezas.filter((p) => p.estado === 'EN_TALLER').reduce((sum, p) => sum + p.cantidad, 0)
+    const totalPiezasEmpaquetando = piezas.filter((p) => p.estado === 'EMPAQUETANDO').reduce((sum, p) => sum + p.cantidad, 0)
     const totalPiezasListas = piezas.filter((p) => p.estado === 'LISTO_ENTREGA').reduce((sum, p) => sum + p.cantidad, 0)
     const totalGramosRequeridos = Number(piezas.reduce((sum, p) => sum + p.pesoGramosTotal, 0).toFixed(1))
     
@@ -568,8 +578,10 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       metricas: {
         totalPiezasPendientes,
         totalPiezasEnProduccion,
+        totalPiezasEnTaller,
+        totalPiezasEmpaquetando,
         totalPiezasListas,
-        totalPiezasActivas: totalPiezasPendientes + totalPiezasEnProduccion + totalPiezasListas,
+        totalPiezasActivas: totalPiezasPendientes + totalPiezasEnProduccion + totalPiezasEnTaller + totalPiezasEmpaquetando + totalPiezasListas,
         totalModelosUnicos: gruposPorModelo.length,
         totalGramosRequeridos,
         totalColoresRequeridos: gruposPorColor.length,
@@ -586,6 +598,8 @@ export async function getTallerData(): Promise<TallerDataResponse> {
       metricas: {
         totalPiezasPendientes: 0,
         totalPiezasEnProduccion: 0,
+        totalPiezasEnTaller: 0,
+        totalPiezasEmpaquetando: 0,
         totalPiezasListas: 0,
         totalPiezasActivas: 0,
         totalModelosUnicos: 0,
@@ -600,7 +614,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
 export async function updateEstadoPieza(
   tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
   registroId: string,
-  nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'
+  nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'
 ) {
   try {
     if (tipoRegistro === 'PEDIDO_ITEM') {
@@ -620,15 +634,27 @@ export async function updateEstadoPieza(
       // 2. Recalcular el estado consolidado del Pedido padre
       if (itemActualizado.pedido) {
         const todosItems = itemActualizado.pedido.items
-        const todosListos = todosItems.every(it => it.estado === 'LISTO_ENTREGA' || it.estado === 'ENTREGADO')
-        const algunEnProduccionOListo = todosItems.some(it => it.estado === 'EN_PRODUCCION' || it.estado === 'LISTO_ENTREGA')
+        const todosEntregados = todosItems.every(it => it.estado === 'ENTREGADO')
+        const todosEmpaquetandoOEntregados = todosItems.every(it => it.estado === 'EMPAQUETANDO' || it.estado === 'ENTREGADO')
+        const todosEnTallerOAdelante = todosItems.every(it => it.estado === 'EN_TALLER' || it.estado === 'EMPAQUETANDO' || it.estado === 'ENTREGADO')
+        const algunEnProduccion = todosItems.some(it => it.estado === 'EN_PRODUCCION')
+        const algunEnTaller = todosItems.some(it => it.estado === 'EN_TALLER')
+        const algunEmpaquetando = todosItems.some(it => it.estado === 'EMPAQUETANDO')
         const todosPendientes = todosItems.every(it => it.estado === 'PENDIENTE')
 
         let nuevoEstadoPedido: EstadoPedido = 'PENDIENTE'
-        if (todosListos) {
-          nuevoEstadoPedido = 'LISTO_ENTREGA'
-        } else if (algunEnProduccionOListo) {
+        if (todosEntregados) {
+          nuevoEstadoPedido = 'ENTREGADO'
+        } else if (todosEmpaquetandoOEntregados) {
+          nuevoEstadoPedido = 'EMPAQUETANDO'
+        } else if (todosEnTallerOAdelante) {
+          nuevoEstadoPedido = 'EN_TALLER'
+        } else if (algunEnProduccion) {
           nuevoEstadoPedido = 'EN_PRODUCCION'
+        } else if (algunEnTaller) {
+          nuevoEstadoPedido = 'EN_TALLER'
+        } else if (algunEmpaquetando) {
+          nuevoEstadoPedido = 'EMPAQUETANDO'
         } else if (todosPendientes) {
           nuevoEstadoPedido = 'PENDIENTE'
         }
@@ -642,7 +668,7 @@ export async function updateEstadoPieza(
       // Venta individual
       await prisma.venta.update({
         where: { id: registroId },
-        data: { estado: (nuevoEstado === 'LISTO_ENTREGA' ? 'ENTREGADO' : nuevoEstado) as EstadoVenta }
+        data: { estado: (nuevoEstado === 'LISTO_ENTREGA' ? 'EMPAQUETANDO' : nuevoEstado) as EstadoVenta }
       })
     }
 

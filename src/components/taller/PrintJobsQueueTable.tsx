@@ -15,7 +15,7 @@ import { ProductionCardMobile } from './ProductionCardMobile'
 
 export interface PrintJobsQueueTableProps {
   piezas: PiezaTaller[]
-  etapa: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA'
+  etapa: 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA'
   titulo: string
   subtitulo: string
   badgeCount: number
@@ -23,7 +23,7 @@ export interface PrintJobsQueueTableProps {
   onCambiarEstado: (
     tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
     piezaId: string,
-    nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'
+    nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'
   ) => void
   onRequestIniciar?: (pieza: PiezaTaller) => void
   onRequestReabrir?: (pieza: PiezaTaller) => void
@@ -52,6 +52,8 @@ export function PrintJobsQueueTable({
   const stageContainerClasses = {
     PENDIENTE: 'border-l-4 border-l-amber-500 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
     EN_PRODUCCION: 'border-l-4 border-l-primary rounded-xl overflow-hidden border border-border bg-card shadow-xs',
+    EN_TALLER: 'border-l-4 border-l-indigo-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
+    EMPAQUETANDO: 'border-l-4 border-l-amber-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
     LISTO_ENTREGA: 'border-l-4 border-l-emerald-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs'
   }[etapa]
 
@@ -59,6 +61,8 @@ export function PrintJobsQueueTable({
   const stageDot = {
     PENDIENTE: <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shrink-0" />,
     EN_PRODUCCION: <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse mr-2 shrink-0" />,
+    EN_TALLER: <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 mr-2 shrink-0" />,
+    EMPAQUETANDO: <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse mr-2 shrink-0" />,
     LISTO_ENTREGA: <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 mr-2 shrink-0" />
   }[etapa]
 
@@ -66,6 +70,8 @@ export function PrintJobsQueueTable({
   const badgeLabel = {
     PENDIENTE: `${totalUds} ${totalUds === 1 ? 'pieza en cola' : 'piezas en cola'}`,
     EN_PRODUCCION: `${totalUds} ${totalUds === 1 ? 'pieza en impresión' : 'piezas en impresión'}`,
+    EN_TALLER: `${totalUds} ${totalUds === 1 ? 'pieza en taller' : 'piezas en taller'}`,
+    EMPAQUETANDO: `${totalUds} ${totalUds === 1 ? 'pieza en empaque' : 'piezas en empaque'}`,
     LISTO_ENTREGA: `${totalUds} ${totalUds === 1 ? 'pieza lista' : 'piezas listas'}`
   }[etapa]
 

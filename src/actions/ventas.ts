@@ -406,7 +406,7 @@ export async function createVenta(data: {
         destinoEnvio: data.destinoEnvio,
         diaEntregaPrometida: data.diaEntregaPrometida,
         notas: data.personalizacion ? `Personalización: ${data.personalizacion}` : null,
-        estado: (data.estado === 'CANCELADO' ? 'CANCELADO' : data.estado === 'EN_PRODUCCION' ? 'EN_PRODUCCION' : data.estado === 'PENDIENTE' ? 'PENDIENTE' : 'ENTREGADO') as any,
+        estado: (data.estado === 'CANCELADO' ? 'CANCELADO' : data.estado === 'EN_PRODUCCION' ? 'EN_PRODUCCION' : data.estado === 'EN_TALLER' ? 'EN_TALLER' : data.estado === 'EMPAQUETANDO' ? 'EMPAQUETANDO' : data.estado === 'PENDIENTE' ? 'PENDIENTE' : 'ENTREGADO') as any,
         costoEnvio: 0,
         subtotal: total,
         total,

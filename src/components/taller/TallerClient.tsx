@@ -28,7 +28,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Estado optimista local y loader individual para feedback instantáneo (<50ms)
-  const [piezasOpt, setPiezasOpt] = useState<Record<string, 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'>>({})
+  const [piezasOpt, setPiezasOpt] = useState<Record<string, 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'>>({})
   const [enlacesOpt, setEnlacesOpt] = useState<Record<string, string | null>>({})
   const [loadingPieceId, setLoadingPieceId] = useState<string | null>(null)
 
@@ -55,10 +55,12 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
   const metricasActivas = useMemo(() => {
     const pendientes = todasPiezas.filter(p => p.estado === 'PENDIENTE').reduce((sum, p) => sum + p.cantidad, 0)
     const enProduccion = todasPiezas.filter(p => p.estado === 'EN_PRODUCCION').reduce((sum, p) => sum + p.cantidad, 0)
+    const enTaller = todasPiezas.filter(p => p.estado === 'EN_TALLER').reduce((sum, p) => sum + p.cantidad, 0)
+    const empaquetando = todasPiezas.filter(p => p.estado === 'EMPAQUETANDO').reduce((sum, p) => sum + p.cantidad, 0)
     const listos = todasPiezas.filter(p => p.estado === 'LISTO_ENTREGA').reduce((sum, p) => sum + p.cantidad, 0)
 
     // Piezas por fabricar / en proceso en taller
-    const piezasTaller = todasPiezas.filter(p => p.estado === 'PENDIENTE' || p.estado === 'EN_PRODUCCION')
+    const piezasTaller = todasPiezas.filter(p => p.estado === 'PENDIENTE' || p.estado === 'EN_PRODUCCION' || p.estado === 'EN_TALLER' || p.estado === 'EMPAQUETANDO')
 
     // Modelos distintos de las piezas activas a fabricar
     const modelosSet = new Set<string>()
@@ -86,8 +88,10 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       ...data.metricas,
       totalPiezasPendientes: pendientes,
       totalPiezasEnProduccion: enProduccion,
+      totalPiezasEnTaller: enTaller,
+      totalPiezasEmpaquetando: empaquetando,
       totalPiezasListas: listos,
-      totalPiezasActivas: pendientes + enProduccion + listos,
+      totalPiezasActivas: pendientes + enProduccion + enTaller + empaquetando + listos,
       totalModelosDistintos,
       totalColoresAsignados,
       coloresPreview: coloresList.slice(0, 4)
@@ -109,7 +113,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
   const handleCambiarEstado = async (
     tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
     piezaId: string,
-    nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'
+    nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'
   ) => {
     setPiezasOpt(prev => ({ ...prev, [piezaId]: nuevoEstado }))
     setLoadingPieceId(piezaId)
@@ -119,8 +123,12 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       if (res.success) {
         if (nuevoEstado === 'EN_PRODUCCION') {
           toast.success('Pieza pasada a En Impresión')
+        } else if (nuevoEstado === 'EN_TALLER') {
+          toast.success('Pieza pasada a En Taller')
+        } else if (nuevoEstado === 'EMPAQUETANDO') {
+          toast.success('Pieza pasada a Empaquetando')
         } else if (nuevoEstado === 'LISTO_ENTREGA') {
-          toast.success('Pieza marcada como Lista para Entrega')
+          toast.success('Pieza marcada como Lista')
         } else if (nuevoEstado === 'ENTREGADO') {
           toast.success('Pedido marcado como Entregado')
         } else {

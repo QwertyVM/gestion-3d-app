@@ -27,8 +27,9 @@ export interface OrdersFilterBarProps {
 
 const STATUS_TABS = [
   { value: 'TODOS', label: 'Todos' },
-  { value: 'EN_PRODUCCION', label: 'Preparando' },
-  { value: 'LISTO_ENTREGA', label: 'Por Entregar' },
+  { value: 'EN_PRODUCCION', label: 'Imprimiendo' },
+  { value: 'EN_TALLER', label: 'En taller' },
+  { value: 'EMPAQUETANDO', label: 'Empaquetando' },
   { value: 'ENTREGADO', label: 'Entregado' },
 ] as const
 

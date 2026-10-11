@@ -15,18 +15,20 @@ export interface ProductionQueueViewProps {
   onCambiarEstado: (
     tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
     piezaId: string,
-    nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'ENTREGADO'
+    nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'
   ) => Promise<void> | void
   onActualizarEnlace?: (productoId: string, nuevoEnlace: string | null) => Promise<void> | void
   metricasActivas: {
     totalPiezasPendientes: number
     totalPiezasEnProduccion: number
-    totalPiezasListas: number
+    totalPiezasEnTaller?: number
+    totalPiezasEmpaquetando?: number
+    totalPiezasListas?: number
     totalPiezasActivas: number
   }
 }
 
-type FiltroEstado = 'PENDIENTE' | 'EN_PRODUCCION' | 'LISTO_ENTREGA' | 'TODOS'
+type FiltroEstado = 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'TODOS'
 
 export function ProductionQueueView({
   piezas,
@@ -87,7 +89,11 @@ export function ProductionQueueView({
 
     // 3. Filtro por estado
     if (filtroEstado !== 'TODOS') {
-      result = result.filter((p) => p.estado === filtroEstado)
+      if (filtroEstado === 'EMPAQUETANDO') {
+        result = result.filter((p) => p.estado === 'EMPAQUETANDO' || p.estado === 'LISTO_ENTREGA')
+      } else {
+        result = result.filter((p) => p.estado === filtroEstado)
+      }
     }
 
     return result
@@ -102,8 +108,12 @@ export function ProductionQueueView({
     () => piezasFiltradas.filter((p) => p.estado === 'EN_PRODUCCION'),
     [piezasFiltradas]
   )
-  const piezasListas = useMemo(
-    () => piezasFiltradas.filter((p) => p.estado === 'LISTO_ENTREGA'),
+  const piezasEnTaller = useMemo(
+    () => piezasFiltradas.filter((p) => p.estado === 'EN_TALLER'),
+    [piezasFiltradas]
+  )
+  const piezasEmpaquetando = useMemo(
+    () => piezasFiltradas.filter((p) => p.estado === 'EMPAQUETANDO' || p.estado === 'LISTO_ENTREGA'),
     [piezasFiltradas]
   )
 
@@ -184,8 +194,9 @@ export function ProductionQueueView({
           <div className="bg-secondary/60 p-1 rounded-xl flex items-center gap-1 shrink-0 overflow-x-auto max-w-full">
             {[
               { id: 'PENDIENTE', label: 'Pendientes', count: metricasActivas.totalPiezasPendientes },
-              { id: 'EN_PRODUCCION', label: 'En Impresión', count: metricasActivas.totalPiezasEnProduccion },
-              { id: 'LISTO_ENTREGA', label: 'Listos', count: metricasActivas.totalPiezasListas },
+              { id: 'EN_PRODUCCION', label: 'Imprimiendo', count: metricasActivas.totalPiezasEnProduccion },
+              { id: 'EN_TALLER', label: 'En taller', count: metricasActivas.totalPiezasEnTaller || 0 },
+              { id: 'EMPAQUETANDO', label: 'Empaquetando', count: (metricasActivas.totalPiezasEmpaquetando || 0) + (metricasActivas.totalPiezasListas || 0) },
               { id: 'TODOS', label: 'Todos', count: metricasActivas.totalPiezasActivas }
             ].map((st) => {
               const isSelected = filtroEstado === st.id
@@ -295,12 +306,12 @@ export function ProductionQueueView({
             onVincularUrl={handleRequestVincular}
           />
 
-          {/* 2. Etapa En Impresión (Terracota NOVA) */}
+          {/* 2. Etapa Imprimiendo (Azul / Primario) */}
           <PrintJobsQueueTable
             piezas={piezasEnProduccion}
             etapa="EN_PRODUCCION"
-            titulo="Piezas en Impresión"
-            subtitulo="Piezas actualmente en proceso activo de impresión 3D en taller."
+            titulo="Piezas Imprimiendo"
+            subtitulo="Piezas actualmente en proceso activo de impresión 3D en máquinas."
             badgeCount={piezasEnProduccion.length}
             loadingPieceId={loadingPieceId}
             onCambiarEstado={onCambiarEstado}
@@ -309,13 +320,27 @@ export function ProductionQueueView({
             onVincularUrl={handleRequestVincular}
           />
 
-          {/* 3. Etapa Lista para Entrega (Verde salvia artesanal) */}
+          {/* 3. Etapa En Taller (Índigo) */}
           <PrintJobsQueueTable
-            piezas={piezasListas}
-            etapa="LISTO_ENTREGA"
-            titulo="Piezas Listas para Entrega"
-            subtitulo="Piezas impresas y verificadas listas para despacho o recojo en taller."
-            badgeCount={piezasListas.length}
+            piezas={piezasEnTaller}
+            etapa="EN_TALLER"
+            titulo="Piezas en Taller"
+            subtitulo="Piezas impresas en acabado, limpieza de soportes o ensamble en mesa de trabajo."
+            badgeCount={piezasEnTaller.length}
+            loadingPieceId={loadingPieceId}
+            onCambiarEstado={onCambiarEstado}
+            onRequestIniciar={handleRequestIniciar}
+            onRequestReabrir={handleRequestReabrir}
+            onVincularUrl={handleRequestVincular}
+          />
+
+          {/* 4. Etapa Empaquetando (Ámbar / Naranja) */}
+          <PrintJobsQueueTable
+            piezas={piezasEmpaquetando}
+            etapa="EMPAQUETANDO"
+            titulo="Piezas Empaquetando"
+            subtitulo="Piezas en embalaje, preparación de caja o paquete para despacho o entrega."
+            badgeCount={piezasEmpaquetando.length}
             loadingPieceId={loadingPieceId}
             onCambiarEstado={onCambiarEstado}
             onRequestIniciar={handleRequestIniciar}
@@ -344,7 +369,7 @@ export function ProductionQueueView({
             <PrintJobsQueueTable
               piezas={piezasEnProduccion}
               etapa="EN_PRODUCCION"
-              titulo="Piezas en Impresión"
+              titulo="Piezas Imprimiendo"
               subtitulo="Piezas en proceso activo de impresión 3D en taller."
               badgeCount={piezasEnProduccion.length}
               loadingPieceId={loadingPieceId}
@@ -355,13 +380,28 @@ export function ProductionQueueView({
             />
           )}
 
-          {filtroEstado === 'LISTO_ENTREGA' && (
+          {filtroEstado === 'EN_TALLER' && (
             <PrintJobsQueueTable
-              piezas={piezasListas}
-              etapa="LISTO_ENTREGA"
-              titulo="Piezas Listas para Entrega"
-              subtitulo="Piezas terminadas listas para entrega al cliente o despacho."
-              badgeCount={piezasListas.length}
+              piezas={piezasEnTaller}
+              etapa="EN_TALLER"
+              titulo="Piezas en Taller"
+              subtitulo="Piezas en acabado, limpieza de soportes o ensamble en mesa de trabajo."
+              badgeCount={piezasEnTaller.length}
+              loadingPieceId={loadingPieceId}
+              onCambiarEstado={onCambiarEstado}
+              onRequestIniciar={handleRequestIniciar}
+              onRequestReabrir={handleRequestReabrir}
+              onVincularUrl={handleRequestVincular}
+            />
+          )}
+
+          {filtroEstado === 'EMPAQUETANDO' && (
+            <PrintJobsQueueTable
+              piezas={piezasEmpaquetando}
+              etapa="EMPAQUETANDO"
+              titulo="Piezas Empaquetando"
+              subtitulo="Piezas en embalaje, preparación de caja o paquete para despacho o entrega."
+              badgeCount={piezasEmpaquetando.length}
               loadingPieceId={loadingPieceId}
               onCambiarEstado={onCambiarEstado}
               onRequestIniciar={handleRequestIniciar}

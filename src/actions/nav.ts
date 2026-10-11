@@ -30,7 +30,7 @@ export async function getNavLiveMetrics(negocio?: TipoNegocio) {
         where: {
           pedido: {
             negocio: '3D',
-            estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] }
+            estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'EN_TALLER', 'EMPAQUETANDO'] }
           },
           producto: {
             negocio: '3D'
@@ -41,7 +41,7 @@ export async function getNavLiveMetrics(negocio?: TipoNegocio) {
       targetNegocio === '3D' ? prisma.venta.findMany({
         where: {
           negocio: '3D',
-          estado: { in: ['PENDIENTE', 'EN_PRODUCCION'] },
+          estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'EN_TALLER', 'EMPAQUETANDO'] },
           producto: {
             negocio: '3D'
           }

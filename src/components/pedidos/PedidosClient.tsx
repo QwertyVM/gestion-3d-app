@@ -261,10 +261,24 @@ const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; col
     icon: CheckCircle2
   },
   EN_PRODUCCION: {
-    label: 'Preparando',
+    label: 'Imprimiendo',
     colorBg: 'bg-[#EBF3FB]',
     colorText: 'text-[#2B6CB0]',
     colorBorder: 'border-[#BEE3F8]',
+    icon: Printer
+  },
+  EN_TALLER: {
+    label: 'En taller',
+    colorBg: 'bg-indigo-50 dark:bg-indigo-950/40',
+    colorText: 'text-indigo-700 dark:text-indigo-300',
+    colorBorder: 'border-indigo-200 dark:border-indigo-800',
+    icon: Boxes
+  },
+  EMPAQUETANDO: {
+    label: 'Empaquetando',
+    colorBg: 'bg-amber-50 dark:bg-amber-950/40',
+    colorText: 'text-amber-700 dark:text-amber-300',
+    colorBorder: 'border-amber-200 dark:border-amber-800',
     icon: Package
   },
   LISTO_ENTREGA: {
@@ -925,7 +939,13 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         if (!matchSearch) return false
       }
 
-      if (selectedEstadoFilter !== 'TODOS' && p.estado !== selectedEstadoFilter) return false
+      if (selectedEstadoFilter !== 'TODOS') {
+        if (selectedEstadoFilter === 'EMPAQUETANDO') {
+          if (p.estado !== 'EMPAQUETANDO' && p.estado !== 'LISTO_ENTREGA') return false
+        } else if (p.estado !== selectedEstadoFilter) {
+          return false
+        }
+      }
 
       if (selectedPagoFilter === 'PAGADO' && p.saldoPendiente > 0) return false
       if (selectedPagoFilter === 'PENDIENTE' && p.saldoPendiente <= 0) return false
@@ -982,6 +1002,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
     const totalPedidos = pedidosEnRango.length
     const pagoValidados = pedidosEnRango.filter(p => p.estado === 'PAGO_VALIDADO').length
     const enProduccion = pedidosEnRango.filter(p => p.estado === 'EN_PRODUCCION').length
+    const enTaller = pedidosEnRango.filter(p => p.estado === 'EN_TALLER').length
+    const empaquetando = pedidosEnRango.filter(p => p.estado === 'EMPAQUETANDO' || p.estado === 'LISTO_ENTREGA').length
     const pendientes = pedidosEnRango.filter(p => p.estado === 'PENDIENTE').length
     const listos = pedidosEnRango.filter(p => p.estado === 'LISTO_ENTREGA').length
     const entregados = pedidosEnRango.filter(p => p.estado === 'ENTREGADO').length
@@ -995,6 +1017,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       totalPedidos,
       pagoValidados,
       enProduccion,
+      enTaller,
+      empaquetando,
       pendientes,
       listos,
       entregados,
