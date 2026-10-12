@@ -131,8 +131,10 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
           toast.success('Pieza marcada como Lista')
         } else if (nuevoEstado === 'ENTREGADO') {
           toast.success('Pedido marcado como Entregado')
+        } else if (nuevoEstado === 'PENDIENTE') {
+          toast.success('Pieza devuelta a Pendiente')
         } else {
-          toast.success('Pieza reabierta a Pendiente')
+          toast.success('Pieza actualizada')
         }
         startTransition(() => {
           router.refresh()

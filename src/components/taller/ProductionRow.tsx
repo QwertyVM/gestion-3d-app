@@ -164,7 +164,9 @@ export function ProductionRow({
   const handleReabrirClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (isLoading) return
-    if (pieza.estado === 'EN_TALLER') {
+    if (pieza.estado === 'EN_PRODUCCION') {
+      onCambiarEstado(pieza.tipoRegistro, pieza.id, 'PENDIENTE')
+    } else if (pieza.estado === 'EN_TALLER') {
       onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_PRODUCCION')
     } else if (pieza.estado === 'EMPAQUETANDO') {
       onCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_TALLER')
@@ -393,25 +395,49 @@ export function ProductionRow({
           )}
 
           {pieza.estado === 'EN_PRODUCCION' && (
-            <Button
-              size="sm"
-              disabled={isLoading}
-              onClick={handleATallerClick}
-              className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer hover:shadow-sm"
-              title="Mover a En Taller (terminar impresión)"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                  <span>Guardando...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="w-3.5 h-3.5 shrink-0" />
-                  <span>A taller</span>
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <TooltipProvider delay={100}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={isLoading}
+                        onClick={handleReabrirClick}
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+                        aria-label="Devolver pieza a pendientes"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent sideOffset={4} className="text-xs font-medium">
+                    Devolver a Pendiente (en cola)
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <Button
+                size="sm"
+                disabled={isLoading}
+                onClick={handleATallerClick}
+                className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer hover:shadow-sm"
+                title="Mover a En Taller (terminar impresión)"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" />
+                    <span>A taller</span>
+                  </>
+                )}
+              </Button>
+            </div>
           )}
 
           {pieza.estado === 'EN_TALLER' && (
