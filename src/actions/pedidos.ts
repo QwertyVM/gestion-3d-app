@@ -212,7 +212,10 @@ export async function getPedidos(negocio?: TipoNegocio) {
             orderBy: { fecha: 'asc' }
           }
         },
-        orderBy: { fecha: 'desc' }
+        orderBy: [
+          { fecha: 'desc' },
+          { codigo: 'desc' }
+        ]
       }),
       prisma.inventarioFilamento.findMany()
     ])
@@ -298,7 +301,8 @@ export async function createPedido(data: CreatePedidoInput) {
 
     // 2. Compute item subtotals
     let subtotalCalculado = 0
-    const processedItems = data.items.map(item => {
+    const processedItems: any[] = []
+    data.items.forEach(item => {
       const resolvedId = item.varianteId || item.productoId
       const prod = prodMap.get(resolvedId)
       const qty = Math.max(1, Number(item.cantidad) || 1)
@@ -311,22 +315,49 @@ export async function createPedido(data: CreatePedidoInput) {
         ? item.coloresIds
         : (item.colorFilamentoId ? [item.colorFilamentoId] : [])
 
-      return {
-        productoId: resolvedId,
-        nombreProductoSnapshot: prod?.nombreModelo || (targetNegocio === 'BG' ? 'Juego de Mesa' : 'Modelo 3D'),
-        costoBaseSnapshot: (item.costoBaseSnapshot != null && Number(item.costoBaseSnapshot) > 0)
-          ? Number(item.costoBaseSnapshot)
-          : (prod ? Number(prod.costoBase) : 0),
-        colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
-        coloresIds: rawColores,
-        personalizacion: item.personalizacion?.trim() || null,
-        cantidad: qty,
-        tipoPrecio: item.tipoPrecio || 'MENOR',
-        precioUnitario: unitPrice,
-        costoPackaging: packCost,
-        porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
-        gramosConsumidos: Number(item.gramosConsumidos) || 0,
-        subtotal: itemSubtotal
+      const is3D = targetNegocio === '3D' && (!prod || prod.negocio === '3D')
+      const singleItemSubtotal = Number((unitPrice + packCost).toFixed(2))
+      const singleGramos = qty > 0 ? Number(((Number(item.gramosConsumidos) || 0) / qty).toFixed(1)) : 0
+
+      if (is3D && qty > 1) {
+        // En 3D desglosamos cada unidad individual para permitir seguimiento y avance por separado en taller
+        for (let q = 0; q < qty; q++) {
+          processedItems.push({
+            productoId: resolvedId,
+            nombreProductoSnapshot: prod?.nombreModelo || 'Modelo 3D',
+            costoBaseSnapshot: (item.costoBaseSnapshot != null && Number(item.costoBaseSnapshot) > 0)
+              ? Number(item.costoBaseSnapshot)
+              : (prod ? Number(prod.costoBase) : 0),
+            colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
+            coloresIds: rawColores,
+            personalizacion: item.personalizacion?.trim() || null,
+            cantidad: 1,
+            tipoPrecio: item.tipoPrecio || 'MENOR',
+            precioUnitario: unitPrice,
+            costoPackaging: packCost,
+            porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
+            gramosConsumidos: singleGramos,
+            subtotal: singleItemSubtotal
+          })
+        }
+      } else {
+        processedItems.push({
+          productoId: resolvedId,
+          nombreProductoSnapshot: prod?.nombreModelo || (targetNegocio === 'BG' ? 'Juego de Mesa' : 'Modelo 3D'),
+          costoBaseSnapshot: (item.costoBaseSnapshot != null && Number(item.costoBaseSnapshot) > 0)
+            ? Number(item.costoBaseSnapshot)
+            : (prod ? Number(prod.costoBase) : 0),
+          colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
+          coloresIds: rawColores,
+          personalizacion: item.personalizacion?.trim() || null,
+          cantidad: qty,
+          tipoPrecio: item.tipoPrecio || 'MENOR',
+          precioUnitario: unitPrice,
+          costoPackaging: packCost,
+          porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
+          gramosConsumidos: Number(item.gramosConsumidos) || 0,
+          subtotal: itemSubtotal
+        })
       }
     })
 
@@ -844,7 +875,8 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
 
     // 2. Compute item subtotals
     let subtotalCalculado = 0
-    const processedItems = data.items.map(item => {
+    const processedItems: any[] = []
+    data.items.forEach(item => {
       const resolvedId = item.varianteId || item.productoId
       const prod = prodMap.get(resolvedId)
       const qty = Math.max(1, Number(item.cantidad) || 1)
@@ -867,23 +899,48 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
             : (prod ? Number(prod.costoBase) : 0))
 
       const preservedNombreSnapshot = item.nombreProductoSnapshot || existingItem?.nombreProductoSnapshot || prod?.nombreModelo || 'Modelo 3D'
+      const is3D = current.negocio === '3D' && (!prod || prod.negocio === '3D')
+      const singleItemSubtotal = Number((unitPrice + packCost).toFixed(2))
+      const singleGramos = qty > 0 ? Number(((Number(item.gramosConsumidos) || 0) / qty).toFixed(1)) : 0
 
-      return {
-        pedidoId: id,
-        productoId: resolvedId,
-        nombreProductoSnapshot: preservedNombreSnapshot,
-        costoBaseSnapshot: preservedCostoSnapshot,
-        colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
-        coloresIds: rawColores,
-        personalizacion: item.personalizacion?.trim() || null,
-        cantidad: qty,
-        tipoPrecio: item.tipoPrecio || 'MENOR',
-        precioUnitario: unitPrice,
-        costoPackaging: packCost,
-        porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
-        gramosConsumidos: Number(item.gramosConsumidos) || 0,
-        subtotal: itemSubtotal,
-        estado: data.estado || current.estado || 'PENDIENTE'
+      if (is3D && qty > 1) {
+        for (let q = 0; q < qty; q++) {
+          processedItems.push({
+            pedidoId: id,
+            productoId: resolvedId,
+            nombreProductoSnapshot: preservedNombreSnapshot,
+            costoBaseSnapshot: preservedCostoSnapshot,
+            colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
+            coloresIds: rawColores,
+            personalizacion: item.personalizacion?.trim() || null,
+            cantidad: 1,
+            tipoPrecio: item.tipoPrecio || 'MENOR',
+            precioUnitario: unitPrice,
+            costoPackaging: packCost,
+            porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
+            gramosConsumidos: singleGramos,
+            subtotal: singleItemSubtotal,
+            estado: data.estado || existingItem?.estado || current.estado || 'PENDIENTE'
+          })
+        }
+      } else {
+        processedItems.push({
+          pedidoId: id,
+          productoId: resolvedId,
+          nombreProductoSnapshot: preservedNombreSnapshot,
+          costoBaseSnapshot: preservedCostoSnapshot,
+          colorFilamentoId: rawColores[0] || item.colorFilamentoId || null,
+          coloresIds: rawColores,
+          personalizacion: item.personalizacion?.trim() || null,
+          cantidad: qty,
+          tipoPrecio: item.tipoPrecio || 'MENOR',
+          precioUnitario: unitPrice,
+          costoPackaging: packCost,
+          porcentajeAdicional: Number(item.porcentajeAdicional) || 0,
+          gramosConsumidos: Number(item.gramosConsumidos) || 0,
+          subtotal: itemSubtotal,
+          estado: data.estado || existingItem?.estado || current.estado || 'PENDIENTE'
+        })
       }
     })
 

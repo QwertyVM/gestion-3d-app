@@ -259,9 +259,15 @@ export function ProductionCardMobile({
             >
               {pieza.nombreModelo}
             </h4>
-            <span className="font-mono text-xs font-semibold text-muted-foreground">
-              x{pieza.cantidad}
-            </span>
+            {pieza.indicadorUnidad ? (
+              <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded-md font-mono shrink-0">
+                Pieza {pieza.indicadorUnidad}
+              </span>
+            ) : (
+              <span className="font-mono text-xs font-semibold text-muted-foreground">
+                x{pieza.cantidad}
+              </span>
+            )}
           </div>
 
           {/* Enlace o botón para modelo 3D en móvil */}

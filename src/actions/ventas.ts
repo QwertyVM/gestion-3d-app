@@ -274,14 +274,19 @@ export async function getVentas(negocio?: TipoNegocio) {
           orderBy: { fecha: 'asc' }
         }
       },
-      orderBy: { fecha: 'desc' }
+      orderBy: [
+        { fecha: 'desc' },
+        { codigo: 'desc' }
+      ]
     }),
     prisma.inventarioFilamento.findMany()
   ])
 
   const filMap = new Map(allFilamentos.map(f => [f.id, f]))
   return pedidos.map(p => serializePedidoToVenta(p, filMap)).sort((a, b) => {
-    return new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    const diff = new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    if (diff !== 0) return diff
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   })
 }
 

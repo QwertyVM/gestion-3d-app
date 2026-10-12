@@ -50,6 +50,9 @@ export interface PiezaTaller {
   notas?: string | null
   enlaceMakerworld?: string | null
   imagenUrl?: string | null
+  unidadIndice?: number
+  unidadTotal?: number
+  indicadorUnidad?: string
 }
 
 export interface GrupoModeloTaller {
@@ -149,6 +152,16 @@ function mapDataToPiezas(
   // 1. Procesar items de Pedidos
   pedidosList.forEach((ped) => {
     const rawFecha = ped.fecha instanceof Date ? ped.fecha.toISOString() : String(ped.fecha)
+    // Contabilizar total de unidades por modelo en este pedido
+    const modeloTotalMap = new Map<string, number>()
+    ped.items.forEach((item: any) => {
+      if (item.producto && item.producto.negocio !== '3D') return
+      const key = item.productoId || item.nombreProductoSnapshot || 'Pieza 3D'
+      modeloTotalMap.set(key, (modeloTotalMap.get(key) || 0) + Number(item.cantidad || 1))
+    })
+
+    const modeloIndexMap = new Map<string, number>()
+
     ped.items.forEach((item: any) => {
       // Taller 3D es exclusivamente para fabricación 3D, no juegos de mesa (BG)
       if (item.producto && item.producto.negocio !== '3D') return
@@ -156,9 +169,6 @@ function mapDataToPiezas(
       const pesoUnit = (item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0 
         ? Number(item.gramosConsumidos) / cant
         : 0)
-      const pesoTotal = item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0
-        ? Number(item.gramosConsumidos)
-        : pesoUnit * cant
 
       const rawColores: string[] = Array.isArray(item.coloresIds) && item.coloresIds.length > 0
         ? item.coloresIds
@@ -199,35 +209,47 @@ function mapDataToPiezas(
         ? (enlaceMap.get(item.productoId) || enlaceMap.get((item.producto?.nombreModelo || '').toLowerCase().trim()) || null)
         : null
 
-      result.push({
-        id: item.id,
-        registroId: ped.id,
-        tipoRegistro: 'PEDIDO_ITEM',
-        codigoRef: ped.codigo,
-        fechaSolicitud: rawFecha,
-        diaEntregaPrometida: ped.diaEntregaPrometida || null,
-        cliente: ped.cliente,
-        telefono: ped.telefono || null,
-        canalVenta: ped.canalVenta || null,
-        productoId: item.productoId,
-        nombreModelo: item.nombreProductoSnapshot || item.producto?.nombreModelo || 'Pieza 3D',
-        lineaCategoria: item.producto?.lineaCategoria || 'General',
-        cantidad: cant,
-        colorFilamentoId: primaryCol?.id || item.colorFilamentoId || null,
-        coloresIds: rawColores,
-        colores: sortedColores,
-        nombreColor: displayNombreColor,
-        codigoHex: primaryCol?.codigoHex || '#94A3B8',
-        tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
-        personalizacion: item.personalizacion || null,
-        pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
-        pesoGramosTotal: Number(pesoTotal.toFixed(1)),
-        costoBaseUnitario: item.costoBaseSnapshot != null ? Number(item.costoBaseSnapshot) : (item.producto ? Number(item.producto.costoBase) : 0),
-        estado: (item.estado || ped.estado) as any,
-        notas: ped.notas || null,
-        enlaceMakerworld: enlaceDirecto || enlaceFallback || null,
-        imagenUrl: item.producto?.imagenUrl || null
-      })
+      const key = item.productoId || item.nombreProductoSnapshot || 'Pieza 3D'
+      const totalUnits = modeloTotalMap.get(key) || 1
+
+      for (let q = 0; q < cant; q++) {
+        const curIdx = (modeloIndexMap.get(key) || 0) + 1
+        modeloIndexMap.set(key, curIdx)
+        const pieceId = cant > 1 ? `${item.id}#unit-${q}` : item.id
+
+        result.push({
+          id: pieceId,
+          registroId: ped.id,
+          tipoRegistro: 'PEDIDO_ITEM',
+          codigoRef: ped.codigo,
+          fechaSolicitud: rawFecha,
+          diaEntregaPrometida: ped.diaEntregaPrometida || null,
+          cliente: ped.cliente,
+          telefono: ped.telefono || null,
+          canalVenta: ped.canalVenta || null,
+          productoId: item.productoId,
+          nombreModelo: item.nombreProductoSnapshot || item.producto?.nombreModelo || 'Pieza 3D',
+          lineaCategoria: item.producto?.lineaCategoria || 'General',
+          cantidad: 1,
+          unidadIndice: curIdx,
+          unidadTotal: totalUnits,
+          indicadorUnidad: totalUnits > 1 ? `${curIdx}/${totalUnits}` : undefined,
+          colorFilamentoId: primaryCol?.id || item.colorFilamentoId || null,
+          coloresIds: rawColores,
+          colores: sortedColores,
+          nombreColor: displayNombreColor,
+          codigoHex: primaryCol?.codigoHex || '#94A3B8',
+          tipoMaterial: primaryCol?.tipoMaterial || 'PLA',
+          personalizacion: item.personalizacion || null,
+          pesoGramosUnitario: Number(pesoUnit.toFixed(1)),
+          pesoGramosTotal: Number(pesoUnit.toFixed(1)),
+          costoBaseUnitario: item.costoBaseSnapshot != null ? Number(item.costoBaseSnapshot) : (item.producto ? Number(item.producto.costoBase) : 0),
+          estado: (item.estado || ped.estado) as any,
+          notas: ped.notas || null,
+          enlaceMakerworld: enlaceDirecto || enlaceFallback || null,
+          imagenUrl: item.producto?.imagenUrl || null
+        })
+      }
     })
   })
 
@@ -333,7 +355,10 @@ export async function getTallerData(): Promise<TallerDataResponse> {
             }
           }
         },
-        orderBy: { fecha: 'asc' }
+        orderBy: [
+          { fecha: 'asc' },
+          { codigo: 'asc' }
+        ]
       }),
       prisma.venta.findMany({
         where: {
@@ -363,7 +388,10 @@ export async function getTallerData(): Promise<TallerDataResponse> {
             }
           }
         },
-        orderBy: { fecha: 'desc' }
+        orderBy: [
+          { fecha: 'desc' },
+          { codigo: 'desc' }
+        ]
       }),
       prisma.venta.findMany({
         where: {
@@ -619,8 +647,9 @@ export async function updateEstadoPieza(
   try {
     if (tipoRegistro === 'PEDIDO_ITEM') {
       // 1. Actualizar el estado de la pieza individual (ItemPedido)
+      const targetId = registroId.includes('#unit-') ? registroId.split('#unit-')[0] : registroId
       const itemActualizado = await prisma.itemPedido.update({
-        where: { id: registroId },
+        where: { id: targetId },
         data: { estado: nuevoEstado as EstadoPedido },
         include: {
           pedido: {

@@ -336,9 +336,15 @@ export function ProductionRow({
 
           {/* Fila secundaria: Multiplicador x1, Swatches circulares nítidos y Chip de Material (CERO gramos) */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-semibold text-muted-foreground font-mono shrink-0">
-              x{pieza.cantidad}
-            </span>
+            {pieza.indicadorUnidad ? (
+              <span className="text-[11px] font-bold text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded-md font-mono shrink-0">
+                Pieza {pieza.indicadorUnidad}
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-muted-foreground font-mono shrink-0">
+                x{pieza.cantidad}
+              </span>
+            )}
 
             <FilamentDotsGroup
               colores={pieza.colores}

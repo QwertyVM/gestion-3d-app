@@ -355,7 +355,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
   const [editingPedido, setEditingPedido] = useState<PedidoView | null>(null)
 
   // Estado para Vista de Tabla Interactiva y Paginación
-  const [sortField, setSortField] = useState<'fecha' | 'codigo' | 'cliente' | 'cantidad' | 'total' | 'saldoPendiente' | 'estado'>('fecha')
+  const [sortField, setSortField] = useState<'fecha' | 'codigo' | 'cliente' | 'cantidad' | 'total' | 'saldoPendiente' | 'estado'>('codigo')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
@@ -971,10 +971,13 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
   const sortedPedidos = useMemo(() => {
     return [...filteredPedidos].sort((a, b) => {
       let comparison = 0
-      if (sortField === 'fecha') {
+      if (sortField === 'codigo') {
+        comparison = a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+      } else if (sortField === 'fecha') {
         comparison = new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
-      } else if (sortField === 'codigo') {
-        comparison = a.codigo.localeCompare(b.codigo)
+        if (comparison === 0) {
+          comparison = a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+        }
       } else if (sortField === 'cliente') {
         comparison = a.cliente.localeCompare(b.cliente)
       } else if (sortField === 'cantidad') {
@@ -986,6 +989,12 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       } else if (sortField === 'estado') {
         comparison = a.estado.localeCompare(b.estado)
       }
+
+      // Desempate garantizado: siempre desempatar por correlativo de pedido
+      if (comparison === 0 && sortField !== 'codigo') {
+        comparison = a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
+      }
+
       return sortOrder === 'asc' ? comparison : -comparison
     })
   }, [filteredPedidos, sortField, sortOrder])
@@ -1180,11 +1189,11 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                   <TableHead className="w-[14%] pl-5 pr-3 py-3 text-left">
                     <button
                       type="button"
-                      onClick={() => handleSort('fecha')}
+                      onClick={() => handleSort('codigo')}
                       className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
                     >
                       <span>PEDIDO</span>
-                      {sortField === 'fecha' || sortField === 'codigo' ? (
+                      {sortField === 'codigo' || sortField === 'fecha' ? (
                         sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
                       ) : (
                         <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
