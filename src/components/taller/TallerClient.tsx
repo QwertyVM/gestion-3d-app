@@ -109,24 +109,24 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
     return todasPiezas
   }, [data.historicoPiezas, piezasOpt, todasPiezas])
 
-  // Acción instantánea con optimistic update para cambiar estado de la pieza individual
+  // Acción instantánea con feedback visual y transición fluida para cambiar estado de la pieza individual
   const handleCambiarEstado = async (
     tipoRegistro: 'PEDIDO_ITEM' | 'VENTA_INDIVIDUAL',
     piezaId: string,
     nuevoEstado: 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'
   ) => {
-    setPiezasOpt(prev => ({ ...prev, [piezaId]: nuevoEstado }))
     setLoadingPieceId(piezaId)
 
     try {
       const res = await updateEstadoPieza(tipoRegistro, piezaId, nuevoEstado)
       if (res.success) {
+        setPiezasOpt(prev => ({ ...prev, [piezaId]: nuevoEstado }))
         if (nuevoEstado === 'EN_PRODUCCION') {
           toast.success('Pieza pasada a En Impresión')
         } else if (nuevoEstado === 'EN_TALLER') {
           toast.success('Pieza pasada a En Taller')
         } else if (nuevoEstado === 'EMPAQUETANDO') {
-          toast.success('Pieza pasada a Empaquetando')
+          toast.success('Pieza enviada a Empaque')
         } else if (nuevoEstado === 'LISTO_ENTREGA') {
           toast.success('Pieza marcada como Lista')
         } else if (nuevoEstado === 'ENTREGADO') {
@@ -138,19 +138,9 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
           router.refresh()
         })
       } else {
-        setPiezasOpt(prev => {
-          const next = { ...prev }
-          delete next[piezaId]
-          return next
-        })
         toast.error(res.error || 'Error al actualizar estado')
       }
     } catch (err: any) {
-      setPiezasOpt(prev => {
-        const next = { ...prev }
-        delete next[piezaId]
-        return next
-      })
       toast.error(err.message || 'Error de conexión')
     } finally {
       setLoadingPieceId(null)

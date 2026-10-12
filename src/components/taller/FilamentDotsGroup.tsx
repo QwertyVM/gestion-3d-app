@@ -91,11 +91,30 @@ export function FilamentDotsGroup({
         </div>
       </TooltipProvider>
 
-      {/* Chip de material (CERO mención a gramos) */}
+      {/* Chip de material con Tooltip informativo que lista los colores exactos utilizados */}
       {tipoMaterial && (
-        <span className="bg-secondary border border-border/80 text-foreground text-[10px] font-bold px-2 py-0.5 rounded-md ml-1.5 shrink-0">
-          {tipoMaterial}
-        </span>
+        <TooltipProvider delay={100}>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span
+                  tabIndex={0}
+                  className="bg-secondary border border-border/80 text-foreground text-[10px] font-bold px-2 py-0.5 rounded-md ml-1.5 shrink-0 cursor-default"
+                >
+                  {tipoMaterial}
+                </span>
+              }
+            />
+            <TooltipContent sideOffset={4} className="text-[11px] font-medium py-1 px-2.5">
+              <span>
+                Material {tipoMaterial}
+                {resolvedColores.length > 0
+                  ? ` • ${resolvedColores.map((c) => c.nombreColor).join(', ')}`
+                  : ''}
+              </span>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
     </div>
   )

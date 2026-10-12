@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipProvider
 } from '@/components/ui/tooltip'
-import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil, Package } from 'lucide-react'
+import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil, Package, PackageCheck } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 import { formatDate } from '@/lib/utils'
@@ -182,7 +182,9 @@ export function ProductionRow({
   return (
     <TableRow
       onClick={() => onSelectPieza?.(pieza)}
-      className="border-b border-border/70 hover:bg-secondary/35 transition-colors duration-150 cursor-default group min-h-[64px]"
+      className={`border-b border-border/70 hover:bg-secondary/35 transition-colors duration-150 cursor-default group min-h-[64px] ${
+        isLoading ? 'animate-out fade-out-50 duration-150 pointer-events-none' : ''
+      }`}
     >
       {/* 1. Pieza & Especificación (w-[28%], con pl-6) */}
       <TableCell className="w-[28%] pl-6 pr-4 py-3 align-middle overflow-hidden min-w-0">
@@ -275,8 +277,8 @@ export function ProductionRow({
         </div>
       </TableCell>
 
-      {/* 2. Cliente & Pedido (w-[25%]) */}
-      <TableCell className="w-[25%] px-4 py-3 align-middle overflow-hidden min-w-0">
+      {/* 2. Cliente & Pedido (w-[24%]) */}
+      <TableCell className="w-[24%] px-4 py-3 align-middle overflow-hidden min-w-0">
         <div className="space-y-1 min-w-0">
           <span
             className="text-sm font-semibold text-foreground truncate block"
@@ -304,8 +306,8 @@ export function ProductionRow({
         </div>
       </TableCell>
 
-      {/* 3. Entrega & Antigüedad (w-[24%]) */}
-      <TableCell className="w-[24%] px-4 py-3 align-middle min-w-0">
+      {/* 3. Entrega & Antigüedad (w-[22%]) */}
+      <TableCell className="w-[22%] px-4 py-3 align-middle min-w-0">
         <div className="space-y-0.5 min-w-0">
           {/* Primera línea: Ícono de calendario y fecha con Tooltip */}
           {renderEntregaInfo(pieza.diaEntregaPrometida)}
@@ -319,12 +321,12 @@ export function ProductionRow({
         </div>
       </TableCell>
 
-      {/* 4. Estado & Acción Operativa Unificada (w-[23%], mínimo 210px efectivo, CERO recorte de badge) */}
+      {/* 4. Estado & Acción Operativa Unificada (w-[26%], CERO recorte de badge y CERO scroll horizontal) */}
       <TableCell
-        className="w-[23%] pl-2 pr-4 py-3 align-middle text-right min-w-0"
+        className="w-[26%] pl-2 pr-6 py-3 align-middle text-right min-w-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-end gap-2.5 pr-4 h-full">
+        <div className="flex items-center justify-end gap-2.5 pr-2 h-full">
           {/* Badge de Estado con shrink-0 estricto */}
           {pieza.estado === 'PENDIENTE' && (
             <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap shrink-0 shadow-2xs">
@@ -341,9 +343,9 @@ export function ProductionRow({
           )}
 
           {pieza.estado === 'EN_TALLER' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border border-indigo-500/20 whitespace-nowrap shrink-0 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
-              En taller
+            <span className="bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+              En taller (Acabada)
             </span>
           )}
 
@@ -414,32 +416,44 @@ export function ProductionRow({
 
           {pieza.estado === 'EN_TALLER' && (
             <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={isLoading}
-                onClick={handleReabrirClick}
-                className="h-8 w-8 p-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center shrink-0"
-                title="Volver a En Impresión"
-              >
-                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-              </Button>
+              <TooltipProvider delay={100}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={isLoading}
+                        onClick={handleReabrirClick}
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+                        aria-label="Devolver pieza a impresión / descarte"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent sideOffset={4} className="text-xs font-medium">
+                    Devolver pieza a impresión / descarte
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               <Button
                 size="sm"
                 disabled={isLoading}
                 onClick={handleEmpaquetarClick}
-                className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer hover:shadow-sm"
-                title="Mover a Empaquetando"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95 shrink-0 cursor-pointer"
+                title="Enviar a Empaque"
               >
                 {isLoading ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                    <span>Guardando...</span>
+                    <span>Enviando...</span>
                   </>
                 ) : (
                   <>
-                    <Package className="w-3.5 h-3.5 shrink-0" />
-                    <span>Empaquetar</span>
+                    <PackageCheck className="w-3.5 h-3.5 shrink-0" />
+                    <span>Enviar a Empaque</span>
                   </>
                 )}
               </Button>

@@ -8,7 +8,7 @@ import {
   TableHead,
   TableRow
 } from '@/components/ui/table'
-import { Box } from 'lucide-react'
+import { Box, PackageCheck } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { ProductionRow } from './ProductionRow'
 import { ProductionCardMobile } from './ProductionCardMobile'
@@ -52,25 +52,25 @@ export function PrintJobsQueueTable({
   const stageContainerClasses = {
     PENDIENTE: 'border-l-4 border-l-amber-500 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
     EN_PRODUCCION: 'border-l-4 border-l-primary rounded-xl overflow-hidden border border-border bg-card shadow-xs',
-    EN_TALLER: 'border-l-4 border-l-indigo-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
+    EN_TALLER: 'border-l-4 border-l-sky-500 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
     EMPAQUETANDO: 'border-l-4 border-l-amber-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
     LISTO_ENTREGA: 'border-l-4 border-l-emerald-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs'
   }[etapa]
 
   // Indicador dot coloreado
   const stageDot = {
-    PENDIENTE: <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shrink-0" />,
-    EN_PRODUCCION: <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse mr-2 shrink-0" />,
-    EN_TALLER: <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 mr-2 shrink-0" />,
-    EMPAQUETANDO: <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse mr-2 shrink-0" />,
-    LISTO_ENTREGA: <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 mr-2 shrink-0" />
+    PENDIENTE: <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shrink-0 inline-block" />,
+    EN_PRODUCCION: <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse mr-2 shrink-0 inline-block" />,
+    EN_TALLER: <span className="w-2.5 h-2.5 rounded-full bg-sky-500 mr-2 inline-block shrink-0" />,
+    EMPAQUETANDO: <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse mr-2 shrink-0 inline-block" />,
+    LISTO_ENTREGA: <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 mr-2 shrink-0 inline-block" />
   }[etapa]
 
   // Texto del badge en esquina superior derecha
   const badgeLabel = {
     PENDIENTE: `${totalUds} ${totalUds === 1 ? 'pieza en cola' : 'piezas en cola'}`,
     EN_PRODUCCION: `${totalUds} ${totalUds === 1 ? 'pieza en impresión' : 'piezas en impresión'}`,
-    EN_TALLER: `${totalUds} ${totalUds === 1 ? 'pieza en taller' : 'piezas en taller'}`,
+    EN_TALLER: `${totalUds} ${totalUds === 1 ? 'lista para empaque' : 'listas para empaque'}`,
     EMPAQUETANDO: `${totalUds} ${totalUds === 1 ? 'pieza en empaque' : 'piezas en empaque'}`,
     LISTO_ENTREGA: `${totalUds} ${totalUds === 1 ? 'pieza lista' : 'piezas listas'}`
   }[etapa]
@@ -88,7 +88,7 @@ export function PrintJobsQueueTable({
                 {titulo}
               </h3>
             </div>
-            <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs font-semibold border border-border/60">
+            <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full text-xs font-semibold">
               {badgeCount}
             </span>
           </div>
@@ -97,9 +97,13 @@ export function PrintJobsQueueTable({
           </p>
         </div>
 
-        {/* Lado Derecho: Badge Limpio y Conciso Centrado en Piezas (CERO mención a gramos) */}
-        <div className="bg-secondary/70 border border-border px-3 py-1 rounded-lg text-xs font-semibold text-foreground flex items-center gap-1.5 self-start sm:self-auto shadow-2xs">
-          <Box className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+        {/* Lado Derecho: Badge de métricas superior derecho (CERO mención a gramos) */}
+        <div className="bg-secondary border border-border/80 px-3 py-1 rounded-xl text-xs font-semibold text-foreground flex items-center gap-1.5 self-start sm:self-auto shadow-2xs">
+          {etapa === 'EN_TALLER' ? (
+            <PackageCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+          ) : (
+            <Box className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          )}
           <span>{badgeLabel}</span>
         </div>
       </div>
@@ -112,13 +116,13 @@ export function PrintJobsQueueTable({
               <TableHead className="w-[28%] pl-6 pr-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
                 Pieza & Especificación
               </TableHead>
-              <TableHead className="w-[25%] px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+              <TableHead className="w-[24%] px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
                 Cliente & Pedido
               </TableHead>
-              <TableHead className="w-[24%] px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+              <TableHead className="w-[22%] px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
                 Entrega & Antigüedad
               </TableHead>
-              <TableHead className="w-[23%] pl-4 pr-6 py-2.5 text-right text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+              <TableHead className="w-[26%] pl-4 pr-6 py-2.5 text-right text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
                 Estado & Acción
               </TableHead>
             </TableRow>
@@ -160,4 +164,8 @@ export function PrintJobsQueueTable({
 }
 
 // Aliases para máxima compatibilidad con nombres alternativos de especificación
-export { PrintJobsQueueTable as ProductionQueueTable, PrintJobsQueueTable as PendingPiecesTable }
+export {
+  PrintJobsQueueTable as ProductionQueueTable,
+  PrintJobsQueueTable as PendingPiecesTable,
+  PrintJobsQueueTable as WorkshopPiecesSection
+}

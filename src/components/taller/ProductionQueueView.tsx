@@ -199,7 +199,7 @@ export function ProductionQueueView({
             {[
               { id: 'PENDIENTE', label: 'Pendientes', count: metricasActivas.totalPiezasPendientes },
               { id: 'EN_PRODUCCION', label: 'Imprimiendo', count: metricasActivas.totalPiezasEnProduccion },
-              { id: 'EN_TALLER', label: 'En taller', count: metricasActivas.totalPiezasEnTaller || 0 },
+              { id: 'EN_TALLER', label: 'Listas en taller', count: metricasActivas.totalPiezasEnTaller || 0 },
               { id: 'EMPAQUETANDO', label: 'Empaquetando', count: (metricasActivas.totalPiezasEmpaquetando || 0) + (metricasActivas.totalPiezasListas || 0) },
               { id: 'TODOS', label: 'Todos', count: metricasActivas.totalPiezasActivas }
             ].map((st) => {
@@ -324,12 +324,12 @@ export function ProductionQueueView({
             onVincularUrl={handleRequestVincular}
           />
 
-          {/* 3. Etapa En Taller (Índigo) */}
+          {/* 3. Etapa En Taller (Terminadas) */}
           <PrintJobsQueueTable
             piezas={piezasEnTaller}
             etapa="EN_TALLER"
-            titulo="Piezas en Taller"
-            subtitulo="Piezas impresas en acabado, limpieza de soportes o ensamble en mesa de trabajo."
+            titulo="Piezas en Taller (Terminadas)"
+            subtitulo="Piezas con fabricación y acabado finalizado en taller, listas para trasladar al área de empaque."
             badgeCount={piezasEnTaller.length}
             loadingPieceId={loadingPieceId}
             onCambiarEstado={onCambiarEstado}
@@ -388,8 +388,8 @@ export function ProductionQueueView({
             <PrintJobsQueueTable
               piezas={piezasEnTaller}
               etapa="EN_TALLER"
-              titulo="Piezas en Taller"
-              subtitulo="Piezas en acabado, limpieza de soportes o ensamble en mesa de trabajo."
+              titulo="Piezas en Taller (Terminadas)"
+              subtitulo="Piezas con fabricación y acabado finalizado en taller, listas para trasladar al área de empaque."
               badgeCount={piezasEnTaller.length}
               loadingPieceId={loadingPieceId}
               onCambiarEstado={onCambiarEstado}

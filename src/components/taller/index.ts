@@ -7,7 +7,8 @@ export { ProductionQueueView } from './ProductionQueueView'
 export {
   PrintJobsQueueTable,
   ProductionQueueTable,
-  PendingPiecesTable
+  PendingPiecesTable,
+  WorkshopPiecesSection
 } from './PrintJobsQueueTable'
 export { ProductionRow } from './ProductionRow'
 export { ProductionCardMobile } from './ProductionCardMobile'
