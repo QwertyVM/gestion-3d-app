@@ -5,6 +5,7 @@ import { Search, Boxes, Sparkles, Filter, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { PiezaTaller } from '@/actions/taller'
+import { comparePiezasTaller } from '@/lib/date-utils'
 import { PrintJobsQueueTable } from './PrintJobsQueueTable'
 import { ConfirmarAccionPiezaModal } from './ConfirmarAccionPiezaModal'
 import { VincularModeloModal } from './VincularModeloModal'
@@ -95,6 +96,9 @@ export function ProductionQueueView({
         result = result.filter((p) => p.estado === filtroEstado)
       }
     }
+
+    // Ordenar por fecha más pronta de entrega y desempate por número de pedido
+    result.sort(comparePiezasTaller)
 
     return result
   }, [piezas, busqueda, filtroMaterial, filtroEstado])

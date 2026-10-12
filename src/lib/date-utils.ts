@@ -278,3 +278,93 @@ export function formatDiaPromesaDisplay(dia: string | null | undefined): string 
   return trimmed
 }
 
+/**
+ * Obtiene el timestamp en milisegundos de la fecha más pronta de entrega de un texto o fecha prometida.
+ * Las fechas no especificadas devuelven Number.MAX_SAFE_INTEGER para posicionarse al final.
+ */
+export function getEntregaTimestamp(diaPromesa?: string | null, fechaSolicitud?: string | Date): number {
+  if (!diaPromesa || !diaPromesa.trim()) return Number.MAX_SAFE_INTEGER
+  const trimmed = diaPromesa.trim()
+
+  const refDate = fechaSolicitud ? new Date(fechaSolicitud) : new Date()
+  const currentYear = isNaN(refDate.getTime()) ? new Date().getFullYear() : refDate.getFullYear()
+  const currentMonth = isNaN(refDate.getTime()) ? new Date().getMonth() : refDate.getMonth()
+
+  const hoy = new Date()
+  const hoyMidnight = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime()
+
+  // 1. Textos relativos ("Hoy", "Mañana", "Pasado mañana")
+  if (/^hoy\b/i.test(trimmed)) return hoyMidnight
+  if (/^mañana\b/i.test(trimmed)) return hoyMidnight + 24 * 60 * 60 * 1000
+  if (/^pasado\s+mañana\b/i.test(trimmed)) return hoyMidnight + 48 * 60 * 60 * 1000
+
+  // 2. Formato ISO (YYYY-MM-DD)
+  const matchIso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (matchIso) {
+    const d = new Date(parseInt(matchIso[1], 10), parseInt(matchIso[2], 10) - 1, parseInt(matchIso[3], 10))
+    if (!isNaN(d.getTime())) return d.getTime()
+  }
+
+  // 3. Formato numérico DD/MM/YYYY o DD/MM o DD-MM
+  const matchDmy = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/)
+  if (matchDmy) {
+    const d = parseInt(matchDmy[1], 10)
+    const m = parseInt(matchDmy[2], 10) - 1
+    let y = matchDmy[3] ? parseInt(matchDmy[3], 10) : currentYear
+    if (y < 100) y += 2000
+    const parsed = new Date(y, m, d)
+    if (!isNaN(parsed.getTime())) return parsed.getTime()
+  }
+
+  // 4. Extraer mes en español si existe en el texto
+  const MESES: Record<string, number> = {
+    septiembre: 8, setiembre: 8, noviembre: 10, diciembre: 11, febrero: 1, octubre: 9,
+    agosto: 7, marzo: 2, enero: 0, julio: 6, junio: 5, abril: 3, mayo: 4,
+    sep: 8, set: 8, nov: 10, dic: 11, feb: 1, oct: 9, ago: 7, mar: 2, ene: 0, jul: 6, jun: 5, abr: 3, may: 4
+  }
+
+  let detectedMonth = currentMonth
+  let detectedYear = currentYear
+
+  const matchMesName = trimmed.match(/\b(septiembre|setiembre|noviembre|diciembre|febrero|octubre|agosto|marzo|enero|julio|junio|abril|mayo|sep|set|nov|dic|feb|oct|ago|mar|ene|jul|jun|abr|may)\b/i)
+  if (matchMesName) {
+    detectedMonth = MESES[matchMesName[1].toLowerCase()]
+  }
+  const matchYear = trimmed.match(/\b(20\d\d)\b/)
+  if (matchYear) {
+    detectedYear = parseInt(matchYear[1], 10)
+  }
+
+  // 5. Extraer el primer día numérico encontrado
+  const matchDay = trimmed.match(/\b(\d{1,2})\b/)
+  if (matchDay) {
+    const day = parseInt(matchDay[1], 10)
+    if (day >= 1 && day <= 31) {
+      const parsed = new Date(detectedYear, detectedMonth, day)
+      if (!isNaN(parsed.getTime())) return parsed.getTime()
+    }
+  }
+
+  return Number.MAX_SAFE_INTEGER
+}
+
+/**
+ * Comparador determinista para la cola de producción en taller:
+ * 1° Criterio: Fecha más pronta de entrega (menor timestamp, urgentes/vencidos primero)
+ * 2° Criterio: Número de pedido (código correlativo numérico)
+ * 3° Criterio: Índice de unidad de la pieza
+ */
+export function comparePiezasTaller(
+  a: { diaEntregaPrometida?: string | null; fechaSolicitud?: string | Date; codigoRef: string; unidadIndice?: number },
+  b: { diaEntregaPrometida?: string | null; fechaSolicitud?: string | Date; codigoRef: string; unidadIndice?: number }
+): number {
+  const tA = getEntregaTimestamp(a.diaEntregaPrometida, a.fechaSolicitud)
+  const tB = getEntregaTimestamp(b.diaEntregaPrometida, b.fechaSolicitud)
+  if (tA !== tB) return tA - tB
+
+  const codeComp = a.codigoRef.localeCompare(b.codigoRef, undefined, { numeric: true })
+  if (codeComp !== 0) return codeComp
+
+  return (a.unidadIndice || 0) - (b.unidadIndice || 0)
+}
+

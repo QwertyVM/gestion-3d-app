@@ -3,7 +3,7 @@
 import prisma from '@/lib/prisma'
 import { EstadoPedido, EstadoVenta } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
-import { parseDiaPromesa } from '@/lib/date-utils'
+import { parseDiaPromesa, comparePiezasTaller } from '@/lib/date-utils'
 
 function safeRevalidate() {
   try {
@@ -597,6 +597,9 @@ export async function getTallerData(): Promise<TallerDataResponse> {
         return false
       }
     }).length
+
+    piezas.sort(comparePiezasTaller)
+    historicoPiezas.sort(comparePiezasTaller)
 
     return {
       piezas,
