@@ -13,7 +13,7 @@ import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, Exte
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 import { formatDate } from '@/lib/utils'
-import { parseDiaPromesa } from '@/lib/date-utils'
+import { parseDiaPromesa, getEntregaInfoStatus } from '@/lib/date-utils'
 
 interface ProductionCardMobileProps {
   pieza: PiezaTaller
@@ -73,110 +73,50 @@ function getTiempoTranscurrido(rawFecha: string) {
 }
 
 function renderEntregaInfo(diaPromesa: string | null) {
+  const info = getEntregaInfoStatus(diaPromesa)
+
+  let iconNode: React.ReactNode = null
+  if (info.iconType === 'flame') {
+    iconNode = <Flame className="w-3.5 h-3.5 shrink-0 inline mr-1 text-red-600 dark:text-red-400" />
+  } else if (info.iconType === 'clock') {
+    iconNode = <Clock className="w-3.5 h-3.5 shrink-0 inline mr-1 text-red-600 dark:text-red-400" />
+  } else if (info.iconType === 'none') {
+    iconNode = <Calendar className="w-3.5 h-3.5 shrink-0 inline mr-1 opacity-50 text-muted-foreground" />
+  } else {
+    iconNode = <Calendar className="w-3.5 h-3.5 shrink-0 inline mr-1" />
+  }
+
+  const content = (
+    <span className={`inline-flex items-center text-xs ${info.colorClass}`}>
+      {iconNode}
+      <span className="truncate">{info.texto}</span>
+    </span>
+  )
+
   if (!diaPromesa) {
     return (
       <div className="flex items-center min-w-0">
-        <Calendar className="w-3.5 h-3.5 text-muted-foreground inline mr-1.5 shrink-0 opacity-50" />
-        <span className="text-xs text-muted-foreground/60 font-medium">Sin fecha</span>
+        {content}
       </div>
     )
   }
 
-  try {
-    const d = parseDiaPromesa(diaPromesa)
-
-    if (!d || isNaN(d.getTime())) {
-      return (
-        <TooltipProvider delay={100}>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <div className="flex items-center min-w-0 max-w-full truncate cursor-default">
-                  <Calendar className="w-3.5 h-3.5 text-muted-foreground inline mr-1.5 shrink-0" />
-                  <span className="text-xs font-medium text-foreground truncate">{diaPromesa}</span>
-                </div>
-              }
-            />
-            <TooltipContent sideOffset={4} className="text-xs max-w-xs font-medium">
-              <span>Fecha prometida: {diaPromesa}</span>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )
-    }
-
-    const hoy = new Date()
-    const hoyMidnight = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime()
-    const promesaMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-    const diffDias = Math.round((promesaMidnight - hoyMidnight) / (1000 * 60 * 60 * 24))
-
-    let textoRender: React.ReactNode
-    const day = String(d.getDate()).padStart(2, '0')
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const year = d.getFullYear()
-    const textoCompleto = `${day}/${month}/${year}`
-
-    if (diffDias < 0) {
-      textoRender = (
-        <span className="inline-flex items-center gap-1 text-xs font-bold text-destructive">
-          <Flame className="w-3.5 h-3.5 text-destructive shrink-0 inline mr-1" />
-          <span>Vencido ({Math.abs(diffDias)}d)</span>
-        </span>
-      )
-    } else if (diffDias === 0) {
-      textoRender = (
-        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-500">
-          <Clock className="w-3.5 h-3.5 shrink-0 inline mr-1" />
-          <span>Entrega Hoy</span>
-        </span>
-      )
-    } else if (diffDias === 1) {
-      textoRender = (
-        <span className="inline-flex items-center text-xs font-semibold text-amber-600 dark:text-amber-500">
-          <Calendar className="w-3.5 h-3.5 text-amber-600 inline mr-1.5 shrink-0" />
-          <span>Mañana</span>
-        </span>
-      )
-    } else if (diffDias <= 3) {
-      textoRender = (
-        <span className="inline-flex items-center text-xs font-medium text-foreground">
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground inline mr-1.5 shrink-0" />
-          <span>En {diffDias} días</span>
-        </span>
-      )
-    } else {
-      textoRender = (
-        <span className="inline-flex items-center text-xs font-medium text-foreground">
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground inline mr-1.5 shrink-0" />
-          <span className="truncate">{textoCompleto}</span>
-        </span>
-      )
-    }
-
-    return (
-      <TooltipProvider delay={100}>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <div className="flex items-center min-w-0 max-w-full truncate cursor-default">
-                {textoRender}
-              </div>
-            }
-          />
-          <TooltipContent sideOffset={4} className="text-xs max-w-xs font-medium">
-            <span>Fecha prometida: {diaPromesa}</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    )
-  } catch {
-    return (
-      <div className="flex items-center min-w-0 truncate">
-        <Calendar className="w-3.5 h-3.5 text-muted-foreground inline mr-1.5 shrink-0" />
-        <span className="text-xs text-foreground font-medium truncate">{diaPromesa}</span>
-      </div>
-    )
-  }
+  return (
+    <TooltipProvider delay={100}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <div className="flex items-center min-w-0 max-w-full truncate cursor-default">
+              {content}
+            </div>
+          }
+        />
+        <TooltipContent sideOffset={4} className="text-xs max-w-xs font-medium">
+          <span>Fecha prometida: {diaPromesa}</span>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
 }
 
 export function ProductionCardMobile({

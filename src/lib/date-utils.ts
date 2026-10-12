@@ -293,10 +293,15 @@ export function getEntregaTimestamp(diaPromesa?: string | null, fechaSolicitud?:
   const hoy = new Date()
   const hoyMidnight = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime()
 
-  // 1. Textos relativos ("Hoy", "Mañana", "Pasado mañana")
+  // 1. Textos relativos ("Hoy", "Mañana", "Pasado mañana", "En X días")
   if (/^hoy\b/i.test(trimmed)) return hoyMidnight
   if (/^mañana\b/i.test(trimmed)) return hoyMidnight + 24 * 60 * 60 * 1000
   if (/^pasado\s+mañana\b/i.test(trimmed)) return hoyMidnight + 48 * 60 * 60 * 1000
+  const matchEnDias = trimmed.match(/^en\s+(\d+)\s+d[íi]as?\b/i)
+  if (matchEnDias) {
+    const d = parseInt(matchEnDias[1], 10)
+    return hoyMidnight + d * 24 * 60 * 60 * 1000
+  }
 
   // 2. Formato ISO (YYYY-MM-DD)
   const matchIso = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/)
@@ -366,5 +371,160 @@ export function comparePiezasTaller(
   if (codeComp !== 0) return codeComp
 
   return (a.unidadIndice || 0) - (b.unidadIndice || 0)
+}
+
+/**
+ * Helper para abreviar textos descriptivos de fechas (ej: "Entre el domingo 11 y lunes 12" -> "Dom 11 - Lun 12")
+ */
+export function formatEntregaCompacta(diaPromesa: string): string {
+  return diaPromesa
+    .replace(/^Entre el\s+/i, '')
+    .replace(/^Entre\s+/i, '')
+    .replace(/\s+y\s+/gi, ' - ')
+    .replace(/domingo/gi, 'Dom')
+    .replace(/lunes/gi, 'Lun')
+    .replace(/martes/gi, 'Mar')
+    .replace(/mi[ée]rcoles/gi, 'Mié')
+    .replace(/jueves/gi, 'Jue')
+    .replace(/viernes/gi, 'Vie')
+    .replace(/s[áa]bado/gi, 'Sáb')
+    .replace(/enero/gi, 'Ene')
+    .replace(/febrero/gi, 'Feb')
+    .replace(/marzo/gi, 'Mar')
+    .replace(/abril/gi, 'Abr')
+    .replace(/mayo/gi, 'May')
+    .replace(/junio/gi, 'Jun')
+    .replace(/julio/gi, 'Jul')
+    .replace(/agosto/gi, 'Ago')
+    .replace(/se[pt]iembre/gi, 'Sep')
+    .replace(/octubre/gi, 'Oct')
+    .replace(/noviembre/gi, 'Nov')
+    .replace(/diciembre/gi, 'Dic')
+    .replace(/\s+de\s+/gi, ' ')
+}
+
+export interface EntregaInfoStatus {
+  texto: string
+  diffDias: number | null
+  colorClass: string
+  iconType: 'flame' | 'clock' | 'calendar' | 'none'
+  esVencido: boolean
+  esHoy: boolean
+}
+
+/**
+ * Calcula el formato enriquecido de fecha de entrega para el taller y su nivel de alerta cromática:
+ * Formato: "Jueves 15 (3 días)", "Martes 13 (1 día)", etc.
+ * Escala de alerta:
+ * - 1 día (o <= 0 / vencido): ROJO
+ * - 2 días: AMARILLO
+ * - 3 días: NARANJA
+ * - + de 3 días: VERDE
+ */
+export function getEntregaInfoStatus(diaPromesa?: string | null): EntregaInfoStatus {
+  if (!diaPromesa || !diaPromesa.trim()) {
+    return {
+      texto: 'Sin fecha',
+      diffDias: null,
+      colorClass: 'text-muted-foreground/60 font-medium',
+      iconType: 'none',
+      esVencido: false,
+      esHoy: false
+    }
+  }
+
+  const trimmed = diaPromesa.trim()
+  const timestamp = getEntregaTimestamp(trimmed)
+
+  if (timestamp === Number.MAX_SAFE_INTEGER) {
+    return {
+      texto: formatEntregaCompacta(trimmed),
+      diffDias: null,
+      colorClass: 'text-foreground font-medium',
+      iconType: 'calendar',
+      esVencido: false,
+      esHoy: false
+    }
+  }
+
+  const targetDate = new Date(timestamp)
+  const hoy = new Date()
+  const hoyMidnight = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime()
+  const targetMidnight = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime()
+  const diffDias = Math.round((targetMidnight - hoyMidnight) / (1000 * 60 * 60 * 24))
+
+  // Escala de alertas por días:
+  // 1 día, hoy o vencido: ROJO
+  // 2 días: AMARILLO
+  // 3 días: NARANJA
+  // + de 3 días: VERDE
+  let colorClass = ''
+  let iconType: 'flame' | 'clock' | 'calendar' = 'calendar'
+  let esVencido = false
+  let esHoy = false
+
+  if (diffDias < 0) {
+    colorClass = 'text-red-600 dark:text-red-400 font-semibold'
+    iconType = 'flame'
+    esVencido = true
+  } else if (diffDias === 0) {
+    colorClass = 'text-red-600 dark:text-red-400 font-semibold'
+    iconType = 'clock'
+    esHoy = true
+  } else if (diffDias === 1) {
+    colorClass = 'text-red-600 dark:text-red-400 font-semibold'
+    iconType = 'calendar'
+  } else if (diffDias === 2) {
+    colorClass = 'text-yellow-600 dark:text-yellow-400 font-semibold'
+    iconType = 'calendar'
+  } else if (diffDias === 3) {
+    colorClass = 'text-orange-600 dark:text-orange-400 font-semibold'
+    iconType = 'calendar'
+  } else {
+    colorClass = 'text-emerald-600 dark:text-emerald-400 font-semibold'
+    iconType = 'calendar'
+  }
+
+  // Base: "Jueves 15" o compacto para rangos ("Mié 14 - Jue 15")
+  const isRange = /^entre\s+/i.test(trimmed) || /\s+y\s+/i.test(trimmed) || /\s+-\s+/.test(trimmed) || /\s+o\s+/i.test(trimmed)
+  let baseLabel = ''
+
+  if (isRange) {
+    baseLabel = formatEntregaCompacta(trimmed)
+  } else {
+    const weekday = targetDate.toLocaleDateString('es-PE', { weekday: 'long' })
+    const capWeekday = weekday.charAt(0).toUpperCase() + weekday.slice(1)
+    const day = targetDate.getDate()
+    const isDifferentMonth = targetDate.getMonth() !== hoy.getMonth()
+
+    if (isDifferentMonth) {
+      const monthShort = targetDate.toLocaleDateString('es-PE', { month: 'short' }).replace('.', '')
+      const capMonth = monthShort.charAt(0).toUpperCase() + monthShort.slice(1)
+      baseLabel = `${capWeekday} ${day} ${capMonth}`
+    } else {
+      baseLabel = `${capWeekday} ${day}`
+    }
+  }
+
+  // Sufijo: "(Hoy)", "(1 día)", "(2 días)", "(3 días)", "(Vencido 1d)"
+  let diasSuffix = ''
+  if (diffDias < 0) {
+    diasSuffix = `(Vencido ${Math.abs(diffDias)}d)`
+  } else if (diffDias === 0) {
+    diasSuffix = '(Hoy)'
+  } else if (diffDias === 1) {
+    diasSuffix = '(1 día)'
+  } else {
+    diasSuffix = `(${diffDias} días)`
+  }
+
+  return {
+    texto: `${baseLabel} ${diasSuffix}`,
+    diffDias,
+    colorClass,
+    iconType,
+    esVencido,
+    esHoy
+  }
 }
 
