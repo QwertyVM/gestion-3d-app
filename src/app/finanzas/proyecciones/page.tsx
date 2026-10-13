@@ -1,9 +1,8 @@
-import { getDatosPresupuestoTranquilidad } from '@/actions/presupuesto'
-import { ProyeccionesClient } from '@/components/finanzas/ProyeccionesClient'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ProyeccionesPage() {
-  const datos = await getDatosPresupuestoTranquilidad()
-  return <ProyeccionesClient datos={datos} />
+export default function ProyeccionesPage() {
+  redirect('/finanzas/flujo-caja?vista=blindaje')
 }
+
