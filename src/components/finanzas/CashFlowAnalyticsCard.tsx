@@ -305,10 +305,10 @@ export function CashFlowAnalyticsCard({
         {/* Columna A: Estructura de Ingresos / Entradas */}
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               INGRESOS & ENTRADAS
             </span>
-            <span className="text-[11px] font-mono font-bold text-muted-foreground">
+            <span className="text-xs font-mono font-bold text-foreground">
               Total: {formatCurrency(activeIngresos)}
             </span>
           </div>
@@ -361,10 +361,10 @@ export function CashFlowAnalyticsCard({
         {/* Columna B: Estructura de Egresos / Salidas */}
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
               EGRESOS & SALIDAS
             </span>
-            <span className="text-[11px] font-mono font-bold text-muted-foreground">
+            <span className="text-xs font-mono font-bold text-foreground">
               Total: {formatCurrency(activeEgresos)}
             </span>
           </div>
