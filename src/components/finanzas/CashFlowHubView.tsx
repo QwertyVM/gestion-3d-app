@@ -640,7 +640,7 @@ export function CashFlowHubView({
                 notaExtra = ` • ${cleanNota}`
               }
             }
-            const resto = v.saldoPendiente > 0 ? ` (Resta: ${formatCurrency(v.saldoPendiente)})` : ''
+            const resto = v.saldoPendiente > 0 ? ` • Resta: ${formatCurrency(v.saldoPendiente)}` : ''
             const detalle = `${modelDesc} • ${metodo}${notaExtra}${resto}`
 
             movements.push({
@@ -657,7 +657,7 @@ export function CashFlowHubView({
         })
       } else if (v.montoPagado > 0) {
         const titulo = `Abono #1 • Pedido ${pedidoTag}`
-        const resto = v.saldoPendiente > 0 ? ` (Resta: ${formatCurrency(v.saldoPendiente)})` : ''
+        const resto = v.saldoPendiente > 0 ? ` • Resta: ${formatCurrency(v.saldoPendiente)}` : ''
         const detalle = `${modelDesc} • Yape${resto}`
 
         movements.push({
@@ -1229,8 +1229,8 @@ export function CashFlowHubView({
           {showChart && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
               {/* Gráfico de Evolución de Caja & Movimientos */}
-              <Card className="lg:col-span-7 bg-card border-border rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-                <div>
+              <Card className="lg:col-span-7 bg-card border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between h-full min-h-[480px]">
+                <div className="flex flex-col h-full justify-between">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/70">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1245,7 +1245,7 @@ export function CashFlowHubView({
                     </div>
                   </div>
 
-                  <div className="h-[220px] sm:h-[260px] w-full pt-3">
+                  <div className="flex-1 w-full min-h-[350px] pt-3">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={chartTimelineData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.5} />
@@ -1292,12 +1292,12 @@ export function CashFlowHubView({
               </Card>
 
               {/* Módulo de Análisis Gastos vs Ingresos (Relación de Flujo & Balance) */}
-              <div className="lg:col-span-5 flex flex-col">
+              <div className="lg:col-span-5 flex flex-col h-full min-h-[480px]">
                 <CashFlowAnalyticsCard
                   ventas={ventasEnRango}
                   egresos={egresosEnRango}
                   ingresosDirectos={ingresosDirectosEnRango}
-                  className="h-full flex flex-col justify-between"
+                  className="h-full min-h-[480px]"
                 />
               </div>
             </div>
@@ -1393,7 +1393,7 @@ export function CashFlowHubView({
                       <div className="min-w-0 flex-1">
                         <span className="font-bold text-xs text-foreground block truncate">{mov.concepto}</span>
                         {mov.detalle && (
-                          <span className="text-[11px] text-muted-foreground block truncate mt-0.5">
+                          <span className="text-[11px] text-muted-foreground block truncate mt-0.5 leading-normal">
                             {mov.detalle}
                           </span>
                         )}
@@ -1506,17 +1506,17 @@ export function CashFlowHubView({
                         </TableCell>
 
                         <TableCell className="px-3 py-2.5 min-w-0">
-                          <span className="font-bold text-xs text-foreground block truncate" title={mov.concepto}>
+                          <span className="font-bold text-xs text-foreground block truncate">
                             {mov.concepto}
                           </span>
                           {mov.detalle && (
-                            <span className="text-[11px] text-muted-foreground block truncate mt-0.5" title={mov.detalle}>
+                            <span className="text-[11px] text-muted-foreground block truncate mt-0.5 leading-normal">
                               {mov.detalle}
                             </span>
                           )}
                         </TableCell>
 
-                        <TableCell className="px-3 py-2.5 text-xs font-medium text-foreground whitespace-nowrap truncate" title={mov.entidad}>
+                        <TableCell className="px-3 py-2.5 text-xs font-medium text-foreground whitespace-nowrap truncate">
                           {mov.entidad}
                         </TableCell>
 
