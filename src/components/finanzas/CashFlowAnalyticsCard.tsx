@@ -131,9 +131,9 @@ export function CashFlowAnalyticsCard({
     if (isOperativo) {
       return [
         {
-          name: 'Ventas Reales del Taller',
+          name: 'Ventas de Catálogo',
           value: ventasOperativas,
-          color: '#047857', // emerald-700
+          color: '#059669', // emerald-600
           porcentaje: ventasOperativas + costosOperativos > 0
             ? Math.round((ventasOperativas / (ventasOperativas + costosOperativos)) * 100)
             : 0,
@@ -151,15 +151,15 @@ export function CashFlowAnalyticsCard({
 
     return [
       {
-        name: 'Ventas Reales del Taller',
+        name: 'Ventas de Catálogo',
         value: ventasOperativas,
-        color: '#047857', // emerald-700
+        color: '#059669', // emerald-600
         porcentaje: pctVentas,
       },
       {
-        name: 'Financiamiento BCP',
+        name: 'Préstamo BCP',
         value: financiamiento,
-        color: '#0284c7', // sky-600/80
+        color: '#0284c7', // sky-600
         porcentaje: pctFinanciamiento,
       },
       {
@@ -169,7 +169,7 @@ export function CashFlowAnalyticsCard({
         porcentaje: pctCostosOperativos,
       },
       {
-        name: 'Inversión en Maquinaria',
+        name: 'Inversión en Máquinas',
         value: activosFijos,
         color: '#A36F4C', // primary oficial NOVA
         porcentaje: pctActivosFijos,
@@ -197,22 +197,20 @@ export function CashFlowAnalyticsCard({
   return (
     <div className={`bg-card border border-border rounded-2xl p-6 shadow-xs space-y-5 ${className}`}>
       {/* 1. Cabecera con Switch de Perspectiva Financiera */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-lg font-bold text-foreground">
-            Relación de Flujo & Balance
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Estructura entre ventas operativas, financiamiento bancario e inversiones
-          </p>
-        </div>
+      <div>
+        <h2 className="text-base font-bold text-foreground">
+          Estructura de Flujo & Balance
+        </h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Compara ventas reales vs. financiamiento y gastos operativos vs. inversión
+        </p>
 
-        {/* Segmented Control */}
-        <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl flex items-center gap-1 shrink-0 self-start sm:self-auto">
+        {/* Fila 3: Selector de Modo (Segmented control a ancho completo) */}
+        <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl flex items-center gap-1 w-full mt-3">
           <button
             type="button"
             onClick={() => setPerspective('TOTAL')}
-            className={`px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs transition-all cursor-pointer text-center ${
               perspective === 'TOTAL'
                 ? 'bg-card text-foreground font-bold shadow-2xs'
                 : 'text-muted-foreground hover:text-foreground font-medium'
@@ -223,7 +221,7 @@ export function CashFlowAnalyticsCard({
           <button
             type="button"
             onClick={() => setPerspective('OPERATIVO')}
-            className={`px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs transition-all cursor-pointer text-center ${
               perspective === 'OPERATIVO'
                 ? 'bg-card text-foreground font-bold shadow-2xs'
                 : 'text-muted-foreground hover:text-foreground font-medium'
@@ -300,117 +298,67 @@ export function CashFlowAnalyticsCard({
         )}
       </div>
 
-      {/* 3. Panel Inferior de Desglose Contable (2 Columnas Estructuradas) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border/70">
-        {/* Columna A: Estructura de Ingresos / Entradas */}
+      {/* 3. Panel Inferior de Desglose Contable (2 Bloques Verticales Estructurados) */}
+      <div className="space-y-4 pt-4 border-t border-border/70 w-full">
+        {/* Bloque Ingresos */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-              INGRESOS & ENTRADAS
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+            Ingresos & Entradas ({formatCurrency(activeIngresos)})
+          </span>
+          <div className="flex items-center justify-between text-xs py-1">
+            <span className="flex items-center gap-2 font-medium text-foreground">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+              Ventas de Catálogo
             </span>
-            <span className="text-xs font-mono font-bold text-foreground">
-              Total: {formatCurrency(activeIngresos)}
+            <span className="font-bold text-foreground">
+              {formatCurrency(ventasOperativas)}{' '}
+              <span className="text-muted-foreground font-normal text-[11px]">
+                ({isOperativo ? '100%' : `${pctVentas}%`})
+              </span>
             </span>
           </div>
-
-          <div className="space-y-1.5">
-            {/* Fila 1: Ventas Taller */}
-            <div className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-secondary/35 hover:bg-secondary/60 transition-colors">
-              <div className="flex items-center min-w-0 pr-2">
-                <span className="w-2 h-2 rounded-full inline-block mr-2 bg-emerald-700 dark:bg-emerald-600 shrink-0" />
-                <span className="text-xs font-semibold text-foreground truncate">
-                  Ventas de Catálogo & Clientes
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0 font-mono">
-                <span className="font-bold text-foreground">
-                  {formatCurrency(ventasOperativas)}
-                </span>
-                <span className="text-[10px] text-muted-foreground w-9 text-right font-medium">
-                  {isOperativo ? '100%' : `${pctVentas}%`}
-                </span>
-              </div>
-            </div>
-
-            {/* Fila 2: Financiamiento */}
-            <div
-              className={`flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl transition-colors ${
-                isOperativo
-                  ? 'opacity-40 bg-secondary/15'
-                  : 'bg-secondary/35 hover:bg-secondary/60'
-              }`}
-            >
-              <div className="flex items-center min-w-0 pr-2">
-                <span className="w-2 h-2 rounded-full inline-block mr-2 bg-sky-700 dark:bg-sky-600 shrink-0" />
-                <span className="text-xs font-semibold text-foreground truncate">
-                  Financiamiento (Préstamo BCP)
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0 font-mono">
-                <span className="font-bold text-foreground">
-                  {formatCurrency(financiamiento)}
-                </span>
-                <span className="text-[10px] text-muted-foreground w-9 text-right font-medium">
-                  {isOperativo ? '—' : `${pctFinanciamiento}%`}
-                </span>
-              </div>
-            </div>
+          <div className={`flex items-center justify-between text-xs py-1 ${isOperativo ? 'opacity-40' : ''}`}>
+            <span className="flex items-center gap-2 font-medium text-foreground">
+              <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
+              Préstamo BCP
+            </span>
+            <span className="font-bold text-foreground">
+              {formatCurrency(financiamiento)}{' '}
+              <span className="text-muted-foreground font-normal text-[11px]">
+                ({isOperativo ? '—' : `${pctFinanciamiento}%`})
+              </span>
+            </span>
           </div>
         </div>
 
-        {/* Columna B: Estructura de Egresos / Salidas */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-              EGRESOS & SALIDAS
+        {/* Bloque Egresos */}
+        <div className="space-y-2 pt-2 border-t border-border/50">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+            Egresos & Salidas ({formatCurrency(activeEgresos)})
+          </span>
+          <div className="flex items-center justify-between text-xs py-1">
+            <span className="flex items-center gap-2 font-medium text-foreground">
+              <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />
+              Costos Operativos
             </span>
-            <span className="text-xs font-mono font-bold text-foreground">
-              Total: {formatCurrency(activeEgresos)}
+            <span className="font-bold text-foreground">
+              {formatCurrency(costosOperativos)}{' '}
+              <span className="text-muted-foreground font-normal text-[11px]">
+                ({isOperativo ? '100%' : `${pctCostosOperativos}%`})
+              </span>
             </span>
           </div>
-
-          <div className="space-y-1.5">
-            {/* Fila 1: Operación & Insumos */}
-            <div className="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl bg-secondary/35 hover:bg-secondary/60 transition-colors">
-              <div className="flex items-center min-w-0 pr-2">
-                <span className="w-2 h-2 rounded-full inline-block mr-2 bg-destructive shrink-0" />
-                <span className="text-xs font-semibold text-foreground truncate">
-                  Costos Operativos (Insumos, Luz, Fletes)
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0 font-mono">
-                <span className="font-bold text-foreground">
-                  {formatCurrency(costosOperativos)}
-                </span>
-                <span className="text-[10px] text-muted-foreground w-9 text-right font-medium">
-                  {isOperativo ? '100%' : `${pctCostosOperativos}%`}
-                </span>
-              </div>
-            </div>
-
-            {/* Fila 2: Activos Fijos */}
-            <div
-              className={`flex items-center justify-between text-xs py-1.5 px-2.5 rounded-xl transition-colors ${
-                isOperativo
-                  ? 'opacity-40 bg-secondary/15'
-                  : 'bg-secondary/35 hover:bg-secondary/60'
-              }`}
-            >
-              <div className="flex items-center min-w-0 pr-2">
-                <span className="w-2 h-2 rounded-full inline-block mr-2 bg-primary shrink-0" />
-                <span className="text-xs font-semibold text-foreground truncate">
-                  Inversión en Máquinas (Activos Fijos)
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0 font-mono">
-                <span className="font-bold text-foreground">
-                  {formatCurrency(activosFijos)}
-                </span>
-                <span className="text-[10px] text-muted-foreground w-9 text-right font-medium">
-                  {isOperativo ? '—' : `${pctActivosFijos}%`}
-                </span>
-              </div>
-            </div>
+          <div className={`flex items-center justify-between text-xs py-1 ${isOperativo ? 'opacity-40' : ''}`}>
+            <span className="flex items-center gap-2 font-medium text-foreground">
+              <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+              Inversión en Máquinas
+            </span>
+            <span className="font-bold text-foreground">
+              {formatCurrency(activosFijos)}{' '}
+              <span className="text-muted-foreground font-normal text-[11px]">
+                ({isOperativo ? '—' : `${pctActivosFijos}%`})
+              </span>
+            </span>
           </div>
         </div>
       </div>

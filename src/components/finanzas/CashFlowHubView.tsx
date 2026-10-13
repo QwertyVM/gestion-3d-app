@@ -101,6 +101,7 @@ export interface PagoVentaItem {
 
 export interface VentaItem {
   id: string
+  codigo?: string
   fecha: string
   cliente: string
   cantidad: number
@@ -598,37 +599,75 @@ export function CashFlowHubView({
     }> = []
 
     ventas.forEach((v, vIdx) => {
-      const codigo = (v as any).codigo || `PED-${String(ventas.length - vIdx).padStart(3, '0')}`
+      const rawCodigo = v.codigo || (v as any).codigo || `PED-${String(ventas.length - vIdx).padStart(3, '0')}`
+      const codigoClean = rawCodigo.replace(/^#/, '').trim()
+      const pedidoTag = `#${codigoClean}`
+
+      // Sanitizar el nombre del modelo o descripción evitando redundancias como "PED-033: PED-033:" o "PED-033: "
+      const rawNombre = (v.producto?.nombreModelo || (v as any).nombreProductoSnapshot || '').trim()
+      let cleanNombre = rawNombre
+      let prevNombre = ''
+      while (cleanNombre !== prevNombre) {
+        prevNombre = cleanNombre
+        cleanNombre = cleanNombre
+          .replace(new RegExp(`^#?${codigoClean}:?\\s*`, 'i'), '')
+          .replace(/^#?PED-\d+:?\\s*/i, '')
+          .trim()
+      }
+
+      const baseDesc = cleanNombre || 'Modelo 3D'
+      const modelDesc = (baseDesc.includes('(') || baseDesc.includes('modelos') || baseDesc.includes('pzs'))
+        ? baseDesc
+        : (v.cantidad > 1 ? `${baseDesc} (x${v.cantidad})` : baseDesc)
+
       if (Array.isArray(v.pagos) && v.pagos.length > 0) {
         v.pagos.forEach((p, idx) => {
           if (p.monto > 0) {
             const isSingleFull = ((v.pagos?.length || 0) === 1 && v.saldoPendiente <= 0) || p.tipo === 'PAGO_TOTAL'
             const numAbono = idx + 1
-            const concepto = isSingleFull
-              ? `Pago Total del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
-              : `Abono #${numAbono} del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`
+            const titulo = isSingleFull
+              ? `Pago Total • Pedido ${pedidoTag}`
+              : `Abono #${numAbono} • Pedido ${pedidoTag}`
+
+            const metodo = p.metodoPago || 'Yape'
+            let notaExtra = ''
+            if (p.notas) {
+              const cleanNota = p.notas
+                .replace(new RegExp(`^Abono inicial #?${codigoClean}`, 'i'), '')
+                .replace(new RegExp(`^Pago inicial #?${codigoClean}`, 'i'), '')
+                .trim()
+              if (cleanNota && !cleanNota.toLowerCase().includes(codigoClean.toLowerCase())) {
+                notaExtra = ` • ${cleanNota}`
+              }
+            }
+            const resto = v.saldoPendiente > 0 ? ` (Resta: ${formatCurrency(v.saldoPendiente)})` : ''
+            const detalle = `${modelDesc} • ${metodo}${notaExtra}${resto}`
 
             movements.push({
               id: `pago-${p.id || `${v.id}-${idx}`}`,
               fecha: p.fecha,
               tipo: 'INGRESO_VENTA',
-              concepto,
+              concepto: titulo,
               entidad: v.cliente,
               monto: p.monto,
-              detalle: `${p.metodoPago || 'Yape'}${p.notas ? ` • ${p.notas}` : ''}${v.saldoPendiente > 0 ? ` (Resta: ${formatCurrency(v.saldoPendiente)})` : ''}`,
+              detalle,
               isPositive: true,
             })
           }
         })
       } else if (v.montoPagado > 0) {
+        const titulo = `Abono #1 • Pedido ${pedidoTag}`
+        const resto = v.saldoPendiente > 0 ? ` (Resta: ${formatCurrency(v.saldoPendiente)})` : ''
+        const detalle = `${modelDesc} • Yape${resto}`
+
         movements.push({
           id: `v-${v.id}`,
           fecha: v.fecha,
           tipo: 'INGRESO_VENTA',
-          concepto: `Abono #1 del pedido ${codigo}: ${v.producto.nombreModelo} (x${v.cantidad})`,
+          concepto: titulo,
           entidad: v.cliente,
           monto: v.montoPagado,
-          detalle: v.saldoPendiente > 0 ? `Saldo pend: ${formatCurrency(v.saldoPendiente)}` : 'Cobrado total',
+          detalle,
           isPositive: true,
         })
       }
@@ -1084,7 +1123,7 @@ export function CashFlowHubView({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         
         {/* Tarjeta 1 - Saldo Real en Caja */}
-        <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               SALDO NETO EN CAJA
@@ -1098,13 +1137,13 @@ export function CashFlowHubView({
               {formatCurrency(saldoNetoCaja)}
             </div>
           </div>
-          <div className="text-xs text-muted-foreground truncate" title={`Ingresos (${formatCurrency(totalIngresosCobrados)}) - Egresos (${formatCurrency(totalEgresos)}) • +${formatCurrency(cuentasPorCobrar)} por cobrar`}>
-            Ingresos ({formatCurrency(totalIngresosCobrados)}) - Egresos ({formatCurrency(totalEgresos)}) • +{formatCurrency(cuentasPorCobrar)} por cobrar
+          <div className="text-xs text-muted-foreground leading-normal">
+            Ingresos {formatCurrency(totalIngresosCobrados)} - Egresos {formatCurrency(totalEgresos)} • +{formatCurrency(cuentasPorCobrar)} por cobrar
           </div>
         </div>
 
         {/* Tarjeta 2 - Fondos Blindados del Mes */}
-        <div className="bg-card border border-amber-500/30 rounded-xl p-5 shadow-xs flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-card border border-amber-500/30 rounded-2xl p-5 shadow-xs flex flex-col justify-between relative">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
               FONDOS BLINDADOS
@@ -1118,13 +1157,13 @@ export function CashFlowHubView({
               {formatCurrency(totalBlindadoPendiente)}
             </div>
           </div>
-          <div className="text-xs text-muted-foreground truncate" title={desgloseBlindados}>
+          <div className="text-xs text-muted-foreground leading-normal">
             {desgloseBlindados}
           </div>
         </div>
 
         {/* Tarjeta 3 - Gasto Libre Hoy (Capacidad Real) */}
-        <div className="bg-card border-2 border-emerald-500/30 rounded-xl p-5 shadow-sm flex flex-col justify-between bg-gradient-to-br from-card to-emerald-500/5">
+        <div className="bg-card border-2 border-emerald-500/30 rounded-2xl p-5 shadow-sm flex flex-col justify-between bg-gradient-to-br from-card to-emerald-500/5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
               GASTO LIBRE HOY
@@ -1138,8 +1177,8 @@ export function CashFlowHubView({
               {formatCurrency(gastoLibreHoy)}
             </div>
           </div>
-          <div className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 truncate">
-            ✓ Saldo disponible para compras sin tocar cuotas ni servicios
+          <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 leading-normal">
+            ✓ Saldo disponible para compras sin tocar cuotas fijas
           </div>
         </div>
 
@@ -1188,9 +1227,9 @@ export function CashFlowHubView({
           
           {/* Gráficos de Análisis Financiero: Evolución Temporal & Relación de Flujo/Balance */}
           {showChart && (
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
               {/* Gráfico de Evolución de Caja & Movimientos */}
-              <Card className="xl:col-span-7 bg-card border-border rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+              <Card className="lg:col-span-7 bg-card border-border rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col justify-between">
                 <div>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/70">
                     <div>
@@ -1253,7 +1292,7 @@ export function CashFlowHubView({
               </Card>
 
               {/* Módulo de Análisis Gastos vs Ingresos (Relación de Flujo & Balance) */}
-              <div className="xl:col-span-5 flex flex-col">
+              <div className="lg:col-span-5 flex flex-col">
                 <CashFlowAnalyticsCard
                   ventas={ventasEnRango}
                   egresos={egresosEnRango}
@@ -1340,7 +1379,7 @@ export function CashFlowHubView({
           </div>
 
           {/* Tabla de Transacciones (Zero Scroll) */}
-          <Card className="bg-card border-border overflow-hidden shadow-xs rounded-xl">
+          <Card className="bg-card border-border overflow-hidden shadow-xs rounded-2xl">
             {/* Vista Móvil: Tarjetas */}
             <div className="block md:hidden divide-y divide-border/70">
               {paginatedMovements.length === 0 ? (
@@ -1353,6 +1392,11 @@ export function CashFlowHubView({
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <span className="font-bold text-xs text-foreground block truncate">{mov.concepto}</span>
+                        {mov.detalle && (
+                          <span className="text-[11px] text-muted-foreground block truncate mt-0.5">
+                            {mov.detalle}
+                          </span>
+                        )}
                         <span className="text-[11px] text-muted-foreground font-mono block mt-0.5">
                           {formatDate(mov.fecha)} • {mov.entidad}
                         </span>
@@ -1462,7 +1506,7 @@ export function CashFlowHubView({
                         </TableCell>
 
                         <TableCell className="px-3 py-2.5 min-w-0">
-                          <span className="font-semibold text-xs text-foreground block truncate" title={mov.concepto}>
+                          <span className="font-bold text-xs text-foreground block truncate" title={mov.concepto}>
                             {mov.concepto}
                           </span>
                           {mov.detalle && (
@@ -1490,10 +1534,10 @@ export function CashFlowHubView({
 
             {/* Paginación */}
             {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-border bg-secondary/40 text-xs text-muted-foreground">
-                <div>
-                  Mostrando <span className="text-foreground font-bold">{paginatedMovements.length}</span> de <span className="text-foreground font-bold">{filteredMovements.length}</span> movimientos (Página {currentPage} de {totalPages})
-                </div>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-border bg-secondary/40">
+                <span className="text-xs text-muted-foreground">
+                  Mostrando {paginatedMovements.length} de {filteredMovements.length} movimientos
+                </span>
 
                 <div className="flex items-center gap-1.5">
                   <Button
@@ -1501,36 +1545,22 @@ export function CashFlowHubView({
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="h-8 px-2.5 border-border bg-card text-foreground hover:bg-secondary disabled:opacity-40 cursor-pointer shadow-2xs"
+                    className="rounded-xl text-xs h-8 px-3 border-border bg-card text-foreground hover:bg-secondary disabled:opacity-40 cursor-pointer shadow-2xs"
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
                     Anterior
                   </Button>
 
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className={`h-8 w-8 p-0 cursor-pointer shadow-2xs ${
-                          currentPage === page
-                            ? "bg-foreground text-background font-bold"
-                            : "border-border bg-card text-muted-foreground hover:bg-secondary hover:text-foreground"
-                        }`}
-                      >
-                        {page}
-                      </Button>
-                    ))}
-                  </div>
+                  <span className="text-xs font-semibold text-foreground px-3 py-1 bg-secondary rounded-lg border border-border/60">
+                    Página {currentPage} de {totalPages}
+                  </span>
 
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="h-8 px-2.5 border-border bg-card text-foreground hover:bg-secondary disabled:opacity-40 cursor-pointer shadow-2xs"
+                    className="rounded-xl text-xs h-8 px-3 border-border bg-card text-foreground hover:bg-secondary disabled:opacity-40 cursor-pointer shadow-2xs"
                   >
                     Siguiente
                     <ChevronRight className="h-4 w-4 ml-1" />

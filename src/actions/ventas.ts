@@ -219,6 +219,7 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
 
   return {
     id: p.id,
+    codigo: p.codigo,
     fecha: p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha),
     cliente: p.cliente,
     productoId: items[0]?.productoId || p.id,
