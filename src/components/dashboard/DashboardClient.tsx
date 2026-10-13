@@ -1088,10 +1088,10 @@ export function DashboardClient({
           </button>
 
           <Link
-            href="/finanzas/proyecciones"
+            href="/finanzas/flujo-caja"
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-[#FAF7F4] text-[#1F2937] border border-[#E5DCD3] shadow-xs transition-all"
           >
-            <span>Simulador & Presupuesto</span>
+            <span>Flujo de Caja</span>
             <ArrowRight className="h-3.5 w-3.5 text-[#7C5835]" />
           </Link>
         </div>

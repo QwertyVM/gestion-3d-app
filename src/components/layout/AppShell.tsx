@@ -34,7 +34,6 @@ export function AppShell({ children }: AppShellProps) {
     if (pathname === '/finanzas/tags') return 'Tags & Categorías'
     if (pathname === '/catalogo/categorias') return 'Categorías'
     if (pathname.startsWith('/catalogo')) return is3D ? 'Catálogo de Modelos' : 'Catálogo de Juegos'
-    if (pathname === '/finanzas/proyecciones') return 'Presupuesto & Proyecciones'
     if (pathname === '/finanzas/cierres') return 'Cierres de Mes'
     return config.name
   }

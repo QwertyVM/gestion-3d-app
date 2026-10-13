@@ -12,7 +12,6 @@ import {
   ArrowUpRight, 
   ArrowDownLeft, 
   Tag, 
-  TrendingUp, 
   PackageSearch, 
   Layers, 
   CircleDot, 
@@ -386,21 +385,6 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
               >
                 <Tag className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
                 <span>Tags de Gasto</span>
-              </Link>
-
-              {/* PROYECCIONES */}
-              <Link
-                href="/finanzas/flujo-caja?vista=blindaje"
-                onClick={handleLinkClick}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
-                  pathname === '/finanzas/proyecciones' || pathname === '/finanzas/caja-chica'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-                )}
-              >
-                <TrendingUp className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
-                <span>Proyecciones & Presupuesto</span>
               </Link>
             </div>
           )}
