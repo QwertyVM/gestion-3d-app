@@ -7,6 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 import type { EgresoItem, VentaItem, IngresoDirectoItem } from './FlujoCajaClient'
 
 export type FinancialPerspective = 'TOTAL' | 'OPERATIVO'
@@ -158,7 +159,10 @@ export function CashFlowAnalyticsCard({
   return (
     <TooltipProvider delay={100}>
       <div
-        className={`bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between h-[300px] ${className}`}
+        className={cn(
+          'bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between h-[300px]',
+          className
+        )}
       >
         {/* Cabecera: Título y Selector de Modo Compacto */}
         <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-border/60">

@@ -407,7 +407,9 @@ export async function getDashboardData(negocio?: TipoNegocio) {
   const serializedInversiones = inversiones.map((inv: any) => ({
     id: inv.id,
     fecha: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : String(inv.createdAt),
+    createdAt: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : String(inv.createdAt),
     categoria: inv.categoria,
+    subcategoria: inv.subcategoria,
     costoTotal: Number(inv.costoTotal),
     itemConcepto: inv.itemConcepto,
     persona: inv.persona
