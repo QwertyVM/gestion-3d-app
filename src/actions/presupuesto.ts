@@ -305,10 +305,14 @@ export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Pr
   const montoPagadoTotal = pagosPrestamo.reduce((acc, p) => acc + Number(p.costoTotal || 0), 0)
   const cuotaActual = Math.min(totalCuotas, cuotasPagadas + 1) // Cuota 2
   
-  // Verificar si se pagó en el ciclo actual (últimos 30 días o antes del corte)
+  // Verificar si se pagó la cuota correspondiente al mes actual en curso
   const ahora = new Date()
-  const hace30Dias = new Date(ahora.getTime() - 30 * 24 * 60 * 60 * 1000)
-  const pagadaEnPeriodo = pagosPrestamo.some(p => new Date(p.createdAt) >= hace30Dias)
+  const mesActual = ahora.getMonth()
+  const anioActual = ahora.getFullYear()
+  const pagadaEnPeriodo = pagosPrestamo.some(p => {
+    const d = new Date(p.createdAt)
+    return d.getMonth() === mesActual && d.getFullYear() === anioActual
+  })
   
   const saldoCapitalRestante = Math.max(0, totalPrestamo - montoPagadoTotal)
   const fechaCorteRecalculo = '15 de Octubre 2026'
@@ -507,6 +511,73 @@ export async function guardarPartidaPlan(partida: any) {
     console.error('Error guardando partida individual en BD:', err)
   }
   return { success: true, partida, timestamp: new Date().toISOString() }
+}
+
+export async function guardarPartidaPresupuesto(partida: {
+  id?: string
+  concepto: string
+  subconcepto?: string | null
+  presupuesto: number
+  categoria?: string
+  tipo?: 'Blindado' | 'Flexible'
+  pagado?: boolean
+  negocio?: string
+}) {
+  const targetNegocio = partida.negocio || (await getActiveNegocioServer())
+  const id = partida.id || `partida-${Date.now()}`
+  const tipo = partida.tipo || 'Blindado'
+  const categoria = partida.categoria || 'OPERATIVO'
+  const presupuesto = Number(partida.presupuesto || 0)
+
+  try {
+    await prisma.partidaPresupuesto.upsert({
+      where: { id },
+      create: {
+        id,
+        negocio: targetNegocio,
+        categoria,
+        concepto: partida.concepto,
+        subconcepto: partida.subconcepto || null,
+        presupuesto,
+        tipo,
+        pagado: Boolean(partida.pagado)
+      },
+      update: {
+        categoria,
+        concepto: partida.concepto,
+        subconcepto: partida.subconcepto || null,
+        presupuesto,
+        tipo,
+        pagado: Boolean(partida.pagado)
+      }
+    })
+    return { success: true, id, partida: { ...partida, id, tipo, categoria, presupuesto } }
+  } catch (err: any) {
+    console.error('Error en guardarPartidaPresupuesto:', err)
+    if (err?.code === 'P2002') {
+      try {
+        const updated = await prisma.partidaPresupuesto.update({
+          where: {
+            concepto_negocio: {
+              concepto: partida.concepto,
+              negocio: targetNegocio
+            }
+          },
+          data: {
+            categoria,
+            subconcepto: partida.subconcepto || null,
+            presupuesto,
+            tipo,
+            pagado: Boolean(partida.pagado)
+          }
+        })
+        return { success: true, id: updated.id, partida: updated }
+      } catch (innerErr) {
+        console.error('Error actualizando por concepto_negocio:', innerErr)
+      }
+    }
+    throw err
+  }
 }
 
 export async function restablecerPlanBaseDB(negocio: string = '3D') {

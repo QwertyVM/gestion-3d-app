@@ -19,16 +19,16 @@ export interface CashFlowAnalyticsCardProps {
 }
 
 function formatCurrency(val: number) {
-  return `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `S/\u00A0${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 function formatCompactCurrency(val: number) {
-  return `S/ ${Math.round(val).toLocaleString('es-PE')}`
+  return `S/\u00A0${Math.round(val).toLocaleString('es-PE')}`
 }
 
 function formatSignedCurrency(val: number) {
   const sign = val >= 0 ? '+' : '-'
-  return `${sign}S/ ${Math.abs(val).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `${sign}S/\u00A0${Math.abs(val).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 export function CashFlowAnalyticsCard({
@@ -198,27 +198,31 @@ export function CashFlowAnalyticsCard({
         </div>
 
         {/* Cuerpo: Barras de Composición Proporcional */}
-        <div className="space-y-4 my-auto">
+        <div className="space-y-3.5 my-auto">
           {/* Bloque Ingresos */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Ingresos ({formatCurrency(activeIngresos)})
               </span>
-              <div className="flex items-center gap-3 text-[11px] font-mono">
-                <span className="flex items-center gap-1 font-medium text-emerald-800 dark:text-emerald-300">
-                  <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0" />
-                  Ventas: <strong className="font-bold">{formatCompactCurrency(ventasOperativas)}</strong> ({displayPctVentas}%)
-                </span>
-                <span className={`flex items-center gap-1 font-medium text-sky-700 dark:text-sky-400 ${isOperativo ? 'opacity-30' : ''}`}>
-                  <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
-                  Préstamo: <strong className="font-bold">{formatCompactCurrency(financiamiento)}</strong> ({displayPctFinanciamiento}%)
-                </span>
-              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs whitespace-nowrap pt-0.5">
+              <span className="flex items-center gap-1.5 text-foreground font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0" />
+                <span>Ventas:</span>
+                <strong className="font-bold">{formatCompactCurrency(ventasOperativas)}</strong>
+                <span className="text-muted-foreground text-[11px]">({displayPctVentas}%)</span>
+              </span>
+              <span className={`flex items-center gap-1.5 text-foreground font-medium ${isOperativo ? 'opacity-30' : ''}`}>
+                <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
+                <span>Préstamo:</span>
+                <strong className="font-bold">{formatCompactCurrency(financiamiento)}</strong>
+                <span className="text-muted-foreground text-[11px]">({displayPctFinanciamiento}%)</span>
+              </span>
             </div>
 
             {/* Barra apilada Ingresos */}
-            <div className="h-2.5 w-full rounded-full overflow-hidden flex bg-secondary border border-border/50">
+            <div className="h-2.5 w-full rounded-full overflow-hidden flex bg-secondary">
               {widthVentas > 0 && (
                 <Tooltip>
                   <TooltipTrigger
@@ -254,25 +258,29 @@ export function CashFlowAnalyticsCard({
           </div>
 
           {/* Bloque Egresos */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 pt-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Egresos ({formatCurrency(activeEgresos)})
               </span>
-              <div className="flex items-center gap-3 text-[11px] font-mono">
-                <span className="flex items-center gap-1 font-medium text-destructive">
-                  <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />
-                  Operativo: <strong className="font-bold">{formatCompactCurrency(costosOperativos)}</strong> ({displayPctOperativos}%)
-                </span>
-                <span className={`flex items-center gap-1 font-medium text-primary ${isOperativo ? 'opacity-30' : ''}`}>
-                  <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
-                  Máquinas: <strong className="font-bold">{formatCompactCurrency(activosFijos)}</strong> ({displayPctMaquinas}%)
-                </span>
-              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs whitespace-nowrap pt-0.5">
+              <span className="flex items-center gap-1.5 text-foreground font-medium">
+                <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />
+                <span>Operativo:</span>
+                <strong className="font-bold">{formatCompactCurrency(costosOperativos)}</strong>
+                <span className="text-muted-foreground text-[11px]">({displayPctOperativos}%)</span>
+              </span>
+              <span className={`flex items-center gap-1.5 text-foreground font-medium ${isOperativo ? 'opacity-30' : ''}`}>
+                <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                <span>Máquinas:</span>
+                <strong className="font-bold">{formatCompactCurrency(activosFijos)}</strong>
+                <span className="text-muted-foreground text-[11px]">({displayPctMaquinas}%)</span>
+              </span>
             </div>
 
             {/* Barra apilada Egresos */}
-            <div className="h-2.5 w-full rounded-full overflow-hidden flex bg-secondary border border-border/50">
+            <div className="h-2.5 w-full rounded-full overflow-hidden flex bg-secondary">
               {widthOperativos > 0 && (
                 <Tooltip>
                   <TooltipTrigger

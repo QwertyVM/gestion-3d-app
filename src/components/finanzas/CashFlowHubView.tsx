@@ -38,7 +38,8 @@ import {
   Package,
   Calculator,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Zap
 } from 'lucide-react'
 import {
   Area,
@@ -61,6 +62,7 @@ import {
   DatosPresupuestoTranquilidad,
   actualizarPresupuestoPartida,
   guardarPartidaPlan,
+  guardarPartidaPresupuesto,
   conmutarTipoPartidaPresupuesto,
   togglePagadoPartidaPresupuesto,
   eliminarPartidaPresupuesto,
@@ -69,6 +71,8 @@ import {
 } from '@/actions/presupuesto'
 import { pagarCuotaPrestamo } from '@/actions/inversiones'
 import { CashFlowAnalyticsCard } from './CashFlowAnalyticsCard'
+import { CompromisosBlindadosSection } from './CompromisosBlindadosSection'
+import type { BlindadoFormData } from './AddBlindadoModal'
 
 // =========================================================================
 // INTERFACES Y TIPOS
@@ -219,7 +223,7 @@ function CustomCashFlowTooltip({ active, payload, label }: any) {
                 : 'bg-destructive/10 text-destructive border-destructive/20'
             }`}
           >
-            {isNetPositive ? `+S/ ${neto.toFixed(2)}` : `-S/ ${Math.abs(neto).toFixed(2)}`}
+            {isNetPositive ? `+S/\u00A0${neto.toFixed(2)}` : `-S/\u00A0${Math.abs(neto).toFixed(2)}`}
           </Badge>
         </div>
 
@@ -230,7 +234,7 @@ function CustomCashFlowTooltip({ active, payload, label }: any) {
               Ingresos Cobrados:
             </span>
             <span className="font-mono font-bold">
-              +S/ {Number(data.ingresos || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              +S/\u00A0{Number(data.ingresos || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
@@ -240,7 +244,7 @@ function CustomCashFlowTooltip({ active, payload, label }: any) {
               Egresos / Gastos:
             </span>
             <span className="font-mono font-bold">
-              -S/ {Number(data.egresos || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              -S/\u00A0{Number(data.egresos || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
 
@@ -250,7 +254,7 @@ function CustomCashFlowTooltip({ active, payload, label }: any) {
               Saldo Acumulado:
             </span>
             <span className="font-mono font-extrabold text-foreground text-sm">
-              S/ {Number(data.saldoAcumulado || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              S/\u00A0{Number(data.saldoAcumulado || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>
@@ -372,7 +376,7 @@ export function CashFlowHubView({
   const { isBG } = useBusiness()
 
   const formatCurrency = (val: number) =>
-    `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    `S/\u00A0${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // =========================================================================
   // NAVEGACIÓN Y PERSISTENCIA DE PESTAÑAS (URL SEARCH PARAM)
@@ -440,33 +444,149 @@ export function CashFlowHubView({
     return totalIngresosCobrados - totalEgresos
   }, [totalIngresosCobrados, totalEgresos])
 
-  // 2. Suma de fondos blindados proveniente de partidas presupuestarias pendientes
-  const totalBlindadoPendiente = useMemo(() => {
-    return partidas
-      .filter(p => p.tipo === 'Blindado' && !p.pagado)
-      .reduce((acc, p) => acc + Number(p.presupuesto || 0), 0)
+  // =========================================================================
+  // CONTROL DE AMORTIZACIÓN DEL PRÉSTAMO BCP & DATOS BASE
+  // =========================================================================
+  const [isPayingCuota, setIsPayingCuota] = useState(false)
+  const cuotaPrestamoItem = partidas.find(i => i.id === 'gasto-cuota-prestamo')
+  const tienePrestamoBCP = true
+  const estaCuotaPagada = Boolean(datosPresupuesto?.prestamoInfo?.pagadaEnPeriodo || cuotaPrestamoItem?.pagado)
+  const siguienteCuotaNum = datosPresupuesto?.prestamoInfo?.cuotaActual || (estaCuotaPagada ? 2 : 1)
+  const cuotaMontoValor = datosPresupuesto?.prestamoInfo?.cuotaMensual || 388.68
+  const cuotasPagadas = datosPresupuesto?.prestamoInfo?.cuotasPagadas || (estaCuotaPagada ? 1 : 0)
+  const cuotasTotales = datosPresupuesto?.prestamoInfo?.totalCuotas || 24
+  const saldoCapitalRestante = datosPresupuesto?.prestamoInfo?.saldoCapitalRestante || 7631.12
+  const tasaTea = '8.70%'
+
+  const bcpData = useMemo(() => ({
+    cuotaActual: siguienteCuotaNum,
+    totalCuotas: cuotasTotales,
+    montoCuota: cuotaMontoValor,
+    capitalRestante: saldoCapitalRestante,
+    pagada: estaCuotaPagada
+  }), [siguienteCuotaNum, cuotasTotales, cuotaMontoValor, saldoCapitalRestante, estaCuotaPagada])
+
+  // Partidas blindadas adicionales (Luz, Internet, Reservas)
+  const partidasBlindadas = useMemo(() => {
+    return partidas.filter(p =>
+      (p.tipo === 'Blindado' || p.esBlindado) &&
+      p.id !== 'gasto-cuota-prestamo' &&
+      !p.concepto.toLowerCase().includes('préstamo bcp') &&
+      !p.concepto.toLowerCase().includes('cuota mensual de préstamo')
+    )
   }, [partidas])
 
-  // 3. Ecuación de liquidez pura
+  // 2. Motor reactivo de total blindado (Préstamo BCP pendiente + partidas blindadas)
+  const totalBlindado = useMemo(() => {
+    const bcpMonto = tienePrestamoBCP && !estaCuotaPagada ? bcpData.montoCuota : 0
+    const sumaPartidas = partidasBlindadas
+      .filter(p => !p.pagado)
+      .reduce((acc, p) => acc + Number(p.monto ?? p.presupuesto ?? 0), 0)
+    return bcpMonto + sumaPartidas
+  }, [tienePrestamoBCP, estaCuotaPagada, bcpData.montoCuota, partidasBlindadas])
+
+  const totalBlindadoPendiente = totalBlindado
+
+  // 3. Ecuación de liquidez pura en tiempo real
   const gastoLibreHoy = useMemo(() => {
-    return Math.max(0, saldoNetoCaja - totalBlindadoPendiente)
-  }, [saldoNetoCaja, totalBlindadoPendiente])
+    return Math.max(0, saldoNetoCaja - totalBlindado)
+  }, [saldoNetoCaja, totalBlindado])
 
   // Desglose dinámico de fondos blindados para la tarjeta de KPI
   const desgloseBlindados = useMemo(() => {
-    const pendientes = partidas.filter(p => p.tipo === 'Blindado' && !p.pagado)
-    if (pendientes.length === 0) return 'Sin compromisos blindados pendientes'
-    const nombres = pendientes.map(p => {
-      let nombre = p.concepto
-        .replace('Cuota Mensual de Préstamo', 'Cuota BCP')
-        .replace('Luz e Internet del Taller', 'Luz')
-        .replace('Reserva para Nueva Impresora', 'Reserva A2L')
-        .replace(' de Préstamo', '')
-        .replace(' para Nueva Impresora', '')
-      return `${nombre} (${formatCurrency(p.presupuesto)})`
-    })
-    return `${nombres.join(' + ')} comprometidos`
-  }, [partidas])
+    const items: string[] = []
+    if (tienePrestamoBCP && !estaCuotaPagada) {
+      items.push(`Cuota BCP (${formatCurrency(bcpData.montoCuota)})`)
+    }
+    partidasBlindadas
+      .filter(p => !p.pagado)
+      .forEach(p => {
+        items.push(`${p.concepto} (${formatCurrency(Number(p.monto ?? p.presupuesto ?? 0))})`)
+      })
+    if (items.length === 0) return 'Sin compromisos blindados pendientes'
+    return `${items.join(' + ')} comprometidos`
+  }, [tienePrestamoBCP, estaCuotaPagada, bcpData.montoCuota, partidasBlindadas])
+
+  // Handlers para agregar, editar y eliminar partidas blindadas con persistencia inmediata
+  const handleSavePartidaBlindada = async (formData: BlindadoFormData) => {
+    if (formData.id) {
+      const targetId = formData.id
+      const updatedPartida: PartidaPresupuesto = {
+        id: targetId,
+        concepto: formData.concepto,
+        subconcepto: formData.subconcepto,
+        presupuesto: formData.monto,
+        monto: formData.monto,
+        categoria: formData.categoria as CategoriaGastoPlan,
+        tipo: 'Blindado',
+        esBlindado: true,
+        pagado: false,
+        montoAgostoReal: 0,
+        montoSeptiembreReal: 0
+      }
+
+      setPartidas(prev => prev.map(p => p.id === targetId ? { ...p, ...updatedPartida } : p))
+      toast.success(`Compromiso "${formData.concepto}" actualizado`)
+
+      try {
+        await guardarPartidaPresupuesto({
+          id: targetId,
+          concepto: formData.concepto,
+          subconcepto: formData.subconcepto,
+          presupuesto: formData.monto,
+          categoria: formData.categoria,
+          tipo: 'Blindado',
+          pagado: false,
+          negocio: isBG ? 'BG' : '3D'
+        })
+      } catch (err) {
+        console.error('Error al guardar partida blindada en BD:', err)
+      }
+    } else {
+      const newId = `blindado-${Date.now()}`
+      const nuevaPartida: PartidaPresupuesto = {
+        id: newId,
+        concepto: formData.concepto,
+        subconcepto: formData.subconcepto,
+        presupuesto: formData.monto,
+        monto: formData.monto,
+        categoria: formData.categoria as CategoriaGastoPlan,
+        tipo: 'Blindado',
+        esBlindado: true,
+        pagado: false,
+        montoAgostoReal: 0,
+        montoSeptiembreReal: 0
+      }
+
+      setPartidas(prev => [nuevaPartida, ...prev])
+      toast.success(`Compromiso "${formData.concepto}" blindado exitosamente`)
+
+      try {
+        await guardarPartidaPresupuesto({
+          id: newId,
+          concepto: formData.concepto,
+          subconcepto: formData.subconcepto,
+          presupuesto: formData.monto,
+          categoria: formData.categoria,
+          tipo: 'Blindado',
+          pagado: false,
+          negocio: isBG ? 'BG' : '3D'
+        })
+      } catch (err) {
+        console.error('Error al guardar nueva partida blindada en BD:', err)
+      }
+    }
+  }
+
+  const handleDeletePartidaBlindada = async (id: string) => {
+    setPartidas(prev => prev.filter(p => p.id !== id))
+    toast.success('Compromiso eliminado. Fondos liberados.')
+    try {
+      await eliminarPartidaPresupuesto(id)
+    } catch (err) {
+      console.error('Error al eliminar partida blindada de BD:', err)
+    }
+  }
 
   // =========================================================================
   // CONTROL DE FECHAS Y FILTROS PARA PESTAÑA MOVIMIENTOS
@@ -878,20 +998,8 @@ export function CashFlowHubView({
   }
 
   // =========================================================================
-  // CONTROL DE AMORTIZACIÓN DEL PRÉSTAMO BCP
+  // ACCIÓN DE AMORTIZACIÓN DEL PRÉSTAMO BCP
   // =========================================================================
-  const [isPayingCuota, setIsPayingCuota] = useState(false)
-  const cuotaPrestamoItem = partidas.find(i => i.id === 'gasto-cuota-prestamo')
-  const estaCuotaPagada = Boolean(datosPresupuesto?.prestamoInfo?.pagadaEnPeriodo || cuotaPrestamoItem?.pagado)
-  const siguienteCuotaNum = datosPresupuesto?.prestamoInfo?.cuotaActual || (estaCuotaPagada ? 2 : 1)
-  const cuotaMontoValor = datosPresupuesto?.prestamoInfo?.cuotaMensual || 388.68
-  const cuotasPagadas = datosPresupuesto?.prestamoInfo?.cuotasPagadas || (estaCuotaPagada ? 1 : 0)
-  const cuotasTotales = datosPresupuesto?.prestamoInfo?.totalCuotas || 24
-  const saldoCapitalRestante = datosPresupuesto?.prestamoInfo?.saldoCapitalRestante || 7631.12
-  const tasaTea = '8.70%'
-  const luzItem = partidas.find(p => p.concepto.toLowerCase().includes('luz') || p.concepto.toLowerCase().includes('electricidad'))
-  const luzMonto = luzItem ? Number(luzItem.presupuesto || luzItem.monto || 30) : 30.00
-
   const handlePagarCuotaDirecto = async () => {
     if (!confirm(`¿Confirmas el registro del pago de la Cuota ${siguienteCuotaNum}/24 por S/ ${cuotaMontoValor.toFixed(2)}?\n\nSe registrará automáticamente en Egresos como FINANCIERO y liberará el fondo blindado correspondiente.`)) {
       return
@@ -1200,7 +1308,7 @@ export function CashFlowHubView({
                     <stop offset="95%" stopColor="#A34335" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="saldoAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#241C15" stopOpacity={0.12} />
+                    <stop offset="5%" stopColor="#241C15" stopOpacity={0.10} />
                     <stop offset="95%" stopColor="#241C15" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
@@ -1217,7 +1325,11 @@ export function CashFlowHubView({
                   fontSize={10}
                   tickLine={false}
                   axisLine={{ stroke: '#E2D9CC' }}
-                  tickFormatter={(v) => `S/${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`}
+                  tickFormatter={(value) => {
+                    if (value === 0) return 'S/\u00A00';
+                    if (Math.abs(value) >= 1000) return `S/\u00A0${(value / 1000).toFixed(0)}k`;
+                    return `S/\u00A0${value}`;
+                  }}
                 />
                 <RechartsTooltip content={<CustomCashFlowTooltip />} />
                 <Area
@@ -1238,12 +1350,14 @@ export function CashFlowHubView({
                   fillOpacity={1}
                   fill="url(#egresosAreaGrad)"
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="saldoAcumulado"
                   name="saldoAcumulado"
                   stroke="#241C15"
                   strokeWidth={2.5}
+                  fillOpacity={1}
+                  fill="url(#saldoAreaGrad)"
                   dot={{ fill: '#241C15', r: 2.5, strokeWidth: 1, stroke: '#FFFFFF' }}
                   activeDot={{ r: 4, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
                 />
@@ -1264,72 +1378,18 @@ export function CashFlowHubView({
       </div>
 
       {/* ========================================================================= */}
-      {/* NIVEL 3: BARRA DE COMPROMISOS BLINDADOS & PRÉSTAMO BCP (DIRECTA)          */}
+      {/* NIVEL 3: COMPROMISOS BLINDADOS DEL MES (MÓDULO DINÁMICO)                  */}
       {/* ========================================================================= */}
-      <div className="bg-card border border-border rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-5">
-        {/* Izquierda: Banco BCP */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0 border border-border/60">
-            <Landmark className="w-5 h-5 text-primary stroke-[2.2]" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-extrabold text-foreground tracking-tight">
-                Préstamo BCP: Cuota {cuotasPagadas}/{cuotasTotales} ({formatCurrency(cuotaMontoValor)})
-              </span>
-              <Badge variant="outline" className="bg-secondary text-foreground border-border text-[10px] font-bold">
-                TEA {tasaTea}
-              </Badge>
-              {estaCuotaPagada ? (
-                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20 text-[10px] font-bold flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-700" />
-                  Al día
-                </Badge>
-              ) : null}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5 font-mono">
-              Capital restante: <strong className="text-foreground">{formatCurrency(saldoCapitalRestante)}</strong>
-            </p>
-          </div>
-        </div>
-
-        {/* Centro: Luz de Taller */}
-        <div className="flex items-center gap-2 self-start sm:self-center">
-          <div className="bg-secondary/80 border border-border px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-2">
-            <span className="text-sm">💡</span>
-            <span className="font-semibold text-foreground">Luz Taller:</span>
-            <span className="font-bold text-amber-800 dark:text-amber-300 font-mono">
-              {formatCurrency(luzMonto)}
-            </span>
-            <span className="text-[11px] text-muted-foreground">comprometidos</span>
-          </div>
-        </div>
-
-        {/* Derecha: Amortización rápida y acceso al plan */}
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            onClick={handlePagarCuotaDirecto}
-            disabled={isPayingCuota}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
-          >
-            <CreditCard className="h-3.5 w-3.5" />
-            {isPayingCuota
-              ? 'Registrando...'
-              : `Pagar Cuota ${siguienteCuotaNum} (${formatCurrency(cuotaMontoValor)})`}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsPlanModalOpen(true)}
-            className="h-9 px-3.5 rounded-xl border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer shadow-2xs"
-            title="Ver y configurar partidas presupuestarias"
-          >
-            <ShieldCheck className="h-3.5 w-3.5 mr-1 text-primary" />
-            Ver Plan
-          </Button>
-        </div>
-      </div>
+      <CompromisosBlindadosSection
+        partidasBlindadas={partidasBlindadas}
+        tienePrestamoBCP={tienePrestamoBCP}
+        bcpData={bcpData}
+        totalBlindado={totalBlindado}
+        isPayingCuota={isPayingCuota}
+        handlePagarCuotaBCP={handlePagarCuotaDirecto}
+        onSavePartida={handleSavePartidaBlindada}
+        onDeletePartida={handleDeletePartidaBlindada}
+      />
 
       {/* ========================================================================= */}
       {/* NIVEL 4: REGISTRO DETALLADO DE MOVIMIENTOS DE CAJA (TABLA CONTABLE)       */}
