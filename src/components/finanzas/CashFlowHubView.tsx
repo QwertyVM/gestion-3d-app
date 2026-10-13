@@ -41,6 +41,7 @@ import {
   ArrowDownRight
 } from 'lucide-react'
 import {
+  Area,
   ComposedChart,
   Bar,
   Line,
@@ -377,25 +378,15 @@ export function CashFlowHubView({
   // NAVEGACIÓN Y PERSISTENCIA DE PESTAÑAS (URL SEARCH PARAM)
   // =========================================================================
   const vistaParam = searchParams.get('vista')
-  const [selectedTab, setSelectedTab] = useState<'movimientos' | 'blindaje'>(() => {
-    return vistaParam === 'blindaje' ? 'blindaje' : 'movimientos'
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(() => {
+    return vistaParam === 'blindaje'
   })
 
   useEffect(() => {
-    const current = searchParams.get('vista') === 'blindaje' ? 'blindaje' : 'movimientos'
-    setSelectedTab(current)
-  }, [searchParams])
-
-  const handleTabChange = (newTab: 'movimientos' | 'blindaje') => {
-    setSelectedTab(newTab)
-    const params = new URLSearchParams(searchParams.toString())
-    if (newTab === 'blindaje') {
-      params.set('vista', 'blindaje')
-    } else {
-      params.set('vista', 'movimientos')
+    if (searchParams.get('vista') === 'blindaje' || searchParams.get('tab') === 'blindaje') {
+      setIsPlanModalOpen(true)
     }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
+  }, [searchParams])
 
   // =========================================================================
   // ESTADO DE PARTIDAS PRESUPUESTARIAS (EN MEMORIA + DB)
@@ -892,8 +883,14 @@ export function CashFlowHubView({
   const [isPayingCuota, setIsPayingCuota] = useState(false)
   const cuotaPrestamoItem = partidas.find(i => i.id === 'gasto-cuota-prestamo')
   const estaCuotaPagada = Boolean(datosPresupuesto?.prestamoInfo?.pagadaEnPeriodo || cuotaPrestamoItem?.pagado)
-  const siguienteCuotaNum = datosPresupuesto?.prestamoInfo?.cuotaActual || 2
+  const siguienteCuotaNum = datosPresupuesto?.prestamoInfo?.cuotaActual || (estaCuotaPagada ? 2 : 1)
   const cuotaMontoValor = datosPresupuesto?.prestamoInfo?.cuotaMensual || 388.68
+  const cuotasPagadas = datosPresupuesto?.prestamoInfo?.cuotasPagadas || (estaCuotaPagada ? 1 : 0)
+  const cuotasTotales = datosPresupuesto?.prestamoInfo?.totalCuotas || 24
+  const saldoCapitalRestante = datosPresupuesto?.prestamoInfo?.saldoCapitalRestante || 7631.12
+  const tasaTea = '8.70%'
+  const luzItem = partidas.find(p => p.concepto.toLowerCase().includes('luz') || p.concepto.toLowerCase().includes('electricidad'))
+  const luzMonto = luzItem ? Number(luzItem.presupuesto || luzItem.monto || 30) : 30.00
 
   const handlePagarCuotaDirecto = async () => {
     if (!confirm(`¿Confirmas el registro del pago de la Cuota ${siguienteCuotaNum}/24 por S/ ${cuotaMontoValor.toFixed(2)}?\n\nSe registrará automáticamente en Egresos como FINANCIERO y liberará el fondo blindado correspondiente.`)) {
@@ -1073,54 +1070,31 @@ export function CashFlowHubView({
           </p>
         </div>
 
-        {/* Acciones de Cabecera Según Tab */}
+        {/* Acciones de Cabecera */}
         <div className="flex items-center gap-2 shrink-0">
-          {selectedTab === 'movimientos' ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setShowChart(!showChart)}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-card hover:bg-secondary text-muted-foreground hover:text-foreground border border-border shadow-2xs transition-all cursor-pointer"
-                title={showChart ? "Ocultar gráfico" : "Ver gráfico analítico"}
-              >
-                <BarChart3 className="h-4 w-4 text-primary" />
-                <span>{showChart ? "Ocultar Gráfico" : "Ver Gráfico"}</span>
-              </button>
-              <Link
-                href="/historico-mensual"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-secondary hover:bg-accent text-accent-foreground border border-border shadow-2xs transition-all"
-              >
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <span>Histórico</span>
-              </Link>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleResetearPlan}
-                className="h-10 px-3.5 rounded-xl border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer"
-              >
-                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                Restablecer Plan
-              </Button>
-              <Button
-                onClick={handleOpenCrear}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-10 px-4 rounded-xl shadow-xs cursor-pointer flex items-center gap-2 transition-all active:scale-[0.98]"
-              >
-                <Plus className="h-4 w-4 stroke-[2.5]" />
-                Nuevo Gasto al Plan
-              </Button>
-            </>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPlanModalOpen(true)}
+            className="h-9 px-3.5 rounded-xl border-border bg-card text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer shadow-2xs flex items-center gap-1.5"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+            <span>Plan de Gastos ({partidas.length})</span>
+          </Button>
+          <Link
+            href="/historico-mensual"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-bold bg-secondary hover:bg-accent text-accent-foreground border border-border shadow-2xs transition-all"
+          >
+            <TrendingUp className="h-3.5 w-3.5 text-primary" />
+            <span>Histórico</span>
+          </Link>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* NIVEL 1: TRÍPTICO DE LIQUIDEZ Y DIAGNÓSTICO FINANCIERO (SIEMPRE VISIBLE) */}
+      {/* NIVEL 1: TRÍPTICO DE LIQUIDEZ Y DIAGNÓSTICO FINANCIERO (KPIS FIJOS)       */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
         
         {/* Tarjeta 1 - Saldo Real en Caja */}
         <div className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between">
@@ -1178,130 +1152,189 @@ export function CashFlowHubView({
             </div>
           </div>
           <div className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 leading-normal">
-            ✓ Saldo disponible para compras sin tocar cuotas fijas
+            ✓ Disponible para compras sin tocar cuotas
           </div>
         </div>
 
       </div>
 
       {/* ========================================================================= */}
-      {/* NIVEL 2: BARRA DE PESTAÑAS DE MODO FINANCIERO                             */}
+      {/* NIVEL 2: PANEL CENTRAL DE TENDENCIA & ESTRUCTURA (H-[300PX])              */}
       {/* ========================================================================= */}
-      <div className="bg-secondary/80 border border-border/80 p-1.5 rounded-2xl flex items-center gap-1.5 w-full max-w-md mx-auto mb-6 shadow-xs">
-        <button
-          type="button"
-          onClick={() => handleTabChange('movimientos')}
-          className={`flex-1 flex items-center justify-center gap-2 cursor-pointer transition-all ${
-            selectedTab === 'movimientos'
-              ? 'bg-card text-foreground font-bold shadow-xs px-4 py-2 rounded-xl text-xs sm:text-sm'
-              : 'text-muted-foreground hover:text-foreground px-4 py-2 rounded-xl text-xs sm:text-sm transition-colors'
-          }`}
-        >
-          <BarChart3 className="w-4 h-4 text-primary" />
-          <span>Movimientos & Histórico</span>
-        </button>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-5 items-stretch">
+        {/* Columna A: Gráfica de Evolución de Caja */}
+        <div className="lg:col-span-7 bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between h-[300px]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-border/60">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-bold text-foreground">
+                Evolución de Caja
+              </h3>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] font-semibold text-muted-foreground">
+              <span className="flex items-center gap-1.5 text-foreground">
+                <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0" />
+                Entradas (+)
+              </span>
+              <span className="flex items-center gap-1.5 text-foreground">
+                <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />
+                Salidas (-)
+              </span>
+              <span className="flex items-center gap-1.5 text-foreground">
+                <span className="w-2 h-2 rounded-full bg-foreground shrink-0" />
+                Saldo
+              </span>
+            </div>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => handleTabChange('blindaje')}
-          className={`flex-1 flex items-center justify-center gap-2 cursor-pointer transition-all ${
-            selectedTab === 'blindaje'
-              ? 'bg-card text-foreground font-bold shadow-xs px-4 py-2 rounded-xl text-xs sm:text-sm'
-              : 'text-muted-foreground hover:text-foreground px-4 py-2 rounded-xl text-xs sm:text-sm transition-colors'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4 text-primary" />
-          <span>Plan de Gastos & Blindaje</span>
-        </button>
+          <div className="h-52 w-full pt-1">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartTimelineData} margin={{ top: 8, right: 10, left: -15, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="ingresosAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#047857" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#047857" stopOpacity={0.0} />
+                  </linearGradient>
+                  <linearGradient id="egresosAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#A34335" stopOpacity={0.20} />
+                    <stop offset="95%" stopColor="#A34335" stopOpacity={0.0} />
+                  </linearGradient>
+                  <linearGradient id="saldoAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#241C15" stopOpacity={0.12} />
+                    <stop offset="95%" stopColor="#241C15" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.5} />
+                <XAxis
+                  dataKey="fechaLabel"
+                  stroke="#75695D"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#E2D9CC' }}
+                />
+                <YAxis
+                  stroke="#75695D"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={{ stroke: '#E2D9CC' }}
+                  tickFormatter={(v) => `S/${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`}
+                />
+                <RechartsTooltip content={<CustomCashFlowTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="ingresos"
+                  name="ingresos"
+                  stroke="#047857"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#ingresosAreaGrad)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="egresos"
+                  name="egresos"
+                  stroke="#A34335"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#egresosAreaGrad)"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="saldoAcumulado"
+                  name="saldoAcumulado"
+                  stroke="#241C15"
+                  strokeWidth={2.5}
+                  dot={{ fill: '#241C15', r: 2.5, strokeWidth: 1, stroke: '#FFFFFF' }}
+                  activeDot={{ r: 4, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Columna B: Estructura Financiera con Barras de Composición */}
+        <div className="lg:col-span-5 flex flex-col h-[300px]">
+          <CashFlowAnalyticsCard
+            ventas={ventasEnRango}
+            egresos={egresosEnRango}
+            ingresosDirectos={ingresosDirectosEnRango}
+            className="h-[300px]"
+          />
+        </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* NIVEL 3: CONTENIDO MODULAR SEGÚN PESTAÑA ACTIVA                           */}
+      {/* NIVEL 3: BARRA DE COMPROMISOS BLINDADOS & PRÉSTAMO BCP (DIRECTA)          */}
       {/* ========================================================================= */}
-
-      {/* ------------------------------------------------------------------------- */}
-      {/* VISTA A: MOVIMIENTOS & HISTÓRICO                                          */}
-      {/* ------------------------------------------------------------------------- */}
-      {selectedTab === 'movimientos' && (
-        <div className="space-y-4 animate-in fade-in duration-200">
-          
-          {/* Gráficos de Análisis Financiero: Evolución Temporal & Relación de Flujo/Balance */}
-          {showChart && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-              {/* Gráfico de Evolución de Caja & Movimientos */}
-              <Card className="lg:col-span-7 bg-card border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between h-full min-h-[480px]">
-                <div className="flex flex-col h-full justify-between">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/70">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-primary" />
-                        <h3 className="text-sm font-bold text-foreground">
-                          Evolución de Caja & Movimientos
-                        </h3>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Entradas (+), salidas (-) y saldo acumulado a través del tiempo.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 w-full min-h-[350px] pt-3">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={chartTimelineData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.5} />
-                        <XAxis
-                          dataKey="fechaLabel"
-                          stroke="#75695D"
-                          fontSize={10}
-                          tickLine={false}
-                          axisLine={{ stroke: '#E2D9CC' }}
-                        />
-                        <YAxis
-                          stroke="#75695D"
-                          fontSize={10}
-                          tickLine={false}
-                          axisLine={{ stroke: '#E2D9CC' }}
-                          tickFormatter={(v) => `S/${v >= 1000 ? `${(v/1000).toFixed(1)}k` : v}`}
-                        />
-                        <RechartsTooltip content={<CustomCashFlowTooltip />} />
-                        <Legend
-                          verticalAlign="top"
-                          height={28}
-                          iconType="circle"
-                          formatter={(value) => (
-                            <span className="text-[11px] font-semibold text-foreground mr-3">
-                              {value === 'ingresos' ? 'Ingresos (+)' : value === 'egresos' ? 'Egresos (-)' : 'Saldo Acumulado'}
-                            </span>
-                          )}
-                        />
-                        <Bar dataKey="ingresos" name="ingresos" fill="#047857" radius={[3, 3, 0, 0]} maxBarSize={28} />
-                        <Bar dataKey="egresos" name="egresos" fill="#A34335" radius={[3, 3, 0, 0]} maxBarSize={28} />
-                        <Line
-                          type="monotone"
-                          dataKey="saldoAcumulado"
-                          name="saldoAcumulado"
-                          stroke="#241C15"
-                          strokeWidth={2}
-                          dot={{ fill: '#241C15', r: 3, strokeWidth: 1.5, stroke: '#FFFFFF' }}
-                          activeDot={{ r: 4.5, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Módulo de Análisis Gastos vs Ingresos (Relación de Flujo & Balance) */}
-              <div className="lg:col-span-5 flex flex-col h-full min-h-[480px]">
-                <CashFlowAnalyticsCard
-                  ventas={ventasEnRango}
-                  egresos={egresosEnRango}
-                  ingresosDirectos={ingresosDirectosEnRango}
-                  className="h-full min-h-[480px]"
-                />
-              </div>
+      <div className="bg-card border border-border rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-5">
+        {/* Izquierda: Banco BCP */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0 border border-border/60">
+            <Landmark className="w-5 h-5 text-primary stroke-[2.2]" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-extrabold text-foreground tracking-tight">
+                Préstamo BCP: Cuota {cuotasPagadas}/{cuotasTotales} ({formatCurrency(cuotaMontoValor)})
+              </span>
+              <Badge variant="outline" className="bg-secondary text-foreground border-border text-[10px] font-bold">
+                TEA {tasaTea}
+              </Badge>
+              {estaCuotaPagada ? (
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20 text-[10px] font-bold flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-700" />
+                  Al día
+                </Badge>
+              ) : null}
             </div>
-          )}
+            <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+              Capital restante: <strong className="text-foreground">{formatCurrency(saldoCapitalRestante)}</strong>
+            </p>
+          </div>
+        </div>
+
+        {/* Centro: Luz de Taller */}
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="bg-secondary/80 border border-border px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-2">
+            <span className="text-sm">💡</span>
+            <span className="font-semibold text-foreground">Luz Taller:</span>
+            <span className="font-bold text-amber-800 dark:text-amber-300 font-mono">
+              {formatCurrency(luzMonto)}
+            </span>
+            <span className="text-[11px] text-muted-foreground">comprometidos</span>
+          </div>
+        </div>
+
+        {/* Derecha: Amortización rápida y acceso al plan */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            onClick={handlePagarCuotaDirecto}
+            disabled={isPayingCuota}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            {isPayingCuota
+              ? 'Registrando...'
+              : `Pagar Cuota ${siguienteCuotaNum} (${formatCurrency(cuotaMontoValor)})`}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPlanModalOpen(true)}
+            className="h-9 px-3.5 rounded-xl border-border bg-card text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer shadow-2xs"
+            title="Ver y configurar partidas presupuestarias"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 mr-1 text-primary" />
+            Ver Plan
+          </Button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* NIVEL 4: REGISTRO DETALLADO DE MOVIMIENTOS DE CAJA (TABLA CONTABLE)       */}
+      {/* ========================================================================= */}
+      <div className="space-y-4">
 
           {/* Barra de Filtros y Búsqueda */}
           <div className="bg-card border border-border rounded-xl p-3 sm:p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -1570,98 +1603,39 @@ export function CashFlowHubView({
             )}
           </Card>
         </div>
-      )}
 
-      {/* ------------------------------------------------------------------------- */}
-      {/* VISTA B: PLAN DE GASTOS & BLINDAJE                                        */}
-      {/* ------------------------------------------------------------------------- */}
-      {selectedTab === 'blindaje' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
-          
-          {/* Módulo Compacto del Préstamo BCP */}
-          <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0">
-                <Landmark className="w-5 h-5 stroke-[2.2]" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-sm sm:text-base font-extrabold text-foreground tracking-tight truncate">
-                    Préstamo Capital de Trabajo (BCP)
-                  </h2>
-                  <Badge variant="outline" className="bg-secondary text-foreground border-border text-[10px] font-bold">
-                    24 Cuotas • TEA 8.70%
-                  </Badge>
-                  {estaCuotaPagada ? (
-                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20 text-[10px] font-bold flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Cuota {datosPresupuesto?.prestamoInfo?.cuotasPagadas || 1}/24 Pagada este Ciclo
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20 text-[10px] font-bold flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Cuota {siguienteCuotaNum}/24 Pendiente
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  Desembolso S/ {(datosPresupuesto?.prestamoInfo?.totalPrestamo || 8000).toLocaleString('es-PE')} • Próximo recálculo: {datosPresupuesto?.prestamoInfo?.fechaCorteRecalculo || '15 de Octubre 2026'}
-                </p>
-              </div>
+      {/* ========================================================================= */}
+      {/* MODAL GESTIÓN COMPLETA DEL PLAN DE GASTOS & BLINDAJE                      */}
+      {/* ========================================================================= */}
+      <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
+        <DialogContent className="w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto bg-card border-border rounded-2xl p-6 shadow-2xl space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
+            <div>
+              <DialogTitle className="text-lg font-black text-foreground flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <span>Plan de Gastos & Compromisos Blindados</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                Configura metas presupuestarias, blindaje de cuotas y reservas operativas del taller.
+              </DialogDescription>
             </div>
-
-            <div className="flex items-center gap-4 text-xs font-mono shrink-0 bg-secondary/50 px-3.5 py-2 rounded-xl border border-border/60">
-              <div>
-                <span className="text-[10px] text-muted-foreground block font-sans uppercase">Progreso</span>
-                <span className="font-extrabold text-foreground">
-                  {datosPresupuesto?.prestamoInfo?.cuotasPagadas || 1}/24
-                </span>
-              </div>
-              <div className="h-6 w-px bg-border" />
-              <div>
-                <span className="text-[10px] text-muted-foreground block font-sans uppercase">Cuota</span>
-                <span className="font-extrabold text-foreground">
-                  {formatCurrency(cuotaMontoValor)}
-                </span>
-              </div>
-              <div className="h-6 w-px bg-border" />
-              <div>
-                <span className="text-[10px] text-muted-foreground block font-sans uppercase">Capital Restante</span>
-                <span className="font-extrabold text-primary">
-                  {formatCurrency(datosPresupuesto?.prestamoInfo?.saldoCapitalRestante || 7631.12)}
-                </span>
-              </div>
-            </div>
-
-            <div className="shrink-0 flex items-center">
-              {!estaCuotaPagada ? (
-                <Button
-                  onClick={handlePagarCuotaDirecto}
-                  disabled={isPayingCuota}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-10 px-4 rounded-xl shadow-xs flex items-center gap-2 cursor-pointer w-full md:w-auto justify-center transition-all active:scale-[0.98]"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  {isPayingCuota
-                    ? 'Registrando...'
-                    : `Pagar Cuota ${siguienteCuotaNum} (${formatCurrency(cuotaMontoValor)})`}
-                </Button>
-              ) : (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-3.5 py-2 rounded-xl border border-emerald-500/20">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-                    <span>✓ Cuota {datosPresupuesto?.prestamoInfo?.cuotasPagadas || 1} al día</span>
-                  </div>
-                  <Button
-                    onClick={handlePagarCuotaDirecto}
-                    disabled={isPayingCuota}
-                    variant="outline"
-                    className="text-xs h-10 px-3.5 rounded-xl border-border hover:bg-secondary cursor-pointer flex items-center gap-1.5 font-semibold text-foreground"
-                  >
-                    <CreditCard className="h-3.5 w-3.5 text-primary" />
-                    Pagar Cuota {siguienteCuotaNum}
-                  </Button>
-                </div>
-              )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetearPlan}
+                className="h-9 px-3 rounded-xl border-border bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer"
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                Restablecer Plan Base
+              </Button>
+              <Button
+                onClick={handleOpenCrear}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-3.5 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="h-4 w-4 stroke-[2.5]" />
+                Nuevo Gasto al Plan
+              </Button>
             </div>
           </div>
 
@@ -2141,8 +2115,8 @@ export function CashFlowHubView({
               </p>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* ========================================================================= */}
       {/* MODAL PARA AGREGAR / EDITAR PARTIDA DE GASTO                              */}

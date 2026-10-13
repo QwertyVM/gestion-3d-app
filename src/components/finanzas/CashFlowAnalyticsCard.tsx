@@ -1,7 +1,12 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import type { EgresoItem, VentaItem, IngresoDirectoItem } from './FlujoCajaClient'
 
 export type FinancialPerspective = 'TOTAL' | 'OPERATIVO'
@@ -60,7 +65,6 @@ export function CashFlowAnalyticsCard({
 
       // REGLA ESTRICTA: categoria === 'Deuda / Préstamo' ➔ Financiamiento
       // También mapea la categoría existente en BD 'Préstamo Bancario / Financiamiento'
-      // Excluye micro-ingresos por intereses de cuenta que corresponden a operación
       const isFinanciamiento =
         cat === 'Deuda / Préstamo' ||
         ((cat === 'Préstamo Bancario / Financiamiento' ||
@@ -96,8 +100,7 @@ export function CashFlowAnalyticsCard({
       const cat = (e.categoria || '').trim()
       const sub = (e.subcategoria || '').toLowerCase()
 
-      // REGLA ESTRICTA: categoria === 'Maquinaria & Equipos' ➔ Activos Fijos
-      // También mapea enum 'ACTIVO_FIJO' y subcategorías de maquinaria
+      // REGLA ESTRICTA: categoria === 'Maquinaria & Equipos' o 'ACTIVO_FIJO' ➔ Activos Fijos
       const isActivoFijo =
         cat === 'Maquinaria & Equipos' ||
         cat === 'ACTIVO_FIJO' ||
@@ -118,253 +121,208 @@ export function CashFlowAnalyticsCard({
     }
   }, [egresos])
 
-  // Métricas activas según perspectiva financiera
+  // Métricas según perspectiva financiera
   const isOperativo = perspective === 'OPERATIVO'
   const activeIngresos = isOperativo ? ventasOperativas : totalIngresos
   const activeEgresos = isOperativo ? costosOperativos : totalEgresos
   const netFlow = activeIngresos - activeEgresos
 
-  // Porcentajes relativos dentro de su estructura
+  // Porcentajes relativos dentro de cada bloque
   const pctVentas = totalIngresos > 0 ? Math.round((ventasOperativas / totalIngresos) * 100) : 0
-  const pctFinanciamiento = totalIngresos > 0 ? Math.round((financiamiento / totalIngresos) * 100) : 0
+  const pctFinanciamiento = totalIngresos > 0 ? Math.max(0, 100 - pctVentas) : 0
+
   const pctCostosOperativos = totalEgresos > 0 ? Math.round((costosOperativos / totalEgresos) * 100) : 0
-  const pctActivosFijos = totalEgresos > 0 ? Math.round((activosFijos / totalEgresos) * 100) : 0
+  const pctActivosFijos = totalEgresos > 0 ? Math.max(0, 100 - pctCostosOperativos) : 0
 
-  // Segmentos proporcionales desglosados del Donut Multicapa
-  const donutSegments = useMemo(() => {
-    if (isOperativo) {
-      return [
-        {
-          name: 'Ventas Catálogo',
-          value: ventasOperativas,
-          color: '#059669', // emerald-600
-          porcentaje: ventasOperativas + costosOperativos > 0
-            ? Math.round((ventasOperativas / (ventasOperativas + costosOperativos)) * 100)
-            : 0,
-        },
-        {
-          name: 'Operativos',
-          value: costosOperativos,
-          color: '#A34335', // destructive oficial NOVA
-          porcentaje: ventasOperativas + costosOperativos > 0
-            ? Math.round((costosOperativos / (ventasOperativas + costosOperativos)) * 100)
-            : 0,
-        },
-      ].filter((s) => s.value > 0)
-    }
+  // Porcentajes para mostrar en UI
+  const displayPctVentas = isOperativo ? (ventasOperativas > 0 ? 100 : 0) : pctVentas
+  const displayPctFinanciamiento = isOperativo ? 0 : pctFinanciamiento
+  const displayPctOperativos = isOperativo ? (costosOperativos > 0 ? 100 : 0) : pctCostosOperativos
+  const displayPctMaquinas = isOperativo ? 0 : pctActivosFijos
 
-    return [
-      {
-        name: 'Ventas Catálogo',
-        value: ventasOperativas,
-        color: '#059669', // emerald-600
-        porcentaje: pctVentas,
-      },
-      {
-        name: 'Préstamo BCP',
-        value: financiamiento,
-        color: '#0284c7', // sky-600
-        porcentaje: pctFinanciamiento,
-      },
-      {
-        name: 'Operativos',
-        value: costosOperativos,
-        color: '#A34335', // destructive oficial NOVA
-        porcentaje: pctCostosOperativos,
-      },
-      {
-        name: 'Máquinas',
-        value: activosFijos,
-        color: '#A36F4C', // primary oficial NOVA
-        porcentaje: pctActivosFijos,
-      },
-    ].filter((s) => s.value > 0)
-  }, [
-    isOperativo,
-    ventasOperativas,
-    financiamiento,
-    costosOperativos,
-    activosFijos,
-    pctVentas,
-    pctFinanciamiento,
-    pctCostosOperativos,
-    pctActivosFijos,
-  ])
+  // Ancho exacto de las barras (0 a 100%)
+  const widthVentas = isOperativo
+    ? (ventasOperativas > 0 ? 100 : 0)
+    : (totalIngresos > 0 ? (ventasOperativas / totalIngresos) * 100 : 0)
+  const widthFinanciamiento = isOperativo
+    ? 0
+    : (totalIngresos > 0 ? (financiamiento / totalIngresos) * 100 : 0)
 
-  // Centro del Donut según la especificación
-  const centerLabel = isOperativo
-    ? 'UTILIDAD OPERATIVA'
-    : netFlow >= 0
-    ? 'SUPERÁVIT EN CAJA'
-    : 'DÉFICIT EN CAJA'
+  const widthOperativos = isOperativo
+    ? (costosOperativos > 0 ? 100 : 0)
+    : (totalEgresos > 0 ? (costosOperativos / totalEgresos) * 100 : 0)
+  const widthMaquinas = isOperativo
+    ? 0
+    : (totalEgresos > 0 ? (activosFijos / totalEgresos) * 100 : 0)
 
   return (
-    <div className={`bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between h-full min-h-[480px] ${className}`}>
-      {/* 1. Cabecera con Switch de Perspectiva Financiera */}
-      <div>
-        <h2 className="text-base font-bold text-foreground">
-          Estructura de Flujo & Balance
-        </h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Compara ventas reales vs. financiamiento y gastos operativos vs. inversión
-        </p>
-
-        {/* Fila 3: Selector de Modo (Segmented control a ancho completo) */}
-        <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl flex items-center gap-1 w-full mt-3">
-          <button
-            type="button"
-            onClick={() => setPerspective('TOTAL')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs transition-all cursor-pointer text-center ${
-              perspective === 'TOTAL'
-                ? 'bg-card text-foreground font-bold shadow-2xs'
-                : 'text-muted-foreground hover:text-foreground font-medium'
-            }`}
-          >
-            Caja Total (Integral)
-          </button>
-          <button
-            type="button"
-            onClick={() => setPerspective('OPERATIVO')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs transition-all cursor-pointer text-center ${
-              perspective === 'OPERATIVO'
-                ? 'bg-card text-foreground font-bold shadow-2xs'
-                : 'text-muted-foreground hover:text-foreground font-medium'
-            }`}
-          >
-            Operativo Puro (Ventas)
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Gráfico de Donut Multicapa Compacto (w-36 h-36) */}
-      <div className="relative w-36 h-36 mx-auto flex items-center justify-center my-1">
-        {donutSegments.length === 0 ? (
-          <div className="text-xs text-muted-foreground italic text-center">
-            Sin movimientos registrados en este período.
+    <TooltipProvider delay={100}>
+      <div
+        className={`bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between h-[300px] ${className}`}
+      >
+        {/* Cabecera: Título y Selector de Modo Compacto */}
+        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-border/60">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-foreground truncate">
+              Estructura de Capital & Flujo
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+              {isOperativo ? 'Vista operativa pura sin endeudamiento' : 'Balance integral de caja y financiamiento'}
+            </p>
           </div>
-        ) : (
-          <>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={donutSegments}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={46}
-                  outerRadius={66}
-                  paddingAngle={3}
-                  dataKey="value"
-                  stroke="#FFFFFF"
-                  strokeWidth={2}
-                >
-                  {donutSegments.map((entry, index) => (
-                    <Cell key={`donut-cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <RechartsTooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const d = payload[0]
-                      return (
-                        <div className="bg-card/95 backdrop-blur-md border border-border p-2.5 rounded-xl shadow-lg text-xs min-w-[180px]">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="w-2.5 h-2.5 rounded-full shrink-0"
-                              style={{ backgroundColor: d.payload.color }}
-                            />
-                            <span className="font-bold text-foreground">{d.name}</span>
-                          </div>
-                          <div className="mt-1 flex items-center justify-between text-muted-foreground font-mono text-[11px]">
-                            <span>Monto:</span>
-                            <span className="font-bold text-foreground">
-                              {formatCurrency(Number(d.value))}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    }
-                    return null
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
 
-            {/* Centro del Donut */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-1">
-              <span className="text-[8.5px] font-bold text-muted-foreground uppercase tracking-tight leading-tight">
-                {centerLabel}
+          <div className="bg-secondary p-0.5 rounded-xl border border-border flex items-center shrink-0">
+            <button
+              type="button"
+              onClick={() => setPerspective('TOTAL')}
+              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
+                perspective === 'TOTAL'
+                  ? 'bg-card text-foreground font-bold shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground font-medium'
+              }`}
+            >
+              Caja Total
+            </button>
+            <button
+              type="button"
+              onClick={() => setPerspective('OPERATIVO')}
+              className={`px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer ${
+                perspective === 'OPERATIVO'
+                  ? 'bg-card text-foreground font-bold shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground font-medium'
+              }`}
+            >
+              Operativo
+            </button>
+          </div>
+        </div>
+
+        {/* Cuerpo: Barras de Composición Proporcional */}
+        <div className="space-y-4 my-auto">
+          {/* Bloque Ingresos */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                Ingresos ({formatCurrency(activeIngresos)})
               </span>
-              <span className="text-base sm:text-lg font-extrabold text-foreground font-mono tabular-nums mt-0.5 leading-tight">
-                {formatSignedCurrency(netFlow)}
-              </span>
+              <div className="flex items-center gap-3 text-[11px] font-mono">
+                <span className="flex items-center gap-1 font-medium text-emerald-800 dark:text-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-700 shrink-0" />
+                  Ventas: <strong className="font-bold">{formatCompactCurrency(ventasOperativas)}</strong> ({displayPctVentas}%)
+                </span>
+                <span className={`flex items-center gap-1 font-medium text-sky-700 dark:text-sky-400 ${isOperativo ? 'opacity-30' : ''}`}>
+                  <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
+                  Préstamo: <strong className="font-bold">{formatCompactCurrency(financiamiento)}</strong> ({displayPctFinanciamiento}%)
+                </span>
+              </div>
             </div>
-          </>
-        )}
-      </div>
 
-      {/* 3. Panel Inferior de Desglose Contable (2 Columnas Simétricas) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/70 text-xs w-full">
-        {/* Columna 1: Ingresos */}
-        <div className="space-y-1.5 bg-secondary/30 p-2.5 rounded-xl border border-border/50">
-          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">
-            Ingresos ({formatCurrency(activeIngresos)})
-          </span>
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="flex items-center gap-1.5 font-medium text-foreground">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-              Ventas Catálogo
-            </span>
-            <span className="font-bold text-foreground">
-              {formatCompactCurrency(ventasOperativas)} ({isOperativo ? '100%' : `${pctVentas}%`})
-            </span>
+            {/* Barra apilada Ingresos */}
+            <div className="h-2.5 w-full rounded-full overflow-hidden flex bg-secondary border border-border/50">
+              {widthVentas > 0 && (
+                <Tooltip>
+                  <TooltipTrigger
+                    style={{ width: `${widthVentas}%` }}
+                    className="bg-emerald-700 h-full transition-all duration-300 hover:brightness-110 cursor-pointer block border-0 p-0"
+                  />
+                  <TooltipContent className="bg-card text-foreground border border-border p-2.5 rounded-xl shadow-lg text-xs">
+                    <p className="font-bold text-emerald-800 dark:text-emerald-300">Ventas Catálogo</p>
+                    <p className="text-muted-foreground font-mono mt-0.5">
+                      {formatCurrency(ventasOperativas)} ({displayPctVentas}%)
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Ingresos cobrados de clientes y pedidos</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {widthFinanciamiento > 0 && !isOperativo && (
+                <Tooltip>
+                  <TooltipTrigger
+                    style={{ width: `${widthFinanciamiento}%` }}
+                    className="bg-sky-600 h-full transition-all duration-300 hover:brightness-110 cursor-pointer block border-0 p-0"
+                  />
+                  <TooltipContent className="bg-card text-foreground border border-border p-2.5 rounded-xl shadow-lg text-xs">
+                    <p className="font-bold text-sky-600 dark:text-sky-400">Préstamo BCP</p>
+                    <p className="text-muted-foreground font-mono mt-0.5">
+                      {formatCurrency(financiamiento)} ({displayPctFinanciamiento}%)
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Capital de trabajo extraordinario</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
-          <div className={`flex items-center justify-between text-[11px] ${isOperativo ? 'opacity-40' : ''}`}>
-            <span className="flex items-center gap-1.5 font-medium text-foreground">
-              <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />
-              Préstamo BCP
-            </span>
-            <span className="font-bold text-foreground">
-              {formatCompactCurrency(financiamiento)} ({isOperativo ? '—' : `${pctFinanciamiento}%`})
-            </span>
+
+          {/* Bloque Egresos */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                Egresos ({formatCurrency(activeEgresos)})
+              </span>
+              <div className="flex items-center gap-3 text-[11px] font-mono">
+                <span className="flex items-center gap-1 font-medium text-destructive">
+                  <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />
+                  Operativo: <strong className="font-bold">{formatCompactCurrency(costosOperativos)}</strong> ({displayPctOperativos}%)
+                </span>
+                <span className={`flex items-center gap-1 font-medium text-primary ${isOperativo ? 'opacity-30' : ''}`}>
+                  <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                  Máquinas: <strong className="font-bold">{formatCompactCurrency(activosFijos)}</strong> ({displayPctMaquinas}%)
+                </span>
+              </div>
+            </div>
+
+            {/* Barra apilada Egresos */}
+            <div className="h-2.5 w-full rounded-full overflow-hidden flex bg-secondary border border-border/50">
+              {widthOperativos > 0 && (
+                <Tooltip>
+                  <TooltipTrigger
+                    style={{ width: `${widthOperativos}%` }}
+                    className="bg-destructive h-full transition-all duration-300 hover:brightness-110 cursor-pointer block border-0 p-0"
+                  />
+                  <TooltipContent className="bg-card text-foreground border border-border p-2.5 rounded-xl shadow-lg text-xs">
+                    <p className="font-bold text-destructive">Costos Operativos</p>
+                    <p className="text-muted-foreground font-mono mt-0.5">
+                      {formatCurrency(costosOperativos)} ({displayPctOperativos}%)
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Insumos, filamento, servicios y fletes</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
+              {widthMaquinas > 0 && !isOperativo && (
+                <Tooltip>
+                  <TooltipTrigger
+                    style={{ width: `${widthMaquinas}%` }}
+                    className="bg-primary h-full transition-all duration-300 hover:brightness-110 cursor-pointer block border-0 p-0"
+                  />
+                  <TooltipContent className="bg-card text-foreground border border-border p-2.5 rounded-xl shadow-lg text-xs">
+                    <p className="font-bold text-primary">Máquinas & Equipamiento</p>
+                    <p className="text-muted-foreground font-mono mt-0.5">
+                      {formatCurrency(activosFijos)} ({displayPctMaquinas}%)
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Inversión en activos fijos de producción</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Columna 2: Egresos */}
-        <div className="space-y-1.5 bg-secondary/30 p-2.5 rounded-xl border border-border/50">
-          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">
-            Egresos ({formatCurrency(activeEgresos)})
+        {/* Pie de Superávit */}
+        <div className="bg-secondary/50 rounded-xl px-3.5 py-2 flex items-center justify-between text-xs border border-border/40">
+          <span className="text-muted-foreground font-medium">
+            {isOperativo ? 'Utilidad Operativa del Período:' : 'Superávit Neto del Período:'}
           </span>
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="flex items-center gap-1.5 font-medium text-foreground">
-              <span className="w-2 h-2 rounded-full bg-destructive shrink-0" />
-              Operativos
-            </span>
-            <span className="font-bold text-foreground">
-              {formatCompactCurrency(costosOperativos)} ({isOperativo ? '100%' : `${pctCostosOperativos}%`})
-            </span>
-          </div>
-          <div className={`flex items-center justify-between text-[11px] ${isOperativo ? 'opacity-40' : ''}`}>
-            <span className="flex items-center gap-1.5 font-medium text-foreground">
-              <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
-              Máquinas
-            </span>
-            <span className="font-bold text-foreground">
-              {formatCompactCurrency(activosFijos)} ({isOperativo ? '—' : `${pctActivosFijos}%`})
-            </span>
-          </div>
+          <span
+            className={`text-sm font-extrabold font-mono tabular-nums ${
+              netFlow >= 0 ? 'text-foreground' : 'text-destructive'
+            }`}
+          >
+            {formatSignedCurrency(netFlow)}
+          </span>
         </div>
       </div>
-
-      {/* 4. Fila Inferior de Flujo Neto */}
-      <div className="bg-secondary/60 rounded-xl px-3 py-1.5 flex items-center justify-between text-xs mt-2 border border-border/40">
-        <span className="text-muted-foreground font-medium">
-          Flujo Neto del Período:
-        </span>
-        <span className="font-extrabold text-foreground text-xs sm:text-sm font-mono tabular-nums">
-          {formatSignedCurrency(netFlow)}
-        </span>
-      </div>
-    </div>
+    </TooltipProvider>
   )
 }
 
