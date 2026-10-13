@@ -417,9 +417,8 @@ export interface EntregaInfoStatus {
  * Formato: "Jueves 15 (3 días)", "Martes 13 (1 día)", etc.
  * Escala de alerta:
  * - 1 día (o <= 0 / vencido): ROJO
- * - 2 días: AMARILLO
- * - 3 días: NARANJA
- * - + de 3 días: VERDE
+ * - 2 días: ÁMBAR
+ * - 3 días o más: VERDE
  */
 export function getEntregaInfoStatus(diaPromesa?: string | null): EntregaInfoStatus {
   if (!diaPromesa || !diaPromesa.trim()) {
@@ -455,9 +454,8 @@ export function getEntregaInfoStatus(diaPromesa?: string | null): EntregaInfoSta
 
   // Escala de alertas por días:
   // 1 día, hoy o vencido: ROJO
-  // 2 días: AMARILLO
-  // 3 días: NARANJA
-  // + de 3 días: VERDE
+  // 2 días: ÁMBAR
+  // 3 días o más: VERDE
   let colorClass = ''
   let iconType: 'flame' | 'clock' | 'calendar' = 'calendar'
   let esVencido = false
@@ -475,12 +473,10 @@ export function getEntregaInfoStatus(diaPromesa?: string | null): EntregaInfoSta
     colorClass = 'text-red-600 dark:text-red-400 font-semibold'
     iconType = 'calendar'
   } else if (diffDias === 2) {
-    colorClass = 'text-yellow-600 dark:text-yellow-400 font-semibold'
-    iconType = 'calendar'
-  } else if (diffDias === 3) {
-    colorClass = 'text-orange-600 dark:text-orange-400 font-semibold'
+    colorClass = 'text-amber-600 dark:text-amber-400 font-semibold'
     iconType = 'calendar'
   } else {
+    // 3 días o más: Verde
     colorClass = 'text-emerald-600 dark:text-emerald-400 font-semibold'
     iconType = 'calendar'
   }
