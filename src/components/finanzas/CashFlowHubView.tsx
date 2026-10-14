@@ -54,9 +54,8 @@ import {
   Legend
 } from 'recharts'
 import { toast } from 'sonner'
-import { formatDate } from '@/lib/utils'
-import { DateRange, getDefaultDateRange, isDateInRange } from '@/lib/date-utils'
-import { DateFilterControl } from '@/components/ui/DateFilterControl'
+import { formatDate, cn } from '@/lib/utils'
+import { DateRange, getDefaultDateRange, isDateInRange, MESES_ES, formatToYMD } from '@/lib/date-utils'
 import { useBusiness } from '@/context/BusinessContext'
 import {
   DatosPresupuestoTranquilidad,
@@ -161,6 +160,10 @@ export interface PartidaPresupuesto {
   pagado: boolean
   monto?: number
   esBlindado?: boolean
+  inversionId?: string | null
+  montoPagadoReal?: number | null
+  fechaPago?: string | null
+  vencimiento?: string
 }
 
 export type ItemGastoPlan = PartidaPresupuesto
@@ -201,62 +204,37 @@ const CATEGORIA_CONFIG: Record<CategoriaGastoPlan, { label: string; badgeColor: 
   }
 }
 
-// Tooltip para Gráfica de Evolución
+// Tooltip Flotante Enriquecido para Gráfica de Evolución (Nova Design System)
 function CustomCashFlowTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const data = payload[0]?.payload || {}
-    const isNetPositive = (data.ingresos || 0) >= (data.egresos || 0)
-    const neto = (data.ingresos || 0) - (data.egresos || 0)
+    const ingresos = Number(data.ingresos || 0)
+    const egresos = Number(data.egresos || 0)
+    const saldo = Number(data.saldoAcumulado || 0)
 
     return (
-      <div className="bg-card/95 backdrop-blur-md border border-border p-3.5 rounded-2xl shadow-xl min-w-[240px] text-xs">
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-border/70">
-          <span className="font-bold text-foreground flex items-center gap-1.5 text-xs">
-            <Calendar className="h-3.5 w-3.5 text-primary" />
-            {data.fechaCompleta || label}
-          </span>
-          <Badge
-            variant="outline"
-            className={`text-[10px] font-bold px-1.5 py-0 ${
-              isNetPositive
-                ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20'
-                : 'bg-destructive/10 text-destructive border-destructive/20'
-            }`}
-          >
-            {isNetPositive ? `+S/\u00A0${neto.toFixed(2)}` : `-S/\u00A0${Math.abs(neto).toFixed(2)}`}
-          </Badge>
+      <div className="bg-popover border border-border rounded-xl p-3 shadow-lg text-xs space-y-1 min-w-[200px]">
+        <div className="font-semibold text-foreground flex items-center gap-1.5 border-b border-border/70 pb-1 mb-1">
+          <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+          <span className="truncate">{data.fechaCompleta || label}</span>
         </div>
-
-        <div className="space-y-1.5">
-          <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-medium">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-600" />
-              Ingresos Cobrados:
-            </span>
-            <span className="font-mono font-bold">
-              +S/\u00A0{Number(data.ingresos || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-
-          <div className="flex justify-between items-center text-destructive font-medium">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-destructive" />
-              Egresos / Gastos:
-            </span>
-            <span className="font-mono font-bold">
-              -S/\u00A0{Number(data.egresos || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-
-          <div className="pt-2 mt-2 border-t border-border flex justify-between items-center bg-secondary/50 p-2 rounded-xl">
-            <span className="font-bold text-foreground flex items-center gap-1">
-              <Wallet className="h-3.5 w-3.5 text-foreground" />
-              Saldo Acumulado:
-            </span>
-            <span className="font-mono font-extrabold text-foreground text-sm">
-              S/\u00A0{Number(data.saldoAcumulado || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
+        <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400 font-medium">
+          <span>Entradas del día:</span>
+          <span className="font-mono font-bold">
+            +S/ {ingresos.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div className="flex justify-between items-center text-destructive font-medium">
+          <span>Salidas del día:</span>
+          <span className="font-mono font-bold">
+            -S/ {egresos.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </div>
+        <div className="flex justify-between items-center pt-1 border-t border-border/70">
+          <span className="font-bold text-foreground">Saldo al cierre:</span>
+          <span className="font-mono font-extrabold text-foreground">
+            S/ {saldo.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
         </div>
       </div>
     )
@@ -400,7 +378,11 @@ export function CashFlowHubView({
       return datosPresupuesto.partidasPlan.map(p => ({
         ...p,
         monto: Number(p.presupuesto || 0),
-        esBlindado: p.tipo === 'Blindado'
+        esBlindado: p.tipo === 'Blindado',
+        inversionId: p.inversionId,
+        montoPagadoReal: p.montoPagadoReal,
+        fechaPago: p.fechaPago,
+        vencimiento: p.vencimiento
       }))
     }
     return getPartidasFallback()
@@ -411,7 +393,11 @@ export function CashFlowHubView({
       setPartidas(datosPresupuesto.partidasPlan.map(p => ({
         ...p,
         monto: Number(p.presupuesto || 0),
-        esBlindado: p.tipo === 'Blindado'
+        esBlindado: p.tipo === 'Blindado',
+        inversionId: p.inversionId,
+        montoPagadoReal: p.montoPagadoReal,
+        fechaPago: p.fechaPago,
+        vencimiento: p.vencimiento
       })))
     }
   }, [datosPresupuesto?.partidasPlan])
@@ -463,8 +449,10 @@ export function CashFlowHubView({
     totalCuotas: cuotasTotales,
     montoCuota: cuotaMontoValor,
     capitalRestante: saldoCapitalRestante,
-    pagada: estaCuotaPagada
-  }), [siguienteCuotaNum, cuotasTotales, cuotaMontoValor, saldoCapitalRestante, estaCuotaPagada])
+    pagada: estaCuotaPagada,
+    cuotaSeptiembre: datosPresupuesto?.prestamoInfo?.cuotaSeptiembre,
+    cuotaOctubre: datosPresupuesto?.prestamoInfo?.cuotaOctubre
+  }), [siguienteCuotaNum, cuotasTotales, cuotaMontoValor, saldoCapitalRestante, estaCuotaPagada, datosPresupuesto?.prestamoInfo])
 
   // Partidas blindadas adicionales (Luz, Internet, Reservas)
   const partidasBlindadas = useMemo(() => {
@@ -589,13 +577,124 @@ export function CashFlowHubView({
   }
 
   // =========================================================================
-  // CONTROL DE FECHAS Y FILTROS PARA PESTAÑA MOVIMIENTOS
+  // CONTROL MAESTRO DE PERÍODO UNIFICADO (MASTER DATE CONTROLLER)
   // =========================================================================
+  type PeriodoPreset = 'mes' | 'mes_anterior' | 'trimestre' | 'año' | 'historico'
+
+  const [periodo, setPeriodo] = useState<PeriodoPreset>('mes')
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date())
   const [search, setSearch] = useState('')
   const [tipoFilter, setTipoFilter] = useState<'TODOS' | 'INGRESOS' | 'EGRESOS'>('TODOS')
-  const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange('TODO'))
   const [currentPage, setCurrentPage] = useState(1)
   const [showChart, setShowChart] = useState(true)
+
+  // Handlers para el Selector de Período Maestro
+  const handleCambiarPeriodo = (nuevoPeriodo: PeriodoPreset) => {
+    setPeriodo(nuevoPeriodo)
+    const now = new Date()
+    if (nuevoPeriodo === 'mes') {
+      setCurrentDate(new Date(now.getFullYear(), now.getMonth(), 1))
+    } else if (nuevoPeriodo === 'mes_anterior') {
+      setCurrentDate(new Date(now.getFullYear(), now.getMonth() - 1, 1))
+    } else if (nuevoPeriodo === 'trimestre') {
+      setCurrentDate(new Date(now.getFullYear(), now.getMonth(), 1))
+    } else if (nuevoPeriodo === 'año') {
+      setCurrentDate(new Date(now.getFullYear(), 0, 1))
+    } else {
+      setCurrentDate(now)
+    }
+    setCurrentPage(1)
+  }
+
+  const handleRetrocederPeriodo = () => {
+    setCurrentDate(prev => {
+      if (periodo === 'mes' || periodo === 'mes_anterior') {
+        return new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
+      }
+      if (periodo === 'trimestre') {
+        return new Date(prev.getFullYear(), prev.getMonth() - 3, 1)
+      }
+      if (periodo === 'año') {
+        return new Date(prev.getFullYear() - 1, prev.getMonth(), 1)
+      }
+      return prev
+    })
+    setCurrentPage(1)
+  }
+
+  const handleAvanzarPeriodo = () => {
+    setCurrentDate(prev => {
+      if (periodo === 'mes' || periodo === 'mes_anterior') {
+        return new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
+      }
+      if (periodo === 'trimestre') {
+        return new Date(prev.getFullYear(), prev.getMonth() + 3, 1)
+      }
+      if (periodo === 'año') {
+        return new Date(prev.getFullYear() + 1, prev.getMonth(), 1)
+      }
+      return prev
+    })
+    setCurrentPage(1)
+  }
+
+  // Label amigable para el período activo en el paginador
+  const labelPeriodoActivo = useMemo(() => {
+    if (periodo === 'historico') {
+      return 'Histórico Completo'
+    }
+    if (periodo === 'mes' || periodo === 'mes_anterior') {
+      const mesNombre = MESES_ES[currentDate.getMonth()] || ''
+      return `${mesNombre} ${currentDate.getFullYear()}`
+    }
+    if (periodo === 'trimestre') {
+      const q = Math.floor(currentDate.getMonth() / 3) + 1
+      const qNames = ['Ene - Mar', 'Abr - Jun', 'Jul - Set', 'Oct - Dic']
+      return `T${q} ${currentDate.getFullYear()} (${qNames[q - 1]})`
+    }
+    if (periodo === 'año') {
+      return `Año ${currentDate.getFullYear()}`
+    }
+    return 'Período Activo'
+  }, [periodo, currentDate])
+
+  // Rango de fechas derivado reactivamente
+  const dateRange = useMemo<DateRange>(() => {
+    if (periodo === 'historico') {
+      return { from: null, to: null, preset: 'TODO' }
+    }
+    if (periodo === 'mes' || periodo === 'mes_anterior') {
+      const y = currentDate.getFullYear()
+      const m = currentDate.getMonth()
+      const firstDay = new Date(y, m, 1)
+      const lastDay = new Date(y, m + 1, 0)
+      return {
+        from: formatToYMD(firstDay),
+        to: formatToYMD(lastDay),
+        preset: periodo === 'mes' ? 'ESTE_MES' : 'MES_ANTERIOR'
+      }
+    }
+    if (periodo === 'trimestre') {
+      const y = currentDate.getFullYear()
+      const q = Math.floor(currentDate.getMonth() / 3)
+      const firstDay = new Date(y, q * 3, 1)
+      const lastDay = new Date(y, q * 3 + 3, 0)
+      return {
+        from: formatToYMD(firstDay),
+        to: formatToYMD(lastDay),
+        preset: 'ULTIMOS_3_MESES'
+      }
+    }
+    if (periodo === 'año') {
+      const y = currentDate.getFullYear()
+      return {
+        from: `${y}-01-01`,
+        to: `${y}-12-31`,
+        preset: 'ESTE_ANIO'
+      }
+    }
+    return { from: null, to: null, preset: 'TODO' }
+  }, [periodo, currentDate])
 
   const { minFechaData, maxFechaData } = useMemo(() => {
     let min: string | undefined
@@ -612,9 +711,25 @@ export function CashFlowHubView({
     return { minFechaData: min, maxFechaData: max }
   }, [ventas, ingresosDirectos, egresos])
 
-  // Colecciones filtradas por el rango de fechas activo
+  // Sincronización en cascada: Colecciones filtradas exclusivamente para el lapso de fechas activo
   const ventasEnRango = useMemo(() => {
-    return ventas.filter(v => isDateInRange(v.fecha, dateRange.from, dateRange.to))
+    return ventas.map(v => {
+      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+        const pagosEnRango = v.pagos.filter(p => isDateInRange(p.fecha, dateRange.from, dateRange.to))
+        if (pagosEnRango.length === 0) return null
+        const montoPagadoEnRango = pagosEnRango.reduce((acc, p) => acc + (p.monto || 0), 0)
+        return {
+          ...v,
+          pagos: pagosEnRango,
+          montoPagado: montoPagadoEnRango
+        }
+      } else {
+        if (isDateInRange(v.fecha, dateRange.from, dateRange.to)) {
+          return v
+        }
+        return null
+      }
+    }).filter(Boolean) as VentaItem[]
   }, [ventas, dateRange])
 
   const ingresosDirectosEnRango = useMemo(() => {
@@ -625,76 +740,241 @@ export function CashFlowHubView({
     return egresos.filter(e => isDateInRange(e.createdAt, dateRange.from, dateRange.to))
   }, [egresos, dateRange])
 
-  // Datos para la gráfica de evolución temporal
+  // Datos para la gráfica de evolución temporal con agrupación adaptativa y escala Y dinámica
   const chartTimelineData = useMemo(() => {
+    const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic']
     const dayMap = new Map<string, { ingresos: number; egresos: number }>()
+
+    const addMovement = (dateStr: string | null | undefined, ingresos: number, egresos: number) => {
+      if (!dateStr) return
+      const day = dateStr.split('T')[0]
+      if (!day || day.length < 10) return
+      const curr = dayMap.get(day) || { ingresos: 0, egresos: 0 }
+      curr.ingresos += ingresos
+      curr.egresos += egresos
+      dayMap.set(day, curr)
+    }
 
     ventas.forEach(v => {
       if (Array.isArray(v.pagos) && v.pagos.length > 0) {
         v.pagos.forEach(p => {
-          if (p.monto > 0) {
-            const day = p.fecha.split('T')[0]
-            const curr = dayMap.get(day) || { ingresos: 0, egresos: 0 }
-            curr.ingresos += p.monto
-            dayMap.set(day, curr)
-          }
+          if (p.monto > 0) addMovement(p.fecha, p.monto, 0)
         })
       } else if (v.montoPagado > 0) {
-        const day = v.fecha.split('T')[0]
-        const curr = dayMap.get(day) || { ingresos: 0, egresos: 0 }
-        curr.ingresos += v.montoPagado
-        dayMap.set(day, curr)
+        addMovement(v.fecha, v.montoPagado, 0)
       }
     })
 
     ingresosDirectos.forEach(i => {
-      if (i.monto > 0) {
-        const day = i.fecha.split('T')[0]
-        const curr = dayMap.get(day) || { ingresos: 0, egresos: 0 }
-        curr.ingresos += i.monto
-        dayMap.set(day, curr)
-      }
+      if (i.monto > 0) addMovement(i.fecha, i.monto, 0)
     })
 
     egresos.forEach(e => {
-      if (e.costoTotal > 0) {
-        const day = e.createdAt.split('T')[0]
-        const curr = dayMap.get(day) || { ingresos: 0, egresos: 0 }
-        curr.egresos += e.costoTotal
-        dayMap.set(day, curr)
-      }
+      if (e.costoTotal > 0) addMovement(e.createdAt, 0, e.costoTotal)
     })
 
-    const sortedDays = Array.from(dayMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+    // CASO A: 'mes' o 'mes_anterior' -> Agrupación por DÍA del mes con auto-ajuste de escala Y
+    if (periodo === 'mes' || periodo === 'mes_anterior') {
+      const y = currentDate.getFullYear()
+      const m = currentDate.getMonth()
+      const daysInMonth = new Date(y, m + 1, 0).getDate()
+      const mesAbrev = monthsShort[m]
+      let runningBalance = 0
+      const points = []
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dayStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+        const dayData = dayMap.get(dayStr) || { ingresos: 0, egresos: 0 }
+        const neto = dayData.ingresos - dayData.egresos
+        runningBalance += neto
+
+        points.push({
+          rawDate: dayStr,
+          fechaLabel: `${d} ${mesAbrev}`,
+          fechaCompleta: `${d} de ${MESES_ES[m]} de ${y}`,
+          dayNum: d,
+          ingresos: Number(dayData.ingresos.toFixed(2)),
+          egresos: Number(dayData.egresos.toFixed(2)),
+          neto: Number(neto.toFixed(2)),
+          saldoAcumulado: Number(runningBalance.toFixed(2)),
+        })
+      }
+      return points
+    }
+
+    // CASO B: 'trimestre' -> Agrupación por SEMANAS
+    if (periodo === 'trimestre') {
+      const y = currentDate.getFullYear()
+      const q = Math.floor(currentDate.getMonth() / 3)
+      const qStart = new Date(y, q * 3, 1)
+      const qEnd = new Date(y, q * 3 + 3, 0)
+
+      let runningBalance = 0
+      const points = []
+      let weekNum = 1
+      let weekStart = new Date(qStart)
+
+      while (weekStart <= qEnd) {
+        const weekEnd = new Date(weekStart)
+        weekEnd.setDate(weekStart.getDate() + 6)
+        if (weekEnd > qEnd) {
+          weekEnd.setTime(qEnd.getTime())
+        }
+
+        const startYMD = formatToYMD(weekStart)
+        const endYMD = formatToYMD(weekEnd)
+
+        let wIngresos = 0
+        let wEgresos = 0
+
+        dayMap.forEach((val, dayKey) => {
+          if (dayKey >= startYMD && dayKey <= endYMD) {
+            wIngresos += val.ingresos
+            wEgresos += val.egresos
+          }
+        })
+
+        const neto = wIngresos - wEgresos
+        runningBalance += neto
+
+        const sDay = weekStart.getDate()
+        const sMon = monthsShort[weekStart.getMonth()]
+        const eDay = weekEnd.getDate()
+        const eMon = monthsShort[weekEnd.getMonth()]
+
+        points.push({
+          rawDate: startYMD,
+          fechaLabel: `Sem ${weekNum}`,
+          fechaCompleta: `Semana ${weekNum} (${sDay} ${sMon} - ${eDay} ${eMon} ${weekEnd.getFullYear()})`,
+          ingresos: Number(wIngresos.toFixed(2)),
+          egresos: Number(wEgresos.toFixed(2)),
+          neto: Number(neto.toFixed(2)),
+          saldoAcumulado: Number(runningBalance.toFixed(2)),
+        })
+
+        weekNum++
+        weekStart = new Date(weekEnd)
+        weekStart.setDate(weekStart.getDate() + 1)
+      }
+      return points
+    }
+
+    // CASO C: 'año' -> Agrupación por MESES del año
+    if (periodo === 'año') {
+      const y = currentDate.getFullYear()
+      let runningBalance = 0
+      const points = []
+
+      for (let m = 0; m < 12; m++) {
+        const mStart = `${y}-${String(m + 1).padStart(2, '0')}-01`
+        const lastD = new Date(y, m + 1, 0).getDate()
+        const mEnd = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastD).padStart(2, '0')}`
+
+        let mIngresos = 0
+        let mEgresos = 0
+
+        dayMap.forEach((val, dayKey) => {
+          if (dayKey >= mStart && dayKey <= mEnd) {
+            mIngresos += val.ingresos
+            mEgresos += val.egresos
+          }
+        })
+
+        const neto = mIngresos - mEgresos
+        runningBalance += neto
+
+        points.push({
+          rawDate: mStart,
+          fechaLabel: monthsShort[m],
+          fechaCompleta: `${MESES_ES[m]} ${y}`,
+          ingresos: Number(mIngresos.toFixed(2)),
+          egresos: Number(mEgresos.toFixed(2)),
+          neto: Number(neto.toFixed(2)),
+          saldoAcumulado: Number(runningBalance.toFixed(2)),
+        })
+      }
+      return points
+    }
+
+    // CASO D: 'historico' -> Agrupación por MESES de toda la historia
+    const allDays = Array.from(dayMap.keys()).sort()
+    if (allDays.length === 0) {
+      const now = new Date()
+      return [{
+        rawDate: formatToYMD(now),
+        fechaLabel: monthsShort[now.getMonth()],
+        fechaCompleta: `${MESES_ES[now.getMonth()]} ${now.getFullYear()}`,
+        ingresos: 0,
+        egresos: 0,
+        neto: 0,
+        saldoAcumulado: 0
+      }]
+    }
+
+    const firstDay = allDays[0]
+    const lastDay = allDays[allDays.length - 1]
+    const [startYear, startMonth] = firstDay.split('-').map(Number)
+    const [endYear, endMonth] = lastDay.split('-').map(Number)
 
     let runningBalance = 0
-    const points = sortedDays.map(([day, val]) => {
-      const netoDia = val.ingresos - val.egresos
-      runningBalance += netoDia
-      const parts = day.split('-')
-      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic']
-      const dayNum = parseInt(parts[2], 10)
-      const monthName = months[parseInt(parts[1], 10) - 1] || ''
-      const formattedShort = `${dayNum} ${monthName}`
-      const formattedLong = `${dayNum} ${monthName} ${parts[0]}`
+    const points = []
+    let curY = startYear
+    let curM = startMonth
 
-      return {
-        rawDate: day,
-        fechaLabel: formattedShort,
-        fechaCompleta: formattedLong,
-        ingresos: Number(val.ingresos.toFixed(2)),
-        egresos: Number(val.egresos.toFixed(2)),
-        neto: Number(netoDia.toFixed(2)),
+    while (curY < endYear || (curY === endYear && curM <= endMonth)) {
+      const mIndex = curM - 1
+      const mStart = `${curY}-${String(curM).padStart(2, '0')}-01`
+      const lastD = new Date(curY, curM, 0).getDate()
+      const mEnd = `${curY}-${String(curM).padStart(2, '0')}-${String(lastD).padStart(2, '0')}`
+
+      let mIngresos = 0
+      let mEgresos = 0
+
+      dayMap.forEach((val, dayKey) => {
+        if (dayKey >= mStart && dayKey <= mEnd) {
+          mIngresos += val.ingresos
+          mEgresos += val.egresos
+        }
+      })
+
+      const neto = mIngresos - mEgresos
+      runningBalance += neto
+
+      const isMultiYear = startYear !== endYear
+      const label = isMultiYear ? `${monthsShort[mIndex]} ${String(curY).slice(2)}` : monthsShort[mIndex]
+
+      points.push({
+        rawDate: mStart,
+        fechaLabel: label,
+        fechaCompleta: `${MESES_ES[mIndex]} ${curY}`,
+        ingresos: Number(mIngresos.toFixed(2)),
+        egresos: Number(mEgresos.toFixed(2)),
+        neto: Number(neto.toFixed(2)),
         saldoAcumulado: Number(runningBalance.toFixed(2)),
-      }
-    })
+      })
 
-    if (dateRange.preset !== 'TODO') {
-      const filtered = points.filter(p => isDateInRange(p.rawDate, dateRange.from, dateRange.to))
-      return filtered.length > 0 ? filtered : points
+      curM++
+      if (curM > 12) {
+        curM = 1
+        curY++
+      }
     }
     return points
-  }, [ventas, ingresosDirectos, egresos, dateRange])
+  }, [ventas, ingresosDirectos, egresos, periodo, currentDate])
+
+  // Granularidad adaptativa del eje X
+  const xAxisInterval = useMemo(() => {
+    if (periodo === 'mes' || periodo === 'mes_anterior') {
+      return (index: number) => {
+        const d = index + 1
+        return d === 1 || d % 5 === 0
+      }
+    }
+    if (periodo === 'trimestre') {
+      return (index: number) => index % 2 === 0
+    }
+    return 0
+  }, [periodo])
 
   // Movimientos unificados ordenados cronológicamente
   const allMovements = useMemo(() => {
@@ -1156,48 +1436,108 @@ export function CashFlowHubView({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 bg-background text-foreground min-h-screen">
       
-      {/* CABECERA PRINCIPAL */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-accent text-accent-foreground border border-border">
-              Finanzas NOVA
+      {/* CABECERA PRINCIPAL CON SELECTOR DE PERÍODO MAESTRO UNIFICADO */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-border/40 mb-6">
+        {/* Lado Izquierdo: Títulos y Badges */}
+        <div className="space-y-1.5 max-w-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-accent text-accent-foreground px-2 py-0.5 rounded-md border border-border/60">
+              FINANZAS NOVA
             </span>
-            <Badge variant="outline" className="text-[10px] font-semibold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20">
+            <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/20">
               Salud Financiera en Vivo
-            </Badge>
+            </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-2.5">
-            <div className="p-1.5 rounded-xl bg-accent border border-border text-primary shadow-2xs">
-              <Wallet className="h-6 w-6 stroke-[2.5]" />
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Wallet className="w-5 h-5" />
             </div>
-            <span>Flujo de Caja & Salud Financiera</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Flujo de Caja & Salud Financiera
+            </h1>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed pl-11">
             Centro de control unificado: balance real de caja, compromisos blindados y capacidad de gasto libre en tiempo real.
           </p>
         </div>
 
-        {/* Acciones de Cabecera */}
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsPlanModalOpen(true)}
-            className="h-9 px-3.5 rounded-xl border-border bg-card text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer shadow-2xs flex items-center gap-1.5"
+        {/* Lado Derecho: Controles en 1 Sola Línea */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+          {/* Selector de Presets Temporales */}
+          <div className="bg-secondary/80 border border-border/80 p-1 rounded-xl flex items-center gap-1 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => handleCambiarPeriodo('mes')}
+              className={cn(
+                "text-xs px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap cursor-pointer",
+                periodo === 'mes'
+                  ? "bg-card text-foreground font-bold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Este Mes
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCambiarPeriodo('mes_anterior')}
+              className={cn(
+                "text-xs px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap cursor-pointer",
+                periodo === 'mes_anterior'
+                  ? "bg-card text-foreground font-bold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Mes Anterior
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCambiarPeriodo('trimestre')}
+              className={cn(
+                "text-xs px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap cursor-pointer",
+                periodo === 'trimestre'
+                  ? "bg-card text-foreground font-bold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Trimestre
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCambiarPeriodo('año')}
+              className={cn(
+                "text-xs px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap cursor-pointer",
+                periodo === 'año'
+                  ? "bg-card text-foreground font-bold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Año
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCambiarPeriodo('historico')}
+              className={cn(
+                "text-xs px-3 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap cursor-pointer",
+                periodo === 'historico'
+                  ? "bg-card text-foreground font-bold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+            )}
           >
-            <ShieldCheck className="h-3.5 w-3.5 text-primary" />
-            <span>Plan de Gastos ({partidas.length})</span>
-          </Button>
-          <Link
-            href="/historico-mensual"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 h-9 rounded-xl text-xs font-bold bg-secondary hover:bg-accent text-accent-foreground border border-border shadow-2xs transition-all"
-          >
-            <TrendingUp className="h-3.5 w-3.5 text-primary" />
-            <span>Histórico</span>
-          </Link>
+            Histórico
+          </button>
         </div>
+
+        {/* Botón Plan de Gastos */}
+        <Button
+          variant="outline"
+          onClick={() => setIsPlanModalOpen(true)}
+          className="border-border text-foreground hover:bg-secondary text-xs font-semibold h-9 px-3.5 rounded-xl flex items-center gap-1.5 shadow-2xs whitespace-nowrap cursor-pointer"
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+          <span>Plan de Gastos ({partidas.length})</span>
+        </Button>
       </div>
+    </div>
 
       {/* ========================================================================= */}
       {/* NIVEL 1: TRÍPTICO DE LIQUIDEZ Y DIAGNÓSTICO FINANCIERO (KPIS FIJOS)       */}
@@ -1308,7 +1648,7 @@ export function CashFlowHubView({
                     <stop offset="95%" stopColor="#A34335" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="saldoAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#241C15" stopOpacity={0.10} />
+                    <stop offset="5%" stopColor="#241C15" stopOpacity={0.15} />
                     <stop offset="95%" stopColor="#241C15" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
@@ -1319,6 +1659,7 @@ export function CashFlowHubView({
                   fontSize={10}
                   tickLine={false}
                   axisLine={{ stroke: '#E2D9CC' }}
+                  interval={xAxisInterval as any}
                 />
                 <YAxis
                   stroke="#75695D"
@@ -1421,15 +1762,10 @@ export function CashFlowHubView({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-              <DateFilterControl
-                value={dateRange}
-                onChange={(newRange) => {
-                  setDateRange(newRange)
-                  setCurrentPage(1)
-                }}
-                minDate={minFechaData}
-                maxDate={maxFechaData}
-              />
+              <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary/60 border border-border text-xs text-muted-foreground">
+                <Calendar className="w-3.5 h-3.5 text-primary" />
+                <span>Período: <strong className="text-foreground">{labelPeriodoActivo}</strong></span>
+              </div>
 
               <div className="flex items-center gap-1 bg-secondary/80 p-1 rounded-xl border border-border/80">
                 <button
@@ -1441,7 +1777,7 @@ export function CashFlowHubView({
                       : 'text-muted-foreground hover:bg-card hover:text-foreground'
                   }`}
                 >
-                  Todos ({allMovements.length})
+                  Todos ({filteredMovements.length})
                 </button>
                 <button
                   type="button"
