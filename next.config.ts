@@ -1,13 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    // TypeScript validation is handled via tsc
-    ignoreBuildErrors: false,
-  },
+  /* config options here */
 };
 
 export default nextConfig;
