@@ -21,11 +21,13 @@ import {
 import { ProductionKpiCard } from './ProductionKpiCard'
 import { ProductionQueueView } from './ProductionQueueView'
 import { ProductionInsightsSection } from './ProductionInsightsSection'
+import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 
 export function TallerClient({ data }: { data: TallerDataResponse }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [selectedKpiExplainer, setSelectedKpiExplainer] = useState<string | null>(null)
 
   // Estado optimista local y loader individual para feedback instantáneo (<50ms)
   const [piezasOpt, setPiezasOpt] = useState<Record<string, 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'>>({})
@@ -230,6 +232,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         {/* KPI 1 - POR FABRICAR */}
         <ProductionKpiCard
           label="POR FABRICAR"
+          onInfoClick={() => setSelectedKpiExplainer('taller_por_fabricar')}
           value={
             <span className="flex items-baseline gap-1.5">
               <span>{metricasActivas.totalPiezasPendientes}</span>
@@ -250,6 +253,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         {/* KPI 2 - MODELOS DISTINTOS */}
         <ProductionKpiCard
           label="MODELOS DISTINTOS"
+          onInfoClick={() => setSelectedKpiExplainer('taller_modelos_distintos')}
           value={
             <span className="flex items-baseline gap-1.5">
               <span>{metricasActivas.totalModelosDistintos}</span>
@@ -270,6 +274,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         {/* KPI 3 - COLORES ASIGNADOS */}
         <ProductionKpiCard
           label="COLORES ASIGNADOS"
+          onInfoClick={() => setSelectedKpiExplainer('taller_colores_asignados')}
           value={
             <span className="flex items-baseline gap-1.5">
               <span>{metricasActivas.totalColoresAsignados}</span>
@@ -302,6 +307,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         {/* KPI 4 - LISTAS PARA DESPACHO */}
         <ProductionKpiCard
           label="LISTAS PARA DESPACHO"
+          onInfoClick={() => setSelectedKpiExplainer('taller_listas_despacho')}
           className="p-4.5 pr-5"
           value={
             <span className="flex items-baseline gap-1.5">
@@ -335,6 +341,13 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
         onCambiarEstado={handleCambiarEstado}
         onActualizarEnlace={handleActualizarEnlace}
         metricasActivas={metricasActivas}
+      />
+
+      {/* Modal Explicador de Fórmulas y Transacciones de KPI */}
+      <KpiExplainerModal
+        isOpen={!!selectedKpiExplainer}
+        onClose={() => setSelectedKpiExplainer(null)}
+        kpiId={selectedKpiExplainer}
       />
     </div>
   )

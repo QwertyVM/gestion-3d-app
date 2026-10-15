@@ -29,6 +29,7 @@ export function AppShell({ children }: AppShellProps) {
     if (pathname.startsWith('/ventas')) return 'Ventas y Pedidos'
     if (pathname === '/catalogo/inventario' || pathname.startsWith('/inventario')) return 'Inventario de Filamentos'
     if (pathname === '/finanzas/flujo-caja') return 'Flujo de Caja'
+    if (pathname === '/finanzas/rentabilidad') return 'Rentabilidad & Sueldos'
     if (pathname === '/finanzas/ingresos') return 'Ingresos'
     if (pathname === '/finanzas/egresos') return 'Registro de Egresos'
     if (pathname === '/finanzas/tags') return 'Tags & Categorías'

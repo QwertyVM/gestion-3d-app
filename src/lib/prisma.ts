@@ -14,7 +14,8 @@ export function getPrisma(): PrismaClient {
     !('pagoVenta' in globalThis.prismaGlobal) || 
     !('cliente' in globalThis.prismaGlobal) ||
     !('configuracionTienda' in globalThis.prismaGlobal) ||
-    !('partidaPresupuesto' in globalThis.prismaGlobal)
+    !('partidaPresupuesto' in globalThis.prismaGlobal) ||
+    !('ingreso' in globalThis.prismaGlobal)
   ) {
     if (globalThis.prismaGlobal) {
       try {

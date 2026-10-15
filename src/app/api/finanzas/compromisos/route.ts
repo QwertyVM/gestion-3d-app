@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { getDatosPresupuestoTranquilidad, getResumenBlindadoOficial } from '@/actions/presupuesto'
+import { getDatosPresupuestoTranquilidad, getResumenBlindadoOficial, getHistorialCompromisos } from '@/actions/presupuesto'
 
 export async function GET() {
   try {
-    const [datos, resumen] = await Promise.all([
+    const [datos, resumen, historial] = await Promise.all([
       getDatosPresupuestoTranquilidad(),
-      getResumenBlindadoOficial()
+      getResumenBlindadoOficial(),
+      getHistorialCompromisos()
     ])
 
     return NextResponse.json({
@@ -13,7 +14,8 @@ export async function GET() {
       prestamoInfo: datos.prestamoInfo,
       partidasPlan: datos.partidasPlan,
       partidasBlindadas: datos.partidasBlindadasResumen,
-      resumen
+      resumen,
+      historial
     })
   } catch (error: any) {
     console.error('Error en API /api/finanzas/compromisos:', error)

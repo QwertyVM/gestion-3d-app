@@ -19,7 +19,8 @@ import {
   X,
   Hammer,
   Users,
-  Store
+  Store,
+  Coins
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getNavLiveMetrics } from '@/actions/nav'
@@ -325,6 +326,21 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
               >
                 <DollarSign className="h-3.5 w-3.5 shrink-0 text-[#1E5E3A]" />
                 <span>Flujo de Caja</span>
+              </Link>
+
+              {/* RENTABILIDAD & SUELDOS */}
+              <Link
+                href="/finanzas/rentabilidad"
+                onClick={handleLinkClick}
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  pathname === '/finanzas/rentabilidad'
+                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                )}
+              >
+                <Coins className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                <span>Rentabilidad & Sueldos</span>
               </Link>
 
               {/* HISTÓRICO MENSUAL (AHORA DENTRO DE FINANZAS) */}

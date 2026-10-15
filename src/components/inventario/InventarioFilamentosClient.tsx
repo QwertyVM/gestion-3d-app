@@ -30,7 +30,9 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
-  Loader2
+  Loader2,
+  Download,
+  ExternalLink
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -54,6 +56,7 @@ import {
   eliminarColor, 
   resetColoresTaller,
   editarColorFilamento,
+  archivarColor,
   descatalogarColor,
   reactivarColor
 } from '@/actions/inventario'
@@ -129,7 +132,7 @@ const esColorCritico = (c: ColorFilamentoItem) => {
   return gramos < 300 || Boolean(c.alertaCritica)
 }
 
-type FilterTab = 'todos' | 'disponibles' | 'criticos' | 'restock' | 'descatalogados'
+type FilterTab = 'disponibles' | 'criticos' | 'restock' | 'descatalogados' | 'todos'
 
 export function InventarioFilamentosClient({ 
   disponibles: initialDisponibles, 
@@ -141,7 +144,7 @@ export function InventarioFilamentosClient({
   const [restock, setRestock] = useState<ColorFilamentoItem[]>(initialRestock)
   const [descatalogados, setDescatalogados] = useState<ColorFilamentoItem[]>(initialDescatalogados)
   const [search, setSearch] = useState('')
-  const [activeTab, setActiveTab] = useState<FilterTab>('todos')
+  const [activeTab, setActiveTab] = useState<FilterTab>('disponibles')
   const [isPending, startTransition] = useTransition()
 
   // Paginación (8 filamentos por página)
@@ -184,6 +187,51 @@ export function InventarioFilamentosClient({
   // Delete confirmation state
   const [colorToDelete, setColorToDelete] = useState<ColorFilamentoItem | null>(null)
   const [isDeletingColor, setIsDeletingColor] = useState(false)
+
+  // Archive / Descatalogar confirmation state
+  const [colorToArchiveOrDescatalog, setColorToArchiveOrDescatalog] = useState<ColorFilamentoItem | null>(null)
+  const [isProcessingArchive, setIsProcessingArchive] = useState(false)
+
+  // Image Flyer Modal & Download State
+  const [openImageModal, setOpenImageModal] = useState(false)
+  const [imageTheme, setImageTheme] = useState<'dark' | 'light'>('dark')
+  const [isDownloadingImage, setIsDownloadingImage] = useState(false)
+  const [isCopyingImage, setIsCopyingImage] = useState(false)
+  const [imageTimestamp, setImageTimestamp] = useState(Date.now())
+
+  const handleDownloadFlyer = () => {
+    try {
+      setIsDownloadingImage(true)
+      const downloadUrl = `/api/inventario/filamentos/imagen?theme=${imageTheme}&download=true&t=${Date.now()}`
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = `catalogo-colores-disponibles-nova3d-${imageTheme}.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      toast.success('Descargando imagen del catálogo en alta resolución')
+    } catch (err: any) {
+      toast.error('Error al descargar: ' + (err?.message || 'Error'))
+    } finally {
+      setTimeout(() => setIsDownloadingImage(false), 800)
+    }
+  }
+
+  const handleCopyFlyerImage = async () => {
+    try {
+      setIsCopyingImage(true)
+      const res = await fetch(`/api/inventario/filamentos/imagen?theme=${imageTheme}&t=${Date.now()}`)
+      const blob = await res.blob()
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ])
+      toast.success('¡Imagen copiada al portapapeles! Ya puedes pegarla en WhatsApp o Instagram')
+    } catch (err: any) {
+      toast.error('No se pudo copiar directo. Usa el botón "Descargar Imagen"')
+    } finally {
+      setIsCopyingImage(false)
+    }
+  }
 
   // Close copy dropdown on click outside
   useEffect(() => {
@@ -325,10 +373,38 @@ export function InventarioFilamentosClient({
     }
   }
 
-  // Descatalogar color (ya no habrá este color)
-  const handleDescatalogarColor = async (item: ColorFilamentoItem) => {
-    if (!confirm(`¿Descatalogar "${item.nombreColor}"?\n\nEl color ya no aparecerá en el catálogo activo para clientes ni en compras de reposición.`)) return
+  // Archivar color (ocultar de taller temporalmente)
+  const handleArchivarColor = async (item: ColorFilamentoItem) => {
+    const updated: ColorFilamentoItem = { ...item, estado: 'ARCHIVADO', activo: false, nota: 'Archivado' }
+    if (item.estado === 'DISPONIBLE') {
+      setDisponibles(prev => prev.filter(c => c.id !== item.id))
+    } else {
+      setRestock(prev => prev.filter(c => c.id !== item.id))
+    }
+    setDescatalogados(prev => [updated, ...prev.filter(c => c.id !== item.id)])
+    if (selectedColorForDetails?.id === item.id) {
+      setSelectedColorForDetails(updated)
+    }
 
+    try {
+      await archivarColor(item.id)
+      toast.info(`"${item.nombreColor}" ha sido archivado`)
+    } catch (e: any) {
+      toast.error('Error al archivar: ' + e.message)
+      setDescatalogados(prev => prev.filter(c => c.id !== item.id))
+      if (item.estado === 'DISPONIBLE') {
+        setDisponibles(prev => [item, ...prev])
+      } else {
+        setRestock(prev => [item, ...prev])
+      }
+      if (selectedColorForDetails?.id === item.id) {
+        setSelectedColorForDetails(item)
+      }
+    }
+  }
+
+  // Descatalogar color (ya no habrá este color comercialmente)
+  const handleDescatalogarColor = async (item: ColorFilamentoItem) => {
     const updated: ColorFilamentoItem = { ...item, estado: 'DESCATALOGADO', activo: false, nota: 'Descatalogado' }
     if (item.estado === 'DISPONIBLE') {
       setDisponibles(prev => prev.filter(c => c.id !== item.id))
@@ -660,12 +736,12 @@ export function InventarioFilamentosClient({
           <button
             type="button"
             onClick={() => {
-              setActiveTab('todos')
+              setActiveTab('disponibles')
               setCurrentPage(1)
             }}
             className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
-              activeTab === 'todos'
-                ? 'bg-white border-[#A36F4C] ring-1 ring-[#A36F4C]'
+              activeTab === 'disponibles'
+                ? 'bg-white border-[#1E5E3A] ring-1 ring-[#1E5E3A]'
                 : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
             }`}
           >
@@ -872,9 +948,41 @@ export function InventarioFilamentosClient({
                       <div className="text-[10px] font-normal text-[#75695D]">Blanco, Negro, Gris, Arena...</div>
                     </div>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCopyDropdown(false)
+                      setImageTimestamp(Date.now())
+                      setOpenImageModal(true)
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-xl hover:bg-[#F4EFEA] text-xs font-bold text-[#A36F4C] transition-colors cursor-pointer border-t border-[#E2D9CC]/60 mt-1 pt-2"
+                  >
+                    <Download className="h-4 w-4 text-[#A36F4C] flex-shrink-0" />
+                    <div>
+                      <div>Descargar Catálogo en Imagen (HD)</div>
+                      <div className="text-[10px] font-normal text-[#75695D]">Con muestras visuales y códigos HEX</div>
+                    </div>
+                  </button>
                 </div>
               )}
             </div>
+
+            {/* Botón Descargar Catálogo en Imagen Publicitaria */}
+            <Button
+              type="button"
+              onClick={() => {
+                setImageTimestamp(Date.now())
+                setOpenImageModal(true)
+              }}
+              variant="outline"
+              className="border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#241C15] font-bold text-xs h-10 px-3.5 rounded-2xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex items-center gap-2"
+              title="Descargar imagen publicitaria con todos los colores disponibles y sus códigos HEX"
+            >
+              <Download className="h-4 w-4 text-[#A36F4C]" />
+              <span className="hidden sm:inline">Descargar Imagen</span>
+              <span className="sm:hidden">Imagen</span>
+            </Button>
 
             {/* Botón Primario: Nuevo Color */}
             <Button
@@ -891,23 +999,6 @@ export function InventarioFilamentosClient({
         {/* Fila 2: Pestañas de Filtro por Estado (Pills con Conteo) + Resumen */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2.5 border-t border-[#E2D9CC]/70">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <button
-              type="button"
-              onClick={() => setActiveTab('todos')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
-                activeTab === 'todos'
-                  ? 'bg-[#241C15] text-white border-[#241C15] shadow-xs'
-                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#241C15] hover:bg-[#FFFFFF]'
-              }`}
-            >
-              <span>Todos</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                activeTab === 'todos' ? 'bg-white/20 text-white' : 'bg-[#EAE4DC] text-[#75695D]'
-              }`}>
-                {disponibles.length + restock.length}
-              </span>
-            </button>
-
             <button
               type="button"
               onClick={() => setActiveTab('disponibles')}
@@ -972,17 +1063,34 @@ export function InventarioFilamentosClient({
               }`}
             >
               <Archive className="h-3 w-3" />
-              <span>Descatalogados</span>
+              <span>Descatalogados / Archivados</span>
               <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
                 activeTab === 'descatalogados' ? 'bg-white/20 text-white' : 'bg-[#EAE4DC] text-[#75695D]'
               }`}>
                 {descatalogados.length}
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('todos')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                activeTab === 'todos'
+                  ? 'bg-[#241C15] text-white border-[#241C15] shadow-xs'
+                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#241C15] hover:bg-[#FFFFFF]'
+              }`}
+            >
+              <span>Todos</span>
+              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
+                activeTab === 'todos' ? 'bg-white/20 text-white' : 'bg-[#EAE4DC] text-[#75695D]'
+              }`}>
+                {disponibles.length + restock.length}
+              </span>
+            </button>
           </div>
 
-          {/* Botón Restablecer Filtros (Solo visible cuando hay búsqueda o filtro distinto a Todos) */}
-          {(search || activeTab !== 'todos') && (
+          {/* Botón Restablecer Filtros (Solo visible cuando hay búsqueda o filtro distinto a Disponibles) */}
+          {(search || activeTab !== 'disponibles') && (
             <div className="flex items-center justify-end flex-shrink-0">
               <Button
                 type="button"
@@ -990,10 +1098,10 @@ export function InventarioFilamentosClient({
                 size="sm"
                 onClick={() => {
                   setSearch('')
-                  setActiveTab('todos')
+                  setActiveTab('disponibles')
                   setCurrentPage(1)
                 }}
-                title="Restablecer filtros y búsqueda"
+                title="Restablecer filtros a Disponibles"
                 className="h-8 px-2.5 text-xs font-bold text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] border border-slate-200 rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 bg-[#FAF8F5]"
               >
                 <RefreshCw className="h-3 w-3 text-[#A36F4C]" />
@@ -1047,7 +1155,7 @@ export function InventarioFilamentosClient({
             {/* Mobile / Tablet View (< lg): Filament Cards */}
             <div className="block lg:hidden divide-y divide-[#E2D9CC]/70">
               {paginatedItems.map((item, idx) => {
-                const isDescatalogado = item.estado === 'DESCATALOGADO'
+                const isDescatalogado = item.estado === 'DESCATALOGADO' || item.estado === 'ARCHIVADO' || item.activo === false
                 const isDisp = item.estado === 'DISPONIBLE'
                 const rollos = item.rollos || 1
                 const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
@@ -1093,7 +1201,7 @@ export function InventarioFilamentosClient({
                         {isDescatalogado ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC] uppercase tracking-wider inline-flex items-center gap-1">
                             <Archive className="h-2.5 w-2.5 text-[#75695D]" />
-                            Descatalogado
+                            {item.estado === 'ARCHIVADO' ? 'Archivado' : 'Descatalogado'}
                           </span>
                         ) : esCritico ? (
                           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
@@ -1137,7 +1245,7 @@ export function InventarioFilamentosClient({
                       </div>
                     ) : (
                       <div className="p-2.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC]/70 text-xs text-[#854D0E] font-medium flex items-center justify-between">
-                        <span>{isDescatalogado ? 'Color fuera de catálogo' : '0 g en taller (En reposición)'}</span>
+                        <span>{isDescatalogado ? 'Color fuera de taller o catálogo' : '0 g en taller (En reposición)'}</span>
                         <span className="text-[10px] text-[#75695D]">Toca para ajustar stock</span>
                       </div>
                     )}
@@ -1153,10 +1261,37 @@ export function InventarioFilamentosClient({
                         </span>
                       </div>
 
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] group-hover:underline">
-                        Gestionar filamento
-                        <ArrowRight className="h-3 w-3" />
-                      </span>
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        {isDescatalogado ? (
+                          <button
+                            type="button"
+                            onClick={() => handleReactivarColor(item)}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-lg cursor-pointer"
+                            title="Reactivar filamento"
+                          >
+                            <RotateCcw className="h-3 w-3 text-emerald-600" />
+                            <span>Reactivar</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setColorToArchiveOrDescatalog(item)}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border border-stone-200 px-2 py-1 rounded-lg cursor-pointer"
+                            title="Archivar o descatalogar filamento"
+                          >
+                            <Archive className="h-3 w-3 text-stone-500" />
+                            <span>Archivar</span>
+                          </button>
+                        )}
+
+                        <span 
+                          onClick={() => handleOpenColorDetails(item)}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] group-hover:underline cursor-pointer"
+                        >
+                          Ficha
+                          <ArrowRight className="h-3 w-3" />
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )
@@ -1170,16 +1305,16 @@ export function InventarioFilamentosClient({
                   <TableRow className="hover:bg-transparent border-b border-[#E2D9CC] text-xs font-bold text-[#75695D]">
                     <TableHead className="w-10 px-2 py-3 text-center text-[#75695D]">#</TableHead>
                     <TableHead className="px-4 py-3 text-left text-[#75695D]">Color / Filamento</TableHead>
-                    <TableHead className="w-32 px-3 py-3 text-center text-[#75695D]">Estado</TableHead>
-                    <TableHead className="w-52 px-4 py-3 text-left text-[#75695D]">Stock en Taller</TableHead>
-                    <TableHead className="w-36 px-4 py-3 text-left text-[#75695D]">Producción</TableHead>
-                    <TableHead className="w-28 px-3 py-3 text-right pr-4 text-[#75695D]">Gestionar</TableHead>
+                    <TableHead className="w-28 px-3 py-3 text-center text-[#75695D]">Estado</TableHead>
+                    <TableHead className="w-48 px-4 py-3 text-left text-[#75695D]">Stock en Taller</TableHead>
+                    <TableHead className="w-32 px-4 py-3 text-left text-[#75695D]">Producción</TableHead>
+                    <TableHead className="w-48 px-3 py-3 text-right pr-4 text-[#75695D]">Gestionar</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedItems.map((item, idx) => {
                     const globalIdx = (safeCurrentPage - 1) * ITEMS_PER_PAGE + idx + 1
-                    const isDescatalogado = item.estado === 'DESCATALOGADO'
+                    const isDescatalogado = item.estado === 'DESCATALOGADO' || item.estado === 'ARCHIVADO' || item.activo === false
                     const isDisp = item.estado === 'DISPONIBLE'
                     const rollos = item.rollos || 1
                     const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
@@ -1231,7 +1366,7 @@ export function InventarioFilamentosClient({
                           {isDescatalogado ? (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC] uppercase tracking-wider inline-flex items-center gap-1">
                               <Archive className="h-2.5 w-2.5 text-[#75695D]" />
-                              Descatalogado
+                              {item.estado === 'ARCHIVADO' ? 'Archivado' : 'Descatalogado'}
                             </span>
                           ) : esCritico ? (
                             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
@@ -1294,10 +1429,44 @@ export function InventarioFilamentosClient({
                         </TableCell>
 
                         {/* 6. Gestionar */}
-                        <TableCell className="px-3 py-3 text-right pr-4">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] hover:text-stone-900 hover:underline group-hover:text-stone-900 group-hover:underline transition-colors">
-                            Ver ficha →
-                          </span>
+                        <TableCell className="px-3 py-3 text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenColorDetails(item)}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] hover:text-stone-900 hover:underline transition-colors py-1 px-1.5 rounded-lg cursor-pointer"
+                              title="Ver ficha completa"
+                            >
+                              <span>Ver ficha</span>
+                              <ArrowRight className="h-3 w-3" />
+                            </button>
+
+                            {isDescatalogado ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReactivarColor(item)}
+                                className="h-7 px-2 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 rounded-lg cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Reactivar filamento en taller"
+                              >
+                                <RotateCcw className="h-3 w-3 text-emerald-600" />
+                                <span className="hidden xl:inline">Reactivar</span>
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setColorToArchiveOrDescatalog(item)}
+                                className="h-7 px-2 text-[11px] font-semibold text-stone-600 bg-stone-100/80 hover:bg-stone-200/80 hover:text-stone-900 border-stone-200 rounded-lg cursor-pointer flex items-center gap-1 shadow-2xs"
+                                title="Archivar o descatalogar filamento"
+                              >
+                                <Archive className="h-3 w-3 text-stone-500" />
+                                <span className="hidden xl:inline">Archivar</span>
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -1858,6 +2027,258 @@ export function InventarioFilamentosClient({
       </Dialog>
 
       {/* ========================================================================= */}
+      {/* 5.2 MODAL DE CONFIRMACIÓN PARA ARCHIVAR O DESCATALOGAR                    */}
+      {/* ========================================================================= */}
+      <Dialog open={!!colorToArchiveOrDescatalog} onOpenChange={(open) => !open && setColorToArchiveOrDescatalog(null)}>
+        <DialogContent className="bg-white border border-stone-200 text-stone-900 w-[92vw] sm:max-w-md p-6 rounded-3xl shadow-2xl z-50">
+          {colorToArchiveOrDescatalog && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-10 h-10 rounded-full border border-black/10 shadow-xs shrink-0 flex items-center justify-center"
+                  style={{ backgroundColor: colorToArchiveOrDescatalog.codigoHex }}
+                >
+                  <span className="h-2 w-2 rounded-full bg-white/40 border border-black/10" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="text-base font-bold text-stone-900 truncate">
+                    {colorToArchiveOrDescatalog.nombreColor}
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-stone-500 mt-0.5">
+                    Gestionar disponibilidad en taller y catálogo
+                  </DialogDescription>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                  El filamento dejará de verse en los disponibles
+                </p>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Todo el historial de pedidos y modelos fabricados se mantendrá seguro. Podrás reactivarlo en cualquier momento.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 pt-1">
+                <button
+                  type="button"
+                  disabled={isProcessingArchive}
+                  onClick={async () => {
+                    const item = colorToArchiveOrDescatalog
+                    setIsProcessingArchive(true)
+                    try {
+                      setColorToArchiveOrDescatalog(null)
+                      await handleArchivarColor(item)
+                    } finally {
+                      setIsProcessingArchive(false)
+                    }
+                  }}
+                  className="p-3.5 rounded-2xl border border-stone-200 bg-white hover:bg-stone-50 hover:border-stone-300 text-left transition-all cursor-pointer group flex items-start gap-3"
+                >
+                  <div className="p-2 rounded-xl bg-stone-100 text-stone-700 group-hover:bg-stone-200 shrink-0">
+                    <Archive className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-xs text-stone-900">📦 Archivar filamento</div>
+                    <div className="text-[11px] text-stone-500 mt-0.5">
+                      Oculta la bobina del taller activo. Ideal si se agotó temporalmente o no se está usando.
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isProcessingArchive}
+                  onClick={async () => {
+                    const item = colorToArchiveOrDescatalog
+                    setIsProcessingArchive(true)
+                    try {
+                      setColorToArchiveOrDescatalog(null)
+                      await handleDescatalogarColor(item)
+                    } finally {
+                      setIsProcessingArchive(false)
+                    }
+                  }}
+                  className="p-3.5 rounded-2xl border border-rose-200/80 bg-rose-50/30 hover:bg-rose-50 hover:border-rose-300 text-left transition-all cursor-pointer group flex items-start gap-3"
+                >
+                  <div className="p-2 rounded-xl bg-rose-100 text-rose-700 group-hover:bg-rose-200 shrink-0">
+                    <Archive className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-bold text-xs text-rose-900">🚫 Descatalogar color</div>
+                    <div className="text-[11px] text-rose-700/80 mt-0.5">
+                      Baja comercial del catálogo. Ya no se ofrecerá a clientes ni aparecerá para reposición.
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setColorToArchiveOrDescatalog(null)}
+                  className="h-8 px-3 text-xs font-semibold rounded-xl text-stone-600 hover:bg-stone-100 cursor-pointer"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* 5.3 MODAL DE DESCARGA Y PREVIEW DE CATÁLOGO EN IMAGEN (PUBLICIDAD)        */}
+      {/* ========================================================================= */}
+      <Dialog open={openImageModal} onOpenChange={setOpenImageModal}>
+        <DialogContent showCloseButton={false} className="bg-white border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[700px] max-h-[92dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
+          {/* Header */}
+          <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FAF8F5] flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-[#F5EBE1] text-[#A36F4C]">
+                <Palette className="h-5 w-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-base sm:text-lg font-black text-[#241C15]">
+                  Catálogo Visual de Colores Disponibles
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                  Imagen publicitaria de alta definición con muestras y códigos HEX para clientes
+                </DialogDescription>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setOpenImageModal(false)}
+              className="text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] p-2 rounded-xl transition-colors cursor-pointer"
+              title="Cerrar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Controls Bar: Theme Selector & Resolution Info */}
+          <div className="px-5 sm:px-6 py-3 border-b border-[#E2D9CC]/70 bg-white flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#75695D]">Estilo:</span>
+              <div className="inline-flex rounded-xl p-1 bg-[#FAF8F5] border border-[#E2D9CC]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageTheme('dark')
+                    setImageTimestamp(Date.now())
+                  }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                    imageTheme === 'dark'
+                      ? 'bg-[#18181B] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                >
+                  <span>🌙 Obsidian Dark</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageTheme('light')
+                    setImageTimestamp(Date.now())
+                  }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                    imageTheme === 'light'
+                      ? 'bg-[#A36F4C] text-white shadow-2xs'
+                      : 'text-[#75695D] hover:text-[#241C15]'
+                  }`}
+                >
+                  <span>☀️ Studio Warm</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-[11px] font-mono text-[#75695D]">
+              <span className="px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC]">
+                1080 × 1350 px (4:5)
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] font-bold">
+                {disponibles.length} colores
+              </span>
+            </div>
+          </div>
+
+          {/* Preview Area (Scrollable with frame) */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#F4EFEA]/50 flex flex-col items-center justify-center min-h-[320px]">
+            <div className="w-full max-w-[420px] rounded-2xl overflow-hidden shadow-xl border border-black/10 bg-black/5 relative group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/inventario/filamentos/imagen?theme=${imageTheme}&t=${imageTimestamp}`}
+                alt="Catálogo de Colores Disponibles NOVA 3D"
+                className="w-full h-auto block object-cover"
+                loading="eager"
+              />
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FAF8F5] flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <a
+              href={`/api/inventario/filamentos/imagen?theme=${imageTheme}&t=${imageTimestamp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-bold text-[#A36F4C] hover:underline flex items-center gap-1.5 cursor-pointer"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span>Ver en tamaño completo</span>
+            </a>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCopyFlyerImage}
+                disabled={isCopyingImage}
+                className="h-9 px-3.5 text-xs font-bold rounded-xl border-[#E2D9CC] bg-white hover:bg-[#FAF8F5] text-[#241C15] cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                {isCopyingImage ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Copiando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5 text-[#A36F4C]" />
+                    <span>Copiar Imagen</span>
+                  </>
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleDownloadFlyer}
+                disabled={isDownloadingImage}
+                className="h-9 px-4 text-xs font-bold rounded-xl bg-[#A36F4C] hover:bg-[#8E5E3E] text-white cursor-pointer flex items-center gap-2 shadow-xs transition-all active:scale-[0.98]"
+              >
+                {isDownloadingImage ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Generando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 stroke-[2.5]" />
+                    <span>Descargar Imagen HD</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
       {/* 6. MODAL: FICHA DE FILAMENTO                                              */}
       {/* ========================================================================= */}
       <Dialog open={openColorDetailsModal} onOpenChange={setOpenColorDetailsModal}>
@@ -1966,7 +2387,7 @@ export function InventarioFilamentosClient({
                       <span>Editar</span>
                     </Button>
 
-                    {/* Botón secundario [ 🛒 Restock ] / Estado */}
+                    {/* Botón [ 📦 Archivar / Descatalogar ] o [ 🔄 Reactivar ] */}
                     {isDescatalogado ? (
                       <Button
                         type="button"
@@ -1978,28 +2399,46 @@ export function InventarioFilamentosClient({
                         <RotateCcw className="h-3.5 w-3.5 text-emerald-600" />
                         <span>Reactivar</span>
                       </Button>
-                    ) : isDisp ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleMoverARestock(selectedColorForDetails)}
-                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-amber-200 bg-amber-50/60 hover:bg-amber-100 text-amber-800 cursor-pointer shadow-2xs gap-1.5"
-                      >
-                        <ShoppingCart className="h-3.5 w-3.5 text-amber-600" />
-                        <span>Restock</span>
-                      </Button>
                     ) : (
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMoverADisponible(selectedColorForDetails)}
-                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer shadow-2xs gap-1.5"
+                        onClick={() => setColorToArchiveOrDescatalog(selectedColorForDetails)}
+                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-stone-200 bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 cursor-pointer shadow-2xs gap-1.5"
+                        title="Archivar o descatalogar este filamento"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                        <span>Disponible</span>
+                        <Archive className="h-3.5 w-3.5 text-stone-500" />
+                        <span className="hidden sm:inline">Archivar / Descatalogar</span>
+                        <span className="sm:hidden">Archivar</span>
                       </Button>
+                    )}
+
+                    {/* Botón secundario [ 🛒 Restock ] / Estado */}
+                    {!isDescatalogado && (
+                      isDisp ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMoverARestock(selectedColorForDetails)}
+                          className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-amber-200 bg-amber-50/60 hover:bg-amber-100 text-amber-800 cursor-pointer shadow-2xs gap-1.5"
+                        >
+                          <ShoppingCart className="h-3.5 w-3.5 text-amber-600" />
+                          <span>Restock</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMoverADisponible(selectedColorForDetails)}
+                          className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer shadow-2xs gap-1.5"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>Disponible</span>
+                        </Button>
+                      )
                     )}
 
                     {/* Botón icon/ghost [ 🗑️ ] con hover rojo para eliminar */}

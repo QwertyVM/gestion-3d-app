@@ -14,6 +14,31 @@ export interface ColorRestockItem {
   nota?: string | null
 }
 
+export interface ItemHistorialPago {
+  id: string
+  inversionId: string
+  concepto: string
+  mesPeriodo: string
+  monto: number
+  fechaPago: string
+  fechaPagoIso?: string
+  metodoPago: string
+  notas?: string
+  numeroCuota?: number
+}
+
+export interface HistorialCompromisoInfo {
+  compromisoId: string
+  concepto: string
+  tipo: 'PRESTAMO' | 'PARTIDA'
+  totalCuotas?: number
+  cuotasPagadas: number
+  totalMontoPagado: number
+  montoMensualPresupuesto: number
+  saldoRestante?: number
+  pagos: ItemHistorialPago[]
+}
+
 export interface CuotaDetalle {
   numeroCuota: number
   mes: string
@@ -37,6 +62,7 @@ export interface PrestamoCapitalInfo {
   montoPagadoTotal: number
   cuotaSeptiembre?: CuotaDetalle | null
   cuotaOctubre?: CuotaDetalle | null
+  historialPagos?: ItemHistorialPago[]
 }
 
 export interface PartidaBlindadaResumen {
@@ -61,6 +87,10 @@ export interface ItemPartidaPlan {
   montoPagadoReal?: number | null
   fechaPago?: string | null
   vencimiento?: string
+  cuotaSeptiembre?: CuotaDetalle | null
+  cuotaOctubre?: CuotaDetalle | null
+  historialPagos?: ItemHistorialPago[]
+  totalPagos?: number
 }
 
 export interface DatosPresupuestoTranquilidad {
@@ -324,18 +354,38 @@ export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Pr
   const montoPagadoTotal = pagosPrestamo.reduce((acc, p) => acc + Number(p.costoTotal || 0), 0)
   const cuotaActual = Math.min(totalCuotas, cuotasPagadas + 1) // Cuota siguiente
 
+  // Historial de pagos reales de Préstamo BCP
+  const historialPagosBCP: ItemHistorialPago[] = pagosPrestamo.map(p => {
+    const d = new Date(p.createdAt)
+    const mesNom = d.getMonth() === 8 ? 'Septiembre' : d.getMonth() === 9 ? 'Octubre' : d.toLocaleDateString('es-PE', { month: 'long' })
+    const matchCuota = p.itemConcepto.match(/cuota\s*(\d+)/i)
+    const numCuota = matchCuota ? Number(matchCuota[1]) : (d.getMonth() === 8 ? 1 : 2)
+    return {
+      id: p.id,
+      inversionId: p.id,
+      concepto: p.itemConcepto,
+      mesPeriodo: p.especificacionColor || `${mesNom.charAt(0).toUpperCase() + mesNom.slice(1)} ${d.getFullYear()}`,
+      monto: Number(p.costoTotal),
+      fechaPago: d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }),
+      fechaPagoIso: d.toISOString(),
+      metodoPago: p.subcategoria || 'BCP',
+      notas: p.especificacionColor || undefined,
+      numeroCuota: numCuota
+    }
+  })
+
   // Buscar pagos por mes específico
   // Septiembre 2026: mes 8 en JS
   const pagoSeptiembre = pagosPrestamo.find(p => {
     const d = new Date(p.createdAt)
-    return d.getMonth() === 8 && d.getFullYear() === 2026
-  }) || (pagosPrestamo.find(p => p.itemConcepto?.toLowerCase().includes('cuota 1')))
+    return (d.getMonth() === 8 && d.getFullYear() === 2026) || p.itemConcepto?.toLowerCase().includes('cuota 1')
+  })
 
   // Octubre 2026: mes 9 en JS
   const pagoOctubre = pagosPrestamo.find(p => {
     const d = new Date(p.createdAt)
-    return d.getMonth() === 9 && d.getFullYear() === 2026
-  }) || (pagosPrestamo.find(p => p.itemConcepto?.toLowerCase().includes('cuota 2')))
+    return (d.getMonth() === 9 && d.getFullYear() === 2026) || p.itemConcepto?.toLowerCase().includes('cuota 2')
+  })
 
   const cuotaSeptiembre: CuotaDetalle = {
     numeroCuota: 1,
@@ -375,19 +425,14 @@ export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Pr
     saldoCapitalRestante: Number(saldoCapitalRestante.toFixed(2)),
     montoPagadoTotal: Number(montoPagadoTotal.toFixed(2)),
     cuotaSeptiembre,
-    cuotaOctubre
+    cuotaOctubre,
+    historialPagos: historialPagosBCP
   }
 
   // 6. Partidas del Plan Almacenadas en PostgreSQL (Fuente Única de la Verdad)
   const partidasPlan = await getPartidasPlanDB(targetNegocio)
 
-  // Buscar egresos de Octubre 2026 para conciliar pagos reales de partidas
-  const egresosOctubre = inversiones.filter(e => {
-    const d = new Date(e.createdAt)
-    return d.getMonth() === 9 && d.getFullYear() === 2026
-  })
-
-  // Sincronizar estado y conciliación contable de partidas
+  // Sincronizar estado y conciliación contable de partidas con TODOS los egresos reales
   const planActualizado = partidasPlan.map(p => {
     if (p.id === 'gasto-cuota-prestamo') {
       return {
@@ -397,25 +442,97 @@ export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Pr
         inversionId: cuotaOctubre.inversionId,
         montoPagadoReal: cuotaOctubre.pagada ? cuotaOctubre.monto : null,
         fechaPago: cuotaOctubre.fechaPago,
-        vencimiento: 'Finales de Octubre (31/10/2026)'
+        vencimiento: 'Finales de Octubre (31/10/2026)',
+        cuotaSeptiembre,
+        cuotaOctubre,
+        historialPagos: historialPagosBCP,
+        totalPagos: cuotasPagadas
       }
     }
 
-    // Buscar si hay egreso registrado en Octubre para esta partida (Luz, Internet, etc.)
-    const egresoMatch = egresosOctubre.find(e => {
-      const c = e.itemConcepto.toLowerCase()
-      const pNorm = p.concepto.toLowerCase()
-      return c.includes(pNorm) || (pNorm.includes('luz') && c.includes('luz'))
+    // Buscar TODOS los egresos que corresponden a esta partida (en cualquier fecha)
+    const egresosDePartida = inversiones.filter(e => {
+      if (e.categoria === 'FINANCIERO') return false
+      if (e.presentacion === p.id) return true
+      const c = (e.itemConcepto || '').toLowerCase()
+      const pNorm = (p.concepto || '').toLowerCase()
+      if (pNorm && c.includes(pNorm)) return true
+      if (pNorm.includes('luz') && c.includes('luz')) return true
+      if (pNorm.includes('internet') && c.includes('internet')) return true
+      return false
     })
 
-    const estaPagado = Boolean(p.pagado || egresoMatch)
+    // Pago de Septiembre 2026
+    const egresoSep = egresosDePartida.find(e => {
+      const d = new Date(e.createdAt)
+      return (d.getMonth() === 8 && d.getFullYear() === 2026) ||
+             (e.itemConcepto && e.itemConcepto.toLowerCase().includes('septiembre')) ||
+             (e.especificacionColor && e.especificacionColor.toLowerCase().includes('septiembre'))
+    })
+
+    // Pago de Octubre 2026
+    const egresoOct = egresosDePartida.find(e => {
+      const d = new Date(e.createdAt)
+      return (d.getMonth() === 9 && d.getFullYear() === 2026) ||
+             (e.itemConcepto && e.itemConcepto.toLowerCase().includes('octubre')) ||
+             (e.especificacionColor && e.especificacionColor.toLowerCase().includes('octubre'))
+    })
+
+    const montoSepReal = egresoSep
+      ? Number(egresoSep.costoTotal)
+      : Number(p.montoSeptiembreReal || 0)
+
+    const cuotaSepPartida: CuotaDetalle = {
+      numeroCuota: 1,
+      mes: 'Septiembre',
+      anio: 2026,
+      monto: montoSepReal > 0 ? montoSepReal : Number(p.presupuesto || 0),
+      pagada: Boolean(egresoSep || montoSepReal > 0),
+      inversionId: egresoSep?.id || null,
+      fechaPago: egresoSep ? new Date(egresoSep.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : (montoSepReal > 0 ? 'Septiembre 2026' : null),
+      vencimiento: 'Finales de Septiembre (30/09/2026)'
+    }
+
+    const estaPagadoOct = Boolean(p.pagado || egresoOct)
+    const cuotaOctPartida: CuotaDetalle = {
+      numeroCuota: 2,
+      mes: 'Octubre',
+      anio: 2026,
+      monto: egresoOct ? Number(egresoOct.costoTotal) : Number(p.presupuesto || 0),
+      pagada: estaPagadoOct,
+      inversionId: egresoOct?.id || null,
+      fechaPago: egresoOct ? new Date(egresoOct.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+      vencimiento: 'Finales de Octubre (31/10/2026)'
+    }
+
+    const historialPagosPartida: ItemHistorialPago[] = egresosDePartida.map(e => {
+      const d = new Date(e.createdAt)
+      const mesNom = d.getMonth() === 8 ? 'Septiembre' : d.getMonth() === 9 ? 'Octubre' : d.toLocaleDateString('es-PE', { month: 'long' })
+      return {
+        id: e.id,
+        inversionId: e.id,
+        concepto: e.itemConcepto,
+        mesPeriodo: e.especificacionColor || `${mesNom.charAt(0).toUpperCase() + mesNom.slice(1)} ${d.getFullYear()}`,
+        monto: Number(e.costoTotal),
+        fechaPago: d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }),
+        fechaPagoIso: d.toISOString(),
+        metodoPago: e.subcategoria || 'BCP',
+        notas: e.especificacionColor || undefined
+      }
+    })
+
     return {
       ...p,
-      pagado: estaPagado,
-      inversionId: egresoMatch?.id || null,
-      montoPagadoReal: egresoMatch ? Number(egresoMatch.costoTotal) : (estaPagado ? Number(p.presupuesto) : null),
-      fechaPago: egresoMatch ? new Date(egresoMatch.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
-      vencimiento: 'Finales de Octubre (31/10/2026)'
+      montoSeptiembreReal: montoSepReal,
+      pagado: estaPagadoOct,
+      inversionId: egresoOct?.id || null,
+      montoPagadoReal: egresoOct ? Number(egresoOct.costoTotal) : (estaPagadoOct ? Number(p.presupuesto) : null),
+      fechaPago: egresoOct ? new Date(egresoOct.createdAt).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+      vencimiento: 'Finales de Octubre (31/10/2026)',
+      cuotaSeptiembre: cuotaSepPartida,
+      cuotaOctubre: cuotaOctPartida,
+      historialPagos: historialPagosPartida,
+      totalPagos: historialPagosPartida.length
     }
   })
 
@@ -723,6 +840,7 @@ export interface PagarCompromisoInput {
   concepto: string
   monto: number
   fechaPago?: string | Date
+  mesPeriodo?: string
   metodoPago?: string
   categoria?: string
   subcategoria?: string
@@ -740,6 +858,21 @@ export async function pagarCompromisoBlindado(data: PagarCompromisoInput) {
   }
 
   const fechaObj = parseDateInput(data.fechaPago)
+  const mesNum = fechaObj.getMonth() // 8 = Septiembre, 9 = Octubre (en JS 0-indexed)
+  const anioNum = fechaObj.getFullYear()
+
+  // Determinar período contable
+  let mesPeriodo = data.mesPeriodo
+  if (!mesPeriodo) {
+    if (mesNum === 8 && anioNum === 2026) mesPeriodo = 'Septiembre 2026'
+    else if (mesNum === 9 && anioNum === 2026) mesPeriodo = 'Octubre 2026'
+    else {
+      const mesStr = fechaObj.toLocaleDateString('es-PE', { month: 'long' })
+      mesPeriodo = `${mesStr.charAt(0).toUpperCase() + mesStr.slice(1)} ${anioNum}`
+    }
+  }
+
+  const esSeptiembre = mesPeriodo.toLowerCase().includes('septiembre') || (mesNum === 8 && anioNum === 2026)
 
   let categoriaInv: CategoriaInversion = 'SERVICIO'
   let subcategoria = data.subcategoria || 'Servicios Taller'
@@ -748,8 +881,8 @@ export async function pagarCompromisoBlindado(data: PagarCompromisoInput) {
   if (data.tipoCompromiso === 'PRESTAMO') {
     categoriaInv = 'FINANCIERO'
     subcategoria = 'BCP'
-    const numCuota = data.numeroCuota || 2
-    concepto = `Pago Cuota ${numCuota}/24 (Octubre) - Préstamo BCP Capital de Trabajo`
+    const numCuota = data.numeroCuota || (esSeptiembre ? 1 : 2)
+    concepto = `Pago Cuota ${numCuota}/24 (${mesPeriodo}) - Préstamo BCP Capital de Trabajo`
   } else {
     const catUpper = (data.categoria || '').toUpperCase()
     if (catUpper === 'INSUMOS') categoriaInv = 'INSUMO'
@@ -757,8 +890,8 @@ export async function pagarCompromisoBlindado(data: PagarCompromisoInput) {
     else if (catUpper === 'BLINDADO') categoriaInv = 'FINANCIERO'
     else categoriaInv = 'SERVICIO'
 
-    if (!concepto.toLowerCase().includes('octubre')) {
-      concepto = `${concepto} - Cuota Octubre 2026`
+    if (!concepto.toLowerCase().includes(mesPeriodo.toLowerCase())) {
+      concepto = `${concepto} - Cuota ${mesPeriodo}`
     }
   }
 
@@ -773,7 +906,9 @@ export async function pagarCompromisoBlindado(data: PagarCompromisoInput) {
       persona,
       categoria: categoriaInv,
       subcategoria,
-      itemConcepto: concepto,
+      itemConcepto: data.notas ? `${concepto} (${data.notas})` : concepto,
+      presentacion: data.partidaId || (data.tipoCompromiso === 'PRESTAMO' ? 'PRESTAMO_BCP' : null),
+      especificacionColor: mesPeriodo,
       cantidad: 1,
       costoUnitario: monto,
       costoEnvio: 0,
@@ -784,30 +919,39 @@ export async function pagarCompromisoBlindado(data: PagarCompromisoInput) {
     }
   })
 
-  // 2. Si es partida presupuestaria, actualizar estado pagado
+  // 2. Si es partida presupuestaria, actualizar estado o monto histórico
   if (data.partidaId) {
     try {
-      await prisma.partidaPresupuesto.update({
-        where: { id: data.partidaId },
-        data: { pagado: true }
-      })
+      if (esSeptiembre) {
+        // Registro de Septiembre: actualizar montoSeptiembreReal
+        await prisma.partidaPresupuesto.update({
+          where: { id: data.partidaId },
+          data: { montoSeptiembreReal: monto }
+        })
+      } else {
+        // Pago de Octubre / mes en curso: marcar pagado
+        await prisma.partidaPresupuesto.update({
+          where: { id: data.partidaId },
+          data: { pagado: true }
+        })
+      }
     } catch (e) {
-      console.warn('Partida no encontrada por id directo al marcar pagado:', data.partidaId)
+      console.warn('Partida no encontrada por id directo al actualizar:', data.partidaId)
     }
   } else if (data.tipoCompromiso === 'PRESTAMO') {
-    try {
-      await prisma.partidaPresupuesto.updateMany({
-        where: {
-          OR: [
-            { id: 'gasto-cuota-prestamo' },
-            { concepto: { contains: 'préstamo', mode: 'insensitive' } }
-          ],
-          negocio: targetNegocio
-        },
-        data: { pagado: true }
-      })
-    } catch (e) {
-      // Ignorar si no existe
+    if (!esSeptiembre || data.numeroCuota === 2) {
+      try {
+        await prisma.partidaPresupuesto.updateMany({
+          where: {
+            OR: [
+              { id: 'gasto-cuota-prestamo' },
+              { concepto: { contains: 'préstamo', mode: 'insensitive' } }
+            ],
+            negocio: targetNegocio
+          },
+          data: { pagado: true }
+        })
+      } catch (e) {}
     }
   }
 
@@ -817,6 +961,7 @@ export async function pagarCompromisoBlindado(data: PagarCompromisoInput) {
     inversionId: inversion.id,
     monto,
     concepto,
+    mesPeriodo,
     fecha: inversion.createdAt.toISOString()
   }
 }
@@ -833,17 +978,22 @@ export interface RevertirCompromisoInput {
 export async function revertirPagoCompromisoBlindado(data: RevertirCompromisoInput) {
   const targetNegocio = data.negocio || await getActiveNegocioServer()
 
+  let invABorrar = null
+
   // 1. Eliminar el egreso contable de Inversiones (Extorno contable)
   if (data.inversionId) {
     try {
-      await prisma.inversion.delete({
+      invABorrar = await prisma.inversion.findUnique({
         where: { id: data.inversionId }
       })
+      if (invABorrar) {
+        await prisma.inversion.delete({ where: { id: data.inversionId } })
+      }
     } catch (e) {
       console.warn('Inversión no encontrada por id directo al revertir:', data.inversionId)
     }
   } else if (data.tipoCompromiso === 'PRESTAMO' && data.numeroCuota) {
-    const inv = await prisma.inversion.findFirst({
+    invABorrar = await prisma.inversion.findFirst({
       where: {
         categoria: 'FINANCIERO',
         negocio: targetNegocio,
@@ -854,38 +1004,50 @@ export async function revertirPagoCompromisoBlindado(data: RevertirCompromisoInp
       },
       orderBy: { createdAt: 'desc' }
     })
-    if (inv) {
-      await prisma.inversion.delete({ where: { id: inv.id } })
+    if (invABorrar) {
+      await prisma.inversion.delete({ where: { id: invABorrar.id } })
     }
   } else if (data.partidaId) {
-    const egreso = await prisma.inversion.findFirst({
+    invABorrar = await prisma.inversion.findFirst({
       where: {
         negocio: targetNegocio,
-        createdAt: {
-          gte: new Date(2026, 9, 1),
-          lte: new Date(2026, 9, 31, 23, 59, 59)
-        },
-        itemConcepto: { contains: data.concepto || '', mode: 'insensitive' }
-      }
+        OR: [
+          { presentacion: data.partidaId },
+          { itemConcepto: { contains: data.concepto || '', mode: 'insensitive' } }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
     })
-    if (egreso) {
-      await prisma.inversion.delete({ where: { id: egreso.id } })
+    if (invABorrar) {
+      await prisma.inversion.delete({ where: { id: invABorrar.id } })
     }
   }
 
-  // 2. Desmarcar como pagado en PartidaPresupuesto para restaurar el fondo blindado
+  // 2. Determinar si correspondía a Septiembre o a Octubre
+  const d = invABorrar ? new Date(invABorrar.createdAt) : new Date()
+  const esSeptiembre = invABorrar?.especificacionColor?.toLowerCase().includes('septiembre') ||
+                       invABorrar?.itemConcepto?.toLowerCase().includes('septiembre') ||
+                       (d.getMonth() === 8 && d.getFullYear() === 2026) ||
+                       data.numeroCuota === 1
+
   if (data.partidaId) {
     try {
-      await prisma.partidaPresupuesto.update({
-        where: { id: data.partidaId },
-        data: { pagado: false }
-      })
+      if (esSeptiembre) {
+        await prisma.partidaPresupuesto.update({
+          where: { id: data.partidaId },
+          data: { montoSeptiembreReal: 0 }
+        })
+      } else {
+        await prisma.partidaPresupuesto.update({
+          where: { id: data.partidaId },
+          data: { pagado: false }
+        })
+      }
     } catch (e) {
-      console.warn('Partida no encontrada para desmarcar pagado:', data.partidaId)
+      console.warn('Partida no encontrada para actualizar estado tras reversión:', data.partidaId)
     }
   } else if (data.tipoCompromiso === 'PRESTAMO') {
-    // Si se revierte cuota 2 (Octubre), desmarcar pagado en partida
-    if (data.numeroCuota === 2) {
+    if (!esSeptiembre || data.numeroCuota === 2) {
       try {
         await prisma.partidaPresupuesto.updateMany({
           where: {
@@ -897,9 +1059,7 @@ export async function revertirPagoCompromisoBlindado(data: RevertirCompromisoInp
           },
           data: { pagado: false }
         })
-      } catch (e) {
-        // Ignorar
-      }
+      } catch (e) {}
     }
   }
 
@@ -909,4 +1069,39 @@ export async function revertirPagoCompromisoBlindado(data: RevertirCompromisoInp
     reversedCuota: data.numeroCuota,
     partidaId: data.partidaId
   }
+}
+
+export async function getHistorialCompromisos(negocio?: TipoNegocio): Promise<HistorialCompromisoInfo[]> {
+  const datos = await getDatosPresupuestoTranquilidad(negocio)
+  const result: HistorialCompromisoInfo[] = []
+
+  // 1. Préstamo BCP
+  result.push({
+    compromisoId: 'prestamo-bcp',
+    concepto: 'Préstamo BCP Capital de Trabajo',
+    tipo: 'PRESTAMO',
+    totalCuotas: datos.prestamoInfo.totalCuotas,
+    cuotasPagadas: datos.prestamoInfo.cuotasPagadas,
+    totalMontoPagado: datos.prestamoInfo.montoPagadoTotal,
+    montoMensualPresupuesto: datos.prestamoInfo.cuotaMensual,
+    saldoRestante: datos.prestamoInfo.saldoCapitalRestante,
+    pagos: datos.prestamoInfo.historialPagos || []
+  })
+
+  // 2. Partidas
+  for (const p of datos.partidasPlan) {
+    const totalMonto = (p.historialPagos || []).reduce((acc, h) => acc + h.monto, 0)
+    result.push({
+      compromisoId: p.id,
+      concepto: p.concepto,
+      tipo: 'PARTIDA',
+      totalCuotas: undefined,
+      cuotasPagadas: p.totalPagos || (p.historialPagos?.length || 0),
+      totalMontoPagado: totalMonto,
+      montoMensualPresupuesto: Number(p.presupuesto || 0),
+      pagos: p.historialPagos || []
+    })
+  }
+
+  return result
 }

@@ -6,7 +6,10 @@ import { revalidatePath } from 'next/cache'
 function safeRevalidate() {
   try {
     revalidatePath('/inventario')
+    revalidatePath('/catalogo/inventario')
+    revalidatePath('/catalogo')
     revalidatePath('/ventas')
+    revalidatePath('/pedidos')
     revalidatePath('/')
   } catch (e) {
     // Ignore outside request store
@@ -34,7 +37,7 @@ export interface ColorFilamentoItem {
   id: string
   nombreColor: string
   codigoHex: string
-  estado: 'DISPONIBLE' | 'RESTOCK' | 'DESCATALOGADO'
+  estado: 'DISPONIBLE' | 'RESTOCK' | 'DESCATALOGADO' | 'ARCHIVADO'
   activo?: boolean
   nota?: string | null
   stockGramos: number
@@ -203,8 +206,10 @@ export async function getColoresInventario(forceReset = false): Promise<{
 
 
   const mapped: ColorFilamentoItem[] = filamentos.map(f => {
-    const isDescatalogado = f.activo === false || f.estadoStock === 'DESCATALOGADO' || f.estado === 'DESCATALOGADO'
-    const isDisponible = !isDescatalogado && (f.estadoStock === 'ABIERTO' || f.estadoStock === 'SELLADO' || f.estado === 'DISPONIBLE')
+    const isArchivado = f.estadoStock === 'ARCHIVADO' || f.estado === 'ARCHIVADO'
+    const isDescatalogado = !isArchivado && (f.activo === false || f.estadoStock === 'DESCATALOGADO' || f.estado === 'DESCATALOGADO')
+    const isInactive = isArchivado || isDescatalogado || f.activo === false
+    const isDisponible = !isInactive && (f.estadoStock === 'ABIERTO' || f.estadoStock === 'SELLADO' || f.estado === 'DISPONIBLE')
     const storedBobinas = f.stockBobinas != null && Number(f.stockBobinas) >= 1 ? Math.round(Number(f.stockBobinas)) : 1
     const storedPeso = f.pesoInicialGramos != null ? Number(f.pesoInicialGramos) : (storedBobinas * 1000)
     const rollos = Math.max(1, Math.round(storedPeso / 1000))
@@ -262,7 +267,9 @@ export async function getColoresInventario(forceReset = false): Promise<{
 
     const productosInvertidos = Object.values(mapProductos).sort((a, b) => b.totalUnidades - a.totalUnidades)
 
-    const estadoItem: 'DISPONIBLE' | 'RESTOCK' | 'DESCATALOGADO' = isDescatalogado 
+    const estadoItem: 'DISPONIBLE' | 'RESTOCK' | 'DESCATALOGADO' | 'ARCHIVADO' = isArchivado
+      ? 'ARCHIVADO'
+      : isDescatalogado 
       ? 'DESCATALOGADO' 
       : (isDisponible ? 'DISPONIBLE' : 'RESTOCK')
 
@@ -271,7 +278,7 @@ export async function getColoresInventario(forceReset = false): Promise<{
       nombreColor: f.nombreColor,
       codigoHex: f.codigoHex || '#18181B',
       estado: estadoItem,
-      activo: f.activo ?? !isDescatalogado,
+      activo: f.activo ?? !isInactive,
       nota: f.notaProduccion || (alertaCritica ? '⚠️ Menos de 300g' : null),
       stockGramos,
       rollos,
@@ -295,7 +302,7 @@ export async function getColoresInventario(forceReset = false): Promise<{
     .sort((a, b) => a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' }))
 
   const descatalogados = mapped
-    .filter(c => c.estado === 'DESCATALOGADO')
+    .filter(c => c.estado === 'DESCATALOGADO' || c.estado === 'ARCHIVADO')
     .sort((a, b) => a.nombreColor.localeCompare(b.nombreColor, 'es', { sensitivity: 'base' }))
 
   return { disponibles, restock, descatalogados }
@@ -541,6 +548,21 @@ export async function editarColorFilamento(id: string, data: {
     nota: updated.notaProduccion,
     updatedAt: updated.updatedAt.toISOString(),
   }
+}
+
+export async function archivarColor(id: string) {
+  const updated = await prisma.inventarioFilamento.update({
+    where: { id },
+    data: {
+      activo: false,
+      estadoStock: 'ARCHIVADO',
+      estado: 'ARCHIVADO',
+      notaProduccion: 'Archivado'
+    }
+  })
+
+  safeRevalidate()
+  return { success: true, id: updated.id }
 }
 
 export async function descatalogarColor(id: string) {

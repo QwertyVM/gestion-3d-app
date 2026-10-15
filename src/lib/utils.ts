@@ -21,3 +21,8 @@ export function formatDate(date: string | Date | undefined | null): string {
   const year = d.getUTCFullYear()
   return `${day}/${month}/${year}`
 }
+
+export function formatCurrency(amount: number): string {
+  return `S/ ${(amount || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+

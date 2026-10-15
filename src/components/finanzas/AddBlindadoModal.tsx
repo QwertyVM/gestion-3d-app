@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Lock, Calendar } from 'lucide-react'
+import { Lock, Calendar, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import type { PartidaPresupuesto } from './CashFlowHubView'
 
@@ -29,6 +29,7 @@ export interface AddBlindadoModalProps {
   onOpenChange: (open: boolean) => void
   editingPartida?: PartidaPresupuesto | null
   onSave: (data: BlindadoFormData) => Promise<void>
+  gastoLibreActual?: number
 }
 
 export const CATEGORIAS_BLINDADO = [
@@ -43,6 +44,7 @@ export function AddBlindadoModal({
   onOpenChange,
   editingPartida,
   onSave,
+  gastoLibreActual,
 }: AddBlindadoModalProps) {
   const [concepto, setConcepto] = useState('')
   const [monto, setMonto] = useState('')
@@ -55,7 +57,6 @@ export function AddBlindadoModal({
       setConcepto(editingPartida.concepto)
       setMonto(String(editingPartida.monto || editingPartida.presupuesto || ''))
       setCategoria(editingPartida.categoria || 'OPERATIVO')
-      // Extraer día si existía en subconcepto tipo "Día 15"
       const match = editingPartida.subconcepto?.match(/\d+/)
       setDiaPago(match ? match[0] : '')
     } else {
@@ -65,6 +66,26 @@ export function AddBlindadoModal({
       setDiaPago('')
     }
   }, [editingPartida, open])
+
+  // Cálculo previo del impacto en liquidez libre
+  const montoIngresado = parseFloat(monto) || 0
+  const montoOriginal = editingPartida
+    ? Number(editingPartida.monto || editingPartida.presupuesto || 0)
+    : 0
+
+  const { tieneCalculo, gastoAntes, gastoDespues } = useMemo(() => {
+    if (gastoLibreActual === undefined) {
+      return { tieneCalculo: false, gastoAntes: 0, gastoDespues: 0 }
+    }
+    const antes = gastoLibreActual
+    const impacto = montoIngresado - montoOriginal
+    const despues = Math.max(0, antes - impacto)
+    return {
+      tieneCalculo: montoIngresado > 0,
+      gastoAntes: Math.round(antes),
+      gastoDespues: Math.round(despues),
+    }
+  }, [gastoLibreActual, montoIngresado, montoOriginal])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,22 +138,25 @@ export function AddBlindadoModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] sm:max-w-md bg-background border border-border rounded-2xl p-6 shadow-2xl space-y-4 text-foreground">
-        <DialogHeader className="pb-1 border-b border-border/60">
-          <DialogTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-              <Lock className="w-3.5 h-3.5" />
+        {/* Cabecera */}
+        <DialogHeader className="pb-1 border-b border-border/70 space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+              <Lock className="w-4 h-4" />
             </div>
-            <span>
-              {editingPartida ? 'Editar Compromiso Blindado' : 'Blindar Nuevo Compromiso Financiero'}
-            </span>
-          </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground mt-1">
-            Gastos fijos o amortizaciones descontados automáticamente de tu liquidez libre.
-          </DialogDescription>
+            <div>
+              <DialogTitle className="text-sm font-bold text-foreground">
+                {editingPartida ? 'Editar Compromiso Blindado' : 'Blindar Nuevo Compromiso Financiero'}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                Gastos fijos o amortizaciones descontados automáticamente de tu liquidez libre.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-          {/* 1. Concepto / Nombre */}
+          {/* 1. Concepto / Nombre del Gasto */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-foreground">
               Concepto / Nombre del Gasto <span className="text-destructive">*</span>
@@ -141,16 +165,16 @@ export function AddBlindadoModal({
               value={concepto}
               onChange={(e) => setConcepto(e.target.value)}
               placeholder="Ej: Internet del Taller, Alquiler, Reserva Bambu A2L"
-              className="bg-card border-input text-xs rounded-xl h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card"
+              className="h-10 rounded-xl border border-input bg-card text-xs text-foreground px-3.5 focus:ring-2 focus:ring-primary/20 focus:border-primary"
               required
               autoFocus
             />
           </div>
 
-          {/* 2. Monto a Blindar */}
+          {/* 2. Monto Mensual a Blindar (S/) */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-foreground">
-              Monto a Blindar (S/) <span className="text-destructive">*</span>
+              Monto Mensual a Blindar (S/) <span className="text-destructive">*</span>
             </Label>
             <div className="relative flex items-center">
               <span className="absolute left-3 text-xs font-bold text-muted-foreground pointer-events-none select-none">
@@ -163,14 +187,14 @@ export function AddBlindadoModal({
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
                 placeholder="0.00"
-                className="pl-8 bg-card border-input text-xs font-mono font-bold rounded-xl h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card"
+                className="h-10 rounded-xl border border-input bg-card text-sm font-bold text-foreground text-right pr-3.5 pl-8 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 required
               />
             </div>
           </div>
 
+          {/* 3. Fila de 2 columnas: Categoría y Día de Pago */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {/* 3. Categoría */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-foreground">
                 Categoría
@@ -178,7 +202,7 @@ export function AddBlindadoModal({
               <select
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
-                className="w-full bg-card border border-input rounded-xl h-10 px-3 text-xs text-foreground font-medium cursor-pointer focus:border-primary focus:outline-none"
+                className="h-10 rounded-xl border border-input bg-card text-xs text-foreground px-3.5 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:outline-none"
               >
                 {CATEGORIAS_BLINDADO.map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -188,7 +212,6 @@ export function AddBlindadoModal({
               </select>
             </div>
 
-            {/* 4. Día Estimado de Pago */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-foreground flex items-center justify-between">
                 <span>Día de Pago</span>
@@ -203,19 +226,35 @@ export function AddBlindadoModal({
                   value={diaPago}
                   onChange={(e) => setDiaPago(e.target.value)}
                   placeholder="Ej: 15"
-                  className="pl-9 bg-card border-input text-xs rounded-xl h-10 text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card font-mono"
+                  className="h-10 rounded-xl border border-input bg-card text-xs text-foreground pl-9 pr-3.5 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
             </div>
           </div>
 
-          {/* Footer del Modal */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/70">
+          {/* 4. Previsualización del Impacto en Liquidez (Micro-Feedback) */}
+          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-900 dark:text-amber-200 flex items-center gap-2">
+            <Info className="w-4 h-4 text-amber-600 shrink-0" />
+            <div className="space-y-0.5 min-w-0">
+              {tieneCalculo && (
+                <p className="font-semibold text-foreground text-xs">
+                  Tu Gasto Libre pasará de <span className="font-mono font-bold">S/ {gastoAntes.toLocaleString('es-PE')}</span> a{' '}
+                  <span className="font-mono font-extrabold text-primary">S/ {gastoDespues.toLocaleString('es-PE')}</span>.
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Este monto se descontará automáticamente cada mes de tu caja disponible para proteger tus pagos fijos.
+              </p>
+            </div>
+          </div>
+
+          {/* 5. Footer */}
+          <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border/70">
             <Button
               type="button"
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="text-xs rounded-xl h-10 px-4 text-muted-foreground hover:text-foreground cursor-pointer"
+              className="rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground h-10 px-4 cursor-pointer"
               disabled={isSubmitting}
             >
               Cancelar
@@ -223,7 +262,7 @@ export function AddBlindadoModal({
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-10 px-5 rounded-xl shadow-md shadow-primary/20 cursor-pointer transition-all active:scale-[0.98]"
+              className="h-10 px-5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-md shadow-primary/20 transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98]"
             >
               {isSubmitting ? (
                 'Guardando...'

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { KpiInfoTrigger } from '@/components/ui/KpiInfoTrigger'
 
 export interface ProductionKpiCardProps {
   label: string
@@ -9,6 +10,7 @@ export interface ProductionKpiCardProps {
   icon?: React.ReactNode
   isDestructive?: boolean
   className?: string
+  onInfoClick?: () => void
 }
 
 export function ProductionKpiCard({
@@ -17,7 +19,8 @@ export function ProductionKpiCard({
   sublabel,
   icon,
   isDestructive = false,
-  className = ''
+  className = '',
+  onInfoClick
 }: ProductionKpiCardProps) {
   return (
     <div
@@ -25,9 +28,17 @@ export function ProductionKpiCard({
     >
       {/* Encabezado: Título en mayúsculas pequeñas e ícono temático a la derecha */}
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
-          {label}
-        </span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
+            {label}
+          </span>
+          {onInfoClick && (
+            <KpiInfoTrigger
+              onClick={onInfoClick}
+              title={`Ver fórmula y auditoría de ${label}`}
+            />
+          )}
+        </div>
         {icon && (
           <div className="w-4 h-4 text-primary/70 shrink-0 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
             {icon}

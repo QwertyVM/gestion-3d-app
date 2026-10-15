@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CreditCard, Calendar, CheckCircle2, AlertCircle, FileText } from 'lucide-react'
+import { CreditCard, Calendar, CheckCircle2, AlertCircle, FileText, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 
 export interface CompromisoParaPagar {
@@ -45,6 +45,7 @@ export interface ModalPagarCompromisoProps {
     concepto: string
     monto: number
     fechaPago: string
+    mesPeriodo?: string
     metodoPago: string
     categoria?: string
     subcategoria?: string
@@ -68,7 +69,8 @@ export function ModalPagarCompromiso({
   onConfirmarPago,
 }: ModalPagarCompromisoProps) {
   const [monto, setMonto] = useState('')
-  const [fechaPago, setFechaPago] = useState('2026-10-31') // Finales de octubre por defecto
+  const [mesPeriodo, setMesPeriodo] = useState('Octubre 2026')
+  const [fechaPago, setFechaPago] = useState('2026-10-31')
   const [metodoPago, setMetodoPago] = useState('BCP')
   const [notas, setNotas] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -76,9 +78,15 @@ export function ModalPagarCompromiso({
   useEffect(() => {
     if (compromiso && open) {
       setMonto(compromiso.montoSugerido.toFixed(2))
-      // Fecha por defecto: Finales de Octubre (31 Oct 2026)
-      setFechaPago('2026-10-31')
-      setMetodoPago(compromiso.tipoCompromiso === 'PRESTAMO' ? 'BCP' : 'BCP')
+      const targetPeriodo = compromiso.mesPeriodo || 'Octubre 2026'
+      setMesPeriodo(targetPeriodo)
+
+      if (targetPeriodo.toLowerCase().includes('septiembre') || compromiso.numeroCuota === 1) {
+        setFechaPago('2026-09-30')
+      } else {
+        setFechaPago('2026-10-31')
+      }
+      setMetodoPago('BCP')
       setNotas('')
     }
   }, [compromiso, open])
@@ -89,8 +97,9 @@ export function ModalPagarCompromiso({
   const diferencia = montoNumero - compromiso.montoSugerido
   const esDiferente = Math.abs(diferencia) >= 0.01
 
-  const handleSeleccionarFecha = (fechaStr: string) => {
-    setFechaPago(fechaStr)
+  const handleSeleccionarPeriodo = (periodo: string, defaultFecha: string) => {
+    setMesPeriodo(periodo)
+    setFechaPago(defaultFecha)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,6 +124,7 @@ export function ModalPagarCompromiso({
         concepto: compromiso.concepto,
         monto: montoNumero,
         fechaPago,
+        mesPeriodo,
         metodoPago,
         categoria: compromiso.categoria,
         subcategoria: compromiso.subcategoria,
@@ -138,16 +148,16 @@ export function ModalPagarCompromiso({
             </div>
             <div>
               <DialogTitle className="text-sm font-bold text-foreground">
-                Asentar Pago Contable
+                Registrar Pago Contable
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                {compromiso.cuotaLabel || compromiso.concepto} • {compromiso.mesPeriodo || 'Octubre 2026'}
+                {compromiso.concepto} • {mesPeriodo}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        {/* Guía Contable Senior */}
+        {/* Guía Contable */}
         <div className="bg-secondary/40 border border-border/70 rounded-xl p-3 text-xs space-y-1 text-muted-foreground">
           <div className="flex items-center gap-1.5 font-semibold text-foreground text-[11px]">
             <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
@@ -155,12 +165,44 @@ export function ModalPagarCompromiso({
           </div>
           <p className="text-[11px] leading-relaxed">
             {compromiso.tipoCompromiso === 'PRESTAMO'
-              ? 'Registra la amortización de la cuota del préstamo BCP. Se generará el egreso financiero en caja y se liberará el blindaje de Octubre.'
-              : 'Gastos como la luz e internet pueden variar según el recibo emitido. Ingresa el monto real facturado para asentar el egreso contable exacto.'}
+              ? 'Registra la amortización de cuota del préstamo BCP. Asentará el egreso financiero en caja y actualizará el saldo capital.'
+              : 'Puedes registrar pagos manualmente para Septiembre, Octubre o cualquier período según tus recibos reales.'}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* Selector de Período Contable */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-primary" />
+              <span>Período a Pagar</span>
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleSeleccionarPeriodo('Octubre 2026', '2026-10-31')}
+                className={`text-xs py-2 px-3 rounded-xl border text-center font-semibold transition-all cursor-pointer ${
+                  mesPeriodo === 'Octubre 2026'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                    : 'bg-card hover:bg-secondary border-border text-foreground'
+                }`}
+              >
+                Octubre 2026 (En curso)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSeleccionarPeriodo('Septiembre 2026', '2026-09-30')}
+                className={`text-xs py-2 px-3 rounded-xl border text-center font-semibold transition-all cursor-pointer ${
+                  mesPeriodo === 'Septiembre 2026'
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                    : 'bg-card hover:bg-secondary border-border text-foreground'
+                }`}
+              >
+                Septiembre 2026 (Mes anterior)
+              </button>
+            </div>
+          </div>
+
           {/* Monto Real Pagado */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -206,25 +248,25 @@ export function ModalPagarCompromiso({
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => handleSeleccionarFecha('2026-10-31')}
-                  className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors ${
+                  onClick={() => setFechaPago('2026-09-30')}
+                  className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
+                    fechaPago === '2026-09-30'
+                      ? 'bg-primary text-primary-foreground font-bold'
+                      : 'bg-secondary text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  30 Sep
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFechaPago('2026-10-31')}
+                  className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer ${
                     fechaPago === '2026-10-31'
                       ? 'bg-primary text-primary-foreground font-bold'
                       : 'bg-secondary text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Fin de Mes (31 Oct)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSeleccionarFecha('2026-10-13')}
-                  className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors ${
-                    fechaPago === '2026-10-13'
-                      ? 'bg-primary text-primary-foreground font-bold'
-                      : 'bg-secondary text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Hoy (13 Oct)
+                  31 Oct
                 </button>
               </div>
             </div>
@@ -272,7 +314,7 @@ export function ModalPagarCompromiso({
                 type="text"
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
-                placeholder="Ej: Recibo Enel Octubre #84930, N° Operación..."
+                placeholder="Ej: Recibo Enel Septiembre #84930, N° Op..."
                 className="pl-9 text-xs h-9 rounded-xl bg-background border-input focus:border-primary"
               />
             </div>

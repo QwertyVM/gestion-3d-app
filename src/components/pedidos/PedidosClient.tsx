@@ -66,6 +66,7 @@ import { EditOrderModal } from './EditOrderModal'
 import { OrdersFilterBar } from './OrdersFilterBar'
 import { OrderDetailModal } from './OrderDetailModal'
 import { KpiCard } from './KpiCard'
+import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 import { OrderRow } from './OrderRow'
 import { ColorDot } from './ColorDot'
 import { getItemColors, consolidateOrderItems, formatCurrency } from './orderUtils'
@@ -360,6 +361,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
   const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('TODO'))
+  const [selectedKpiExplainer, setSelectedKpiExplainer] = useState<string | null>(null)
 
   // =========================================================================
   // ESTADO DEL FORMULARIO MULTIPRODUCTO
@@ -1093,24 +1095,28 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
           value={kpis.totalPedidos}
           sublabel={`(${kpis.totalPiezas} piezas)`}
           icon={<Boxes className="h-3.5 w-3.5" />}
+          onInfoClick={() => setSelectedKpiExplainer('pedidos_total')}
         />
         <KpiCard
           label="Preparando"
           value={kpis.enProduccion}
           sublabel="en taller"
           icon={<Package className="h-3.5 w-3.5" />}
+          onInfoClick={() => setSelectedKpiExplainer('pedidos_preparando')}
         />
         <KpiCard
           label="Por Entregar"
           value={kpis.listos}
           sublabel="listos"
           icon={<Truck className="h-3.5 w-3.5" />}
+          onInfoClick={() => setSelectedKpiExplainer('pedidos_por_entregar')}
         />
         <KpiCard
           label="Por Cobrar"
           value={formatCurrency(kpis.saldoPorCobrar)}
           sublabel="saldo pendiente"
           icon={<DollarSign className="h-3.5 w-3.5" />}
+          onInfoClick={() => setSelectedKpiExplainer('pedidos_por_cobrar')}
         />
         <KpiCard
           label="Cobrado"
@@ -1118,6 +1124,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
           sublabel="en caja"
           icon={<CheckCircle2 className="h-3.5 w-3.5" />}
           className="col-span-2 md:col-span-1"
+          onInfoClick={() => setSelectedKpiExplainer('pedidos_cobrado')}
         />
       </div>
 
@@ -1548,6 +1555,15 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         filamentos={filamentos}
         clientesList={clientesList}
         onOrderUpdated={handleOrderUpdated}
+      />
+
+      {/* Modal Explicador de Fórmulas y Transacciones de KPI */}
+      <KpiExplainerModal
+        isOpen={!!selectedKpiExplainer}
+        onClose={() => setSelectedKpiExplainer(null)}
+        kpiId={selectedKpiExplainer}
+        from={dateRange.from}
+        to={dateRange.to}
       />
     </div>
   )

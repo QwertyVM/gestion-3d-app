@@ -14,10 +14,8 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  Legend, 
-  ReferenceLine 
+  Legend 
 } from 'recharts'
-import { CashFlowAnalyticsCard } from '@/components/finanzas/CashFlowAnalyticsCard'
 import { 
   TrendingUp, 
   ArrowRight,
@@ -28,11 +26,26 @@ import {
   Users,
   ShoppingBag,
   Package,
-  ArrowUpRight
+  ArrowUpRight,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw
 } from 'lucide-react'
 
-import { DateFilterControl } from '@/components/ui/DateFilterControl'
-import { DateRange, getPresetDateRange, isDateInRange, formatFechaEvolucion, MESES_ES } from '@/lib/date-utils'
+import { CategoryFinancialBreakdownCard } from '@/components/dashboard/CategoryFinancialBreakdownCard'
+import { ClienteDetalleDrawer } from '@/components/clientes/ClienteDetalleDrawer'
+import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
+import { KpiInfoTrigger } from '@/components/ui/KpiInfoTrigger'
+import { 
+  DatePreset,
+  DateRange, 
+  getPresetDateRange, 
+  getMonthYearDateRange, 
+  isDateInRange, 
+  formatFechaEvolucion, 
+  MESES_ES 
+} from '@/lib/date-utils'
 
 // Obtener iniciales de un nombre
 function getInitials(name: string) {
@@ -42,27 +55,17 @@ function getInitials(name: string) {
   return (parts[0][0] + parts[1][0]).toUpperCase()
 }
 
-// Configuración de los 3 gráficos analíticos
-const EVOLUCION_CONFIG = {
-  MARGEN: {
-    title: 'Margen Real por Pedido',
-    description: 'Facturación vendida vs. costo de producción por día'
-  },
-  FLUJO: {
-    title: 'Flujo Diario de Caja',
-    description: 'Cobranzas recibidas vs. gastos del taller por fecha real'
-  },
-  ACUMULADO: {
-    title: 'Curva Acumulativa del Período',
-    description: 'Tendencia acumulada de cobranzas vs. egresos a la fecha'
-  },
-  TODOS: {
-    title: 'Análisis Financiero Completo (3 Gráficos)',
-    description: 'Margen de producción, flujo de caja y curva acumulada'
-  }
+// Capitalizar nombres automáticamente (ej: "con rad" -> "Con Rad")
+function formatClienteNombre(name: string) {
+  if (!name) return 'Cliente'
+  return name
+    .trim()
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
 }
 
-// Tooltip 1: Margen por Pedido
+// Tooltip interactivo para Margen por Pedido
 function MargenTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const data = payload[0]?.payload || {}
@@ -73,42 +76,44 @@ function MargenTooltip({ active, payload, label }: any) {
     const pedidos = data.pedidosDetalle || []
 
     return (
-      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[220px] max-w-[280px] text-xs font-sans">
-        <div className="flex items-center justify-between border-b border-[#F5EFEB] pb-1.5 mb-2">
-          <span className="font-bold text-[#1F2937]">{formatFechaEvolucion(label, true)}</span>
-          <span className="text-[10px] font-semibold text-[#059669] bg-[#ECFDF5] px-1.5 py-0.5 rounded">
+      <div className="bg-card border border-border/80 rounded-xl shadow-xl p-3 min-w-[230px] max-w-[290px] text-xs font-sans">
+        <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2">
+          <span className="font-bold text-foreground">{formatFechaEvolucion(label, true)}</span>
+          <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-500/10 px-1.5 py-0.5 rounded">
             {margenPct}% margen
           </span>
         </div>
-        <div className="space-y-1.5 text-[#6B7280]">
+        <div className="space-y-1.5 text-muted-foreground">
           <div className="flex justify-between items-center">
             <span>Venta Total:</span>
-            <span className="font-mono font-bold text-[#1F2937]">S/ {venta.toFixed(2)}</span>
+            <span className="font-mono font-bold text-foreground">S/ {venta.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span>Costo Producción:</span>
-            <span className="font-mono font-medium text-[#75695D]">S/ {costo.toFixed(2)}</span>
+            <span>Costo de Filamento/Luz:</span>
+            <span className="font-mono font-medium text-foreground/80">S/ {costo.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between items-center pt-1.5 border-t border-[#F5EFEB] font-bold">
-            <span className="text-[#059669]">Utilidad Neta:</span>
-            <span className="font-mono text-sm text-[#059669]">
+          <div className="flex justify-between items-center pt-1.5 border-t border-border/60 font-bold">
+            <span className="text-emerald-700">Margen Neto:</span>
+            <span className="font-mono text-sm text-emerald-700">
               +S/ {utilidad.toFixed(2)}
             </span>
           </div>
 
           {/* Desglose de pedidos del día con Cliente y Producto */}
           {pedidos.length > 0 && (
-            <div className="pt-2 border-t border-[#F5EFEB] space-y-1">
-              <div className="text-[10px] uppercase font-bold text-[#9CA3AF] tracking-wider">
+            <div className="pt-2 border-t border-border/60 space-y-1">
+              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
                 {pedidos.length === 1 ? 'Detalle del pedido' : `${pedidos.length} pedidos registrados`}:
               </div>
               {pedidos.map((p: any, idx: number) => (
                 <div key={idx} className="flex justify-between items-start text-[11px] gap-2 py-0.5">
                   <div className="truncate min-w-0 flex-1">
-                    <span className="font-semibold text-[#1F2937] block truncate">{p.cliente}</span>
-                    <span className="text-[#6B7280] block text-[10px] truncate">{p.producto}</span>
+                    <span className="font-semibold text-foreground block truncate">
+                      {formatClienteNombre(p.cliente)}
+                    </span>
+                    <span className="text-muted-foreground block text-[10px] truncate">{p.producto}</span>
                   </div>
-                  <span className="font-mono font-bold text-[#1F2937] shrink-0">
+                  <span className="font-mono font-bold text-foreground shrink-0">
                     S/ {Number(p.total).toFixed(2)}
                   </span>
                 </div>
@@ -122,91 +127,44 @@ function MargenTooltip({ active, payload, label }: any) {
   return null
 }
 
-// Tooltip 2: Flujo Diario de Caja
-function FlujoCajaTooltip({ active, payload, label }: any) {
-  if (active && payload && payload.length) {
-    const data = payload[0]?.payload || {}
-    const entradas = Number(data.entradas || 0)
-    const salidas = Number(data.salidas || 0)
-    const balanceNeto = Number(data.balanceNeto || 0)
-    const isNegative = balanceNeto < 0
-
-    return (
-      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[210px] text-xs font-sans">
-        <div className="flex items-center justify-between border-b border-[#F5EFEB] pb-1.5 mb-2">
-          <span className="font-bold text-[#1F2937]">{formatFechaEvolucion(label, true)}</span>
-          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-            isNegative ? 'text-[#DC2626] bg-[#FEF2F2]' : 'text-[#059669] bg-[#ECFDF5]'
-          }`}>
-            {isNegative ? 'Déficit Día' : 'Superávit Día'}
-          </span>
-        </div>
-        <div className="space-y-1.5 text-[#6B7280]">
-          <div className="flex justify-between items-center">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#059669]" />
-              Cobranzas (Entradas):
-            </span>
-            <span className="font-mono font-bold text-[#059669]">S/ {entradas.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
-              Gastos Taller (Salidas):
-            </span>
-            <span className="font-mono font-bold text-[#DC2626]">S/ {salidas.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between items-center pt-1.5 border-t border-[#F5EFEB] font-bold">
-            <span className={isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}>Balance Neto:</span>
-            <span className={`font-mono text-sm ${isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
-              {isNegative ? `-S/ ${Math.abs(balanceNeto).toFixed(2)}` : `+S/ ${balanceNeto.toFixed(2)}`}
-            </span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-  return null
-}
-
-// Tooltip 3: Curva Acumulada
+// Tooltip para Curva Acumulada
 function CurvaAcumuladaTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
     const data = payload[0]?.payload || {}
-    const cobranza = Number(data.ingresosAcum || 0)
-    const gastos = Number(data.egresosAcum || 0)
-    const balance = Number(data.balanceAcum || 0)
-    const isNegative = balance < 0
+    const ventas = Number(data.ventasAcum || 0)
+    const costo = Number(data.costosAcum || 0)
+    const utilidad = Number(data.utilidadAcum || (ventas - costo))
+    const isNegative = utilidad < 0
 
     return (
-      <div className="bg-white border border-[#E5DCD3] rounded-xl shadow-lg p-3 min-w-[220px] text-xs font-sans">
-        <div className="flex items-center justify-between border-b border-[#F5EFEB] pb-1.5 mb-2">
-          <span className="font-bold text-[#1F2937]">{formatFechaEvolucion(label, true)}</span>
+      <div className="bg-card border border-border/80 rounded-xl shadow-xl p-3 min-w-[220px] text-xs font-sans">
+        <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2">
+          <span className="font-bold text-foreground">{formatFechaEvolucion(label, true)}</span>
           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-            isNegative ? 'text-[#DC2626] bg-[#FEF2F2]' : 'text-[#059669] bg-[#ECFDF5]'
+            isNegative ? 'text-destructive bg-destructive/10' : 'text-emerald-800 bg-emerald-500/10'
           }`}>
-            {isNegative ? 'Déficit Acumulado' : 'Superávit Acumulado'}
+            {isNegative ? 'Margen Negativo' : 'Margen Acumulado'}
           </span>
         </div>
-        <div className="space-y-1.5 text-[#6B7280]">
+        <div className="space-y-1.5 text-muted-foreground">
           <div className="flex justify-between items-center">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#059669]" />
-              Cobranza Acumulada:
+              <span className="w-2 h-2 rounded-full bg-[#A36F4C]" />
+              Venta Acumulada:
             </span>
-            <span className="font-mono font-bold text-[#059669]">S/ {cobranza.toFixed(2)}</span>
+            <span className="font-mono font-bold text-foreground">S/ {ventas.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
-              Gastos Acumulados:
+              <span className="w-2 h-2 rounded-full bg-[#E2D9CC]" />
+              Costo Acumulado:
             </span>
-            <span className="font-mono font-bold text-[#DC2626]">S/ {gastos.toFixed(2)}</span>
+            <span className="font-mono font-medium text-foreground/80">S/ {costo.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between items-center pt-1.5 border-t border-[#F5EFEB] font-bold">
-            <span className={isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}>Balance a la Fecha:</span>
-            <span className={`font-mono text-sm ${isNegative ? 'text-[#DC2626]' : 'text-[#059669]'}`}>
-              {isNegative ? `-S/ ${Math.abs(balance).toFixed(2)}` : `+S/ ${balance.toFixed(2)}`}
+          <div className="flex justify-between items-center pt-1.5 border-t border-border/60 font-bold">
+            <span className="text-emerald-700">Utilidad Acumulada:</span>
+            <span className={`font-mono text-sm ${isNegative ? 'text-destructive' : 'text-emerald-700'}`}>
+              {isNegative ? `-S/ ${Math.abs(utilidad).toFixed(2)}` : `+S/ ${utilidad.toFixed(2)}`}
             </span>
           </div>
         </div>
@@ -244,6 +202,7 @@ export interface TopArticuloItem {
   id: string
   nombreModelo: string
   lineaCategoria: string
+  imageUrl?: string | null
   unidadesVendidas: number
   totalFacturado: number
   pedidosCount: number
@@ -297,40 +256,35 @@ interface DashboardClientProps {
 export function DashboardClient({ 
   kpis: initialKpis, 
   capacidadGasto: initialCapacidadGasto,
-  graficoEvolucion: initialGraficoEvolucion, 
-  graficoInversion: initialGraficoInversion,
   topClientes: initialTopClientes = [],
   topArticulos: initialTopArticulos = [],
   rawVentas = [],
   rawInversiones = [],
   rawIngresosDirectos = [],
-  rawFilamentos = []
 }: DashboardClientProps) {
   const router = useRouter()
-  // Default to Mes Actual
-  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('TODO'))
+
+  // Default al Mes Actual (Este Mes)
+  const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('ESTE_MES'))
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [evolucionTab, setEvolucionTab] = useState<'MARGEN' | 'FLUJO' | 'ACUMULADO' | 'TODOS'>('MARGEN')
+  const [chartMode, setChartMode] = useState<'DIARIO' | 'ACUMULADO'>('DIARIO')
   const [soloDiasConVentas, setSoloDiasConVentas] = useState(true)
   const [rankingArticulosMode, setRankingArticulosMode] = useState<'RENTABILIDAD' | 'VOLUMEN'>('RENTABILIDAD')
 
-  const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  // Drawer de Detalle del Cliente
+  const [selectedClienteDrawer, setSelectedClienteDrawer] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
-  // 0. Calcular rango global de fechas con datos
-  const { minFechaData, maxFechaData } = useMemo(() => {
-    let min: string | undefined
-    let max: string | undefined
-    const checkDate = (d?: string | Date | null) => {
-      if (!d) return
-      const s = typeof d === 'string' ? d : d.toISOString()
-      if (!min || s < min) min = s
-      if (!max || s > max) max = s
-    }
-    rawVentas?.forEach((v: any) => checkDate(v.fecha))
-    rawInversiones?.forEach((inv: any) => checkDate(inv.fecha || inv.createdAt))
-    rawIngresosDirectos?.forEach((ing: any) => checkDate(ing.fecha))
-    return { minFechaData: min, maxFechaData: max }
-  }, [rawVentas, rawInversiones, rawIngresosDirectos])
+  // Modal de Auditoría y Explicación de KPIs
+  const [selectedKpiExplainer, setSelectedKpiExplainer] = useState<string | null>(null)
+
+  const handleOpenClienteDetalle = (cliente: string) => {
+    setSelectedClienteDrawer(cliente)
+    setDrawerOpen(true)
+  }
+
+  const formatCurrency = (val: number) => 
+    `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // 1. Filtrar ventas por rango de fecha
   const filteredVentas = useMemo(() => {
@@ -350,30 +304,6 @@ export function DashboardClient({
     return rawIngresosDirectos.filter((ing: any) => isDateInRange(ing.fecha, dateRange.from, dateRange.to))
   }, [rawIngresosDirectos, dateRange])
 
-  // 3.1. Ventas con cobranzas/pagos filtrados por fecha para estructura de flujo y balance
-  const ventasParaAnalytics = useMemo(() => {
-    if (!rawVentas || rawVentas.length === 0) return []
-    return rawVentas
-      .map((v: any) => {
-        if (Array.isArray(v.pagos) && v.pagos.length > 0) {
-          const pagosEnRango = v.pagos.filter((p: any) => isDateInRange(p.fecha, dateRange.from, dateRange.to))
-          if (pagosEnRango.length > 0) {
-            return {
-              ...v,
-              pagos: pagosEnRango,
-              montoPagado: pagosEnRango.reduce((sum: number, p: any) => sum + Number(p.monto || 0), 0)
-            }
-          }
-          return null
-        }
-        if (isDateInRange(v.fecha, dateRange.from, dateRange.to)) {
-          return v
-        }
-        return null
-      })
-      .filter(Boolean) as any[]
-  }, [rawVentas, dateRange])
-
   // 4. Calcular KPIs dinámicamente según el período seleccionado
   const dynamicKpis = useMemo(() => {
     if (rawVentas.length === 0 && rawInversiones.length === 0) {
@@ -383,6 +313,15 @@ export function DashboardClient({
     const ingresosVentas = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.total || 0), 0)
     
     const costoFabricacionTotal = filteredVentas.reduce((sum: number, v: any) => {
+      // Si el pedido tiene items desagregados
+      if (Array.isArray(v.items) && v.items.length > 0) {
+        return sum + v.items.reduce((iSum: number, it: any) => {
+          const cUnit = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+            ? Number(it.costoBaseSnapshot)
+            : (Number(it.producto?.costoBase) || 0)
+          return iSum + (cUnit * Number(it.cantidad || 1))
+        }, 0)
+      }
       const costoBaseUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
         ? Number(v.costoBaseSnapshot) 
         : (Number(v.producto?.costoBase) || 0)
@@ -392,13 +331,12 @@ export function DashboardClient({
     const gananciaNeta = ingresosVentas - costoFabricacionTotal
     const margenPorcentaje = costoFabricacionTotal > 0 ? (gananciaNeta / costoFabricacionTotal) * 100 : 0
 
-    // Cobranzas efectivas dentro del período (considera abonos recibidos en el período de cualquier pedido)
+    // Cobranzas efectivas dentro del período
     const totalCobradoVentas = rawVentas.reduce((sum: number, v: any) => {
       if (Array.isArray(v.pagos) && v.pagos.length > 0) {
         const pagosEnRango = v.pagos.filter((p: any) => isDateInRange(p.fecha, dateRange.from, dateRange.to))
         return sum + pagosEnRango.reduce((pSum: number, p: any) => pSum + Number(p.monto || 0), 0)
       }
-      // Fallback si no hay array de pagos pero la fecha de venta está en rango
       if (isDateInRange(v.fecha, dateRange.from, dateRange.to)) {
         return sum + Number(v.montoPagado || 0)
       }
@@ -423,7 +361,7 @@ export function DashboardClient({
     }
   }, [filteredVentas, filteredInversiones, filteredIngresosDirectos, dateRange, rawVentas, rawInversiones, initialKpis])
 
-  // 5. Capacidad de gasto calculada para el período (vinculada a Proyecciones y Presupuestos)
+  // 5. Capacidad de gasto calculada para el período
   const gasto = useMemo(() => {
     const saldoActualCaja = Math.max(0, (dynamicKpis.totalCobradoVentas + dynamicKpis.totalIngresosDirectos) - dynamicKpis.egresosTotales)
     const cuotaPrestamoMensual = initialCapacidadGasto?.cuotaPrestamoMensual ?? 388.68
@@ -451,19 +389,17 @@ export function DashboardClient({
     }
   }, [dynamicKpis, filteredVentas.length, initialCapacidadGasto])
 
-  // 6. Métricas y datos para los 3 gráficos financieros
+  // 6. Métricas para el gráfico de Margen Real por Pedido & Curva Acumulada
   const metricasEvolucion = useMemo(() => {
     const timelineMap: Record<string, {
       ventaTotal: number
       costoProduccion: number
       utilidad: number
-      entradas: number
-      salidas: number
       pedidosCount: number
       pedidosDetalle?: { cliente: string; producto: string; total: number }[]
     }> = {}
 
-    // A. Inicializar todos los días del período para rangos continuos (ej. semana o mes de hasta 60 días)
+    // Inicializar todos los días del período para rangos continuos
     if (dateRange.from && dateRange.to) {
       const [startYear, startMonth, startDay] = dateRange.from.split('-').map(Number)
       const [endYear, endMonth, endDay] = dateRange.to.split('-').map(Number)
@@ -480,8 +416,6 @@ export function DashboardClient({
             ventaTotal: 0,
             costoProduccion: 0,
             utilidad: 0,
-            entradas: 0,
-            salidas: 0,
             pedidosCount: 0,
             pedidosDetalle: []
           }
@@ -490,7 +424,6 @@ export function DashboardClient({
       }
     }
 
-    // B. Mapear ventas y costos de producción (por fecha del pedido - Gráfico 1: Margen de Pedidos)
     filteredVentas.forEach((venta: any) => {
       const vDate = String(venta.fecha).split('T')[0]
       if (!timelineMap[vDate]) {
@@ -498,17 +431,26 @@ export function DashboardClient({
           ventaTotal: 0,
           costoProduccion: 0,
           utilidad: 0,
-          entradas: 0,
-          salidas: 0,
           pedidosCount: 0,
           pedidosDetalle: []
         }
       }
 
-      const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
-        ? Number(venta.costoBaseSnapshot) 
-        : (Number(venta.producto?.costoBase) || 0)
-      const ventaCosto = costoBaseUnit * Number(venta.cantidad || 1)
+      let ventaCosto = 0
+      if (Array.isArray(venta.items) && venta.items.length > 0) {
+        ventaCosto = venta.items.reduce((sum: number, it: any) => {
+          const cUnit = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+            ? Number(it.costoBaseSnapshot)
+            : (Number(it.producto?.costoBase) || 0)
+          return sum + (cUnit * Number(it.cantidad || 1))
+        }, 0)
+      } else {
+        const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
+          ? Number(venta.costoBaseSnapshot) 
+          : (Number(venta.producto?.costoBase) || 0)
+        ventaCosto = costoBaseUnit * Number(venta.cantidad || 1)
+      }
+
       const ventaTotal = Number(venta.total || 0)
 
       timelineMap[vDate].costoProduccion += ventaCosto
@@ -522,73 +464,13 @@ export function DashboardClient({
         producto: venta.nombreProductoSnapshot || venta.producto?.nombreModelo || 'Producto',
         total: ventaTotal
       })
-
-      // Fallback si no hay array de pagos pero la fecha está en rango
-      if (!venta.pagos || venta.pagos.length === 0) {
-        timelineMap[vDate].entradas += Number(venta.montoPagado != null ? venta.montoPagado : venta.total)
-      }
     })
 
-    // C. Mapear cobranzas reales por fecha de pago (Gráfico 2: Flujo de Caja)
-    rawVentas.forEach((venta: any) => {
-      if (Array.isArray(venta.pagos) && venta.pagos.length > 0) {
-        venta.pagos.forEach((pago: any) => {
-          const pDate = String(pago.fecha).split('T')[0]
-          if (isDateInRange(pDate, dateRange.from, dateRange.to)) {
-            if (!timelineMap[pDate]) {
-              timelineMap[pDate] = {
-                ventaTotal: 0,
-                costoProduccion: 0,
-                utilidad: 0,
-                entradas: 0,
-                salidas: 0,
-                pedidosCount: 0
-              }
-            }
-            timelineMap[pDate].entradas += Number(pago.monto || 0)
-          }
-        })
-      }
-    })
-
-    // Sumar ingresos directos a las entradas
-    filteredIngresosDirectos.forEach((ing: any) => {
-      const iDate = String(ing.fecha).split('T')[0]
-      if (!timelineMap[iDate]) {
-        timelineMap[iDate] = {
-          ventaTotal: 0,
-          costoProduccion: 0,
-          utilidad: 0,
-          entradas: 0,
-          salidas: 0,
-          pedidosCount: 0
-        }
-      }
-      timelineMap[iDate].entradas += Number(ing.monto || 0)
-    })
-
-    // D. Mapear salidas / egresos del taller (Gráfico 2: Flujo de Caja)
-    filteredInversiones.forEach((inv: any) => {
-      const gDate = String(inv.fecha).split('T')[0]
-      if (!timelineMap[gDate]) {
-        timelineMap[gDate] = {
-          ventaTotal: 0,
-          costoProduccion: 0,
-          utilidad: 0,
-          entradas: 0,
-          salidas: 0,
-          pedidosCount: 0
-        }
-      }
-      timelineMap[gDate].salidas += Number(inv.costoTotal || 0)
-    })
-
-    // E. Generar listado cronológico y acumulados
     const sortedEntries = Object.entries(timelineMap).sort((a, b) => a[0].localeCompare(b[0]))
 
-    let acumCobranza = 0
-    let acumGastos = 0
     let acumVentas = 0
+    let acumCostos = 0
+    let acumUtilidad = 0
 
     return sortedEntries.map(([fecha, vals]) => {
       const ventaTotal = Number(vals.ventaTotal.toFixed(2))
@@ -596,40 +478,26 @@ export function DashboardClient({
       const utilidad = Number((ventaTotal - costoProduccion).toFixed(2))
       const margenPct = ventaTotal > 0 ? Math.round((utilidad / ventaTotal) * 100) : 0
 
-      const entradas = Number(vals.entradas.toFixed(2))
-      const salidas = Number(vals.salidas.toFixed(2))
-      const balanceNeto = Number((entradas - salidas).toFixed(2))
-
-      acumCobranza += entradas
-      acumGastos += salidas
       acumVentas += ventaTotal
+      acumCostos += costoProduccion
+      acumUtilidad += utilidad
 
       return {
         fecha,
-        // Gráfico 1: Margen de Pedidos
         ventaTotal,
         costoProduccion,
         utilidad,
         margenPct,
         pedidosCount: vals.pedidosCount,
         pedidosDetalle: vals.pedidosDetalle || [],
-        // Gráfico 2: Flujo de Caja
-        entradas,
-        salidas,
-        balanceNeto,
-        // Gráfico 3: Curva Acumulada
-        ingresosAcum: Number(acumCobranza.toFixed(2)),
-        egresosAcum: Number(acumGastos.toFixed(2)),
         ventasAcum: Number(acumVentas.toFixed(2)),
-        balanceAcum: Number((acumCobranza - acumGastos).toFixed(2))
+        costosAcum: Number(acumCostos.toFixed(2)),
+        utilidadAcum: Number(acumUtilidad.toFixed(2))
       }
     })
-  }, [filteredVentas, rawVentas, filteredIngresosDirectos, filteredInversiones, dateRange])
+  }, [filteredVentas, dateRange])
 
-  // 7. Distribución de gastos dinámico
-
-
-  // 8. Top 5 Clientes en valor en el período seleccionado
+  // 7. Top 5 Clientes en valor en el período seleccionado
   const topClientesDinamico = useMemo(() => {
     if (rawVentas.length === 0) return initialTopClientes
 
@@ -694,7 +562,7 @@ export function DashboardClient({
         })
 
         return {
-          cliente: c.cliente,
+          cliente: formatClienteNombre(c.cliente),
           totalComprado: Number(c.totalComprado.toFixed(2)),
           totalPagado: Number(c.totalPagado.toFixed(2)),
           saldoPendiente: Number(c.saldoPendiente.toFixed(2)),
@@ -707,7 +575,7 @@ export function DashboardClient({
       })
   }, [filteredVentas, rawVentas, dynamicKpis.ingresosVentas, initialTopClientes])
 
-  // 9. Top 5 Artículos más vendidos en el período seleccionado
+  // 8. Top 5 Artículos Más Rentables en el período (Desagregados por producto individual del catálogo)
   const topArticulosDinamico = useMemo(() => {
     if (rawVentas.length === 0) return initialTopArticulos
 
@@ -715,6 +583,7 @@ export function DashboardClient({
       id: string
       nombreModelo: string
       lineaCategoria: string
+      imageUrl?: string | null
       unidadesVendidas: number
       totalFacturado: number
       costoProduccionTotal: number
@@ -724,34 +593,78 @@ export function DashboardClient({
     let totalUnidades = 0
 
     filteredVentas.forEach((v: any) => {
-      const nombre = v.nombreProductoSnapshot || v.producto?.nombreModelo || 'Artículo'
-      const artKey = (v.productoId || nombre).trim().toLowerCase()
-      const categoria = v.producto?.lineaCategoria || 'General'
-      const cant = Number(v.cantidad || 1)
-      const sub = Number(v.total || 0)
+      // Si el pedido tiene items desagregados, procesar cada producto individual
+      if (Array.isArray(v.items) && v.items.length > 0) {
+        v.items.forEach((it: any) => {
+          const nombre = it.nombreModelo || it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Artículo'
+          const artKey = (it.productoId || nombre).trim().toLowerCase()
+          const categoria = it.lineaCategoria || it.producto?.lineaCategoria || 'General'
+          const cant = Number(it.cantidad || 1)
+          const sub = Number(it.subtotal != null ? it.subtotal : (Number(it.precioUnitario || 0) * cant))
+          const costoBaseUnit = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0 
+            ? Number(it.costoBaseSnapshot) 
+            : (Number(it.producto?.costoBase) || 0)
+          const costoProd = costoBaseUnit * cant
+          const img = it.imagenUrl || it.producto?.imagenUrl || null
 
-      const costoBaseUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
-        ? Number(v.costoBaseSnapshot) 
-        : (Number(v.producto?.costoBase) || 0)
-      const costoProd = costoBaseUnit * cant
+          if (!articulosMap[artKey]) {
+            articulosMap[artKey] = {
+              id: it.productoId || artKey,
+              nombreModelo: nombre,
+              lineaCategoria: categoria,
+              imageUrl: img,
+              unidadesVendidas: 0,
+              totalFacturado: 0,
+              costoProduccionTotal: 0,
+              pedidosCount: 0
+            }
+          }
 
-      if (!articulosMap[artKey]) {
-        articulosMap[artKey] = {
-          id: v.productoId || artKey,
-          nombreModelo: nombre,
-          lineaCategoria: categoria,
-          unidadesVendidas: 0,
-          totalFacturado: 0,
-          costoProduccionTotal: 0,
-          pedidosCount: 0
+          articulosMap[artKey].unidadesVendidas += cant
+          articulosMap[artKey].totalFacturado += sub
+          articulosMap[artKey].costoProduccionTotal += costoProd
+          articulosMap[artKey].pedidosCount += 1
+          if (!articulosMap[artKey].imageUrl && img) {
+            articulosMap[artKey].imageUrl = img
+          }
+          totalUnidades += cant
+        })
+      } else {
+        // Fallback para venta individual
+        const nombre = v.producto?.nombreModelo || v.nombreProductoSnapshot || 'Artículo'
+        const artKey = (v.productoId || nombre).trim().toLowerCase()
+        const categoria = v.producto?.lineaCategoria || 'General'
+        const cant = Number(v.cantidad || 1)
+        const sub = Number(v.total || 0)
+
+        const costoBaseUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
+          ? Number(v.costoBaseSnapshot) 
+          : (Number(v.producto?.costoBase) || 0)
+        const costoProd = costoBaseUnit * cant
+        const img = v.producto?.imagenUrl || null
+
+        if (!articulosMap[artKey]) {
+          articulosMap[artKey] = {
+            id: v.productoId || artKey,
+            nombreModelo: nombre,
+            lineaCategoria: categoria,
+            imageUrl: img,
+            unidadesVendidas: 0,
+            totalFacturado: 0,
+            costoProduccionTotal: 0,
+            pedidosCount: 0
+          }
         }
-      }
 
-      articulosMap[artKey].unidadesVendidas += cant
-      articulosMap[artKey].totalFacturado += sub
-      articulosMap[artKey].costoProduccionTotal += costoProd
-      articulosMap[artKey].pedidosCount += 1
-      totalUnidades += cant
+        articulosMap[artKey].unidadesVendidas += cant
+        articulosMap[artKey].totalFacturado += sub
+        articulosMap[artKey].costoProduccionTotal += costoProd
+        articulosMap[artKey].pedidosCount += 1
+        if (!articulosMap[artKey].imageUrl && img) {
+          articulosMap[artKey].imageUrl = img
+        }
+        totalUnidades += cant
+      }
     })
 
     const ingresosTotal = dynamicKpis.ingresosVentas
@@ -767,6 +680,7 @@ export function DashboardClient({
           id: art.id,
           nombreModelo: art.nombreModelo,
           lineaCategoria: art.lineaCategoria,
+          imageUrl: art.imageUrl || null,
           unidadesVendidas: art.unidadesVendidas,
           totalFacturado: Number(art.totalFacturado.toFixed(2)),
           costoProduccionTotal: Number(art.costoProduccionTotal.toFixed(2)),
@@ -787,29 +701,92 @@ export function DashboardClient({
       .slice(0, 5)
   }, [filteredVentas, rawVentas, dynamicKpis.ingresosVentas, initialTopArticulos, rankingArticulosMode])
 
-  // Funciones de renderizado para los 3 gráficos
-  const renderMargenChart = (data: any[], heightClass: string = 'h-full') => {
+  // Navegador Temporal y Presets
+  const now = new Date()
+  const currentMonthName = MESES_ES[now.getMonth()]
+
+  const handleSelectPreset = (preset: DatePreset) => {
+    setDateRange(getPresetDateRange(preset))
+  }
+
+  // Navegar mes anterior / mes siguiente
+  const handleNavigateMonth = (direction: -1 | 1) => {
+    let year = now.getFullYear()
+    let month = now.getMonth()
+    if (dateRange.from) {
+      const parts = dateRange.from.split('-').map(Number)
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        year = parts[0]
+        month = parts[1] - 1
+      }
+    }
+    const targetDate = new Date(year, month + direction, 1)
+    const isCurrent = targetDate.getFullYear() === now.getFullYear() && targetDate.getMonth() === now.getMonth()
+    if (isCurrent) {
+      setDateRange(getPresetDateRange('ESTE_MES'))
+    } else {
+      setDateRange(getMonthYearDateRange(targetDate.getFullYear(), targetDate.getMonth() + 1))
+    }
+  }
+
+  // Label de visualización del período activo
+  const activeDateLabel = useMemo(() => {
+    if (dateRange.preset === 'ESTE_MES') {
+      return `Este Mes (${currentMonthName})`
+    }
+    if (dateRange.preset === 'MES_ANTERIOR') {
+      const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      return `Mes Anterior (${MESES_ES[prev.getMonth()]})`
+    }
+    if (dateRange.preset === 'ULTIMOS_3_MESES') {
+      return 'Trimestre'
+    }
+    if (dateRange.preset === 'TODO') {
+      return 'Histórico'
+    }
+    if (dateRange.from && dateRange.to) {
+      const [fromY, fromM, fromD] = dateRange.from.split('-').map(Number)
+      const [toY, toM, toD] = dateRange.to.split('-').map(Number)
+      if (fromY === toY && fromM === toM && fromD === 1) {
+        const lastDay = new Date(fromY, fromM, 0).getDate()
+        if (toD === lastDay) {
+          return `${MESES_ES[fromM - 1]} ${fromY}`
+        }
+      }
+      return `${formatFechaEvolucion(dateRange.from)} - ${formatFechaEvolucion(dateRange.to)}`
+    }
+    return 'Este Mes'
+  }, [dateRange, currentMonthName])
+
+  const handleManualRefresh = () => {
+    setIsRefreshing(true)
+    router.refresh()
+    setTimeout(() => setIsRefreshing(false), 600)
+  }
+
+  // Renderizado del Gráfico de Margen Real por Pedido
+  const renderMargenChart = (data: any[]) => {
     const displayData = soloDiasConVentas ? data.filter(d => d.ventaTotal > 0) : data
     const chartData = displayData.length > 0 ? displayData : data
 
     return (
-      <div className={`${heightClass} w-full`}>
+      <div className="h-full w-full min-h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.6} />
             <XAxis 
               dataKey="fecha" 
-              stroke="#6B7280" 
+              stroke="#75695D" 
               fontSize={11} 
               tickLine={false} 
-              axisLine={{ stroke: '#E5DCD3' }}
+              axisLine={{ stroke: '#E2D9CC' }}
               interval={chartData.length <= 10 ? 0 : 'preserveStartEnd'}
               minTickGap={32}
               tickFormatter={(val) => formatFechaEvolucion(val, false)}
               dy={4}
             />
             <YAxis 
-              stroke="#6B7280" 
+              stroke="#75695D" 
               fontSize={11} 
               tickLine={false} 
               axisLine={false} 
@@ -819,46 +796,49 @@ export function DashboardClient({
             <Legend 
               verticalAlign="top"
               content={() => (
-                <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] pb-2 text-[#6B7280]">
+                <div className="flex flex-wrap items-center justify-end gap-3.5 text-[11px] pb-2 text-muted-foreground">
                   <div className="flex items-center gap-1.5 font-medium">
-                    <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
+                    <span className="w-2.5 h-2.5 bg-emerald-700 rounded-xs inline-block" />
                     <span>Utilidad Neta</span>
                   </div>
                   <div className="flex items-center gap-1.5 font-medium">
-                    <span className="w-2.5 h-2.5 bg-[#D1C7BD] rounded-xs inline-block" />
+                    <span className="w-2.5 h-2.5 bg-[#E2D9CC] rounded-xs inline-block border border-border/80" />
                     <span>Costo Producción</span>
                   </div>
-                  <div className="flex items-center gap-1.5 font-medium text-[#7C5835]">
-                    <span className="w-3.5 h-0.5 bg-[#7C5835] rounded-full inline-block" />
+                  <div className="flex items-center gap-1.5 font-medium text-primary">
+                    <span className="w-3.5 h-0.5 bg-primary rounded-full inline-block" />
                     <span>Venta Total</span>
                   </div>
                 </div>
               )}
             />
+            {/* Costo de Producción en Beige NOVA #E2D9CC */}
             <Bar 
               dataKey="costoProduccion" 
               name="Costo Producción" 
               stackId="venta" 
-              fill="#D1C7BD" 
+              fill="#E2D9CC" 
               radius={[0, 0, 0, 0]}
               maxBarSize={32}
             />
+            {/* Utilidad Neta en Verde Esmeralda #047857 (emerald-700) */}
             <Bar 
               dataKey="utilidad" 
               name="Utilidad Neta" 
               stackId="venta" 
-              fill="#059669" 
+              fill="#047857" 
               radius={[4, 4, 0, 0]}
               maxBarSize={32}
             />
+            {/* Venta Total en Terracota #A36F4C */}
             <Line 
               type="monotone" 
               dataKey="ventaTotal" 
               name="Venta Total" 
-              stroke="#7C5835" 
+              stroke="#A36F4C" 
               strokeWidth={2} 
-              dot={{ r: 3, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-              activeDot={{ r: 5, fill: '#7C5835', stroke: '#FFFFFF', strokeWidth: 2 }}
+              dot={{ r: 3, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 1.5 }}
+              activeDot={{ r: 5, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -866,106 +846,35 @@ export function DashboardClient({
     )
   }
 
-  const renderFlujoChart = (data: any[], heightClass: string = 'h-full') => (
-    <div className={`${heightClass} w-full`}>
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
-          <XAxis 
-            dataKey="fecha" 
-            stroke="#6B7280" 
-            fontSize={11} 
-            tickLine={false} 
-            axisLine={{ stroke: '#E5DCD3' }}
-            interval={data.length <= 10 ? 0 : 'preserveStartEnd'}
-            minTickGap={32}
-            tickFormatter={(val) => formatFechaEvolucion(val, false)}
-            dy={4}
-          />
-          <YAxis 
-            stroke="#6B7280" 
-            fontSize={11} 
-            tickLine={false} 
-            axisLine={false} 
-            tickFormatter={(val) => `${val}`}
-          />
-          <Tooltip content={<FlujoCajaTooltip />} />
-          <Legend 
-            verticalAlign="top"
-            content={() => (
-              <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] pb-2 text-[#6B7280]">
-                <div className="flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
-                  <span>Entradas (Cobrado)</span>
-                </div>
-                <div className="flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 bg-[#DC2626] rounded-xs inline-block" />
-                  <span>Salidas (Gastos)</span>
-                </div>
-                <div className="flex items-center gap-1.5 font-medium text-[#1F2937]">
-                  <span className="w-3.5 h-0.5 bg-[#1F2937] rounded-full inline-block" />
-                  <span>Balance Neto</span>
-                </div>
-              </div>
-            )}
-          />
-          <ReferenceLine y={0} stroke="#D1D5DB" strokeWidth={1} />
-          <Bar 
-            dataKey="entradas" 
-            name="Entradas" 
-            fill="#059669" 
-            radius={[3, 3, 0, 0]}
-            maxBarSize={22}
-          />
-          <Bar 
-            dataKey="salidas" 
-            name="Salidas" 
-            fill="#DC2626" 
-            radius={[3, 3, 0, 0]}
-            maxBarSize={22}
-          />
-          <Line 
-            type="monotone" 
-            dataKey="balanceNeto" 
-            name="Balance Diario" 
-            stroke="#1F2937" 
-            strokeWidth={2} 
-            dot={{ r: 3, fill: '#1F2937', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-            activeDot={{ r: 5, fill: '#1F2937', stroke: '#FFFFFF', strokeWidth: 2 }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-    </div>
-  )
-
-  const renderAcumuladoChart = (data: any[], heightClass: string = 'h-full') => (
-    <div className={`${heightClass} w-full`}>
+  // Renderizado del Gráfico Acumulado
+  const renderAcumuladoChart = (data: any[]) => (
+    <div className="h-full w-full min-h-[280px]">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
-            <linearGradient id="colorIngresosAcum" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#059669" stopOpacity={0.25}/>
-              <stop offset="95%" stopColor="#059669" stopOpacity={0.0}/>
+            <linearGradient id="colorVentasAcum" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#A36F4C" stopOpacity={0.25}/>
+              <stop offset="95%" stopColor="#A36F4C" stopOpacity={0.0}/>
             </linearGradient>
-            <linearGradient id="colorGastosAcum" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#DC2626" stopOpacity={0.15}/>
-              <stop offset="95%" stopColor="#DC2626" stopOpacity={0.0}/>
+            <linearGradient id="colorCostosAcum" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#E2D9CC" stopOpacity={0.4}/>
+              <stop offset="95%" stopColor="#E2D9CC" stopOpacity={0.0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5DCD3" vertical={false} opacity={0.5} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.6} />
           <XAxis 
             dataKey="fecha" 
-            stroke="#6B7280" 
+            stroke="#75695D" 
             fontSize={11} 
             tickLine={false} 
-            axisLine={{ stroke: '#E5DCD3' }}
+            axisLine={{ stroke: '#E2D9CC' }}
             interval={data.length <= 10 ? 0 : 'preserveStartEnd'}
             minTickGap={32}
             tickFormatter={(val) => formatFechaEvolucion(val, false)}
             dy={4}
           />
           <YAxis 
-            stroke="#6B7280" 
+            stroke="#75695D" 
             fontSize={11} 
             tickLine={false} 
             axisLine={false} 
@@ -975,45 +884,44 @@ export function DashboardClient({
           <Legend 
             verticalAlign="top"
             content={() => (
-              <div className="flex flex-wrap items-center justify-end gap-3 text-[11px] pb-2 text-[#6B7280]">
-                <div className="flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 bg-[#059669] rounded-xs inline-block" />
-                  <span>Cobranza Acumulada</span>
+              <div className="flex flex-wrap items-center justify-end gap-3.5 text-[11px] pb-2 text-muted-foreground">
+                <div className="flex items-center gap-1.5 font-medium text-primary">
+                  <span className="w-2.5 h-2.5 bg-primary rounded-xs inline-block" />
+                  <span>Ventas Acumuladas</span>
                 </div>
                 <div className="flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 bg-[#DC2626] rounded-xs inline-block" />
-                  <span>Gastos Acumulados</span>
+                  <span className="w-2.5 h-2.5 bg-[#E2D9CC] rounded-xs inline-block border border-border" />
+                  <span>Costo Acumulado</span>
                 </div>
-                <div className="flex items-center gap-1.5 font-medium text-[#7C5835]">
-                  <span className="w-3.5 h-0.5 bg-[#7C5835] rounded-full inline-block" />
-                  <span>Balance a la Fecha</span>
+                <div className="flex items-center gap-1.5 font-medium text-emerald-700">
+                  <span className="w-3.5 h-0.5 bg-emerald-700 rounded-full inline-block" />
+                  <span>Utilidad Neta Acum.</span>
                 </div>
               </div>
             )}
           />
           <Area 
             type="monotone" 
-            dataKey="ingresosAcum" 
-            name="Cobranza Acumulada" 
-            stroke="#059669" 
-            strokeWidth={2.5}
-            fill="url(#colorIngresosAcum)" 
+            dataKey="ventasAcum" 
+            name="Venta Acumulada" 
+            stroke="#A36F4C" 
+            strokeWidth={2}
+            fill="url(#colorVentasAcum)" 
           />
           <Area 
             type="monotone" 
-            dataKey="egresosAcum" 
-            name="Gastos Acumulados" 
-            stroke="#DC2626" 
-            strokeWidth={2}
-            fill="url(#colorGastosAcum)" 
-            strokeDasharray="4 4"
+            dataKey="costosAcum" 
+            name="Costo Acumulado" 
+            stroke="#C4B8A9" 
+            strokeWidth={1.5}
+            fill="url(#colorCostosAcum)" 
           />
           <Line 
             type="monotone" 
-            dataKey="balanceAcum" 
-            name="Balance Acumulado" 
-            stroke="#7C5835" 
-            strokeWidth={2}
+            dataKey="utilidadAcum" 
+            name="Utilidad Acumulada" 
+            stroke="#047857" 
+            strokeWidth={2.5}
             dot={false}
           />
         </ComposedChart>
@@ -1021,124 +929,206 @@ export function DashboardClient({
     </div>
   )
 
-  const handleManualRefresh = () => {
-    setIsRefreshing(true)
-    router.refresh()
-    setTimeout(() => setIsRefreshing(false), 600)
-  }
-
   return (
-    <div className="space-y-5 animate-in fade-in duration-300 pb-10 max-w-7xl mx-auto">
+    <div className="space-y-5 animate-in fade-in duration-300 pb-12 max-w-7xl mx-auto">
       {/* ========================================================================= */}
-      {/* 1. HEADER MINIMALISTA CON FILTRO DE PERÍODO (MES ACTUAL POR DEFECTO)      */}
+      {/* 1. CABECERA MAESTRA CON NAVEGADOR TEMPORAL Y PRESETS RÁPIDOS              */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-1">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#1F2937]">
-            Dashboard
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+            DASHBOARD: Rendimiento Comercial & Taller
           </h1>
-          <p className="text-xs text-[#6B7280] mt-0.5">
-            Rendimiento comercial y tesorería del período seleccionado.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Métricas de facturación, márgenes reales y rentabilidad del taller.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          {/* Selector de Período / Fecha */}
-          <DateFilterControl 
-            value={dateRange} 
-            onChange={setDateRange} 
-            label="Período del Dashboard" 
-            align="right" 
-            minDate={minFechaData}
-            maxDate={maxFechaData}
-          />
+        {/* Controles de Período y Enlaces */}
+        <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+          
+          {/* Navegador Temporal Maestro [ < Este Mes (Octubre) > ] */}
+          <div className="inline-flex items-center bg-card border border-border rounded-xl h-9 shadow-2xs overflow-hidden">
+            <button
+              type="button"
+              onClick={() => handleNavigateMonth(-1)}
+              title="Mes anterior"
+              className="h-full px-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
 
+            <div className="px-2.5 py-1 text-xs font-bold text-foreground border-x border-border/70 flex items-center gap-1.5 whitespace-nowrap">
+              <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span>{activeDateLabel}</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleNavigateMonth(1)}
+              title="Mes siguiente"
+              className="h-full px-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Presets Rápidos: [ Este Mes | Mes Anterior | Trimestre | Histórico ] */}
+          <div className="hidden sm:inline-flex items-center p-0.5 rounded-xl bg-secondary border border-border/70 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('ESTE_MES')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                dateRange.preset === 'ESTE_MES'
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Este Mes
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('MES_ANTERIOR')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                dateRange.preset === 'MES_ANTERIOR'
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Mes Anterior
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('ULTIMOS_3_MESES')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                dateRange.preset === 'ULTIMOS_3_MESES'
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Trimestre
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('TODO')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                dateRange.preset === 'TODO'
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Histórico
+            </button>
+          </div>
+
+          {/* Refrescar */}
           <button
             onClick={handleManualRefresh}
             title="Refrescar datos"
-            className="p-2 rounded-xl bg-white hover:bg-[#FAF7F4] border border-[#E5DCD3] text-[#6B7280] hover:text-[#1F2937] transition-all cursor-pointer shadow-xs"
+            className="p-2 rounded-xl bg-card hover:bg-secondary border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-xs"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-[#7C5835]' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
           </button>
 
+          {/* Botón Flujo de Caja → */}
           <Link
             href="/finanzas/flujo-caja"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white hover:bg-[#FAF7F4] text-[#1F2937] border border-[#E5DCD3] shadow-xs transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-card hover:bg-secondary text-foreground border border-border shadow-xs transition-all cursor-pointer"
           >
             <span>Flujo de Caja</span>
-            <ArrowRight className="h-3.5 w-3.5 text-[#7C5835]" />
+            <ArrowRight className="h-3.5 w-3.5 text-primary" />
           </Link>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. GRID DE 4 TARJETAS DE KPIS DINÁMICOS                                   */}
+      {/* 2. GRID DE 4 TARJETAS DE KPIS PRINCIPALES (CON AUDITORÍA Y EXPLICADOR)     */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
-        {/* KPI 1: Facturación & Utilidad */}
-        <div className="bg-white border border-[#E5DCD3] rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3">
+        {/* KPI 1: Facturación del Período */}
+        <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3 group hover:border-primary/40 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#6B7280]">Facturación del Período</span>
-            <div className="p-1.5 rounded-lg bg-[#FAF7F4] text-[#7C5835]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs font-semibold text-muted-foreground truncate">Facturación del Período</span>
+              <KpiInfoTrigger
+                onClick={() => setSelectedKpiExplainer('facturacion_periodo')}
+                title="Ver fórmula y desglose de pedidos facturados"
+              />
+            </div>
+            <div className="p-1.5 rounded-lg bg-secondary text-primary shrink-0">
               <TrendingUp className="h-4 w-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-[#1F2937] tracking-tight tabular-nums">
+            <div className="text-2xl font-black font-mono text-foreground tracking-tight tabular-nums">
               {formatCurrency(dynamicKpis.ingresosVentas)}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
-              <span className="font-semibold text-[#059669]">
+              <span className="font-semibold text-emerald-800 dark:text-emerald-300">
                 +{dynamicKpis.margenPorcentaje.toFixed(1)}% margen
               </span>
-              <span className="text-[#6B7280]">•</span>
-              <span className="text-[#6B7280] truncate">
+              <span className="text-muted-foreground">•</span>
+              <span className="text-muted-foreground truncate">
                 +{formatCurrency(dynamicKpis.gananciaNeta)} util.
               </span>
             </div>
           </div>
         </div>
 
-        {/* KPI 2: Capacidad de Gasto Libre */}
-        <div className="bg-white border border-[#E5DCD3] rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3">
+        {/* KPI 2: Gasto Disponible Libre */}
+        <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3 group hover:border-primary/40 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#6B7280]">Gasto Disponible Libre</span>
-            <div className={`p-1.5 rounded-lg ${gasto.gastoDisponibleHoy > 0 ? 'bg-[#ECFDF5] text-[#059669]' : 'bg-[#FEF3C7] text-[#92400E]'}`}>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs font-semibold text-muted-foreground truncate">Gasto Libre Disponible</span>
+              <KpiInfoTrigger
+                onClick={() => setSelectedKpiExplainer('gasto_libre_disponible')}
+                title="Ver fórmula y cálculo de liquidez menos fondos blindados"
+              />
+            </div>
+            <div className={`p-1.5 rounded-lg shrink-0 ${gasto.gastoDisponibleHoy > 0 ? 'bg-emerald-500/10 text-emerald-700' : 'bg-amber-500/10 text-amber-700'}`}>
               <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
           <div>
-            <div className={`text-2xl font-black font-mono tracking-tight tabular-nums ${gasto.gastoDisponibleHoy > 0 ? 'text-[#059669]' : 'text-[#92400E]'}`}>
+            <div className={`text-2xl font-black font-mono tracking-tight tabular-nums ${gasto.gastoDisponibleHoy > 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
               {formatCurrency(gasto.gastoDisponibleHoy)}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#6B7280] truncate">
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground truncate">
               <span>Caja: {formatCurrency(gasto.saldoActualCaja)}</span>
               <span>•</span>
-              <span title={`Blindado: ${formatCurrency(gasto.totalBlindadoMes)}`}>Blindado: {formatCurrency(gasto.totalBlindadoMes)}</span>
+              <span title={`Blindado: ${formatCurrency(gasto.totalBlindadoMes)}`}>
+                Blindado: {formatCurrency(gasto.totalBlindadoMes)}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* KPI 3: Cobranzas */}
-        <div className="bg-white border border-[#E5DCD3] rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3">
+        {/* KPI 3: Total Cobrado */}
+        <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3 group hover:border-primary/40 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#6B7280]">Total Cobrado</span>
-            <div className="p-1.5 rounded-lg bg-[#FAF7F4] text-[#7C5835]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs font-semibold text-muted-foreground truncate">Total Cobrado</span>
+              <KpiInfoTrigger
+                onClick={() => setSelectedKpiExplainer('total_cobrado')}
+                title="Ver fórmula y desglose de cobros recibidos"
+              />
+            </div>
+            <div className="p-1.5 rounded-lg bg-secondary text-primary shrink-0">
               <Wallet className="h-4 w-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-[#1F2937] tracking-tight tabular-nums">
+            <div className="text-2xl font-black font-mono text-foreground tracking-tight tabular-nums">
               {formatCurrency(dynamicKpis.totalCobradoVentas)}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#6B7280] truncate">
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground truncate">
               {dynamicKpis.saldoPorCobrar > 0 ? (
-                <span className="text-[#92400E] font-medium">
+                <span className="text-amber-700 font-bold">
                   Por cobrar: {formatCurrency(dynamicKpis.saldoPorCobrar)}
                 </span>
               ) : (
-                <span className="text-[#059669] font-medium">
+                <span className="text-emerald-800 dark:text-emerald-300 font-semibold">
                   ✓ Cuentas 100% al día
                 </span>
               )}
@@ -1147,18 +1137,24 @@ export function DashboardClient({
         </div>
 
         {/* KPI 4: Ticket Promedio */}
-        <div className="bg-white border border-[#E5DCD3] rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3">
+        <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3 group hover:border-primary/40 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#6B7280]">Ticket Promedio</span>
-            <div className="p-1.5 rounded-lg bg-[#FAF7F4] text-[#7C5835]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs font-semibold text-muted-foreground truncate">Ticket Promedio</span>
+              <KpiInfoTrigger
+                onClick={() => setSelectedKpiExplainer('ticket_promedio')}
+                title="Ver fórmula y división por cantidad de pedidos"
+              />
+            </div>
+            <div className="p-1.5 rounded-lg bg-secondary text-primary shrink-0">
               <ShoppingBag className="h-4 w-4" />
             </div>
           </div>
           <div>
-            <div className="text-2xl font-black font-mono text-[#1F2937] tracking-tight tabular-nums">
+            <div className="text-2xl font-black font-mono text-foreground tracking-tight tabular-nums">
               {formatCurrency(dynamicKpis.ticketPromedio)}
             </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#6B7280] truncate">
+            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground truncate">
               <span>Costo prod: {formatCurrency(dynamicKpis.costoFabricacionTotal)}</span>
             </div>
           </div>
@@ -1167,167 +1163,110 @@ export function DashboardClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. GRÁFICOS ANALÍTICOS (EVOLUCIÓN FINANCIERA & ESTRUCTURA DE FLUJO)        */}
+      {/* 3. ZONA CENTRAL: 2 COLUMNAS EQUILIBRADAS                                   */}
+      {/*    Columna 1: Margen Real por Pedido                                      */}
+      {/*    Columna 2: Canales de Venta & Familias (SalesMixCard)                   */}
       {/* ========================================================================= */}
-      <div className="grid gap-5 grid-cols-1 lg:grid-cols-12 items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         
-        {/* Gráfico de Evolución y Análisis Financiero (7 cols) */}
-        <Card className="lg:col-span-7 bg-white border-[#E5DCD3] shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
-          <CardHeader className="p-4 sm:p-5 pb-2">
+        {/* Columna Izquierda: Gráfico Margen Real por Pedido */}
+        <Card className="bg-card border-border/70 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
+          <CardHeader className="p-4 sm:p-5 pb-2 border-b border-border/60">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <CardTitle className="text-[#1F2937] text-sm sm:text-base font-black">
-                    {EVOLUCION_CONFIG[evolucionTab].title}
+                  <CardTitle className="text-foreground text-sm sm:text-base font-bold">
+                    {chartMode === 'DIARIO' ? 'Margen Real por Pedido' : 'Curva Acumulativa del Período'}
                   </CardTitle>
-                  {evolucionTab === 'MARGEN' && (
+                  {chartMode === 'DIARIO' && (
                     <button
                       type="button"
                       onClick={() => setSoloDiasConVentas(!soloDiasConVentas)}
-                      className="text-[10px] text-[#7C5835] hover:text-[#5B4026] bg-[#FAF7F4] hover:bg-[#F2ECE4] border border-[#E5DCD3] px-2 py-0.5 rounded-md font-semibold cursor-pointer transition-colors"
+                      className="text-[10px] text-primary hover:text-primary/80 bg-secondary border border-border/70 px-2 py-0.5 rounded-md font-semibold cursor-pointer transition-colors"
                       title="Alternar entre ver solo días con ventas o todo el calendario"
                     >
-                      {soloDiasConVentas ? '⚡ Solo días con ventas' : '📅 Todo el calendario'}
+                      {soloDiasConVentas ? '⚡ Días con venta' : '📅 Todo el mes'}
                     </button>
                   )}
                 </div>
-                <CardDescription className="text-xs text-[#6B7280]">
-                  {EVOLUCION_CONFIG[evolucionTab].description}
+                <CardDescription className="text-xs text-muted-foreground">
+                  {chartMode === 'DIARIO' 
+                    ? 'Barras apiladas de costo + ganancia neta día a día con curva de venta total' 
+                    : 'Tendencia acumulada de facturación y margen neto del período'}
                 </CardDescription>
               </div>
 
-              {/* Selector de los 3 gráficos */}
-              <div className="flex items-center p-0.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC] shrink-0 overflow-x-auto max-w-full">
+              {/* Selector Simplificado: [ Margen Diario | Acumulado ] */}
+              <div className="inline-flex items-center p-0.5 rounded-xl bg-secondary border border-border/70 shrink-0 self-start sm:self-auto">
                 <button
                   type="button"
-                  onClick={() => setEvolucionTab('MARGEN')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    evolucionTab === 'MARGEN'
-                      ? 'bg-[#A36F4C] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:text-[#241C15]'
+                  onClick={() => setChartMode('DIARIO')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    chartMode === 'DIARIO'
+                      ? 'bg-primary text-primary-foreground shadow-2xs'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Margen Pedidos
+                  Margen Diario
                 </button>
                 <button
                   type="button"
-                  onClick={() => setEvolucionTab('FLUJO')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    evolucionTab === 'FLUJO'
-                      ? 'bg-[#A36F4C] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:text-[#241C15]'
+                  onClick={() => setChartMode('ACUMULADO')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    chartMode === 'ACUMULADO'
+                      ? 'bg-primary text-primary-foreground shadow-2xs'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  Flujo de Caja
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEvolucionTab('ACUMULADO')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    evolucionTab === 'ACUMULADO'
-                      ? 'bg-[#A36F4C] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:text-[#241C15]'
-                  }`}
-                >
-                  Curva Acumulada
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEvolucionTab('TODOS')}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                    evolucionTab === 'TODOS'
-                      ? 'bg-[#A36F4C] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:text-[#241C15]'
-                  }`}
-                >
-                  Ver los 3
+                  Acumulado
                 </button>
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="p-3 sm:p-5 pt-0">
+          <CardContent className="p-3 sm:p-5 pt-3 flex-1 flex flex-col justify-center">
             {metricasEvolucion.length === 0 ? (
-              <div className="h-[280px] flex items-center justify-center text-xs text-[#6B7280] italic">
+              <div className="h-[280px] flex items-center justify-center text-xs text-muted-foreground italic">
                 No hay movimientos registrados en el período seleccionado.
               </div>
-            ) : evolucionTab === 'MARGEN' ? (
-              <div className="h-[280px] sm:h-[320px] w-full">
-                {renderMargenChart(metricasEvolucion)}
-              </div>
-            ) : evolucionTab === 'FLUJO' ? (
-              <div className="h-[280px] sm:h-[320px] w-full">
-                {renderFlujoChart(metricasEvolucion)}
-              </div>
-            ) : evolucionTab === 'ACUMULADO' ? (
-              <div className="h-[280px] sm:h-[320px] w-full">
-                {renderAcumuladoChart(metricasEvolucion)}
-              </div>
+            ) : chartMode === 'DIARIO' ? (
+              renderMargenChart(metricasEvolucion)
             ) : (
-              <div className="space-y-6 pt-2">
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-[#1F2937]">1. Margen Comercial por Pedido</span>
-                    <span className="text-[10px] text-[#6B7280]">Rentabilidad directa de productos vendidos</span>
-                  </div>
-                  <div className="h-[230px] w-full">
-                    {renderMargenChart(metricasEvolucion)}
-                  </div>
-                </div>
-
-                <div className="border-t border-[#F5EFEB] pt-4">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-[#1F2937]">2. Flujo Diario de Caja Real</span>
-                    <span className="text-[10px] text-[#6B7280]">Cobranzas efectivas vs. gastos del taller</span>
-                  </div>
-                  <div className="h-[230px] w-full">
-                    {renderFlujoChart(metricasEvolucion)}
-                  </div>
-                </div>
-
-                <div className="border-t border-[#F5EFEB] pt-4">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-bold text-[#1F2937]">3. Curva Acumulativa del Período</span>
-                    <span className="text-[10px] text-[#6B7280]">Crecimiento acumulado y punto de equilibrio</span>
-                  </div>
-                  <div className="h-[230px] w-full">
-                    {renderAcumuladoChart(metricasEvolucion)}
-                  </div>
-                </div>
-              </div>
+              renderAcumuladoChart(metricasEvolucion)
             )}
           </CardContent>
         </Card>
 
-        {/* Estructura Financiera de Capital & Flujo (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col">
-          <CashFlowAnalyticsCard
-            ventas={ventasParaAnalytics}
-            egresos={filteredInversiones}
-            ingresosDirectos={filteredIngresosDirectos}
-            className="h-full min-h-[340px]"
-          />
-        </div>
+        {/* Columna Derecha: Distribución de Ingresos & Egresos (CategoryFinancialBreakdownCard) */}
+        <CategoryFinancialBreakdownCard
+          ventas={filteredVentas}
+          inversiones={filteredInversiones}
+          ingresosDirectos={filteredIngresosDirectos}
+          ticketPromedio={dynamicKpis.ticketPromedio}
+          totalPedidos={filteredVentas.length}
+          className="h-full min-h-[380px]"
+        />
+
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. RANKINGS COMERCIALES (TOP 5 CLIENTES & TOP 5 ARTÍCULOS)                */}
+      {/* 4. RANKINGS ESTRATÉGICOS (TOP CLIENTES & TOP ARTÍCULOS CON FOTO REAL)     */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         
-        {/* TOP 5 CLIENTES EN VALOR */}
-        <Card className="bg-white border-[#E5DCD3] shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
-          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-[#F5EFEB]">
+        {/* TOP CLIENTES EN VALOR */}
+        <Card className="bg-card border-border/70 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
+          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-[#7C5835]" />
-                <CardTitle className="text-sm sm:text-base font-black text-[#1F2937]">
+                <Trophy className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm sm:text-base font-bold text-foreground">
                   Top Clientes en Valor
                 </CardTitle>
               </div>
               <Link
                 href="/pedidos"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#7C5835] hover:text-[#5E4328] hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 hover:underline"
               >
                 <span>Ver pedidos</span>
                 <ArrowUpRight className="h-3 w-3" />
@@ -1335,49 +1274,51 @@ export function DashboardClient({
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex-1 divide-y divide-[#F5EFEB]">
+          <CardContent className="p-0 flex-1 divide-y divide-border/60">
             {topClientesDinamico.length === 0 ? (
-              <div className="py-8 text-center text-xs text-[#6B7280] space-y-2">
-                <Users className="h-6 w-6 text-[#B8A99A] mx-auto opacity-50" />
+              <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
+                <Users className="h-6 w-6 text-muted-foreground/40 mx-auto" />
                 <p>No hay compras registradas en este período.</p>
               </div>
             ) : (
               topClientesDinamico.map((c, index) => (
                 <div 
                   key={`${c.cliente}-${index}`}
-                  className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3 hover:bg-[#FAF7F4]/50 transition-colors"
+                  onClick={() => handleOpenClienteDetalle(c.cliente)}
+                  className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3 hover:bg-secondary/50 transition-colors cursor-pointer group"
+                  title={`Ver estado de cuenta de ${formatClienteNombre(c.cliente)}`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="text-xs font-bold text-[#6B7280] w-4 text-center shrink-0">
+                    <span className="text-xs font-bold text-muted-foreground w-4 text-center shrink-0">
                       {index + 1}
                     </span>
 
-                    <div className="w-7 h-7 rounded-lg bg-[#FAF7F4] border border-[#E5DCD3] text-[#7C5835] font-bold text-[11px] flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-secondary border border-border/70 text-primary font-bold text-[11px] flex items-center justify-center shrink-0 group-hover:border-primary/40 transition-colors">
                       {getInitials(c.cliente)}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-[#1F2937] truncate" title={c.cliente}>
-                        {c.cliente}
+                      <h4 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                        {formatClienteNombre(c.cliente)}
                       </h4>
-                      <p className="text-[11px] text-[#6B7280] truncate">
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                         {c.pedidosCount} {c.pedidosCount === 1 ? 'pedido' : 'pedidos'} • {c.piezasCount} piezas
                         {c.canalPreferido && ` • ${c.canalPreferido}`}
                       </p>
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <div className="text-xs sm:text-sm font-mono font-bold text-[#1F2937] tabular-nums">
+                  <div className="text-right shrink-0 space-y-0.5">
+                    <div className="text-xs sm:text-sm font-mono font-bold text-foreground tabular-nums">
                       {formatCurrency(c.totalComprado)}
                     </div>
                     <div>
                       {c.saldoPendiente > 0 ? (
-                        <span className="text-[10px] font-medium text-[#92400E]">
+                        <span className="text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-full inline-block">
                           Debe {formatCurrency(c.saldoPendiente)}
                         </span>
                       ) : (
-                        <span className="text-[10px] font-medium text-[#059669]">
+                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-500/10 px-2 py-0.5 rounded-full inline-block">
                           Al día
                         </span>
                       )}
@@ -1389,27 +1330,27 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        {/* TOP 5 ARTÍCULOS MÁS RENTABLES / MÁS VENDIDOS */}
-        <Card className="bg-white border-[#E5DCD3] shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
-          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-[#F5EFEB]">
+        {/* TOP ARTÍCULOS MÁS RENTABLES (CON FOTOS REALES Y PRODUCTOS DESAGREGADOS) */}
+        <Card className="bg-card border-border/70 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
+          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-[#7C5835]" />
-                <CardTitle className="text-sm sm:text-base font-black text-[#1F2937]">
-                  {rankingArticulosMode === 'RENTABILIDAD' ? 'Top Artículos Más Rentables' : 'Top Artículos Más Vendidos'}
+                <Package className="h-4 w-4 text-primary" />
+                <CardTitle className="text-sm sm:text-base font-bold text-foreground">
+                  Top Artículos Más Rentables
                 </CardTitle>
               </div>
 
               {/* Selector de ordenamiento: Rentabilidad vs Volumen */}
               <div className="flex items-center gap-2">
-                <div className="flex items-center p-0.5 rounded-lg bg-[#FAF8F5] border border-[#E2D9CC] shrink-0">
+                <div className="inline-flex items-center p-0.5 rounded-xl bg-secondary border border-border/70 shrink-0">
                   <button
                     type="button"
                     onClick={() => setRankingArticulosMode('RENTABILIDAD')}
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                       rankingArticulosMode === 'RENTABILIDAD'
-                        ? 'bg-[#059669] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:text-[#241C15]'
+                        ? 'bg-emerald-700 text-white shadow-2xs'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     💰 Ganancia
@@ -1417,10 +1358,10 @@ export function DashboardClient({
                   <button
                     type="button"
                     onClick={() => setRankingArticulosMode('VOLUMEN')}
-                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                       rankingArticulosMode === 'VOLUMEN'
-                        ? 'bg-[#A36F4C] text-white shadow-2xs'
-                        : 'text-[#75695D] hover:text-[#241C15]'
+                        ? 'bg-primary text-primary-foreground shadow-2xs'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     📦 Unidades
@@ -1429,7 +1370,7 @@ export function DashboardClient({
 
                 <Link
                   href="/catalogo"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#7C5835] hover:text-[#5E4328] hover:underline shrink-0"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 hover:underline shrink-0"
                 >
                   <span>Catálogo</span>
                   <ArrowUpRight className="h-3 w-3" />
@@ -1438,44 +1379,51 @@ export function DashboardClient({
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex-1 divide-y divide-[#F5EFEB]">
+          <CardContent className="p-0 flex-1 divide-y divide-border/60">
             {topArticulosDinamico.length === 0 ? (
-              <div className="py-8 text-center text-xs text-[#6B7280] space-y-2">
-                <Package className="h-6 w-6 text-[#B8A99A] mx-auto opacity-50" />
+              <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
+                <Package className="h-6 w-6 text-muted-foreground/40 mx-auto" />
                 <p>No hay artículos despachados en este período.</p>
               </div>
             ) : (
               topArticulosDinamico.map((art, index) => (
                 <div 
                   key={`${art.id}-${index}`}
-                  className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3 hover:bg-[#FAF7F4]/50 transition-colors"
+                  className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3 hover:bg-secondary/50 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="text-xs font-bold text-[#6B7280] w-4 text-center shrink-0">
+                    <span className="text-xs font-bold text-muted-foreground w-4 text-center shrink-0">
                       {index + 1}
                     </span>
 
-                    <div className="w-8 h-8 rounded-lg bg-[#FAF7F4] border border-[#E5DCD3] text-[#7C5835] flex items-center justify-center shrink-0">
-                      <Package className="h-4 w-4" />
-                    </div>
+                    {/* Miniatura Fotográfica Real o Cubo 3D en bg-secondary */}
+                    {art.imageUrl ? (
+                      <img 
+                        src={art.imageUrl} 
+                        alt={art.nombreModelo} 
+                        className="w-10 h-10 rounded-lg object-cover border border-border/70 shrink-0" 
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-secondary border border-border/70 flex items-center justify-center shrink-0 text-muted-foreground">
+                        <Package className="h-5 w-5 stroke-[1.5]" />
+                      </div>
+                    )}
 
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-[#1F2937] truncate" title={art.nombreModelo}>
+                      <h4 className="text-xs font-bold text-foreground leading-snug line-clamp-1" title={art.nombreModelo}>
                         {art.nombreModelo}
                       </h4>
-                      <p className="text-[11px] text-[#6B7280] truncate">
-                        {art.unidadesVendidas} {art.unidadesVendidas === 1 ? 'unidad' : 'unidades'} • en {art.pedidosCount} {art.pedidosCount === 1 ? 'pedido' : 'pedidos'}
-                        <span className="mx-1">•</span>
-                        <span>Ventas: {formatCurrency(art.totalFacturado)}</span>
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        {art.unidadesVendidas} {art.unidadesVendidas === 1 ? 'unidad vendida' : 'unidades vendidas'} • Ventas: {formatCurrency(art.totalFacturado)}
                       </p>
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <div className="text-xs sm:text-sm font-mono font-black text-[#059669] tabular-nums">
+                  <div className="text-right shrink-0 space-y-0.5">
+                    <div className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300 tabular-nums font-mono">
                       +{formatCurrency(art.gananciaNeta || 0)}
                     </div>
-                    <div className="text-[10px] font-medium text-[#6B7280]">
+                    <div className="text-[10px] font-medium text-muted-foreground">
                       {art.margenPorcentaje != null ? `${art.margenPorcentaje.toFixed(0)}% margen` : ''}
                     </div>
                   </div>
@@ -1486,7 +1434,24 @@ export function DashboardClient({
         </Card>
 
       </div>
+
+      {/* ========================================================================= */}
+      {/* 5. DRAWER DE DETALLE DEL CLIENTE & MODAL DE AUDITORÍA DE KPIS             */}
+      {/* ========================================================================= */}
+      <ClienteDetalleDrawer 
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        clienteNombre={selectedClienteDrawer}
+      />
+
+      {/* Modal Explicador de Fórmulas y Transacciones de KPI */}
+      <KpiExplainerModal
+        isOpen={!!selectedKpiExplainer}
+        onClose={() => setSelectedKpiExplainer(null)}
+        kpiId={selectedKpiExplainer}
+        from={dateRange.from}
+        to={dateRange.to}
+      />
     </div>
   )
 }
-

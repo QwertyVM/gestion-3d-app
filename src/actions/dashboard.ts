@@ -259,13 +259,15 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     ultimoPedidoFecha: string
   }> = {}
 
-  // 13. Top 5 Artículos Más Vendidos (Por Unidades Despachadas y Facturación)
+  // 13. Top 5 Artículos Más Vendidos y Rentables
   const articulosMap: Record<string, {
     id: string
     nombreModelo: string
     lineaCategoria: string
+    imageUrl?: string | null
     unidadesVendidas: number
     totalFacturado: number
+    costoProduccionTotal: number
     pedidosCount: number
   }> = {}
 
@@ -326,30 +328,51 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     // Artículos del pedido
     if (Array.isArray(p.items)) {
       p.items.forEach((it) => {
-        const nombre = it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Artículo 3D'
+        const nombre = it.producto?.nombreModelo || it.nombreProductoSnapshot || 'Artículo 3D'
         const artKey = (it.productoId || nombre).trim().toLowerCase()
         const categoria = it.producto?.lineaCategoria || 'General'
         const cant = Number(it.cantidad || 1)
         const sub = Number(it.subtotal != null ? it.subtotal : (Number(it.precioUnitario || 0) * cant))
+        const costoBaseUnit = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+          ? Number(it.costoBaseSnapshot)
+          : (Number(it.producto?.costoBase) || 0)
+        const costoProd = costoBaseUnit * cant
+        const img = it.producto?.imagenUrl || null
 
         if (!articulosMap[artKey]) {
           articulosMap[artKey] = {
             id: it.productoId || artKey,
             nombreModelo: nombre,
             lineaCategoria: categoria,
+            imageUrl: img,
             unidadesVendidas: 0,
             totalFacturado: 0,
+            costoProduccionTotal: 0,
             pedidosCount: 0
           }
         }
 
         articulosMap[artKey].unidadesVendidas += cant
         articulosMap[artKey].totalFacturado += sub
+        articulosMap[artKey].costoProduccionTotal += costoProd
         articulosMap[artKey].pedidosCount += 1
+        if (!articulosMap[artKey].imageUrl && img) {
+          articulosMap[artKey].imageUrl = img
+        }
         totalUnidadesVendidas += cant
       })
     }
   })
+
+  // Helper para capitalizar nombres
+  const formatClienteNombre = (name: string) => {
+    if (!name) return 'Cliente'
+    return name
+      .trim()
+      .split(/\s+/)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ')
+  }
 
   // Generar ranking Top 5 Clientes en Valor
   const topClientes = Object.values(clientesMap)
@@ -366,7 +389,7 @@ export async function getDashboardData(negocio?: TipoNegocio) {
       })
 
       return {
-        cliente: c.cliente,
+        cliente: formatClienteNombre(c.cliente),
         totalComprado: Number(c.totalComprado.toFixed(2)),
         totalPagado: Number(c.totalPagado.toFixed(2)),
         saldoPendiente: Number(c.saldoPendiente.toFixed(2)),
@@ -378,21 +401,31 @@ export async function getDashboardData(negocio?: TipoNegocio) {
       }
     })
 
-  // Generar ranking Top 5 Artículos Más Vendidos
+  // Generar ranking Top 5 Artículos Más Rentables
   const topArticulos = Object.values(articulosMap)
-    .sort((a, b) => b.unidadesVendidas - a.unidadesVendidas || b.totalFacturado - a.totalFacturado)
+    .map((art) => {
+      const gananciaNeta = Number((art.totalFacturado - art.costoProduccionTotal).toFixed(2))
+      const margenPorcentaje = art.totalFacturado > 0
+        ? Number(((gananciaNeta / art.totalFacturado) * 100).toFixed(1))
+        : 0
+      return {
+        id: art.id,
+        nombreModelo: art.nombreModelo,
+        lineaCategoria: art.lineaCategoria,
+        imageUrl: art.imageUrl || null,
+        unidadesVendidas: art.unidadesVendidas,
+        totalFacturado: Number(art.totalFacturado.toFixed(2)),
+        costoProduccionTotal: Number(art.costoProduccionTotal.toFixed(2)),
+        gananciaNeta,
+        margenPorcentaje,
+        pedidosCount: art.pedidosCount,
+        precioPromedio: art.unidadesVendidas > 0 ? Number((art.totalFacturado / art.unidadesVendidas).toFixed(2)) : 0,
+        porcentajeUnidades: totalUnidadesVendidas > 0 ? Number(((art.unidadesVendidas / totalUnidadesVendidas) * 100).toFixed(1)) : 0,
+        porcentajeFacturacion: ingresosVentas > 0 ? Number(((art.totalFacturado / ingresosVentas) * 100).toFixed(1)) : 0
+      }
+    })
+    .sort((a, b) => b.gananciaNeta - a.gananciaNeta || b.totalFacturado - a.totalFacturado)
     .slice(0, 5)
-    .map((art) => ({
-      id: art.id,
-      nombreModelo: art.nombreModelo,
-      lineaCategoria: art.lineaCategoria,
-      unidadesVendidas: art.unidadesVendidas,
-      totalFacturado: Number(art.totalFacturado.toFixed(2)),
-      pedidosCount: art.pedidosCount,
-      precioPromedio: art.unidadesVendidas > 0 ? Number((art.totalFacturado / art.unidadesVendidas).toFixed(2)) : 0,
-      porcentajeUnidades: totalUnidadesVendidas > 0 ? Number(((art.unidadesVendidas / totalUnidadesVendidas) * 100).toFixed(1)) : 0,
-      porcentajeFacturacion: ingresosVentas > 0 ? Number(((art.totalFacturado / ingresosVentas) * 100).toFixed(1)) : 0
-    }))
 
   // 14. Capacidad de Gasto y Fondos Blindados directos desde Proyecciones y Presupuestos
   const resumenBlindado = await getResumenBlindadoOficial()

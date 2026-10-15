@@ -98,6 +98,7 @@ function serializeVenta(v: any) {
       id: v.producto.id,
       lineaCategoria: v.producto.lineaCategoria,
       nombreModelo: v.producto.nombreModelo,
+      imagenUrl: v.producto.imagenUrl || null,
       costoBase: Number(v.producto.costoBase),
       precioMayor: Number(v.producto.precioMayor),
       precioMenor: Number(v.producto.precioMenor),
@@ -108,13 +109,30 @@ function serializeVenta(v: any) {
       id: v.productoId,
       lineaCategoria: 'General',
       nombreModelo: v.nombreProductoSnapshot || 'Producto',
+      imagenUrl: null,
       costoBase: 0,
       precioMayor: 0,
       precioMenor: 0,
       activo: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    }
+    },
+    items: [{
+      id: v.id,
+      productoId: v.productoId,
+      nombreModelo: v.producto?.nombreModelo || v.nombreProductoSnapshot || 'Producto',
+      nombreProductoSnapshot: v.nombreProductoSnapshot,
+      lineaCategoria: v.producto?.lineaCategoria || 'General',
+      imagenUrl: v.producto?.imagenUrl || null,
+      cantidad: Number(v.cantidad || 1),
+      precioUnitario: Number(v.precioUnitario || 0),
+      subtotal: Number(v.total || 0),
+      costoBaseSnapshot: v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0
+        ? Number(v.costoBaseSnapshot)
+        : (Number(v.producto?.costoBase) || 0),
+      colorFilamentoId: v.colorFilamentoId || null,
+      personalizacion: v.personalizacion || null
+    }]
   }
 }
 
@@ -164,6 +182,7 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
       id: single.producto.id,
       lineaCategoria: single.producto.lineaCategoria,
       nombreModelo: single.producto.nombreModelo,
+      imagenUrl: single.producto.imagenUrl || null,
       costoBase: Number(single.producto.costoBase),
       precioMayor: Number(single.producto.precioMayor),
       precioMenor: Number(single.producto.precioMenor),
@@ -178,6 +197,7 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
       id: p.id,
       lineaCategoria: 'Multiproducto',
       nombreModelo: `${p.codigo}: ${items.length} modelos (${totalCantidad} pzs)`,
+      imagenUrl: items[0]?.producto?.imagenUrl || null,
       costoBase: costoBaseSnapshotUnit,
       precioMayor: 0,
       precioMenor: 0,
@@ -214,6 +234,23 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
     updatedAt: pg.updatedAt instanceof Date ? pg.updatedAt.toISOString() : String(pg.updatedAt || pg.fecha),
   }))
 
+  const serializedItems = items.map((it: any) => ({
+    id: it.id,
+    productoId: it.productoId,
+    nombreModelo: it.producto?.nombreModelo || it.nombreProductoSnapshot || 'Artículo',
+    nombreProductoSnapshot: it.nombreProductoSnapshot,
+    lineaCategoria: it.producto?.lineaCategoria || 'General',
+    imagenUrl: it.producto?.imagenUrl || null,
+    cantidad: Number(it.cantidad || 1),
+    precioUnitario: Number(it.precioUnitario || 0),
+    subtotal: Number(it.subtotal != null ? it.subtotal : (Number(it.precioUnitario || 0) * Number(it.cantidad || 1))),
+    costoBaseSnapshot: it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+      ? Number(it.costoBaseSnapshot)
+      : (Number(it.producto?.costoBase) || 0),
+    colorFilamentoId: it.colorFilamentoId || null,
+    personalizacion: it.personalizacion || null
+  }))
+
   return {
     id: p.id,
     codigo: p.codigo,
@@ -238,6 +275,7 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
     destinoEnvio: p.destinoEnvio || null,
     canalVenta: p.canalVenta || null,
     pagos,
+    items: serializedItems,
     createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt),
     updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt),
     colorFilamento,
@@ -245,6 +283,7 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
       id: p.id,
       lineaCategoria,
       nombreModelo: nombreProducto,
+      imagenUrl: items[0]?.producto?.imagenUrl || null,
       costoBase: costoBaseSnapshotUnit,
       precioMayor: 0,
       precioMenor: 0,

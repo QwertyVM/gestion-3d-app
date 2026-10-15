@@ -66,11 +66,15 @@ import {
   togglePagadoPartidaPresupuesto,
   eliminarPartidaPresupuesto,
   guardarPlanPresupuestoCompleto,
-  restablecerPlanBaseDB
+  restablecerPlanBaseDB,
+  CuotaDetalle,
+  ItemHistorialPago
 } from '@/actions/presupuesto'
 import { pagarCuotaPrestamo } from '@/actions/inversiones'
 import { CashFlowAnalyticsCard } from './CashFlowAnalyticsCard'
 import { CompromisosBlindadosSection } from './CompromisosBlindadosSection'
+import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
+import { KpiInfoTrigger } from '@/components/ui/KpiInfoTrigger'
 import type { BlindadoFormData } from './AddBlindadoModal'
 
 // =========================================================================
@@ -164,6 +168,10 @@ export interface PartidaPresupuesto {
   montoPagadoReal?: number | null
   fechaPago?: string | null
   vencimiento?: string
+  cuotaSeptiembre?: CuotaDetalle | null
+  cuotaOctubre?: CuotaDetalle | null
+  historialPagos?: ItemHistorialPago[]
+  totalPagos?: number
 }
 
 export type ItemGastoPlan = PartidaPresupuesto
@@ -382,7 +390,11 @@ export function CashFlowHubView({
         inversionId: p.inversionId,
         montoPagadoReal: p.montoPagadoReal,
         fechaPago: p.fechaPago,
-        vencimiento: p.vencimiento
+        vencimiento: p.vencimiento,
+        cuotaSeptiembre: p.cuotaSeptiembre,
+        cuotaOctubre: p.cuotaOctubre,
+        historialPagos: p.historialPagos,
+        totalPagos: p.totalPagos
       }))
     }
     return getPartidasFallback()
@@ -397,7 +409,11 @@ export function CashFlowHubView({
         inversionId: p.inversionId,
         montoPagadoReal: p.montoPagadoReal,
         fechaPago: p.fechaPago,
-        vencimiento: p.vencimiento
+        vencimiento: p.vencimiento,
+        cuotaSeptiembre: p.cuotaSeptiembre,
+        cuotaOctubre: p.cuotaOctubre,
+        historialPagos: p.historialPagos,
+        totalPagos: p.totalPagos
       })))
     }
   }, [datosPresupuesto?.partidasPlan])
@@ -451,7 +467,8 @@ export function CashFlowHubView({
     capitalRestante: saldoCapitalRestante,
     pagada: estaCuotaPagada,
     cuotaSeptiembre: datosPresupuesto?.prestamoInfo?.cuotaSeptiembre,
-    cuotaOctubre: datosPresupuesto?.prestamoInfo?.cuotaOctubre
+    cuotaOctubre: datosPresupuesto?.prestamoInfo?.cuotaOctubre,
+    historialPagos: datosPresupuesto?.prestamoInfo?.historialPagos
   }), [siguienteCuotaNum, cuotasTotales, cuotaMontoValor, saldoCapitalRestante, estaCuotaPagada, datosPresupuesto?.prestamoInfo])
 
   // Partidas blindadas adicionales (Luz, Internet, Reservas)
@@ -587,6 +604,7 @@ export function CashFlowHubView({
   const [tipoFilter, setTipoFilter] = useState<'TODOS' | 'INGRESOS' | 'EGRESOS'>('TODOS')
   const [currentPage, setCurrentPage] = useState(1)
   const [showChart, setShowChart] = useState(true)
+  const [selectedKpiExplainer, setSelectedKpiExplainer] = useState<string | null>(null)
 
   // Handlers para el Selector de Período Maestro
   const handleCambiarPeriodo = (nuevoPeriodo: PeriodoPreset) => {
@@ -1545,12 +1563,18 @@ export function CashFlowHubView({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
         
         {/* Tarjeta 1 - Saldo Real en Caja */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between group hover:border-primary/40 transition-all">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              SALDO NETO EN CAJA
-            </span>
-            <div className="p-2 rounded-lg bg-secondary text-primary">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground truncate">
+                SALDO NETO EN CAJA
+              </span>
+              <KpiInfoTrigger
+                onClick={() => setSelectedKpiExplainer('finanzas_saldo_caja')}
+                title="Ver fórmula y auditoría de saldo de caja"
+              />
+            </div>
+            <div className="p-2 rounded-lg bg-secondary text-primary shrink-0">
               <Wallet className="w-4 h-4 text-primary" />
             </div>
           </div>
@@ -1565,12 +1589,18 @@ export function CashFlowHubView({
         </div>
 
         {/* Tarjeta 2 - Fondos Blindados del Mes */}
-        <div className="bg-card border border-amber-500/30 rounded-2xl p-5 shadow-xs flex flex-col justify-between relative">
+        <div className="bg-card border border-amber-500/30 rounded-2xl p-5 shadow-xs flex flex-col justify-between relative group hover:border-amber-500/50 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-              FONDOS BLINDADOS
-            </span>
-            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wider truncate">
+                FONDOS BLINDADOS
+              </span>
+              <KpiInfoTrigger
+                onClick={() => setSelectedKpiExplainer('finanzas_fondos_blindados')}
+                title="Ver fórmula y desglose de partidas blindadas"
+              />
+            </div>
+            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 shrink-0">
               <Lock className="w-4 h-4 text-amber-600" />
             </div>
           </div>
@@ -1585,12 +1615,18 @@ export function CashFlowHubView({
         </div>
 
         {/* Tarjeta 3 - Gasto Libre Hoy (Capacidad Real) */}
-        <div className="bg-card border-2 border-emerald-500/30 rounded-2xl p-5 shadow-sm flex flex-col justify-between bg-gradient-to-br from-card to-emerald-500/5">
+        <div className="bg-card border-2 border-emerald-500/30 rounded-2xl p-5 shadow-sm flex flex-col justify-between bg-gradient-to-br from-card to-emerald-500/5 group hover:border-emerald-500/60 transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-              GASTO LIBRE HOY
-            </span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-700">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 truncate">
+                GASTO LIBRE HOY
+              </span>
+              <KpiInfoTrigger
+                onClick={() => setSelectedKpiExplainer('finanzas_gasto_libre')}
+                title="Ver fórmula y cálculo de liquidez neta disponible"
+              />
+            </div>
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-700 shrink-0">
               <Sparkles className="w-4 h-4 text-emerald-700" />
             </div>
           </div>
@@ -1718,9 +1754,6 @@ export function CashFlowHubView({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* NIVEL 3: COMPROMISOS BLINDADOS DEL MES (MÓDULO DINÁMICO)                  */}
-      {/* ========================================================================= */}
       <CompromisosBlindadosSection
         partidasBlindadas={partidasBlindadas}
         tienePrestamoBCP={tienePrestamoBCP}
@@ -1730,6 +1763,8 @@ export function CashFlowHubView({
         handlePagarCuotaBCP={handlePagarCuotaDirecto}
         onSavePartida={handleSavePartidaBlindada}
         onDeletePartida={handleDeletePartidaBlindada}
+        gastoLibreActual={gastoLibreHoy}
+        mesNombre="Octubre"
       />
 
       {/* ========================================================================= */}
@@ -2626,6 +2661,14 @@ export function CashFlowHubView({
         </DialogContent>
       </Dialog>
 
+      {/* Modal Explicador de Fórmulas y Transacciones de KPI */}
+      <KpiExplainerModal
+        isOpen={!!selectedKpiExplainer}
+        onClose={() => setSelectedKpiExplainer(null)}
+        kpiId={selectedKpiExplainer}
+        from={dateRange.from}
+        to={dateRange.to}
+      />
     </div>
   )
 }
