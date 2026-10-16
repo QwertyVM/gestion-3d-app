@@ -234,10 +234,24 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                 {formatCurrency(activeMes.saldoInicial)}
               </span>
             </div>
+            {activeMes.inyeccionCapital > 0 && (
+              <div className="flex justify-between text-[#75695D] bg-sky-50/70 px-1.5 py-0.5 rounded border border-sky-200/60">
+                <span className="text-sky-900 font-medium">(+) Préstamo / Aportes:</span>
+                <span className="font-mono font-bold text-sky-900">
+                  +{formatCurrency(activeMes.inyeccionCapital)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-[#75695D]">
-              <span>(+) Utilidad del Mes:</span>
-              <span className="font-mono font-bold text-emerald-800">
-                +{formatCurrency(activeMes.utilidadMes)}
+              <span>(+) Utilidad Operativa del Mes:</span>
+              <span
+                className={cn(
+                  'font-mono font-bold',
+                  activeMes.utilidadMes >= 0 ? 'text-emerald-800' : 'text-red-700'
+                )}
+              >
+                {activeMes.utilidadMes >= 0 ? '+' : ''}
+                {formatCurrency(activeMes.utilidadMes)}
               </span>
             </div>
             {activeMes.activosFijosCapex > 0 && (
@@ -580,9 +594,16 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                 >
                   {/* Vista Desktop (Grid fluido de 12 columnas sin scroll horizontal) */}
                   <div className="hidden lg:grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-2 font-bold text-[#241C15] flex items-center gap-1.5 truncate">
-                      <span className={cn('w-2 h-2 rounded-full shrink-0', isSelected ? 'bg-amber-600' : 'bg-transparent')} />
-                      <span className="truncate">{m.nombreMes}</span>
+                    <div className="col-span-2 font-bold text-[#241C15] flex flex-col justify-center truncate">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className={cn('w-2 h-2 rounded-full shrink-0', isSelected ? 'bg-amber-600' : 'bg-transparent')} />
+                        <span className="truncate">{m.nombreMes}</span>
+                      </div>
+                      {m.inyeccionCapital > 0 && (
+                        <span className="text-[10px] text-sky-700 font-medium pl-3.5 truncate">
+                          +{formatCurrency(m.inyeccionCapital)} financiamiento
+                        </span>
+                      )}
                     </div>
 
                     <div className="col-span-1 text-right font-mono font-medium text-[#75695D]">
@@ -645,6 +666,14 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                           +{formatCurrency(m.ventasCobradas)}
                         </span>
                       </div>
+                      {m.inyeccionCapital > 0 && (
+                        <div>
+                          <span className="text-sky-900 block font-medium">Inyección / Préstamo:</span>
+                          <span className="font-mono font-semibold text-sky-700">
+                            +{formatCurrency(m.inyeccionCapital)}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <span className="text-[#75695D] block">Compras Material:</span>
                         <span className="font-mono font-semibold text-amber-800">

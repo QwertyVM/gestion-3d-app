@@ -15,6 +15,7 @@ export interface MesRentabilidadData {
   anio: number
   saldoInicial: number
   ventasCobradas: number
+  inyeccionCapital: number // Préstamos bancarios y aportes de capital que entraron a caja
   comprasDirectas: number
   gastosOperativos: number // Publicidad, marketing, envíos, comisiones
   gastosBlindadosPagados: number // Préstamo BCP pagado, luz/internet pagados, alquiler
@@ -39,6 +40,7 @@ export interface RentabilidadSueldosResumen {
   mesSeleccionado: MesRentabilidadData
   meses: MesRentabilidadData[]
   totalHistoricoVentas: number
+  totalHistoricoInyeccion: number
   totalHistoricoCompras: number
   totalHistoricoOperativos: number
   totalHistoricoBlindados: number
@@ -73,6 +75,7 @@ export async function getRentabilidadSueldos(
   // 2. Mapa mensual cronológico
   const monthMap: Record<string, {
     ventasCobradas: number
+    inyeccionCapital: number
     comprasDirectas: number
     gastosOperativos: number
     gastosBlindadosPagados: number
@@ -84,6 +87,7 @@ export async function getRentabilidadSueldos(
     if (!monthMap[key]) {
       monthMap[key] = {
         ventasCobradas: 0,
+        inyeccionCapital: 0,
         comprasDirectas: 0,
         gastosOperativos: 0,
         gastosBlindadosPagados: 0,
@@ -109,7 +113,7 @@ export async function getRentabilidadSueldos(
     }
   })
 
-  // B. Procesar Ingresos Directos (Ventas directas vs préstamos)
+  // B. Procesar Ingresos Directos (Ventas directas vs préstamos e inyección de capital)
   ingresosDirectos.forEach(i => {
     if (!i.fecha || i.monto <= 0) return
     const key = i.fecha.slice(0, 7)
@@ -117,14 +121,22 @@ export async function getRentabilidadSueldos(
     const catLower = (i.categoria || '').toLowerCase()
     const conLower = (i.concepto || '').toLowerCase()
 
-    const isPrestamo =
+    const isPrestamoOFinanciamiento =
       catLower.includes('préstamo') ||
       catLower.includes('prestamo') ||
+      catLower.includes('financiamiento') ||
+      catLower.includes('aporte') ||
+      catLower.includes('capital') ||
       conLower.includes('préstamo') ||
-      conLower.includes('prestamo')
+      conLower.includes('prestamo') ||
+      conLower.includes('desembolso') ||
+      conLower.includes('aporte') ||
+      conLower.includes('capital')
 
-    // Si es venta o servicio directo se suma a ventas operativas
-    if (!isPrestamo) {
+    // Préstamos y aportes van a inyección de capital para la caja real; ventas comerciales van a ventasCobradas
+    if (isPrestamoOFinanciamiento) {
+      monthMap[key].inyeccionCapital += Number(i.monto)
+    } else {
       monthMap[key].ventasCobradas += Number(i.monto)
     }
   })
@@ -199,6 +211,7 @@ export async function getRentabilidadSueldos(
     const saldoInicial = Number(runningBalance.toFixed(2))
 
     const ventasCobradas = Number(data.ventasCobradas.toFixed(2))
+    const inyeccionCapital = Number(data.inyeccionCapital.toFixed(2))
     const comprasDirectas = Number(data.comprasDirectas.toFixed(2))
     const gastosOperativos = Number(data.gastosOperativos.toFixed(2))
     const gastosBlindadosPagados = Number(data.gastosBlindadosPagados.toFixed(2))
@@ -206,7 +219,7 @@ export async function getRentabilidadSueldos(
     const activosFijosCapex = Number(data.activosFijosCapex.toFixed(2))
     const otrosEgresos = Number(data.otrosEgresos.toFixed(2))
 
-    // Utilidad Pura del Mes (Resultado Operativo)
+    // Utilidad Pura del Mes (Resultado Operativo P&L sin financiamiento ni capex)
     const utilidadMes = Number((ventasCobradas - comprasDirectas - obligacionesFijas).toFixed(2))
 
     const margenOperativoPct = ventasCobradas > 0
@@ -233,15 +246,19 @@ export async function getRentabilidadSueldos(
       ? Number(((utilidadProyectadaCierre / ventasCobradas) * 100).toFixed(1))
       : 0
 
-    // Saldo acumulado al cierre del mes
-    const flujoNetoTotalMes = utilidadMes - activosFijosCapex - otrosEgresos
+    // Saldo acumulado real en caja al cierre del mes (Flujo de Tesorería)
+    // Entradas: Ventas Cobradas + Inyección de Préstamos / Capital
+    // Salidas: Insumos + Gastos Operativos + Cuotas Préstamo pagadas + Capex (maquinaria) + Otros egresos
+    const flujoNetoTotalMes = Number(
+      (ventasCobradas + inyeccionCapital - comprasDirectas - obligacionesFijas - activosFijosCapex - otrosEgresos).toFixed(2)
+    )
     runningBalance += flujoNetoTotalMes
     const saldoAcumulado = Number(runningBalance.toFixed(2))
 
     // Reserva obligatoria (Compromisos blindados del mes + Fondo mínimo)
     const reservaObligaciones = Number(Math.max(totalBlindadosMes, promedioObligaciones, 100).toFixed(2))
 
-    // Capacidad real para asignarse sueldo seguro (Blindando de antemano compromisos pendientes)
+    // Capacidad real para asignarse sueldo seguro (Blindando de antemano compromisos pendientes y fondo de seguridad)
     const capacidadSueldoSeguro = Number(Math.max(0, saldoAcumulado - compromisosPendientes - 150).toFixed(2))
 
     let estadoDiagnostico: 'EXCELENTE' | 'RENTABLE' | 'EQUILIBRIO' | 'DEFICIT' = 'EQUILIBRIO'
@@ -252,7 +269,7 @@ export async function getRentabilidadSueldos(
       estadoDiagnostico = 'EXCELENTE'
     } else if (margenParaDiag > 10 && utilidadParaDiag > 0) {
       estadoDiagnostico = 'RENTABLE'
-    } else if (utilidadParaDiag >= 0) {
+    } else if (utilidadParaDiag >= 0 || saldoAcumulado >= compromisosPendientes) {
       estadoDiagnostico = 'EQUILIBRIO'
     } else {
       estadoDiagnostico = 'DEFICIT'
@@ -265,6 +282,7 @@ export async function getRentabilidadSueldos(
       anio,
       saldoInicial,
       ventasCobradas,
+      inyeccionCapital,
       comprasDirectas,
       gastosOperativos,
       gastosBlindadosPagados,
@@ -294,6 +312,7 @@ export async function getRentabilidadSueldos(
 
   // 7. Métricas consolidadas
   const totalHistoricoVentas = Number(mesesCalculados.reduce((acc, m) => acc + m.ventasCobradas, 0).toFixed(2))
+  const totalHistoricoInyeccion = Number(mesesCalculados.reduce((acc, m) => acc + m.inyeccionCapital, 0).toFixed(2))
   const totalHistoricoCompras = Number(mesesCalculados.reduce((acc, m) => acc + m.comprasDirectas, 0).toFixed(2))
   const totalHistoricoOperativos = Number(mesesCalculados.reduce((acc, m) => acc + m.gastosOperativos, 0).toFixed(2))
   const totalHistoricoBlindados = Number(mesesCalculados.reduce((acc, m) => acc + m.totalBlindadosMes, 0).toFixed(2))
@@ -313,6 +332,7 @@ export async function getRentabilidadSueldos(
     mesSeleccionado,
     meses: mesesCalculados,
     totalHistoricoVentas,
+    totalHistoricoInyeccion,
     totalHistoricoCompras,
     totalHistoricoOperativos,
     totalHistoricoBlindados,
