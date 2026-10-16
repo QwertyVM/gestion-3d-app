@@ -19,7 +19,8 @@ import {
   Building2,
   Layers,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -44,16 +45,24 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
     return found || initialData.mesSeleccionado
   }, [initialData.meses, initialData.mesSeleccionado, selectedMesKey])
 
+  // Configuración de socios (2 personas)
+  const numSocios = activeMes.numSocios || 2
+
   // Simulador de asignación de sueldo
-  const [sueldoSimulado, setSueldoSimulado] = useState<string>('0')
-  const sueldoNum = Math.max(0, parseFloat(sueldoSimulado) || 0)
+  const [modoSimulacion, setModoSimulacion] = useState<'POR_SOCIO' | 'TOTAL'>('POR_SOCIO')
+  const [sueldoSimulado, setSueldoSimulado] = useState<string>('400')
+  const inputNum = Math.max(0, parseFloat(sueldoSimulado) || 0)
+
+  // Montos según el modo de simulación
+  const sueldoPorSocio = modoSimulacion === 'POR_SOCIO' ? inputNum : (numSocios > 0 ? inputNum / numSocios : inputNum)
+  const sueldoTotalEmpresa = modoSimulacion === 'POR_SOCIO' ? inputNum * numSocios : inputNum
 
   // Cálculos reactivos de la simulación
-  const saldoPostSueldo = activeMes.saldoAcumulado - sueldoNum
+  const saldoPostSueldo = activeMes.saldoAcumulado - sueldoTotalEmpresa
   const colchonRestante = saldoPostSueldo - activeMes.reservaObligaciones
-  const esSueldoSeguro = sueldoNum > 0 && sueldoNum <= activeMes.capacidadSueldoSeguro
-  const esSueldoAlerta = sueldoNum > activeMes.capacidadSueldoSeguro && sueldoNum <= activeMes.saldoAcumulado
-  const esSueldoPeligro = sueldoNum > activeMes.saldoAcumulado
+  const esSueldoSeguro = sueldoTotalEmpresa > 0 && sueldoTotalEmpresa <= activeMes.capacidadSueldoSeguro
+  const esSueldoAlerta = sueldoTotalEmpresa > activeMes.capacidadSueldoSeguro && sueldoTotalEmpresa <= activeMes.saldoAcumulado
+  const esSueldoPeligro = sueldoTotalEmpresa > activeMes.saldoAcumulado
 
   // Porcentajes para la barra de cascada
   const pctCompras = activeMes.ventasCobradas > 0
@@ -272,17 +281,23 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
               3. Capacidad Máxima de Sueldo
             </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-              100% Protegido
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
+              <Users className="w-3 h-3 text-emerald-700" />
+              {numSocios} Socios (50/50)
             </span>
           </div>
 
           <div className="my-3">
-            <div className="text-3xl font-extrabold font-mono tracking-tight text-emerald-800">
-              {formatCurrency(activeMes.capacidadSueldoSeguro)}
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-3xl font-extrabold font-mono tracking-tight text-emerald-800">
+                {formatCurrency(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)}
+              </span>
+              <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
+                c/u (por socio)
+              </span>
             </div>
             <p className="text-[11px] text-emerald-900 mt-1 font-medium">
-              Monto que puedes retirar hoy sin comprometer las cuotas ni servicios del mes siguiente.
+              Total disponible para ambos socios: <strong className="font-mono font-bold text-emerald-950">{formatCurrency(activeMes.capacidadSueldoSeguro)}</strong> ({formatCurrency(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)} para cada uno de los {numSocios}).
             </p>
           </div>
 
@@ -426,25 +441,70 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
       {/* ========================================================================= */}
       {/* 4. SIMULADOR INTERACTIVO DE ASIGNACIÓN DE SUELDO                          */}
       {/* ========================================================================= */}
-      <div className="bg-white border border-[#E2D9CC] rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center gap-2 pb-3 border-b border-[#F1ECE4]">
-          <Sliders className="w-4 h-4 text-[#A36F4C]" />
+      {/* ========================================================================= */}
+      {/* 4. SIMULADOR INTERACTIVO DE ASIGNACIÓN DE SUELDO (2 SOCIOS)               */}
+      {/* ========================================================================= */}
+      <div className="bg-white border border-[#E2D9CC] rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#F1ECE4]">
           <div>
-            <h3 className="text-sm font-bold text-[#241C15]">
-              Simulador de Asignación de Sueldo o Retiro
+            <h3 className="text-sm font-bold text-[#241C15] flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-[#A36F4C]" />
+              Simulador de Asignación de Sueldo o Retiro ({numSocios} Socios)
             </h3>
-            <p className="text-[11px] text-[#75695D]">
-              Ingresa el sueldo mensual que deseas asignarte para evaluar el impacto en la caja acumulada y la reserva de seguridad.
+            <p className="text-[11px] text-[#75695D] mt-0.5">
+              Evalúa el impacto en la caja acumulada al retirar sueldos para los {numSocios} socios protegiendo la reserva técnica.
             </p>
           </div>
+          <Badge variant="outline" className="text-[11px] font-bold border-emerald-300 text-emerald-800 bg-emerald-50 self-start sm:self-auto flex items-center gap-1">
+            <Users className="w-3.5 h-3.5 text-emerald-700" />
+            Equipo de {numSocios} personas (50/50)
+          </Badge>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-2 items-center">
           {/* Input de simulación */}
           <div className="lg:col-span-5 space-y-3">
-            <Label className="text-xs font-bold text-[#241C15]">
-              ¿Cuánto sueldo o retiro deseas asignarte? (S/)
-            </Label>
+            {/* Selector de modo: Por socio vs Total equipo */}
+            <div className="flex items-center gap-1 p-1 bg-[#F4EFEA] rounded-xl border border-[#E2D9CC] text-xs font-bold text-[#75695D]">
+              <button
+                type="button"
+                onClick={() => setModoSimulacion('POR_SOCIO')}
+                className={cn(
+                  'flex-1 py-1.5 px-2.5 rounded-lg transition-all text-center cursor-pointer',
+                  modoSimulacion === 'POR_SOCIO'
+                    ? 'bg-white text-[#241C15] shadow-2xs font-extrabold'
+                    : 'hover:text-[#241C15]'
+                )}
+              >
+                Por Socio (c/u × {numSocios})
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoSimulacion('TOTAL')}
+                className={cn(
+                  'flex-1 py-1.5 px-2.5 rounded-lg transition-all text-center cursor-pointer',
+                  modoSimulacion === 'TOTAL'
+                    ? 'bg-white text-[#241C15] shadow-2xs font-extrabold'
+                    : 'hover:text-[#241C15]'
+                )}
+              >
+                Total Empresa (ambos)
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold text-[#241C15]">
+                {modoSimulacion === 'POR_SOCIO'
+                  ? `¿Cuánto sueldo o retiro por socio deseas? (c/u)`
+                  : `¿Cuánto retiro total deseas para los ${numSocios} socios?`}
+              </Label>
+              <span className="text-[11px] font-mono font-semibold text-[#75695D]">
+                {modoSimulacion === 'POR_SOCIO'
+                  ? `Total: ${formatCurrency(sueldoTotalEmpresa)}`
+                  : `c/u: ${formatCurrency(sueldoPorSocio)}`}
+              </span>
+            </div>
+
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-[#75695D]">
                 S/
@@ -455,21 +515,24 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                 step="50"
                 value={sueldoSimulado}
                 onChange={(e) => setSueldoSimulado(e.target.value)}
-                placeholder="Ej. 800.00"
+                placeholder={modoSimulacion === 'POR_SOCIO' ? 'Ej. 400.00' : 'Ej. 800.00'}
                 className="pl-9 h-11 text-base font-mono font-bold border-[#E2D9CC] bg-[#F8F6F2] text-[#241C15] rounded-xl focus:bg-white"
               />
             </div>
 
-            {/* Botones de montos rápidos */}
+            {/* Botones de montos rápidos adaptados */}
             <div className="flex flex-wrap gap-1.5 pt-1">
-              {[200, 400, 800, 1200, Math.round(activeMes.capacidadSueldoSeguro)].filter(v => v > 0).map((v) => (
+              {(modoSimulacion === 'POR_SOCIO'
+                ? [200, 300, 400, Math.floor(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)]
+                : [400, 600, 800, Math.floor(activeMes.capacidadSueldoSeguro)]
+              ).filter((v, idx, arr) => v > 0 && arr.indexOf(v) === idx).map((v) => (
                 <button
                   key={v}
                   type="button"
                   onClick={() => setSueldoSimulado(String(v))}
                   className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-[#E2D9CC] bg-[#F4EFEA] hover:bg-[#EAE4DB] text-[#241C15] transition-colors cursor-pointer"
                 >
-                  S/ {v}
+                  S/ {v} {modoSimulacion === 'POR_SOCIO' ? 'c/u' : 'total'}
                 </button>
               ))}
             </div>
@@ -479,9 +542,9 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
           <div className="lg:col-span-7 bg-[#F8F6F2] border border-[#E2D9CC] rounded-xl p-4">
             <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]">
               <span className="text-xs font-bold text-[#75695D]">
-                Diagnóstico del Retiro Simulado
+                Diagnóstico del Retiro Simulado ({numSocios} personas)
               </span>
-              {sueldoNum === 0 ? (
+              {sueldoTotalEmpresa === 0 ? (
                 <Badge variant="outline" className="text-[10px] bg-white border-[#E2D9CC]">
                   Sin retiro ingresado
                 </Badge>
@@ -503,40 +566,57 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 my-3 text-xs">
-              <div>
-                <span className="text-[#75695D] block text-[11px]">Saldo Acumulado Restante:</span>
+            {/* 4 Tarjetas de desglose exacto */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-3 text-xs">
+              <div className="bg-white p-2 rounded-lg border border-[#E2D9CC]/70">
+                <span className="text-[#75695D] block text-[10px] font-medium truncate">Retiro c/u:</span>
+                <span className="text-sm font-mono font-extrabold text-[#241C15] block">
+                  {formatCurrency(sueldoPorSocio)}
+                </span>
+                <span className="text-[9px] text-[#75695D]">por socio</span>
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-[#E2D9CC]/70">
+                <span className="text-[#75695D] block text-[10px] font-medium truncate">Total Empresa:</span>
+                <span className="text-sm font-mono font-extrabold text-[#241C15] block">
+                  {formatCurrency(sueldoTotalEmpresa)}
+                </span>
+                <span className="text-[9px] text-[#75695D]">{numSocios} personas</span>
+              </div>
+              <div className="bg-white p-2 rounded-lg border border-[#E2D9CC]/70">
+                <span className="text-[#75695D] block text-[10px] font-medium truncate">Caja Restante:</span>
                 <span
                   className={cn(
-                    'text-base font-mono font-extrabold block',
+                    'text-sm font-mono font-extrabold block',
                     saldoPostSueldo >= 0 ? 'text-[#241C15]' : 'text-red-700'
                   )}
                 >
                   {formatCurrency(saldoPostSueldo)}
                 </span>
+                <span className="text-[9px] text-[#75695D]">en cuenta</span>
               </div>
-              <div>
-                <span className="text-[#75695D] block text-[11px]">Reserva de Obligaciones:</span>
+              <div className="bg-white p-2 rounded-lg border border-[#E2D9CC]/70">
+                <span className="text-[#75695D] block text-[10px] font-medium truncate">Reserva Fija:</span>
                 <span
                   className={cn(
-                    'text-base font-mono font-extrabold block',
+                    'text-sm font-mono font-extrabold block',
                     colchonRestante >= 0 ? 'text-emerald-800' : 'text-amber-800'
                   )}
                 >
                   {formatCurrency(activeMes.reservaObligaciones)} {colchonRestante >= 0 ? '✓' : '⚠️'}
                 </span>
+                <span className="text-[9px] text-[#75695D]">blindada</span>
               </div>
             </div>
 
             <p className="text-[11px] text-[#75695D] leading-relaxed pt-2 border-t border-[#E2D9CC]/70">
-              {sueldoNum === 0 ? (
-                'Ingresa un monto para simular la salud de la caja tras el pago de sueldo.'
+              {sueldoTotalEmpresa === 0 ? (
+                'Ingresa un monto para simular la salud de la caja tras el retiro de ambos socios.'
               ) : esSueldoSeguro ? (
-                `Excelente decisión: Puedes pagarte S/ ${sueldoNum.toFixed(2)} y aún quedarán ${formatCurrency(saldoPostSueldo)} en caja, cubriendo completamente la reserva de obligaciones fijas de ${formatCurrency(activeMes.reservaObligaciones)}.`
+                `Excelente decisión: Asignar ${formatCurrency(sueldoPorSocio)} a cada socio (${formatCurrency(sueldoTotalEmpresa)} en total para las ${numSocios} personas) es 100% seguro. Quedarán ${formatCurrency(saldoPostSueldo)} en caja, cubriendo completamente la reserva de obligaciones fijas de ${formatCurrency(activeMes.reservaObligaciones)}.`
               ) : esSueldoAlerta ? (
-                `Advertencia: Hay suficiente caja (${formatCurrency(activeMes.saldoAcumulado)}), pero al pagarte S/ ${sueldoNum.toFixed(2)}, invades ${formatCurrency(Math.abs(colchonRestante))} de la reserva mínima necesaria para el próximo mes.`
+                `Advertencia: Hay suficiente caja (${formatCurrency(activeMes.saldoAcumulado)}), pero al retirar ${formatCurrency(sueldoTotalEmpresa)} entre ambos socios (${formatCurrency(sueldoPorSocio)} c/u), invaden ${formatCurrency(Math.abs(colchonRestante))} de la reserva mínima necesaria para el próximo mes.`
               ) : (
-                `Inviable: El sueldo propuesto (S/ ${sueldoNum.toFixed(2)}) supera la caja total acumulada disponible (${formatCurrency(activeMes.saldoAcumulado)}). Te descapitalizarías inmediatamente.`
+                `Inviable: El retiro propuesto (${formatCurrency(sueldoTotalEmpresa)} total, ${formatCurrency(sueldoPorSocio)} c/u) supera la caja total disponible (${formatCurrency(activeMes.saldoAcumulado)}). Te descapitalizarías inmediatamente.`
               )}
             </p>
           </div>

@@ -31,7 +31,9 @@ export interface MesRentabilidadData {
   margenProyectadoPct: number
   saldoAcumulado: number
   reservaObligaciones: number
-  capacidadSueldoSeguro: number
+  capacidadSueldoSeguro: number // Capacidad total combinada de la empresa
+  numSocios: number // Cantidad de socios (2 personas)
+  capacidadSueldoPorSocio: number // Capacidad máxima segura individual por socio
   estadoDiagnostico: 'EXCELENTE' | 'RENTABLE' | 'EQUILIBRIO' | 'DEFICIT'
 }
 
@@ -50,7 +52,9 @@ export interface RentabilidadSueldosResumen {
   promedioObligacionesMensual: number
   reservaRecomendadaSugerida: number
   saldoCajaActual: number
+  numSocios: number
   capacidadSueldoActual: number
+  capacidadSueldoPorSocioActual: number
 }
 
 const MESES_NOMBRES = [
@@ -259,7 +263,9 @@ export async function getRentabilidadSueldos(
     const reservaObligaciones = Number(Math.max(totalBlindadosMes, promedioObligaciones, 100).toFixed(2))
 
     // Capacidad real para asignarse sueldo seguro (Blindando de antemano compromisos pendientes y fondo de seguridad)
+    const numSocios = 2
     const capacidadSueldoSeguro = Number(Math.max(0, saldoAcumulado - compromisosPendientes - 150).toFixed(2))
+    const capacidadSueldoPorSocio = Number((capacidadSueldoSeguro / numSocios).toFixed(2))
 
     let estadoDiagnostico: 'EXCELENTE' | 'RENTABLE' | 'EQUILIBRIO' | 'DEFICIT' = 'EQUILIBRIO'
     const margenParaDiag = compromisosPendientes > 0 ? margenProyectadoPct : margenOperativoPct
@@ -299,6 +305,8 @@ export async function getRentabilidadSueldos(
       saldoAcumulado,
       reservaObligaciones,
       capacidadSueldoSeguro,
+      numSocios,
+      capacidadSueldoPorSocio,
       estadoDiagnostico,
     })
   })
@@ -326,6 +334,7 @@ export async function getRentabilidadSueldos(
   const reservaRecomendadaSugerida = Number(promedioObligaciones.toFixed(2))
   const saldoCajaActual = mesSeleccionado.saldoAcumulado
   const capacidadSueldoActual = mesSeleccionado.capacidadSueldoSeguro
+  const numSocios = 2
 
   return {
     negocio,
@@ -342,6 +351,8 @@ export async function getRentabilidadSueldos(
     promedioObligacionesMensual: Number(promedioObligaciones.toFixed(2)),
     reservaRecomendadaSugerida,
     saldoCajaActual,
+    numSocios,
     capacidadSueldoActual,
+    capacidadSueldoPorSocioActual: Number((capacidadSueldoActual / numSocios).toFixed(2)),
   }
 }
