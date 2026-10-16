@@ -171,6 +171,14 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                 -{formatCurrency(activeMes.comprasDirectas)}
               </span>
             </div>
+            {activeMes.gastosPersonal > 0 && (
+              <div className="flex justify-between text-[#75695D]">
+                <span>(-) Personal & Colaboradores:</span>
+                <span className="font-mono font-bold text-sky-700">
+                  -{formatCurrency(activeMes.gastosPersonal)}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-[#75695D]">
               <span>(-) Gastos Operativos (Pauta & Envíos):</span>
               <span className="font-mono font-bold text-orange-700">

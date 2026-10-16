@@ -17,12 +17,13 @@ export interface MesRentabilidadData {
   ventasCobradas: number
   inyeccionCapital: number // Préstamos bancarios y aportes de capital que entraron a caja
   comprasDirectas: number
+  gastosPersonal: number // Sueldos de colaboradores / apoyo de taller (Jamile)
   gastosOperativos: number // Publicidad, marketing, envíos, comisiones
   gastosBlindadosPagados: number // Préstamo BCP pagado, luz/internet pagados, alquiler
   compromisosPendientes: number // Blindados pendientes de fin de mes
   totalBlindadosMes: number // gastosBlindadosPagados + compromisosPendientes
-  obligacionesFijas: number // gastosOperativos + gastosBlindadosPagados (total pagado)
-  totalObligacionesMes: number // gastosOperativos + totalBlindadosMes
+  obligacionesFijas: number // gastosPersonal + gastosOperativos + gastosBlindadosPagados (total pagado)
+  totalObligacionesMes: number // gastosPersonal + gastosOperativos + totalBlindadosMes
   activosFijosCapex: number
   otrosEgresos: number
   utilidadMes: number
@@ -44,6 +45,7 @@ export interface RentabilidadSueldosResumen {
   totalHistoricoVentas: number
   totalHistoricoInyeccion: number
   totalHistoricoCompras: number
+  totalHistoricoPersonal: number
   totalHistoricoOperativos: number
   totalHistoricoBlindados: number
   totalHistoricoObligaciones: number
@@ -81,6 +83,7 @@ export async function getRentabilidadSueldos(
     ventasCobradas: number
     inyeccionCapital: number
     comprasDirectas: number
+    gastosPersonal: number
     gastosOperativos: number
     gastosBlindadosPagados: number
     activosFijosCapex: number
@@ -93,6 +96,7 @@ export async function getRentabilidadSueldos(
         ventasCobradas: 0,
         inyeccionCapital: 0,
         comprasDirectas: 0,
+        gastosPersonal: 0,
         gastosOperativos: 0,
         gastosBlindadosPagados: 0,
         activosFijosCapex: 0,
@@ -166,8 +170,18 @@ export async function getRentabilidadSueldos(
       conLower.includes('luz') ||
       conLower.includes('internet')
 
+    const isPersonal =
+      cat === 'PERSONAL' ||
+      subLower.includes('sueldo') ||
+      subLower.includes('planilla') ||
+      conLower.includes('sueldo') ||
+      conLower.includes('jamile') ||
+      conLower.includes('personal')
+
     if (cat === 'INSUMO' || cat === 'MERCADERIA') {
       monthMap[key].comprasDirectas += Number(e.costoTotal)
+    } else if (isPersonal) {
+      monthMap[key].gastosPersonal += Number(e.costoTotal)
     } else if (cat === 'ACTIVO_FIJO' || subLower.includes('maquinaria')) {
       monthMap[key].activosFijosCapex += Number(e.costoTotal)
     } else if (isBlindado) {
@@ -201,7 +215,7 @@ export async function getRentabilidadSueldos(
   const mesesCalculados: MesRentabilidadData[] = []
 
   // Promedio móvil de obligaciones fijas para reserva técnica
-  const totalObligacionesArr = Object.values(monthMap).map(m => m.gastosOperativos + m.gastosBlindadosPagados)
+  const totalObligacionesArr = Object.values(monthMap).map(m => m.gastosPersonal + m.gastosOperativos + m.gastosBlindadosPagados)
   const sumaObligaciones = totalObligacionesArr.reduce((a, b) => a + b, 0)
   const promedioObligaciones = totalObligacionesArr.length > 0 ? (sumaObligaciones / totalObligacionesArr.length) : 300
 
@@ -217,9 +231,10 @@ export async function getRentabilidadSueldos(
     const ventasCobradas = Number(data.ventasCobradas.toFixed(2))
     const inyeccionCapital = Number(data.inyeccionCapital.toFixed(2))
     const comprasDirectas = Number(data.comprasDirectas.toFixed(2))
+    const gastosPersonal = Number(data.gastosPersonal.toFixed(2))
     const gastosOperativos = Number(data.gastosOperativos.toFixed(2))
     const gastosBlindadosPagados = Number(data.gastosBlindadosPagados.toFixed(2))
-    const obligacionesFijas = Number((gastosOperativos + gastosBlindadosPagados).toFixed(2))
+    const obligacionesFijas = Number((gastosPersonal + gastosOperativos + gastosBlindadosPagados).toFixed(2))
     const activosFijosCapex = Number(data.activosFijosCapex.toFixed(2))
     const otrosEgresos = Number(data.otrosEgresos.toFixed(2))
 
@@ -290,6 +305,7 @@ export async function getRentabilidadSueldos(
       ventasCobradas,
       inyeccionCapital,
       comprasDirectas,
+      gastosPersonal,
       gastosOperativos,
       gastosBlindadosPagados,
       compromisosPendientes,
@@ -322,6 +338,7 @@ export async function getRentabilidadSueldos(
   const totalHistoricoVentas = Number(mesesCalculados.reduce((acc, m) => acc + m.ventasCobradas, 0).toFixed(2))
   const totalHistoricoInyeccion = Number(mesesCalculados.reduce((acc, m) => acc + m.inyeccionCapital, 0).toFixed(2))
   const totalHistoricoCompras = Number(mesesCalculados.reduce((acc, m) => acc + m.comprasDirectas, 0).toFixed(2))
+  const totalHistoricoPersonal = Number(mesesCalculados.reduce((acc, m) => acc + m.gastosPersonal, 0).toFixed(2))
   const totalHistoricoOperativos = Number(mesesCalculados.reduce((acc, m) => acc + m.gastosOperativos, 0).toFixed(2))
   const totalHistoricoBlindados = Number(mesesCalculados.reduce((acc, m) => acc + m.totalBlindadosMes, 0).toFixed(2))
   const totalHistoricoObligaciones = Number(mesesCalculados.reduce((acc, m) => acc + m.obligacionesFijas, 0).toFixed(2))
@@ -343,6 +360,7 @@ export async function getRentabilidadSueldos(
     totalHistoricoVentas,
     totalHistoricoInyeccion,
     totalHistoricoCompras,
+    totalHistoricoPersonal,
     totalHistoricoOperativos,
     totalHistoricoBlindados,
     totalHistoricoObligaciones,

@@ -39,7 +39,8 @@ import {
   Calculator,
   ArrowUpRight,
   ArrowDownRight,
-  Zap
+  Zap,
+  Users
 } from 'lucide-react'
 import {
   Area,
@@ -84,7 +85,7 @@ import type { BlindadoFormData } from './AddBlindadoModal'
 export interface EgresoItem {
   id: string
   persona: string
-  categoria: 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO' | 'APORTE_CAPITAL' | 'MERCADERIA' | 'FINANCIERO'
+  categoria: 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO' | 'PERSONAL' | 'APORTE_CAPITAL' | 'MERCADERIA' | 'FINANCIERO'
   subcategoria?: string | null
   itemConcepto: string
   especificacionColor?: string | null
@@ -999,7 +1000,7 @@ export function CashFlowHubView({
     const movements: Array<{
       id: string
       fecha: string
-      tipo: 'INGRESO_VENTA' | 'INGRESO_DIRECTO' | 'EGRESO_MAQUINARIA' | 'EGRESO_INSUMO' | 'EGRESO_SERVICIO'
+      tipo: 'INGRESO_VENTA' | 'INGRESO_DIRECTO' | 'EGRESO_MAQUINARIA' | 'EGRESO_INSUMO' | 'EGRESO_SERVICIO' | 'EGRESO_PERSONAL'
       concepto: string
       entidad: string
       monto: number
@@ -1141,6 +1142,17 @@ export function CashFlowHubView({
           entidad: e.persona || 'Víctor',
           monto: e.costoTotal,
           detalle: e.especificacionColor ? `Color: ${e.especificacionColor}` : (e.presentacion || 'Material'),
+          isPositive: false,
+        })
+      } else if (e.categoria === 'PERSONAL' || e.itemConcepto?.toLowerCase().includes('sueldo') || e.itemConcepto?.toLowerCase().includes('jamile')) {
+        movements.push({
+          id: `eg-${e.id}`,
+          fecha: e.createdAt,
+          tipo: 'EGRESO_PERSONAL',
+          concepto: `Personal: ${e.itemConcepto}`,
+          entidad: e.persona || 'Víctor',
+          monto: e.costoTotal,
+          detalle: e.subcategoria || 'Sueldo / Apoyo taller',
           isPositive: false,
         })
       } else {
@@ -1895,6 +1907,11 @@ export function CashFlowHubView({
                             <ShoppingBag className="h-3 w-3" />
                             Insumo
                           </Badge>
+                        ) : mov.tipo === 'EGRESO_PERSONAL' ? (
+                          <Badge variant="outline" className="bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 text-[10px] font-semibold gap-1">
+                            <Users className="h-3 w-3" />
+                            Personal
+                          </Badge>
                         ) : (
                           <Badge variant="outline" className="bg-secondary text-muted-foreground border-border text-[10px] font-semibold gap-1">
                             <Truck className="h-3 w-3" />
@@ -1960,6 +1977,11 @@ export function CashFlowHubView({
                             <Badge variant="outline" className="bg-secondary text-foreground border-border text-[11px] font-semibold gap-1">
                               <ShoppingBag className="h-3 w-3" />
                               Insumo
+                            </Badge>
+                          ) : mov.tipo === 'EGRESO_PERSONAL' ? (
+                            <Badge variant="outline" className="bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 text-[11px] font-semibold gap-1">
+                              <Users className="h-3 w-3" />
+                              Personal
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-secondary text-muted-foreground border-border text-[11px] font-semibold gap-1">

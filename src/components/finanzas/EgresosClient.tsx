@@ -29,7 +29,8 @@ import {
   Landmark,
   Dice5,
   Store,
-  Calendar
+  Calendar,
+  Users
 } from 'lucide-react'
 import { createInversion, updateInversion, deleteInversion } from '@/actions/inversiones'
 import { TagInsumoItem } from '@/actions/tagsInsumos'
@@ -50,7 +51,7 @@ import {
 import { EgresoItem } from './FlujoCajaClient'
 import { useBusiness } from '@/context/BusinessContext'
 
-export type CategoriaEgreso = 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO' | 'APORTE_CAPITAL' | 'MERCADERIA' | 'FINANCIERO'
+export type CategoriaEgreso = 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO' | 'PERSONAL' | 'APORTE_CAPITAL' | 'MERCADERIA' | 'FINANCIERO'
 
 export interface ProductoCatalogItem {
   id: string
@@ -77,16 +78,22 @@ const CATEGORIAS_CONFIG_3D = [
     icon: ShoppingBag,
   },
   {
-    id: 'ACTIVO_FIJO',
-    label: 'Activo Fijo / Equipos',
-    desc: 'Maquinaria, Herramientas',
-    icon: Wrench,
+    id: 'PERSONAL',
+    label: 'Personal & Sueldos',
+    desc: 'Colaboradores, Apoyo taller, Jamile',
+    icon: Users,
   },
   {
     id: 'SERVICIO',
     label: 'Servicios & Operativos',
-    desc: 'Publicidad, Fletes',
+    desc: 'Publicidad, Fletes, Luz/Internet',
     icon: Truck,
+  },
+  {
+    id: 'ACTIVO_FIJO',
+    label: 'Activo Fijo / Equipos',
+    desc: 'Maquinaria, Herramientas',
+    icon: Wrench,
   },
   {
     id: 'FINANCIERO',
@@ -103,6 +110,12 @@ const CATEGORIAS_CONFIG_BG = [
     label: 'Compra de Juegos / Stock',
     desc: 'Juegos de mesa, pedidos, expansiones',
     icon: Dice5,
+  },
+  {
+    id: 'PERSONAL',
+    label: 'Personal & Sueldos',
+    desc: 'Atención tienda, eventos, colaboradores',
+    icon: Users,
   },
   {
     id: 'FINANCIERO',
@@ -656,7 +669,18 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
   // Tags para el formulario
   const activeCategoryTags = useMemo(() => {
-    return tags.filter(t => t.categoria === formCategoria)
+    const list = tags.filter(t => t.categoria === formCategoria)
+    if (list.length === 0 && formCategoria === 'PERSONAL') {
+      return [
+        { id: 'tag-sueldo', nombre: 'Sueldo', categoria: 'PERSONAL' },
+        { id: 'tag-jamile', nombre: 'Jamile', categoria: 'PERSONAL' },
+        { id: 'tag-apoyo', nombre: 'Apoyo Taller', categoria: 'PERSONAL' },
+        { id: 'tag-operario', nombre: 'Operario', categoria: 'PERSONAL' },
+        { id: 'tag-post', nombre: 'Post-procesado', categoria: 'PERSONAL' },
+        { id: 'tag-empaque', nombre: 'Empaque', categoria: 'PERSONAL' },
+      ] as TagInsumoItem[]
+    }
+    return list
   }, [tags, formCategoria])
 
   // Lista única de tags disponibles
@@ -772,6 +796,12 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       .reduce((acc, e) => acc + e.costoTotal, 0)
   }, [filteredEgresos])
 
+  const totalPersonal = useMemo(() => {
+    return filteredEgresos
+      .filter(e => e.categoria === 'PERSONAL')
+      .reduce((acc, e) => acc + e.costoTotal, 0)
+  }, [filteredEgresos])
+
   const totalServicios = useMemo(() => {
     return filteredEgresos
       .filter(e => e.categoria === 'SERVICIO')
@@ -793,6 +823,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     if (isBG) {
       const countTodos = itemsInPeriod.length
       const countStock = itemsInPeriod.filter(e => e.categoria === 'MERCADERIA' || e.categoria === 'INSUMO').length
+      const countPersonal = itemsInPeriod.filter(e => e.categoria === 'PERSONAL').length
       const countEquip = itemsInPeriod.filter(e => e.categoria === 'ACTIVO_FIJO').length
       const countServ = itemsInPeriod.filter(e => e.categoria === 'SERVICIO').length
       const countFin = itemsInPeriod.filter(e => e.categoria === 'FINANCIERO').length
@@ -800,6 +831,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       return [
         { id: 'TODOS', label: `Todos (${countTodos})` },
         { id: 'MERCADERIA', label: countStock > 0 ? `Juegos / Stock (${countStock})` : 'Juegos / Stock' },
+        { id: 'PERSONAL', label: countPersonal > 0 ? `Personal (${countPersonal})` : 'Personal' },
         { id: 'ACTIVO_FIJO', label: countEquip > 0 ? `Equipamiento (${countEquip})` : 'Equipamiento' },
         { id: 'SERVICIO', label: countServ > 0 ? `Servicios (${countServ})` : 'Servicios' },
         { id: 'FINANCIERO', label: countFin > 0 ? `Banco / ITF (${countFin})` : 'Banco / ITF' },
@@ -808,6 +840,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
     const countTodos = itemsInPeriod.length
     const countInsumos = itemsInPeriod.filter(e => e.categoria === 'INSUMO').length
+    const countPersonal = itemsInPeriod.filter(e => e.categoria === 'PERSONAL').length
     const countActivos = itemsInPeriod.filter(e => e.categoria === 'ACTIVO_FIJO').length
     const countServicios = itemsInPeriod.filter(e => e.categoria === 'SERVICIO').length
     const countFinanciero = itemsInPeriod.filter(e => e.categoria === 'FINANCIERO').length
@@ -815,6 +848,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
     return [
       { id: 'TODOS', label: `Todos (${countTodos})` },
       { id: 'INSUMO', label: countInsumos > 0 ? `Insumos (${countInsumos})` : 'Insumos' },
+      { id: 'PERSONAL', label: countPersonal > 0 ? `Personal (${countPersonal})` : 'Personal' },
       { id: 'ACTIVO_FIJO', label: countActivos > 0 ? `Activos Fijos (${countActivos})` : 'Activos Fijos' },
       { id: 'SERVICIO', label: countServicios > 0 ? `Servicios (${countServicios})` : 'Servicios' },
       { id: 'FINANCIERO', label: countFinanciero > 0 ? `Financiero (${countFinanciero})` : 'Financiero' },
@@ -828,6 +862,9 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       if (!formConcepto) setFormConcepto('ITF')
       if (!formSubcategoria) setFormSubcategoria('BCP')
       if (!formCostoUnitario) setFormCostoUnitario('0.10')
+      setFormCantidad('1')
+      setFormCostoEnvio('0')
+    } else if (cat === 'PERSONAL') {
       setFormCantidad('1')
       setFormCostoEnvio('0')
     }
@@ -1010,6 +1047,14 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
         </span>
       )
     }
+    if (cat === 'PERSONAL') {
+      return (
+        <span className="bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 text-[11px] font-semibold px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
+          <Users className="h-3 w-3 shrink-0" />
+          Personal / Sueldo
+        </span>
+      )
+    }
     if (cat === 'FINANCIERO') {
       return (
         <span className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-semibold px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5">
@@ -1124,9 +1169,9 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. Tarjetas KPI Superiores (4 tarjetas en grid h-[104px])                 */}
+      {/* 2. Tarjetas KPI Superiores (5 tarjetas en grid h-[104px])                 */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         {/* KPI 1: Total Egresos */}
         <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px]">
           <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
@@ -1165,7 +1210,27 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
           </div>
         </div>
 
-        {/* KPI 3: Gastos Bancarios & ITF (BG) o Activos Fijos (3D) */}
+        {/* KPI 3: Personal & Sueldos */}
+        <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px]">
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>Personal & Sueldos</span>
+            <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center text-primary">
+              <Users className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <div>
+            <div className="text-2xl font-extrabold text-foreground tracking-tight font-mono tabular-nums">
+              {formatCurrency(totalPersonal)}
+            </div>
+            <div className="text-xs text-muted-foreground truncate">
+              {isFiltered 
+                ? `${filteredEgresos.filter(e => e.categoria === 'PERSONAL').length} registros` 
+                : 'Apoyo taller, colaboradores'}
+            </div>
+          </div>
+        </div>
+
+        {/* KPI 4: Gastos Bancarios & ITF (BG) o Activos Fijos (3D) */}
         <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px]">
           <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
             <span>{isBG ? 'Gastos Bancarios & ITF' : 'Activos Fijos / Equipos'}</span>
@@ -1185,7 +1250,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
           </div>
         </div>
 
-        {/* KPI 4: Servicios & Operativos */}
+        {/* KPI 5: Servicios & Operativos */}
         <div className="bg-card border border-border rounded-xl p-4.5 shadow-xs flex flex-col justify-between h-[104px]">
           <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
             <span>Servicios & Operativos</span>
@@ -1561,23 +1626,27 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
           <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
             <div className="p-5 sm:p-6 pb-4 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl border shadow-xs ${formCategoria === 'FINANCIERO' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700' : 'bg-accent border-border text-primary'}`}>
-                  {formCategoria === 'FINANCIERO' ? <Landmark className="h-5 w-5 stroke-[2.5]" /> : <Plus className="h-5 w-5 stroke-[2.5]" />}
+                <div className={`p-2.5 rounded-xl border shadow-xs ${formCategoria === 'FINANCIERO' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700' : formCategoria === 'PERSONAL' ? 'bg-sky-500/10 border-sky-500/20 text-sky-700' : 'bg-accent border-border text-primary'}`}>
+                  {formCategoria === 'FINANCIERO' ? <Landmark className="h-5 w-5 stroke-[2.5]" /> : formCategoria === 'PERSONAL' ? <Users className="h-5 w-5 stroke-[2.5]" /> : <Plus className="h-5 w-5 stroke-[2.5]" />}
                 </div>
                 <div>
                   <DialogTitle className="text-base sm:text-lg font-extrabold text-foreground">
                     {formCategoria === 'FINANCIERO' 
                       ? 'Registrar Gasto Bancario / ITF' 
-                      : isBG 
-                        ? 'Registrar Compra / Egreso' 
-                        : 'Registrar Nuevo Egreso'}
+                      : formCategoria === 'PERSONAL'
+                        ? 'Registrar Pago a Personal / Sueldo'
+                        : isBG 
+                          ? 'Registrar Compra / Egreso' 
+                          : 'Registrar Nuevo Egreso'}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                     {formCategoria === 'FINANCIERO' 
                       ? 'Registro rápido del ITF o comisiones cobradas por la entidad bancaria.' 
-                      : isBG 
-                        ? 'Añade compras de juegos de mesa, pedidos a distribuidoras o gastos operativos.' 
-                        : 'Añade compras de insumos, fletes o activos para el taller.'}
+                      : formCategoria === 'PERSONAL'
+                        ? 'Registra pagos de mano de obra, colaboradores de apoyo o sueldos de taller.'
+                        : isBG 
+                          ? 'Añade compras de juegos de mesa, pedidos a distribuidoras o gastos operativos.' 
+                          : 'Añade compras de insumos, fletes o activos para el taller.'}
                   </DialogDescription>
                 </div>
               </div>
@@ -1596,7 +1665,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 <Label className="text-xs font-bold uppercase tracking-wider text-foreground">
                   Categoría Principal *
                 </Label>
-                <div className={`grid gap-2 ${activeCategoriasConfig.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
                   {activeCategoriasConfig.map(cat => {
                     const isSelected = formCategoria === cat.id
                     const Icon = cat.icon
@@ -1728,8 +1797,36 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                       ? 'Concepto Financiero *' 
                       : formCategoria === 'MERCADERIA' 
                         ? 'Nombre del Juego o N° de Pedido *' 
-                        : 'Concepto / Nombre del Insumo *'}
+                        : formCategoria === 'PERSONAL'
+                          ? 'Concepto / Colaborador *'
+                          : 'Concepto / Nombre del Insumo *'}
                   </Label>
+
+                  {/* Pills de conceptos rápidos para personal */}
+                  {formCategoria === 'PERSONAL' && (
+                    <div className="flex items-center gap-1 text-[10px] flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormConcepto('Sueldo Jamile')
+                          setFormSubcategoria('Sueldo, Jamile')
+                        }}
+                        className="px-2 py-0.5 rounded bg-sky-600 text-white hover:bg-sky-700 cursor-pointer font-bold transition-colors"
+                      >
+                        Sueldo Jamile
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormConcepto('Apoyo Taller / Post-procesado')
+                          setFormSubcategoria('Apoyo Taller, Operario')
+                        }}
+                        className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 hover:bg-sky-200 cursor-pointer font-medium"
+                      >
+                        Apoyo Taller
+                      </button>
+                    </div>
+                  )}
 
                   {/* Pills de conceptos rápidos para banco */}
                   {formCategoria === 'FINANCIERO' && (
@@ -1771,7 +1868,9 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                       ? 'ITF Banco, Comisión Interbancaria...'
                       : formCategoria === 'MERCADERIA'
                         ? 'Ej: Pedido Devir F006-00014948 o Catan Básico...'
-                        : 'Ej: Filamento PLA Hyper Creality Negro 1kg...'
+                        : formCategoria === 'PERSONAL'
+                          ? 'Ej: Sueldo Jamile (Quincena 1)...'
+                          : 'Ej: Filamento PLA Hyper Creality Negro 1kg...'
                   }
                   required
                   className="bg-secondary/40 border-input text-foreground placeholder:text-muted-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
@@ -1974,7 +2073,11 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 </div>
                 <div>
                   <DialogTitle className="text-base sm:text-lg font-extrabold text-foreground">
-                    {formCategoria === 'FINANCIERO' ? 'Editar Gasto Bancario / ITF' : 'Editar Egreso'}
+                    {formCategoria === 'FINANCIERO' 
+                      ? 'Editar Gasto Bancario / ITF' 
+                      : formCategoria === 'PERSONAL'
+                        ? 'Editar Pago a Personal'
+                        : 'Editar Egreso'}
                   </DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                     Modifica los detalles, categoría, tags, costos o cantidades adquiridas.
@@ -1996,7 +2099,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 <Label className="text-xs font-bold uppercase tracking-wider text-foreground">
                   Categoría Principal *
                 </Label>
-                <div className={`grid gap-2 ${activeCategoriasConfig.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
                   {activeCategoriasConfig.map(cat => {
                     const isSelected = formCategoria === cat.id
                     const Icon = cat.icon
@@ -2093,7 +2196,9 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                     ? 'Concepto Financiero *' 
                     : formCategoria === 'MERCADERIA' 
                       ? 'Nombre del Juego o N° de Pedido *' 
-                      : 'Concepto / Nombre del Insumo *'}
+                      : formCategoria === 'PERSONAL'
+                        ? 'Concepto / Colaborador *'
+                        : 'Concepto / Nombre del Insumo *'}
                 </Label>
                 <Input 
                   value={formConcepto}
@@ -2103,7 +2208,9 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                       ? 'ITF Banco, Comisión Interbancaria...'
                       : formCategoria === 'MERCADERIA'
                         ? 'Ej: Pedido Devir F006-00014948 o Catan Básico...'
-                        : 'Ej: Filamento PLA Hyper Creality Negro 1kg...'
+                        : formCategoria === 'PERSONAL'
+                          ? 'Ej: Sueldo Jamile (Quincena 1)...'
+                          : 'Ej: Filamento PLA Hyper Creality Negro 1kg...'
                   }
                   required
                   className="bg-secondary/40 border-input text-foreground placeholder:text-muted-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
@@ -2161,7 +2268,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                     <div className="flex items-center">
                       <button
                         type="button"
-                        disabled={formCategoria === 'FINANCIERO'}
+                        disabled={formCategoria === 'FINANCIERO' || formCategoria === 'PERSONAL'}
                         onClick={handleDecrementCantidad}
                         className="h-9 px-2.5 bg-card border border-r-0 border-input rounded-l-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
@@ -2170,7 +2277,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                       <Input 
                         type="number"
                         min="1"
-                        disabled={formCategoria === 'FINANCIERO'}
+                        disabled={formCategoria === 'FINANCIERO' || formCategoria === 'PERSONAL'}
                         value={formCantidad}
                         onChange={(e) => setFormCantidad(e.target.value)}
                         required
@@ -2178,7 +2285,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                       />
                       <button
                         type="button"
-                        disabled={formCategoria === 'FINANCIERO'}
+                        disabled={formCategoria === 'FINANCIERO' || formCategoria === 'PERSONAL'}
                         onClick={handleIncrementCantidad}
                         className="h-9 px-2.5 bg-card border border-l-0 border-input rounded-r-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
@@ -2189,7 +2296,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
                   <div className="space-y-1.5">
                     <Label className="text-xs text-foreground font-bold">
-                      {formCategoria === 'FINANCIERO' ? 'Monto Cobrado (S/) *' : 'Costo Unit. (S/) *'}
+                      {formCategoria === 'FINANCIERO' ? 'Monto Cobrado (S/) *' : formCategoria === 'PERSONAL' ? 'Monto / Sueldo (S/) *' : 'Costo Unit. (S/) *'}
                     </Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
@@ -2214,7 +2321,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         type="number"
                         step="0.01"
                         min="0"
-                        disabled={formCategoria === 'FINANCIERO'}
+                        disabled={formCategoria === 'FINANCIERO' || formCategoria === 'PERSONAL'}
                         value={formCostoEnvio}
                         onChange={(e) => setFormCostoEnvio(e.target.value)}
                         placeholder="0.00"

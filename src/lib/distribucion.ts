@@ -137,6 +137,18 @@ export function calcularDistribucionFinanciera({
       iconName: 'zap',
       detalleDesc: 'luz eléctrica, internet y servicios del taller'
     },
+    PERSONAL: {
+      id: 'PERSONAL',
+      nombre: 'Personal & Sueldos',
+      tipo: 'OPERATIVO',
+      monto: 0,
+      porcentaje: 0,
+      count: 0,
+      unidadLabel: 'pagos',
+      colorBar: 'bg-[#0284C7]', // Azul cielo
+      iconName: 'users',
+      detalleDesc: 'sueldos, colaboradores de taller y mano de obra'
+    },
     MAQUINARIA: {
       id: 'MAQUINARIA',
       nombre: 'Maquinaria & Equipos',
@@ -251,6 +263,15 @@ export function calcularDistribucionFinanciera({
       item.includes('secador')
     ) {
       targetKey = 'MAQUINARIA'
+    } else if (
+      cat === 'PERSONAL' ||
+      item.includes('sueldo') ||
+      item.includes('jamile') ||
+      item.includes('planilla') ||
+      sub.includes('sueldo') ||
+      sub.includes('personal')
+    ) {
+      targetKey = 'PERSONAL'
     } else if (
       cat === 'SERVICIO' ||
       sub.includes('luz') ||

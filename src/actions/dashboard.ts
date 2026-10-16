@@ -117,6 +117,7 @@ export async function getDashboardData(negocio?: TipoNegocio) {
   const distribucionInversion = inversiones.reduce((acc, inv) => {
     let catName = isBG ? 'Compra de Juegos' : 'Insumos & Materiales'
     if (inv.categoria === 'MERCADERIA') catName = 'Compra de Juegos'
+    else if (inv.categoria === 'PERSONAL') catName = 'Personal & Sueldos'
     else if (inv.categoria === 'FINANCIERO') catName = 'Gastos Bancarios & ITF'
     else if (inv.categoria === 'ACTIVO_FIJO') catName = isBG ? 'Equipamiento' : 'Maquinaria & Equipos'
     else if (inv.categoria === 'SERVICIO') catName = 'Servicios & Operativos'
