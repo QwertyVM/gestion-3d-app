@@ -47,6 +47,7 @@ interface ProductoPayload {
   stock?: number | string
   descripcionWeb?: string | null
   imagenUrl?: string | null
+  enlaceMakerworld?: string | null
   fechaRegistro?: string | Date
   createdAt?: string | Date
 }
@@ -123,6 +124,7 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         ...(item.stock !== undefined ? { stock: Number(item.stock) || 0 } : {}),
         ...(item.descripcionWeb !== undefined ? { descripcionWeb: item.descripcionWeb } : {}),
         ...(item.imagenUrl !== undefined ? { imagenUrl: item.imagenUrl } : {}),
+        ...(item.enlaceMakerworld !== undefined ? { enlaceMakerworld: item.enlaceMakerworld } : {}),
         ...(parsedFecha ? { createdAt: parsedFecha } : {}),
       }
     })
@@ -139,6 +141,8 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         activo: updated.activo,
         stock: updated.stock,
         negocio: updated.negocio,
+        enlaceMakerworld: updated.enlaceMakerworld,
+        imagenUrl: updated.imagenUrl,
         fechaRegistro: updated.createdAt.toISOString().split('T')[0],
         createdAt: updated.createdAt.toISOString(),
         updatedAt: updated.updatedAt.toISOString()
@@ -157,6 +161,7 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         stock: item.stock !== undefined ? Number(item.stock) || 0 : 0,
         descripcionWeb: item.descripcionWeb ?? null,
         imagenUrl: item.imagenUrl ?? null,
+        enlaceMakerworld: item.enlaceMakerworld ?? null,
         ...(parsedFecha ? { createdAt: parsedFecha } : {}),
       }
     })
@@ -173,6 +178,8 @@ async function upsertProducto(item: ProductoPayload, negocioDefault = '3D') {
         activo: created.activo,
         stock: created.stock,
         negocio: created.negocio,
+        enlaceMakerworld: created.enlaceMakerworld,
+        imagenUrl: created.imagenUrl,
         fechaRegistro: created.createdAt.toISOString().split('T')[0],
         createdAt: created.createdAt.toISOString()
       }
@@ -297,6 +304,8 @@ export async function GET(req: Request) {
       precioMenor: true,
       precioMayor: true,
       activo: true,
+      enlaceMakerworld: true,
+      imagenUrl: true,
       createdAt: true,
       updatedAt: true
     }
@@ -310,6 +319,8 @@ export async function GET(req: Request) {
       costoBase: Number(p.costoBase),
       precioMenor: Number(p.precioMenor),
       precioMayor: Number(p.precioMayor),
+      enlaceMakerworld: p.enlaceMakerworld,
+      imagenUrl: p.imagenUrl,
       fechaRegistro: p.createdAt.toISOString().split('T')[0],
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
