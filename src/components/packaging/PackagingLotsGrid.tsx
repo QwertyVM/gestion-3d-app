@@ -38,10 +38,13 @@ export function PackagingLotsGrid({
   onStockUpdated
 }: PackagingLotsGridProps) {
   const [searchTerm, setSearchTerm] = useState('')
-  const [stockFilter, setStockFilter] = useState<'TODOS' | 'CON_STOCK' | 'AGOTADOS'>('TODOS')
+  const [stockFilter, setStockFilter] = useState<'CON_STOCK' | 'TODOS' | 'AGOTADOS'>('CON_STOCK')
   const [adjustingLot, setAdjustingLot] = useState<LoteCajaItem | null>(null)
   const [newStockInput, setNewStockInput] = useState<string>('')
   const [isSavingAdjust, setIsSavingAdjust] = useState(false)
+
+  const conStockCount = useMemo(() => lotes.filter((l) => l.stockDisponible > 0).length, [lotes])
+  const agotadosCount = useMemo(() => lotes.filter((l) => l.stockDisponible <= 0).length, [lotes])
 
   const filteredLotes = useMemo(() => {
     return lotes.filter((l) => {
@@ -84,23 +87,39 @@ export function PackagingLotsGrid({
         </div>
 
         <div className="flex items-center gap-1.5 self-end sm:self-auto">
-          {(['TODOS', 'CON_STOCK', 'AGOTADOS'] as const).map((filter) => {
-            const isSel = stockFilter === filter
-            return (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setStockFilter(filter)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                  isSel
-                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-                    : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-              >
-                {filter === 'TODOS' ? 'Todos' : filter === 'CON_STOCK' ? 'Con Stock' : 'Agotados'}
-              </button>
-            )
-          })}
+          <button
+            type="button"
+            onClick={() => setStockFilter('CON_STOCK')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+              stockFilter === 'CON_STOCK'
+                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            Disponibles ({conStockCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStockFilter('AGOTADOS')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+              stockFilter === 'AGOTADOS'
+                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            Agotados ({agotadosCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStockFilter('TODOS')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+              stockFilter === 'TODOS'
+                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+            }`}
+          >
+            Todos ({lotes.length})
+          </button>
         </div>
       </div>
 

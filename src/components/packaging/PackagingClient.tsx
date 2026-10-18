@@ -114,7 +114,7 @@ export function PackagingClient({ initialStockCajas }: PackagingClientProps) {
             <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
               activeTab === 'LOTES' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
             }`}>
-              {stockCajas.lotes.length}
+              {stockCajas.lotes.filter((l) => l.stockDisponible > 0).length}
             </span>
           </button>
 

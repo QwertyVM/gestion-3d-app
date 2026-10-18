@@ -37,7 +37,14 @@ export function BoxLotsModal({
   stockCajas,
   onSelectOrder
 }: BoxLotsModalProps) {
+  const [showOnlyDisponibles, setShowOnlyDisponibles] = React.useState(true)
+
   if (!isOpen || !stockCajas) return null
+
+  const conStockCount = stockCajas.lotes.filter((l) => l.stockDisponible > 0).length
+  const displayedLotes = showOnlyDisponibles
+    ? stockCajas.lotes.filter((l) => l.stockDisponible > 0)
+    : stockCajas.lotes
 
   return (
     <div
@@ -61,9 +68,19 @@ export function BoxLotsModal({
                 <h2 className="text-xl font-bold text-foreground tracking-tight">
                   Lotes de Cajas Registrados
                 </h2>
-                <Badge className="bg-secondary text-foreground text-xs font-semibold px-2 py-0.5 rounded-md border border-border">
-                  {stockCajas.lotes.length} compras en egresos
-                </Badge>
+                <button
+                  type="button"
+                  onClick={() => setShowOnlyDisponibles(!showOnlyDisponibles)}
+                  className="cursor-pointer"
+                >
+                  <Badge className={`text-xs font-semibold px-2 py-0.5 rounded-md border transition-colors ${
+                    showOnlyDisponibles
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-secondary text-foreground border-border'
+                  }`}>
+                    {showOnlyDisponibles ? `${conStockCount} disponibles (ver todos)` : `${stockCajas.lotes.length} compras (ver solo disp.)`}
+                  </Badge>
+                </button>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Seguimiento de compras de cajas, stock remanente y pedidos donde se asignaron.
@@ -144,7 +161,7 @@ export function BoxLotsModal({
                 </TableRow>
               </TableHeader>
               <TableBody className="text-xs divide-y divide-border">
-                {stockCajas.lotes.map((lote) => {
+                {displayedLotes.map((lote) => {
                   const is50Lot = lote.cantidadComprada === 50
                   const isDispo = lote.stockDisponible > 0
 

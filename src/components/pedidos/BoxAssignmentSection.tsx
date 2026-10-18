@@ -215,14 +215,16 @@ export function BoxAssignmentSection({
                   onChange={(e) => setSelectedLotId(e.target.value)}
                   className="w-full h-9 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/20"
                 >
-                  {(stockCajas?.lotes || []).map((lote) => {
-                    const code = lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
-                    return (
-                      <option key={lote.id} value={lote.id}>
-                        [{code}] {lote.concepto} ({lote.fecha.slice(0, 10)}) — S/ {lote.costoUnitario.toFixed(2)} c/u ({lote.stockDisponible} disp.)
-                      </option>
-                    )
-                  })}
+                  {(stockCajas?.lotes || [])
+                    .filter((lote) => lote.stockDisponible > 0 || lote.id === selectedLotId)
+                    .map((lote) => {
+                      const code = lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+                      return (
+                        <option key={lote.id} value={lote.id}>
+                          [{code}] {lote.concepto} ({lote.fecha.slice(0, 10)}) — S/ {lote.costoUnitario.toFixed(2)} c/u ({lote.stockDisponible} disp.)
+                        </option>
+                      )
+                    })}
                 </select>
               </div>
 
