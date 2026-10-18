@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { TipoPrecio } from '@prisma/client'
 import { createPedido } from '@/actions/pedidos'
@@ -24,6 +25,7 @@ import { groupCatalogProducts, findVariantInGroups } from './productHierarchy'
 import { OrderCustomerSection } from './OrderCustomerSection'
 import { OrderItemCard } from './OrderItemCard'
 import { OrderSummarySection } from './OrderSummarySection'
+import { StockCajasResumen } from '@/actions/cajas'
 
 interface RegisterMultiProductOrderModalProps {
   isOpen: boolean
@@ -31,6 +33,7 @@ interface RegisterMultiProductOrderModalProps {
   productos: ProductoOption[]
   filamentos: FilamentoOption[]
   clientesList: ClienteOption[]
+  stockCajas?: StockCajasResumen | null
   initialProductoId?: string
   onOrderCreated: (pedido: any, newClient?: ClienteOption) => void
   onClientAdded?: (cliente: ClienteOption) => void
@@ -49,6 +52,7 @@ export function RegisterMultiProductOrderModal({
   productos,
   filamentos,
   clientesList,
+  stockCajas,
   initialProductoId,
   onOrderCreated,
   onClientAdded
@@ -68,6 +72,9 @@ export function RegisterMultiProductOrderModal({
   const [formDiaEntrega, setFormDiaEntrega] = useState('')
   const [formNotas, setFormNotas] = useState('')
   const [formCostoEnvio, setFormCostoEnvio] = useState<string>('')
+  const [formHasCaja, setFormHasCaja] = useState<boolean>(true)
+  const [formCajasLotId, setFormCajasLotId] = useState<string>('')
+  const [formCajasCantidad, setFormCajasCantidad] = useState<number>(1)
   const [formMontoPagado, setFormMontoPagado] = useState<string>('')
   const [formMetodoPago, setFormMetodoPago] = useState('YAPE')
   const [formNotasPago, setFormNotasPago] = useState('')
@@ -152,6 +159,9 @@ export function RegisterMultiProductOrderModal({
     setFormDiaEntrega('')
     setFormNotas('')
     setFormCostoEnvio('')
+    setFormHasCaja(true)
+    setFormCajasLotId(stockCajas?.loteReciente50?.id || stockCajas?.lotes?.[0]?.id || '')
+    setFormCajasCantidad(1)
     setFormMontoPagado('')
     setFormMetodoPago('YAPE')
     setFormNotasPago('')
@@ -401,7 +411,13 @@ export function RegisterMultiProductOrderModal({
           costoPackaging: Number(it.costoPackaging) || 0,
           porcentajeAdicional: Number(it.porcentajeAdicional) || 0,
           gramosConsumidos: Number(it.gramosConsumidos) || 0
-        }))
+        })),
+        cajas: formHasCaja ? [{
+          inversionId: formCajasLotId || null,
+          nombreCaja: stockCajas?.lotes.find(l => l.id === formCajasLotId)?.concepto || 'Caja de Envío',
+          cantidad: formCajasCantidad,
+          costoUnitario: stockCajas?.lotes.find(l => l.id === formCajasLotId)?.costoUnitario || 2.40
+        }] : []
       })
 
       if (res.success && res.pedido) {
@@ -541,6 +557,62 @@ export function RegisterMultiProductOrderModal({
                   />
                 ))}
               </div>
+            </div>
+
+            {/* SECCIÓN 2.5: CAJA DE PACKAGING & DESCUENTO DE STOCK */}
+            <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={formHasCaja}
+                    onChange={(e) => setFormHasCaja(e.target.checked)}
+                    className="w-4 h-4 rounded text-primary focus:ring-primary border-border cursor-pointer"
+                  />
+                  <span>📦 Incluir Caja de Packaging (Descuenta del Stock de Cajas)</span>
+                </label>
+
+                {formHasCaja && (
+                  <Badge variant="outline" className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30">
+                    Costo: S/ {(formCajasCantidad * (stockCajas?.lotes.find(l => l.id === formCajasLotId)?.costoUnitario || 2.40)).toFixed(2)}
+                  </Badge>
+                )}
+              </div>
+
+              {formHasCaja && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground block">
+                      Lote de Cajas Registrado
+                    </label>
+                    <select
+                      value={formCajasLotId}
+                      onChange={(e) => setFormCajasLotId(e.target.value)}
+                      className="w-full h-9 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-hidden"
+                    >
+                      {(stockCajas?.lotes || []).map((lote) => (
+                        <option key={lote.id} value={lote.id}>
+                          {lote.concepto} ({lote.fecha.slice(0, 10)}) — S/ {lote.costoUnitario.toFixed(2)} c/u ({lote.stockDisponible} disp.)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground block">
+                      Cantidad Cajas
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={formCajasCantidad}
+                      onChange={(e) => setFormCajasCantidad(Math.max(1, Number(e.target.value) || 1))}
+                      className="w-full h-9 rounded-lg border border-border bg-background text-center text-xs font-mono font-bold text-foreground focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* SECCIÓN 3: TOTALES Y LIQUIDACIÓN DINÁMICA */}

@@ -23,11 +23,14 @@ import { ColorDot } from './ColorDot'
 import { OrderLogisticsSummary } from './OrderLogisticsSummary'
 import { OrderPostsaleCard } from './OrderPostsaleCard'
 import { OrderPaymentsList } from './OrderPaymentsList'
+import { BoxAssignmentSection } from './BoxAssignmentSection'
 import { PedidoView, FilamentoOption, PagoPedidoView } from './types'
+import { StockCajasResumen } from '@/actions/cajas'
 
 export interface OrderDetailModalProps {
   pedido: PedidoView | null
   filamentos: FilamentoOption[]
+  stockCajas?: StockCajasResumen | null
   isOpen: boolean
   onClose: () => void
   onEditOrder: (pedido: PedidoView) => void
@@ -42,11 +45,14 @@ export interface OrderDetailModalProps {
     notas?: string
     fecha?: string
   }) => Promise<boolean>
+  onAssignBoxes?: (pedidoId: string, cajas: { inversionId?: string | null, nombreCaja: string, cantidad: number, costoUnitario: number }[]) => Promise<boolean>
+  onRemoveBoxes?: (pedidoId: string) => Promise<boolean>
 }
 
 export function OrderDetailModal({
   pedido,
   filamentos,
+  stockCajas,
   isOpen,
   onClose,
   onEditOrder,
@@ -54,7 +60,9 @@ export function OrderDetailModal({
   onSaveNotasPostventa,
   onOpenEditPago,
   onDeletePago,
-  onRegistrarAbono
+  onRegistrarAbono,
+  onAssignBoxes,
+  onRemoveBoxes
 }: OrderDetailModalProps) {
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false)
 
@@ -271,6 +279,16 @@ export function OrderDetailModal({
               </Table>
             </div>
           </div>
+
+          {/* BLOQUE 3.5: ASIGNACIÓN DE CAJAS & COSTO NETO REAL */}
+          {onAssignBoxes && onRemoveBoxes && (
+            <BoxAssignmentSection
+              pedido={pedido}
+              stockCajas={stockCajas}
+              onAssignBoxes={onAssignBoxes}
+              onRemoveBoxes={onRemoveBoxes}
+            />
+          )}
 
           {/* BLOQUE 4: HISTORIAL DE ABONOS Y SALDO (INTEGRADA AL PIE) */}
           <OrderPaymentsList

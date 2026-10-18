@@ -24,6 +24,7 @@ import { OrderClientHeader } from './OrderClientHeader'
 import { OrderLogisticsSection } from './OrderLogisticsSection'
 import { OrderItemsTable } from './OrderItemsTable'
 import { OrderFinancialSummary } from './OrderFinancialSummary'
+import { StockCajasResumen } from '@/actions/cajas'
 
 interface EditOrderModalProps {
   isOpen: boolean
@@ -32,6 +33,7 @@ interface EditOrderModalProps {
   productos: ProductoOption[]
   filamentos: FilamentoOption[]
   clientesList: ClienteOption[]
+  stockCajas?: StockCajasResumen | null
   onOrderUpdated: (pedido: any, newClient?: ClienteOption) => void
 }
 
@@ -42,6 +44,7 @@ export function EditOrderModal({
   productos,
   filamentos,
   clientesList,
+  stockCajas,
   onOrderUpdated
 }: EditOrderModalProps) {
   const formatCurrency = (val: number) =>
@@ -61,6 +64,11 @@ export function EditOrderModal({
   const [editSeguimientoPostventa, setEditSeguimientoPostventa] = useState(false)
   const [editFechaPostventa, setEditFechaPostventa] = useState<string | null>(null)
   const [editNotasPostventa, setEditNotasPostventa] = useState('')
+
+  // Asignación de caja de packaging
+  const [formHasCaja, setFormHasCaja] = useState<boolean>(false)
+  const [formCajasLotId, setFormCajasLotId] = useState<string>('')
+  const [formCajasCantidad, setFormCajasCantidad] = useState<number>(1)
 
   // Cliente vinculado o nuevo
   const [clientSelectMode, setClientSelectMode] = useState<'EXISTING' | 'NEW'>('EXISTING')
@@ -115,6 +123,17 @@ export function EditOrderModal({
     } else {
       setSelectedClientOption(null)
       setClientSelectMode('NEW')
+    }
+
+    // Inicializar asignación de cajas
+    if (editingPedido.cajas && editingPedido.cajas.length > 0) {
+      setFormHasCaja(true)
+      setFormCajasLotId(editingPedido.cajas[0].inversionId || stockCajas?.loteReciente50?.id || stockCajas?.lotes?.[0]?.id || '')
+      setFormCajasCantidad(editingPedido.cajas[0].cantidad || 1)
+    } else {
+      setFormHasCaja(false)
+      setFormCajasLotId(stockCajas?.loteReciente50?.id || stockCajas?.lotes?.[0]?.id || '')
+      setFormCajasCantidad(1)
     }
 
     // Inicializar ítems
@@ -303,7 +322,13 @@ export function EditOrderModal({
           costoPackaging: Number(it.costoPackaging) || 0,
           porcentajeAdicional: Number(it.porcentajeAdicional) || 0,
           gramosConsumidos: Number(it.gramosConsumidos) || 0
-        }))
+        })),
+        cajas: formHasCaja ? [{
+          inversionId: formCajasLotId || null,
+          nombreCaja: stockCajas?.lotes.find(l => l.id === formCajasLotId)?.concepto || 'Caja de Envío',
+          cantidad: formCajasCantidad,
+          costoUnitario: stockCajas?.lotes.find(l => l.id === formCajasLotId)?.costoUnitario || 2.40
+        }] : []
       })
 
       if (res.success && res.pedido) {
@@ -420,6 +445,62 @@ export function EditOrderModal({
               onUpdateItem={handleUpdateItem}
               formatCurrency={formatCurrency}
             />
+
+            {/* BLOQUE 3.5: CAJA DE PACKAGING & DESCUENTO DE STOCK */}
+            <div className="bg-card border border-border rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={formHasCaja}
+                    onChange={(e) => setFormHasCaja(e.target.checked)}
+                    className="w-4 h-4 rounded text-primary focus:ring-primary border-border cursor-pointer"
+                  />
+                  <span>📦 Asignar Caja de Packaging para este Pedido</span>
+                </label>
+
+                {formHasCaja && (
+                  <Badge variant="outline" className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30">
+                    Costo: S/ {(formCajasCantidad * (stockCajas?.lotes.find(l => l.id === formCajasLotId)?.costoUnitario || 2.40)).toFixed(2)}
+                  </Badge>
+                )}
+              </div>
+
+              {formHasCaja && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground block">
+                      Lote de Cajas Registrado
+                    </label>
+                    <select
+                      value={formCajasLotId}
+                      onChange={(e) => setFormCajasLotId(e.target.value)}
+                      className="w-full h-9 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-hidden"
+                    >
+                      {(stockCajas?.lotes || []).map((lote) => (
+                        <option key={lote.id} value={lote.id}>
+                          {lote.concepto} ({lote.fecha.slice(0, 10)}) — S/ {lote.costoUnitario.toFixed(2)} c/u ({lote.stockDisponible} disp.)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground block">
+                      Cantidad Cajas
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={formCajasCantidad}
+                      onChange={(e) => setFormCajasCantidad(Math.max(1, Number(e.target.value) || 1))}
+                      className="w-full h-9 rounded-lg border border-border bg-background text-center text-xs font-mono font-bold text-foreground focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* BLOQUE 4: BARRA DE BALANCE FINANCIERO COMPACTA (UNA SOLA LÍNEA SOBRIA) */}
             <OrderFinancialSummary

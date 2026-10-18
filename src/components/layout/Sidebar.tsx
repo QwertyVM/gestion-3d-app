@@ -12,6 +12,7 @@ import {
   ArrowUpRight, 
   ArrowDownLeft, 
   Tag, 
+  Package,
   PackageSearch, 
   Layers, 
   CircleDot, 
@@ -52,7 +53,8 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   const isFinanzasSection = pathname.startsWith('/finanzas') || pathname.startsWith('/inversiones') || isHistorico
   
   const isClientes = pathname.startsWith('/clientes')
-  const isTiendaSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario') || isClientes
+  const isPackaging = pathname.startsWith('/packaging')
+  const isTiendaSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario') || isPackaging || isClientes
 
   // Collapsible Accordion states
   const [tiendaOpen, setTiendaOpen] = useState(true)
@@ -279,6 +281,23 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                       {metrics.filamentosCriticos}
                     </span>
                   )}
+                </Link>
+              )}
+
+              {/* PACKAGING & CAJAS (3D) */}
+              {is3D && (
+                <Link
+                  href="/packaging"
+                  onClick={handleLinkClick}
+                  className={cn(
+                    'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                    isPackaging
+                      ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
+                      : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                  )}
+                >
+                  <Package className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                  <span>Packaging & Cajas</span>
                 </Link>
               )}
             </div>

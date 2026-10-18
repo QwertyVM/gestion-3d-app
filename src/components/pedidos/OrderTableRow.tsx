@@ -49,6 +49,7 @@ export interface OrderTableRowProps {
   onSelectPedido: (p: PedidoView) => void
   onCambiarEstado: (id: string, nuevoEstado: EstadoPedido) => void | Promise<void>
   onTogglePostventa: (id: string, nuevoEstado: boolean, e?: React.MouseEvent) => void
+  onQuickAssignBox?: (pedidoId: string, e: React.MouseEvent) => void
 }
 
 export function OrderTableRow({
@@ -56,7 +57,8 @@ export function OrderTableRow({
   filamentos,
   onSelectPedido,
   onCambiarEstado,
-  onTogglePostventa
+  onTogglePostventa,
+  onQuickAssignBox
 }: OrderTableRowProps) {
   const consolidatedItems = React.useMemo(() => {
     return consolidateOrderItems(pedido.items, filamentos)
@@ -238,6 +240,32 @@ export function OrderTableRow({
             <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 text-right">
               ✓ Saldado
             </span>
+          )}
+
+          {/* Badge de Packaging / Cajas Asignadas */}
+          {pedido.totalCajas && pedido.totalCajas > 0 ? (
+            <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground font-medium text-right flex-wrap justify-end">
+              <span className="inline-flex items-center gap-0.5 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md font-mono">
+                📦 {pedido.totalCajas} {pedido.totalCajas === 1 ? 'caja' : 'cajas'}
+              </span>
+              {pedido.utilidadNetaReal !== undefined && (
+                <span className="text-[10px] text-muted-foreground font-mono" title="Utilidad neta estimada">
+                  Neto: S/ {pedido.utilidadNetaReal.toFixed(1)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (onQuickAssignBox) onQuickAssignBox(pedido.id, e)
+              }}
+              className="mt-1 text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 px-1.5 py-0.5 rounded-md transition-colors cursor-pointer flex items-center gap-1"
+              title="Asignar 1 caja del stock para calcular neto"
+            >
+              <span>+ 📦 Caja</span>
+            </button>
           )}
         </div>
       </TableCell>

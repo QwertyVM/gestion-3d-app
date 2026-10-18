@@ -65,6 +65,15 @@ import { RegisterMultiProductOrderModal } from './RegisterMultiProductOrderModal
 import { EditOrderModal } from './EditOrderModal'
 import { OrdersFilterBar } from './OrdersFilterBar'
 import { OrderDetailModal } from './OrderDetailModal'
+import { BoxStockCard } from './BoxStockCard'
+import { BoxLotsModal } from './BoxLotsModal'
+import {
+  StockCajasResumen,
+  getStockCajas,
+  asignarCajasAPedido,
+  asignarCajaRapida,
+  quitarCajasDePedido
+} from '@/actions/cajas'
 import { KpiCard } from './KpiCard'
 import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 import { OrderRow } from './OrderRow'
@@ -178,6 +187,12 @@ export interface PedidoView {
   notasPostventa?: string | null
   items: ItemPedidoView[]
   pagos: PagoPedidoView[]
+  cajas?: any[]
+  totalCajas?: number
+  costoTotalCajas?: number
+  costoFabricacion?: number
+  utilidadNetaReal?: number
+  margenNetoPct?: number
   totalItemsCount: number
   createdAt: string
   updatedAt: string
@@ -222,6 +237,7 @@ interface PedidosClientProps {
   productos: ProductoOption[]
   filamentos: FilamentoOption[]
   clientesIniciales?: ClienteOption[]
+  stockCajasInicial?: StockCajasResumen | null
 }
 
 export interface FormItemState {
@@ -305,8 +321,17 @@ const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; col
   }
 }
 
-export function PedidosClient({ pedidosIniciales, productos, filamentos, clientesIniciales = [] }: PedidosClientProps) {
+export function PedidosClient({
+  pedidosIniciales,
+  productos,
+  filamentos,
+  clientesIniciales = [],
+  stockCajasInicial = null
+}: PedidosClientProps) {
   const [pedidos, setPedidos] = useState<PedidoView[]>(pedidosIniciales)
+  const [stockCajas, setStockCajas] = useState<StockCajasResumen | null>(stockCajasInicial)
+  const [isBoxLotsModalOpen, setIsBoxLotsModalOpen] = useState(false)
+  const [selectedCajasFilter, setSelectedCajasFilter] = useState<'TODOS' | 'CON_CAJA' | 'SIN_CAJA'>('TODOS')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -900,6 +925,88 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
   }
 
   // =========================================================================
+  // GESTIÓN DE STOCK Y ASIGNACIÓN DE CAJAS DE PACKAGING
+  // =========================================================================
+  const reloadStockCajas = async () => {
+    try {
+      const res = await getStockCajas()
+      setStockCajas(res)
+    } catch (err) {
+      console.error('Error reloading box stock:', err)
+    }
+  }
+
+  const handleAssignBoxes = async (
+    pedidoId: string,
+    cajas: { inversionId?: string | null; nombreCaja: string; cantidad: number; costoUnitario: number }[]
+  ): Promise<boolean> => {
+    try {
+      const res = await asignarCajasAPedido({ pedidoId, cajas })
+      if (res.success && res.pedido) {
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
+          setSelectedPedidoDetail(res.pedido as any)
+        }
+        await reloadStockCajas()
+        toast.success('Cajas asignadas correctamente al pedido')
+        return true
+      } else {
+        toast.error(res.error || 'Error al asignar cajas')
+        return false
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al asignar cajas')
+      return false
+    }
+  }
+
+  const handleRemoveBoxes = async (pedidoId: string): Promise<boolean> => {
+    try {
+      const res = await quitarCajasDePedido(pedidoId)
+      if (res.success && res.pedido) {
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
+          setSelectedPedidoDetail(res.pedido as any)
+        }
+        await reloadStockCajas()
+        toast.success('Asignación de cajas removida')
+        return true
+      } else {
+        toast.error(res.error || 'Error al remover cajas')
+        return false
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al remover cajas')
+      return false
+    }
+  }
+
+  const handleQuickAssignBox = async (pedidoId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const targetLot = stockCajas?.loteReciente50 || stockCajas?.lotes?.find(l => l.stockDisponible > 0)
+    if (!targetLot || targetLot.stockDisponible <= 0) {
+      toast.error('No hay stock disponible en el inventario de cajas')
+      return
+    }
+
+    try {
+      const res = await asignarCajaRapida(pedidoId, targetLot.id, 1)
+      if (res.success && res.pedido) {
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
+          setSelectedPedidoDetail(res.pedido as any)
+        }
+        await reloadStockCajas()
+        toast.success(`1 caja asignada al pedido (${targetLot.concepto})`)
+      } else {
+        toast.error(res.error || 'No se pudo asignar la caja')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al asignar caja')
+    }
+  }
+
+  // =========================================================================
   // ELIMINAR PEDIDO
   // =========================================================================
   const handleEliminarPedido = async (id: string, codigo: string) => {
@@ -956,9 +1063,16 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       if (selectedPostventaFilter === 'PENDIENTE' && p.seguimientoPostventa) return false
       if (selectedPostventaFilter === 'REALIZADO' && !p.seguimientoPostventa) return false
 
+      if (selectedCajasFilter === 'CON_CAJA' && (!p.totalCajas || p.totalCajas === 0)) return false
+      if (selectedCajasFilter === 'SIN_CAJA' && (p.totalCajas && p.totalCajas > 0)) return false
+
       return true
     })
-  }, [pedidos, debouncedSearch, selectedEstadoFilter, selectedPagoFilter, selectedPostventaFilter, dateRange, filamentos])
+  }, [pedidos, debouncedSearch, selectedEstadoFilter, selectedPagoFilter, selectedPostventaFilter, selectedCajasFilter, dateRange, filamentos])
+
+  const pedidosSinCajaCount = useMemo(() => {
+    return pedidos.filter(p => p.estado !== 'CANCELADO' && (!p.totalCajas || p.totalCajas === 0)).length
+  }, [pedidos])
 
   const handleSort = (field: 'fecha' | 'codigo' | 'cliente' | 'cantidad' | 'total' | 'saldoPendiente' | 'estado') => {
     if (sortField === field) {
@@ -1129,6 +1243,37 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       </div>
 
       {/* ========================================================================= */}
+      {/* 2.5. INVENTARIO DE CAJAS & PACKAGING (STOCK DE 50 UNIDADES RECIENTES)     */}
+      {/* ========================================================================= */}
+      {stockCajas && (
+        <BoxStockCard
+          stockCajas={stockCajas}
+          onOpenLotsModal={() => setIsBoxLotsModalOpen(true)}
+          onFilterSinCaja={() => {
+            setSelectedCajasFilter(prev => prev === 'SIN_CAJA' ? 'TODOS' : 'SIN_CAJA')
+            setCurrentPage(1)
+          }}
+          pedidosSinCajaCount={pedidosSinCajaCount}
+        />
+      )}
+
+      {selectedCajasFilter === 'SIN_CAJA' && (
+        <div className="flex items-center justify-between px-3.5 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-400">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">Filtrando:</span>
+            <span>Mostrando únicamente pedidos que aún no tienen caja asignada ({filteredPedidos.length} encontrados)</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedCajasFilter('TODOS')}
+            className="text-xs font-semibold underline hover:no-underline cursor-pointer"
+          >
+            Quitar filtro
+          </button>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
       {/* 3. FILTROS Y BÚSQUEDA (ORDERS FILTER BAR)                                 */}
       {/* ========================================================================= */}
       <OrdersFilterBar
@@ -1288,6 +1433,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
                     onSelectPedido={setSelectedPedidoDetail}
                     onCambiarEstado={handleCambiarEstado}
                     onTogglePostventa={handleTogglePostventa}
+                    onQuickAssignBox={handleQuickAssignBox}
                   />
                 ))}
               </TableBody>
@@ -1362,12 +1508,14 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         productos={productos}
         filamentos={filamentos}
         clientesList={clientesList}
+        stockCajas={stockCajas}
         initialProductoId={preselectedProductId}
         onOrderCreated={(newPedido, newClient) => {
           setPedidos(prev => [newPedido as any, ...prev])
           if (newClient) {
             setClientesList(prev => [newClient, ...prev])
           }
+          reloadStockCajas()
         }}
         onClientAdded={(newClient) => {
           setClientesList(prev => [newClient, ...prev.filter(c => c.id !== newClient.id)])
@@ -1381,6 +1529,7 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
       <OrderDetailModal
         pedido={selectedPedidoDetail}
         filamentos={filamentos}
+        stockCajas={stockCajas}
         isOpen={!!selectedPedidoDetail}
         onClose={() => setSelectedPedidoDetail(null)}
         onEditOrder={handleOpenEditModal}
@@ -1389,6 +1538,8 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         onOpenEditPago={handleOpenEditPago}
         onDeletePago={handleDeletePago}
         onRegistrarAbono={handleRegistrarAbonoFromDetail}
+        onAssignBoxes={handleAssignBoxes}
+        onRemoveBoxes={handleRemoveBoxes}
       />
 
       {/* ========================================================================= */}
@@ -1554,7 +1705,25 @@ export function PedidosClient({ pedidosIniciales, productos, filamentos, cliente
         productos={productos}
         filamentos={filamentos}
         clientesList={clientesList}
-        onOrderUpdated={handleOrderUpdated}
+        stockCajas={stockCajas}
+        onOrderUpdated={(updated, client) => {
+          handleOrderUpdated(updated, client)
+          reloadStockCajas()
+        }}
+      />
+
+      {/* ========================================================================= */}
+      {/* 8. MODAL: HISTORIAL DE COMPRAS Y LOTES DE CAJAS                           */}
+      {/* ========================================================================= */}
+      <BoxLotsModal
+        isOpen={isBoxLotsModalOpen}
+        onClose={() => setIsBoxLotsModalOpen(false)}
+        stockCajas={stockCajas}
+        onSelectOrder={(pedidoId) => {
+          setIsBoxLotsModalOpen(false)
+          const p = pedidos.find(item => item.id === pedidoId)
+          if (p) setSelectedPedidoDetail(p)
+        }}
       />
 
       {/* Modal Explicador de Fórmulas y Transacciones de KPI */}

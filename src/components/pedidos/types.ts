@@ -48,6 +48,18 @@ export interface PagoPedidoView {
   notas: string | null
 }
 
+export interface AsignacionCajaPedidoView {
+  id: string
+  pedidoId: string
+  inversionId: string | null
+  nombreCaja: string
+  cantidad: number
+  costoUnitario: number
+  costoTotal: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface PedidoView {
   id: string
   codigo: string
@@ -72,6 +84,12 @@ export interface PedidoView {
   notasPostventa?: string | null
   items: ItemPedidoView[]
   pagos: PagoPedidoView[]
+  cajas?: AsignacionCajaPedidoView[]
+  totalCajas?: number
+  costoTotalCajas?: number
+  costoFabricacion?: number
+  utilidadNetaReal?: number
+  margenNetoPct?: number
   totalItemsCount: number
   createdAt: string
   updatedAt: string

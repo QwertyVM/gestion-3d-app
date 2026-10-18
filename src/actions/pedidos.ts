@@ -53,6 +53,12 @@ export interface CreatePedidoInput {
   notas?: string | null
   costoEnvio?: number
   items: ItemPedidoInput[]
+  cajas?: {
+    inversionId?: string | null
+    nombreCaja?: string
+    cantidad: number
+    costoUnitario?: number
+  }[]
   montoPagado?: number
   metodoPago?: string
   notasPago?: string
@@ -153,6 +159,35 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
     updatedAt: pg.updatedAt instanceof Date ? pg.updatedAt.toISOString() : String(pg.updatedAt)
   })) : []
 
+  const cajas = Array.isArray(p.cajas) ? p.cajas.map((c: any) => ({
+    id: c.id,
+    pedidoId: c.pedidoId,
+    inversionId: c.inversionId || null,
+    nombreCaja: c.nombreCaja || 'Caja de Envío',
+    cantidad: Number(c.cantidad || 1),
+    costoUnitario: Number(c.costoUnitario || 0),
+    costoTotal: Number(c.costoTotal || 0),
+    createdAt: c.createdAt instanceof Date ? c.createdAt.toISOString() : String(c.createdAt),
+    updatedAt: c.updatedAt instanceof Date ? c.updatedAt.toISOString() : String(c.updatedAt)
+  })) : []
+
+  const totalCajas = cajas.reduce((sum: number, c: any) => sum + c.cantidad, 0)
+  const costoTotalCajas = Number(cajas.reduce((sum: number, c: any) => sum + c.costoTotal, 0).toFixed(2))
+
+  const costoFabricacion = Number(items.reduce((sum: number, it: any) => {
+    const cBase = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+      ? Number(it.costoBaseSnapshot)
+      : (it.producto ? Number(it.producto.costoBase) : 0)
+    return sum + (cBase * it.cantidad)
+  }, 0).toFixed(2))
+
+  const totalEnvio = Number(p.costoEnvio || 0)
+  const totalPedido = Number(p.total || 0)
+  const utilidadNetaReal = Number((totalPedido - (costoFabricacion + costoTotalCajas + totalEnvio)).toFixed(2))
+  const margenNetoPct = totalPedido > 0
+    ? Number(((utilidadNetaReal / totalPedido) * 100).toFixed(1))
+    : 0
+
   return {
     id: p.id,
     codigo: p.codigo,
@@ -175,9 +210,9 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
       return 'YAPE'
     })(),
     estado: p.estado as EstadoPedido,
-    costoEnvio: Number(p.costoEnvio || 0),
+    costoEnvio: totalEnvio,
     subtotal: Number(p.subtotal || 0),
-    total: Number(p.total || 0),
+    total: totalPedido,
     montoPagado: Number(p.montoPagado || 0),
     saldoPendiente: Number(p.saldoPendiente || 0),
     seguimientoPostventa: Boolean(p.seguimientoPostventa),
@@ -185,6 +220,12 @@ function serializePedido(p: any, filamentosMap?: Map<string, any>) {
     notasPostventa: p.notasPostventa || null,
     items,
     pagos,
+    cajas,
+    totalCajas,
+    costoTotalCajas,
+    costoFabricacion,
+    utilidadNetaReal,
+    margenNetoPct,
     totalItemsCount: items.reduce((sum: number, it: any) => sum + it.cantidad, 0),
     createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt),
     updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt)
@@ -207,6 +248,9 @@ export async function getPedidos(negocio?: TipoNegocio) {
           },
           pagos: {
             orderBy: { fecha: 'asc' }
+          },
+          cajas: {
+            include: { inversion: true }
           }
         },
         orderBy: [
@@ -239,6 +283,9 @@ export async function getPedidoById(id: string) {
           },
           pagos: {
             orderBy: { fecha: 'asc' }
+          },
+          cajas: {
+            include: { inversion: true }
           }
         }
       }),
@@ -458,6 +505,27 @@ export async function createPedido(data: CreatePedidoInput) {
         })
       }
 
+      // If boxes are assigned, register AsignacionCajaPedido
+      if (Array.isArray(data.cajas) && data.cajas.length > 0) {
+        const toCreateCajas = data.cajas
+          .filter(c => Number(c.cantidad) > 0)
+          .map(c => {
+            const q = Math.max(1, Math.round(Number(c.cantidad) || 1))
+            const u = Number(c.costoUnitario != null ? c.costoUnitario : 2.40)
+            return {
+              pedidoId: p.id,
+              inversionId: c.inversionId || null,
+              nombreCaja: c.nombreCaja?.trim() || 'Caja de Envío',
+              cantidad: q,
+              costoUnitario: u,
+              costoTotal: Number((q * u).toFixed(2))
+            }
+          })
+        if (toCreateCajas.length > 0) {
+          await tx.asignacionCajaPedido.createMany({ data: toCreateCajas })
+        }
+      }
+
       const fullPedido = await tx.pedido.findUnique({
         where: { id: p.id },
         include: {
@@ -466,6 +534,9 @@ export async function createPedido(data: CreatePedidoInput) {
           },
           pagos: {
             orderBy: { fecha: 'asc' }
+          },
+          cajas: {
+            include: { inversion: true }
           }
         }
       })
@@ -838,6 +909,13 @@ export interface UpdatePedidoInput {
   estado?: EstadoPedido
   costoEnvio?: number
   items: ItemPedidoInput[]
+  cajas?: {
+    id?: string
+    inversionId?: string | null
+    nombreCaja?: string
+    cantidad: number
+    costoUnitario?: number
+  }[]
   fecha?: string | Date
   seguimientoPostventa?: boolean
   fechaPostventa?: string | Date | null
@@ -980,6 +1058,30 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
       // Create new items
       await tx.itemPedido.createMany({ data: processedItems })
 
+      // Update box assignments if provided
+      if (data.cajas !== undefined) {
+        await tx.asignacionCajaPedido.deleteMany({ where: { pedidoId: id } })
+        if (Array.isArray(data.cajas) && data.cajas.length > 0) {
+          const toCreateCajas = data.cajas
+            .filter(c => Number(c.cantidad) > 0)
+            .map(c => {
+              const q = Math.max(1, Math.round(Number(c.cantidad) || 1))
+              const u = Number(c.costoUnitario != null ? c.costoUnitario : 2.40)
+              return {
+                pedidoId: id,
+                inversionId: c.inversionId || null,
+                nombreCaja: c.nombreCaja?.trim() || 'Caja de Envío',
+                cantidad: q,
+                costoUnitario: u,
+                costoTotal: Number((q * u).toFixed(2))
+              }
+            })
+          if (toCreateCajas.length > 0) {
+            await tx.asignacionCajaPedido.createMany({ data: toCreateCajas })
+          }
+        }
+      }
+
       // Update header
       const p = await tx.pedido.update({
         where: { id },
@@ -1009,6 +1111,9 @@ export async function updatePedido(id: string, data: UpdatePedidoInput) {
           },
           pagos: {
             orderBy: { fecha: 'asc' }
+          },
+          cajas: {
+            include: { inversion: true }
           }
         }
       })

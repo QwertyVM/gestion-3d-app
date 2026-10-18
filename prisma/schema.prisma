@@ -25,6 +25,7 @@ model Inversion {
   numeroCuotas        Int?
   subcategoria        String?
   negocio             String             @default("3D")
+  cajasAsignadas      AsignacionCajaPedido[]
 }
 
 model Categoria {
@@ -294,6 +295,7 @@ model Pedido {
   notasPostventa      String?
   items               ItemPedido[]
   pagos               PagoPedido[]
+  cajas               AsignacionCajaPedido[]
 
   @@unique([codigo, negocio])
 }
@@ -333,6 +335,24 @@ model PagoPedido {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   pedido     Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+}
+
+model AsignacionCajaPedido {
+  id            String     @id @default(uuid())
+  pedidoId      String
+  inversionId   String?
+  nombreCaja    String     @default("Caja")
+  cantidad      Int        @default(1)
+  costoUnitario Decimal    @default(0.00) @db.Decimal(10, 2)
+  costoTotal    Decimal    @default(0.00) @db.Decimal(10, 2)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  pedido        Pedido     @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  inversion     Inversion? @relation(fields: [inversionId], references: [id], onDelete: SetNull)
+
+  @@index([pedidoId])
+  @@index([inversionId])
 }
 
 model ConfiguracionTienda {
@@ -461,6 +481,7 @@ enum CategoriaInversion {
   APORTE_CAPITAL
   MERCADERIA
   FINANCIERO
+  PERSONAL
 }
 
 enum EstadoVenta {
