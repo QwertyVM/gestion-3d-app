@@ -241,11 +241,53 @@ export async function getKpiExplanation(
   // 2. DASHBOARD & FINANZAS: GASTO LIBRE DISPONIBLE
   // =========================================================================
   if (kpiId === 'gasto_libre_disponible' || kpiId === 'finanzas_gasto_libre') {
-    const totalCobradoVentas = cobrosEnRango.reduce((sum, c) => sum + c.monto, 0)
-    const totalIngresosDirectos = filteredIngresosDirectos.reduce((sum, i: any) => sum + Number(i.monto || 0), 0)
-    const egresosTotales = filteredInversiones.reduce((sum, inv: any) => sum + Number(inv.costoTotal || 0), 0)
+    // El saldo de caja es una variable de estado/stock acumulada hasta la fecha de corte (to).
+    // La liquidez disponible en cuenta bancaria y caja física no se resetea a cero a inicio de mes; acumula los flujos históricos.
+    let cobradoAcumulado = 0
+    const cobrosAcumulados: Array<{
+      id: string
+      fecha: string
+      cliente: string
+      monto: number
+      metodoPago: string
+      codigoRef?: string
+    }> = []
 
-    const saldoActualCaja = Math.max(0, (totalCobradoVentas + totalIngresosDirectos) - egresosTotales)
+    ventas.forEach((v: any) => {
+      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+        v.pagos.forEach((p: any) => {
+          if (isDateInRange(p.fecha, null, to)) {
+            cobradoAcumulado += Number(p.monto || 0)
+            cobrosAcumulados.push({
+              id: p.id,
+              fecha: String(p.fecha).split('T')[0],
+              cliente: v.cliente || 'Cliente',
+              monto: Number(p.monto || 0),
+              metodoPago: p.metodoPago || 'YAPE',
+              codigoRef: v.codigo || v.id.slice(0, 8)
+            })
+          }
+        })
+      } else if (isDateInRange(v.fecha, null, to) && Number(v.montoPagado || 0) > 0) {
+        cobradoAcumulado += Number(v.montoPagado || 0)
+        cobrosAcumulados.push({
+          id: `legacy-${v.id}`,
+          fecha: String(v.fecha).split('T')[0],
+          cliente: v.cliente || 'Cliente',
+          monto: Number(v.montoPagado || 0),
+          metodoPago: 'Directo',
+          codigoRef: v.codigo || v.id.slice(0, 8)
+        })
+      }
+    })
+
+    const directosAcumulados = ingresosDirectos.filter((i: any) => isDateInRange(i.fecha, null, to))
+    const totalIngresosDirectos = directosAcumulados.reduce((sum, i: any) => sum + Number(i.monto || 0), 0)
+
+    const inversionesAcumuladas = inversiones.filter((inv: any) => isDateInRange(inv.createdAt, null, to))
+    const egresosTotales = inversionesAcumuladas.reduce((sum, inv: any) => sum + Number(inv.costoTotal || 0), 0)
+
+    const saldoActualCaja = Math.max(0, (cobradoAcumulado + totalIngresosDirectos) - egresosTotales)
     
     const cuotaPrestamoMensual = blindado?.cuotaPrestamoMensual ?? 388.68
     const reservaCapexMensual = blindado?.reservaCapexMensual ?? 878.00
@@ -255,7 +297,7 @@ export async function getKpiExplanation(
     const gastoDisponibleHoy = Math.max(0, saldoActualCaja - totalBlindadoMes)
 
     const transacciones: KpiTransactionItem[] = [
-      ...cobrosEnRango.map(c => ({
+      ...cobrosAcumulados.map(c => ({
         id: `cobro-${c.id}`,
         fecha: c.fecha,
         concepto: `Cobranza Pedido (${c.metodoPago})`,
@@ -264,7 +306,7 @@ export async function getKpiExplanation(
         cliente: c.cliente,
         categoriaOEstado: 'Entrada Pedido'
       })),
-      ...filteredIngresosDirectos.map((i: any) => ({
+      ...directosAcumulados.map((i: any) => ({
         id: `ingreso-${i.id}`,
         fecha: String(i.fecha).split('T')[0],
         concepto: i.concepto || 'Ingreso directo / Aporte',
@@ -273,7 +315,7 @@ export async function getKpiExplanation(
         cliente: i.origen || 'Caja',
         categoriaOEstado: 'Ingreso Directo'
       })),
-      ...filteredInversiones.map((inv: any) => ({
+      ...inversionesAcumuladas.map((inv: any) => ({
         id: `egreso-${inv.id}`,
         fecha: String(inv.createdAt).split('T')[0],
         concepto: inv.itemConcepto || 'Compra / Gasto',
@@ -287,40 +329,40 @@ export async function getKpiExplanation(
     return {
       kpiId,
       titulo: 'Gasto Libre Disponible',
-      subtitulo: 'Capital líquido que se puede gastar hoy sin tocar los compromisos obligatorios',
+      subtitulo: 'Capital líquido disponible en caja después de blindar los compromisos obligatorios del mes',
       valorFormateado: formatCurrency(gastoDisponibleHoy),
-      rangoFechas: { from: from || null, to: to || null, descripcion: rangoDescripcion },
-      formulaMatematica: 'Gasto Libre = Saldo Actual en Caja - Total Fondos Blindados del Mes',
+      rangoFechas: { from: null, to: to || null, descripcion: to ? `Acumulado hasta el ${formatFechaEvolucion(to)}` : 'Saldo acumulado actual' },
+      formulaMatematica: 'Gasto Libre = Saldo Acumulado en Caja - Total Fondos Blindados Pendientes',
       explicacionConceptual:
-        'Es la regla de oro de tranquilidad financiera del taller: evalúa cuánto dinero real ingresó en efectivo a caja menos los egresos ejecutados, y reserva de forma sagrada las 3 partidas mensuales (Préstamo, Capex e Insumos Fijos). El remanente es tu capacidad de gasto seguro.',
+        'Es la regla de oro de tranquilidad financiera del taller: evalúa el saldo acumulado real que existe en cuentas y caja (todas las cobranzas y aportes históricos menos todos los egresos realizados hasta la fecha de corte), y reserva las partidas blindadas obligatorias del mes (Préstamo BCP, Capex y Costos Fijos). El remanente positivo es la liquidez real disponible para reinvertir o gastar.',
       pasosCalculo: [
         {
           paso: 1,
-          descripcion: 'Sumar cobranzas de ventas ingresadas en caja durante el período.',
-          operacion: '∑ Cobranzas en efectivo',
-          resultadoParcial: formatCurrency(totalCobradoVentas)
+          descripcion: 'Sumar cobranzas de ventas ingresadas en caja acumuladas hasta la fecha de corte.',
+          operacion: '∑ Cobranzas acumuladas en efectivo',
+          resultadoParcial: formatCurrency(cobradoAcumulado)
         },
         {
           paso: 2,
-          descripcion: 'Sumar ingresos directos o aportes de capital del período.',
-          operacion: '∑ Ingresos directos',
+          descripcion: 'Sumar ingresos directos o aportes de capital acumulados hasta la fecha.',
+          operacion: '∑ Ingresos directos acumulados',
           resultadoParcial: formatCurrency(totalIngresosDirectos)
         },
         {
           paso: 3,
-          descripcion: 'Restar todas las compras de insumos, filamento y egresos del período.',
-          operacion: '∑ Egresos del período',
+          descripcion: 'Restar todas las compras de insumos, equipamiento y egresos acumulados hasta la fecha.',
+          operacion: '∑ Egresos acumulados',
           resultadoParcial: `-${formatCurrency(egresosTotales)}`
         },
         {
           paso: 4,
-          descripcion: 'Saldo neto resultante en caja.',
-          operacion: `(${formatCurrency(totalCobradoVentas)} + ${formatCurrency(totalIngresosDirectos)}) - ${formatCurrency(egresosTotales)}`,
+          descripcion: 'Saldo acumulado real disponible en caja a la fecha.',
+          operacion: `(${formatCurrency(cobradoAcumulado)} + ${formatCurrency(totalIngresosDirectos)}) - ${formatCurrency(egresosTotales)}`,
           resultadoParcial: formatCurrency(saldoActualCaja)
         },
         {
           paso: 5,
-          descripcion: 'Descontar la reserva mensual blindada (Préstamo + Capex + Costos Fijos).',
+          descripcion: 'Descontar la reserva mensual blindada pendiente (Préstamo + Capex + Costos Fijos).',
           operacion: `-${formatCurrency(totalBlindadoMes)}`,
           resultadoParcial: `Blindado: ${formatCurrency(totalBlindadoMes)}`
         },
@@ -341,7 +383,7 @@ export async function getKpiExplanation(
       ],
       transaccionesDetalle: transacciones,
       totalTransacciones: transacciones.length,
-      notaAuditoria: 'Si el saldo en caja es menor al monto blindado, el gasto libre se ajusta a S/ 0.00 para proteger las cuotas del mes.'
+      notaAuditoria: 'El saldo de caja refleja el flujo acumulado histórico a la fecha de corte, protegiendo las reservas obligatorias del mes.'
     }
   }
 

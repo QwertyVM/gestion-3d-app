@@ -357,7 +357,32 @@ export function DashboardClient({
 
   // 5. Capacidad de gasto calculada para el período
   const gasto = useMemo(() => {
-    const saldoActualCaja = Math.max(0, (dynamicKpis.totalCobradoVentas + dynamicKpis.totalIngresosDirectos) - dynamicKpis.egresosTotales)
+    // El saldo de caja es un indicador de balance/stock acumulado hasta la fecha de corte seleccionada (dateRange.to).
+    // La liquidez disponible en cuenta bancaria y caja física no se resetea a cero a inicio de mes; acumula los flujos históricos.
+    let cobradoAcumulado = 0
+    rawVentas.forEach((v: any) => {
+      if (Array.isArray(v.pagos) && v.pagos.length > 0) {
+        v.pagos.forEach((p: any) => {
+          if (isDateInRange(p.fecha, null, dateRange.to)) {
+            cobradoAcumulado += Number(p.monto || 0)
+          }
+        })
+      } else {
+        if (isDateInRange(v.fecha, null, dateRange.to)) {
+          cobradoAcumulado += Number(v.montoPagado || 0)
+        }
+      }
+    })
+
+    const directosAcumulados = rawIngresosDirectos.reduce((sum: number, i: any) => {
+      return isDateInRange(i.fecha, null, dateRange.to) ? sum + Number(i.monto || 0) : sum
+    }, 0)
+
+    const egresosAcumulados = rawInversiones.reduce((sum: number, inv: any) => {
+      return isDateInRange(inv.fecha || inv.createdAt, null, dateRange.to) ? sum + Number(inv.costoTotal || 0) : sum
+    }, 0)
+
+    const saldoActualCaja = Math.max(0, (cobradoAcumulado + directosAcumulados) - egresosAcumulados)
     const cuotaPrestamoMensual = initialCapacidadGasto?.cuotaPrestamoMensual ?? 388.68
     const reservaCapexMensual = initialCapacidadGasto?.reservaCapexMensual ?? 878.00
     const gastosFijosTaller = initialCapacidadGasto?.gastosFijosTaller ?? 111.00
@@ -381,7 +406,7 @@ export function DashboardClient({
       pedidosProyectadosMes,
       gananciaProyectadaMes
     }
-  }, [dynamicKpis, filteredVentas.length, initialCapacidadGasto])
+  }, [dateRange.to, rawVentas, rawIngresosDirectos, rawInversiones, initialCapacidadGasto, dynamicKpis.ticketPromedio, dynamicKpis.gananciaNeta, filteredVentas.length])
 
   // 6. Métricas para el gráfico de Margen Real por Pedido & Curva Acumulada
   const metricasEvolucion = useMemo(() => {
