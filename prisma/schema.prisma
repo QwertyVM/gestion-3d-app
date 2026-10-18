@@ -482,7 +482,6 @@ enum CategoriaInversion {
   APORTE_CAPITAL
   MERCADERIA
   FINANCIERO
-  PERSONAL
 }
 
 enum EstadoVenta {
