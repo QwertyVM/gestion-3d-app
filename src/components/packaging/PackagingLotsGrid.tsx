@@ -13,28 +13,35 @@ import {
   Filter,
   CheckCircle2,
   AlertTriangle,
-  Copy
+  Copy,
+  Sliders,
+  X
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { LoteCajaItem } from '@/actions/cajas'
+import { LoteCajaItem, ajustarStockLoteCajas } from '@/actions/cajas'
 
 interface PackagingLotsGridProps {
   lotes: LoteCajaItem[]
   loteReciente50Id?: string
   onSelectLot: (lote: LoteCajaItem) => void
+  onStockUpdated?: () => void
 }
 
 export function PackagingLotsGrid({
   lotes,
   loteReciente50Id,
-  onSelectLot
+  onSelectLot,
+  onStockUpdated
 }: PackagingLotsGridProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [stockFilter, setStockFilter] = useState<'TODOS' | 'CON_STOCK' | 'AGOTADOS'>('TODOS')
+  const [adjustingLot, setAdjustingLot] = useState<LoteCajaItem | null>(null)
+  const [newStockInput, setNewStockInput] = useState<string>('')
+  const [isSavingAdjust, setIsSavingAdjust] = useState(false)
 
   const filteredLotes = useMemo(() => {
     return lotes.filter((l) => {
@@ -153,15 +160,28 @@ export function PackagingLotsGrid({
                         </div>
                       </div>
 
-                      <Badge
-                        className={`text-[10px] font-bold shrink-0 ${
-                          isExhausted
-                            ? 'bg-muted text-muted-foreground border-border'
-                            : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                        }`}
-                      >
-                        {isExhausted ? 'Agotado' : `${lote.stockDisponible} disp.`}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge
+                          className={`text-[10px] font-bold shrink-0 ${
+                            isExhausted
+                              ? 'bg-muted text-muted-foreground border-border'
+                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                          }`}
+                        >
+                          {isExhausted ? 'Agotado' : `${lote.stockDisponible} disp.`}
+                        </Badge>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdjustingLot(lote)
+                            setNewStockInput(String(lote.stockDisponible))
+                          }}
+                          title="Ajustar stock de este lote"
+                          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                        >
+                          <Sliders className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1.5 flex-wrap">
@@ -234,6 +254,100 @@ export function PackagingLotsGrid({
               </Card>
             )
           })}
+        </div>
+      )}
+
+      {/* MODAL PARA AJUSTAR STOCK DE LOTE */}
+      {adjustingLot && (
+        <div className="fixed inset-0 isolate z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card border border-border rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-foreground">
+                  Ajustar Stock Disponible
+                </h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Lote {adjustingLot.codigo} — {adjustingLot.concepto}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdjustingLot(null)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between py-1 border-b border-border/60">
+                <span className="text-muted-foreground">Compradas originalmente:</span>
+                <span className="font-mono font-bold text-foreground">{adjustingLot.cantidadComprada} uds</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border/60">
+                <span className="text-muted-foreground">Asignadas a pedidos:</span>
+                <span className="font-mono font-bold text-foreground">
+                  {adjustingLot.asignaciones.reduce((acc, a) => acc + a.cantidad, 0)} uds
+                </span>
+              </div>
+              <div className="pt-2 space-y-1.5">
+                <label className="text-[11px] font-semibold text-foreground block">
+                  Nuevo Stock Disponible Real:
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  max={adjustingLot.cantidadComprada}
+                  value={newStockInput}
+                  onChange={(e) => setNewStockInput(e.target.value)}
+                  className="font-mono font-bold text-sm h-9 bg-background"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Ajustará el consumo no asociado a pedidos directos.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAdjustingLot(null)}
+                className="flex-1 h-9 rounded-xl text-xs"
+              >
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                disabled={isSavingAdjust}
+                onClick={async () => {
+                  const val = parseInt(newStockInput, 10)
+                  if (isNaN(val) || val < 0) {
+                    toast.error('Ingresa un número válido mayor o igual a 0')
+                    return
+                  }
+                  setIsSavingAdjust(true)
+                  try {
+                    const res = await ajustarStockLoteCajas(adjustingLot.id, val)
+                    if (res.success) {
+                      toast.success(`Stock del lote ${adjustingLot.codigo} actualizado a ${val} uds`)
+                      setAdjustingLot(null)
+                      if (onStockUpdated) onStockUpdated()
+                    } else {
+                      toast.error(res.error || 'Error al actualizar')
+                    }
+                  } catch (e: any) {
+                    toast.error(e.message || 'Error al actualizar')
+                  } finally {
+                    setIsSavingAdjust(false)
+                  }
+                }}
+                className="flex-1 h-9 rounded-xl text-xs font-bold"
+              >
+                {isSavingAdjust ? 'Guardando...' : 'Guardar Ajuste'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

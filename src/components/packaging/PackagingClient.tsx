@@ -155,6 +155,7 @@ export function PackagingClient({ initialStockCajas }: PackagingClientProps) {
           lotes={stockCajas.lotes}
           loteReciente50Id={stockCajas.loteReciente50?.id}
           onSelectLot={handleSelectLotFromGrid}
+          onStockUpdated={reloadStock}
         />
       ) : (
         <PackagingOrdersTable

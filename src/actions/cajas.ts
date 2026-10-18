@@ -30,6 +30,7 @@ export interface LoteCajaItem {
   costoUnitario: number
   costoTotal: number
   cajasAsignadasCount: number
+  cajasConsumidasManual?: number
   stockDisponible: number
   negocio: string
   persona: string
@@ -147,7 +148,9 @@ export async function getStockCajas(negocioOverride?: TipoNegocio): Promise<Stoc
       estadoPedido: asig.pedido?.estado || 'ENTREGADO'
     }))
 
-    const cajasAsignadasCount = asignaciones.reduce((sum, a) => sum + a.cantidad, 0)
+    const asignadasEnPedidos = asignaciones.reduce((sum, a) => sum + a.cantidad, 0)
+    const cajasConsumidasManual = Number(inv.cajasConsumidasManual || 0)
+    const cajasAsignadasCount = asignadasEnPedidos + cajasConsumidasManual
     const stockDisponible = Math.max(0, cantidadComprada - cajasAsignadasCount)
 
     totalCajasCompradas += cantidadComprada
@@ -166,6 +169,7 @@ export async function getStockCajas(negocioOverride?: TipoNegocio): Promise<Stoc
       costoUnitario,
       costoTotal,
       cajasAsignadasCount,
+      cajasConsumidasManual,
       stockDisponible,
       negocio: inv.negocio,
       persona: inv.persona,
@@ -451,3 +455,30 @@ export async function registrarCompraCajas(input: RegistrarCompraCajasInput) {
     return { success: false, error: error.message || 'Error al registrar compra de cajas' }
   }
 }
+
+/**
+ * Ajusta manualmente el stock disponible de un lote de cajas
+ */
+export async function ajustarStockLoteCajas(loteId: string, nuevoStockDisponible: number) {
+  try {
+    const inv = await prisma.inversion.findUnique({
+      where: { id: loteId },
+      include: { cajasAsignadas: true }
+    })
+    if (!inv) return { success: false, error: 'Lote no encontrado' }
+
+    const asignadasEnPedidos = inv.cajasAsignadas.reduce((sum, a) => sum + (a.cantidad || 0), 0)
+    const nuevoConsumoManual = Math.max(0, inv.cantidad - asignadasEnPedidos - Math.max(0, nuevoStockDisponible))
+
+    await prisma.inversion.update({
+      where: { id: loteId },
+      data: { cajasConsumidasManual: nuevoConsumoManual }
+    })
+
+    safeRevalidate()
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error al ajustar stock' }
+  }
+}
+

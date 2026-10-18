@@ -25,6 +25,7 @@ model Inversion {
   numeroCuotas        Int?
   subcategoria        String?
   negocio             String             @default("3D")
+  cajasConsumidasManual Int              @default(0)
   cajasAsignadas      AsignacionCajaPedido[]
 }
 
