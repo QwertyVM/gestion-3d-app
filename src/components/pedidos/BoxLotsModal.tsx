@@ -154,6 +154,9 @@ export function BoxLotsModal({
                         <TableCell className="py-3 pl-4 align-middle">
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-mono text-[10px] font-bold text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.2 rounded-md">
+                                {lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`}
+                              </span>
                               <span className="font-bold text-foreground text-xs sm:text-sm">
                                 {lote.concepto}
                               </span>

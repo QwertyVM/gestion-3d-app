@@ -22,6 +22,7 @@ function safeRevalidate() {
 
 export interface LoteCajaItem {
   id: string
+  codigo: string
   concepto: string
   subcategoria: string | null
   fecha: string
@@ -153,8 +154,11 @@ export async function getStockCajas(negocioOverride?: TipoNegocio): Promise<Stoc
     totalCajasAsignadas += cajasAsignadasCount
     valorTotalStockDisponible += stockDisponible * costoUnitario
 
+    const codigo = `LOT-${inv.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+
     return {
       id: inv.id,
+      codigo,
       concepto: inv.itemConcepto,
       subcategoria: inv.subcategoria,
       fecha: inv.createdAt instanceof Date ? inv.createdAt.toISOString() : String(inv.createdAt),

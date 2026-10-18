@@ -590,11 +590,14 @@ export function RegisterMultiProductOrderModal({
                       onChange={(e) => setFormCajasLotId(e.target.value)}
                       className="w-full h-9 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-hidden"
                     >
-                      {(stockCajas?.lotes || []).map((lote) => (
-                        <option key={lote.id} value={lote.id}>
-                          {lote.concepto} ({lote.fecha.slice(0, 10)}) — S/ {lote.costoUnitario.toFixed(2)} c/u ({lote.stockDisponible} disp.)
-                        </option>
-                      ))}
+                      {(stockCajas?.lotes || []).map((lote) => {
+                        const code = lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+                        return (
+                          <option key={lote.id} value={lote.id}>
+                            [{code}] {lote.concepto} ({lote.fecha.slice(0, 10)}) — S/ {lote.costoUnitario.toFixed(2)} c/u ({lote.stockDisponible} disp.)
+                          </option>
+                        )
+                      })}
                     </select>
                   </div>
 

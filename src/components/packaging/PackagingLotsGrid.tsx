@@ -12,8 +12,10 @@ import {
   Search,
   Filter,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Copy
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,7 +39,15 @@ export function PackagingLotsGrid({
   const filteredLotes = useMemo(() => {
     return lotes.filter((l) => {
       const q = searchTerm.toLowerCase().trim()
-      if (q && !l.concepto.toLowerCase().includes(q) && !(l.subcategoria || '').toLowerCase().includes(q) && !l.persona.toLowerCase().includes(q)) {
+      const lotCode = (l.codigo || `LOT-${l.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`).toLowerCase()
+      if (
+        q && 
+        !l.concepto.toLowerCase().includes(q) && 
+        !(l.subcategoria || '').toLowerCase().includes(q) && 
+        !l.persona.toLowerCase().includes(q) &&
+        !l.id.toLowerCase().includes(q) &&
+        !lotCode.includes(q)
+      ) {
         return false
       }
       if (stockFilter === 'CON_STOCK' && l.stockDisponible <= 0) return false
@@ -61,7 +71,7 @@ export function PackagingLotsGrid({
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por tipo de caja o comprador..."
+            placeholder="Buscar por ID (ej. LOT-...), tipo de caja o comprador..."
             className="pl-9 h-9 text-xs bg-background border-border rounded-xl"
           />
         </div>
@@ -116,15 +126,31 @@ export function PackagingLotsGrid({
                   {/* Encabezado del Lote */}
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-foreground">
-                          {lote.concepto}
-                        </span>
-                        {isLote50 && (
-                          <Badge className="bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">
-                            <Sparkles className="w-3 h-3 mr-1" /> Lote Activo (50)
-                          </Badge>
-                        )}
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              const code = lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+                              navigator.clipboard.writeText(code)
+                              toast.success(`ID ${code} copiado`)
+                            }}
+                            title="Haz clic para copiar el ID del lote"
+                            className="font-mono text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/25 px-1.5 py-0.5 rounded-md tracking-wider shrink-0 transition-colors cursor-pointer flex items-center gap-1 group/btn"
+                          >
+                            <span>{lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`}</span>
+                            <Copy className="w-2.5 h-2.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
+                          </button>
+                          <span className="text-sm font-bold text-foreground">
+                            {lote.concepto}
+                          </span>
+                          {isLote50 && (
+                            <Badge className="bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">
+                              <Sparkles className="w-3 h-3 mr-1" /> Lote Activo (50)
+                            </Badge>
+                          )}
+                        </div>
                       </div>
 
                       <Badge

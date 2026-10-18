@@ -82,9 +82,12 @@ export function PackagingOrdersTable({
       if (selectedLotFilter && item.loteId !== selectedLotFilter) return false
       const q = searchTerm.toLowerCase().trim()
       if (q) {
+        const lotCode = `LOT-${item.loteId.replace(/-/g, '').slice(0, 6).toUpperCase()}`.toLowerCase()
         const match = item.codigoPedido.toLowerCase().includes(q) ||
           item.cliente.toLowerCase().includes(q) ||
-          item.nombreCaja.toLowerCase().includes(q)
+          item.nombreCaja.toLowerCase().includes(q) ||
+          lotCode.includes(q) ||
+          item.loteId.toLowerCase().includes(q)
         if (!match) return false
       }
       return true
@@ -97,10 +100,16 @@ export function PackagingOrdersTable({
     return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
-  const selectedLotName = useMemo(() => {
+  const selectedLot = useMemo(() => {
     if (!selectedLotFilter) return null
-    return lotes.find(l => l.id === selectedLotFilter)?.concepto || 'Lote seleccionado'
+    return lotes.find(l => l.id === selectedLotFilter) || null
   }, [selectedLotFilter, lotes])
+
+  const selectedLotName = useMemo(() => {
+    if (!selectedLot) return null
+    const code = selectedLot.codigo || `LOT-${selectedLot.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+    return `[${code}] ${selectedLot.concepto}`
+  }, [selectedLot])
 
   return (
     <div className="bg-card border border-border/80 rounded-2xl shadow-xs overflow-hidden">
@@ -214,9 +223,14 @@ export function PackagingOrdersTable({
                       <div className="p-1 rounded-md bg-primary/10 text-primary shrink-0">
                         <Package className="w-3 h-3" />
                       </div>
-                      <span className="text-xs text-foreground font-medium truncate">
-                        {row.nombreCaja}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="text-xs text-foreground font-medium truncate block">
+                          {row.nombreCaja}
+                        </span>
+                        <span className="text-[10px] font-mono font-semibold text-primary/80 block">
+                          LOT-{row.loteId.replace(/-/g, '').slice(0, 6).toUpperCase()}
+                        </span>
+                      </div>
                     </div>
                   </TableCell>
 
