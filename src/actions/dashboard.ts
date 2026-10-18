@@ -39,12 +39,17 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     return sum + (costoBaseUnit * v.cantidad)
   }, 0)
 
-  // 4. GANANCIA NETA EN VENTAS (Ingresos por Venta - Costo de Fabricación)
-  const gananciaNeta = ingresosVentas - costoFabricacionTotal
+  // 3.b Costo Total de Packaging (Cajas) y Envío
+  const costoCajasTotal = ventas.reduce((sum, v: any) => sum + Number(v.costoTotalCajas || v.costoPackaging || 0), 0)
+  const costoEnvioTotal = ventas.reduce((sum, v: any) => sum + Number(v.costoEnvio || 0), 0)
+  const costoDirectoTotal = costoFabricacionTotal + costoCajasTotal + costoEnvioTotal
 
-  // 5. Margen de Ganancia sobre Costo (%)
-  const margenPorcentaje = costoFabricacionTotal > 0 
-    ? (gananciaNeta / costoFabricacionTotal) * 100 
+  // 4. GANANCIA NETA EN VENTAS (Ingresos por Venta - Costos Directos: Fabricación + Cajas + Envío)
+  const gananciaNeta = ingresosVentas - costoDirectoTotal
+
+  // 5. Margen de Ganancia sobre Costo Real (%)
+  const margenPorcentaje = costoDirectoTotal > 0 
+    ? (gananciaNeta / costoDirectoTotal) * 100 
     : 0
 
   // 6. Total Cobrado en Efectivo de Ventas (calculado desde pagos o montoPagado)
@@ -79,7 +84,9 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
       ? Number(venta.costoBaseSnapshot) 
       : (Number(venta.producto?.costoBase) || 0)
-    const ventaCosto = costoBaseUnit * Number(venta.cantidad || 1)
+    const ventaCaja = Number(venta.costoTotalCajas || venta.costoPackaging || 0)
+    const ventaEnvio = Number(venta.costoEnvio || 0)
+    const ventaCosto = (costoBaseUnit * Number(venta.cantidad || 1)) + ventaCaja + ventaEnvio
     timelineMap[vDate].costo += ventaCosto
 
     // Si la venta no cuenta con desglose de pagos (ventas anteriores a la tabla PagoVenta)
@@ -470,6 +477,9 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     kpis: {
       ingresosVentas,
       costoFabricacionTotal,
+      costoCajasTotal,
+      costoEnvioTotal,
+      costoDirectoTotal,
       gananciaNeta,
       margenPorcentaje,
       totalCobradoVentas,

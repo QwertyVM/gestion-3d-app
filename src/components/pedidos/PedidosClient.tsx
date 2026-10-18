@@ -1085,6 +1085,18 @@ export function PedidosClient({
 
   const sortedPedidos = useMemo(() => {
     return [...filteredPedidos].sort((a, b) => {
+      // Prioridad 1: Siempre primero los pedidos NO entregados (activos)
+      const getPriority = (estado: string) => {
+        if (estado === 'ENTREGADO') return 2
+        if (estado === 'CANCELADO') return 3
+        return 1 // Activos: PENDIENTE, EN_TALLER, PAGO_VALIDADO, EN_PRODUCCION, EMPAQUETANDO, LISTO_ENTREGA
+      }
+
+      const priorityDiff = getPriority(a.estado) - getPriority(b.estado)
+      if (priorityDiff !== 0) {
+        return priorityDiff
+      }
+
       let comparison = 0
       if (sortField === 'codigo') {
         comparison = a.codigo.localeCompare(b.codigo, undefined, { numeric: true })
@@ -1212,7 +1224,7 @@ export function PedidosClient({
         />
         <KpiCard
           label="Preparando"
-          value={kpis.enProduccion}
+          value={kpis.enProduccion + kpis.enTaller}
           sublabel="en taller"
           icon={<Package className="h-3.5 w-3.5" />}
           onInfoClick={() => setSelectedKpiExplainer('pedidos_preparando')}

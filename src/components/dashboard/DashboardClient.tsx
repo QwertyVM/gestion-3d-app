@@ -209,6 +209,9 @@ interface DashboardClientProps {
   kpis: {
     ingresosVentas: number
     costoFabricacionTotal: number
+    costoCajasTotal?: number
+    costoEnvioTotal?: number
+    costoDirectoTotal?: number
     gananciaNeta: number
     margenPorcentaje: number
     totalCobradoVentas: number
@@ -305,8 +308,19 @@ export function DashboardClient({
       return sum + (costoBaseUnit * Number(v.cantidad || 1))
     }, 0)
 
-    const gananciaNeta = ingresosVentas - costoFabricacionTotal
-    const margenPorcentaje = costoFabricacionTotal > 0 ? (gananciaNeta / costoFabricacionTotal) * 100 : 0
+    const costoCajasTotal = filteredVentas.reduce((sum: number, v: any) => {
+      if (v.costoTotalCajas != null) return sum + Number(v.costoTotalCajas)
+      if (Array.isArray(v.cajas) && v.cajas.length > 0) {
+        return sum + v.cajas.reduce((cSum: number, c: any) => cSum + Number(c.costoTotal || 0), 0)
+      }
+      return sum + Number(v.costoPackaging || 0)
+    }, 0)
+
+    const costoEnvioTotal = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.costoEnvio || 0), 0)
+    const costoDirectoTotal = costoFabricacionTotal + costoCajasTotal + costoEnvioTotal
+
+    const gananciaNeta = ingresosVentas - costoDirectoTotal
+    const margenPorcentaje = costoDirectoTotal > 0 ? (gananciaNeta / costoDirectoTotal) * 100 : 0
 
     // Cobranzas efectivas dentro del período
     const totalCobradoVentas = rawVentas.reduce((sum: number, v: any) => {
@@ -328,6 +342,9 @@ export function DashboardClient({
     return {
       ingresosVentas,
       costoFabricacionTotal,
+      costoCajasTotal,
+      costoEnvioTotal,
+      costoDirectoTotal,
       gananciaNeta,
       margenPorcentaje,
       totalCobradoVentas,
@@ -428,9 +445,12 @@ export function DashboardClient({
         ventaCosto = costoBaseUnit * Number(venta.cantidad || 1)
       }
 
+      const ventaCajas = Number(venta.costoTotalCajas != null ? venta.costoTotalCajas : (venta.costoPackaging || 0))
+      const ventaEnvio = Number(venta.costoEnvio || 0)
+      const ventaCostoTotal = ventaCosto + ventaCajas + ventaEnvio
       const ventaTotal = Number(venta.total || 0)
 
-      timelineMap[vDate].costoProduccion += ventaCosto
+      timelineMap[vDate].costoProduccion += ventaCostoTotal
       timelineMap[vDate].ventaTotal += ventaTotal
       timelineMap[vDate].pedidosCount += 1
       if (!timelineMap[vDate].pedidosDetalle) {
@@ -1132,7 +1152,7 @@ export function DashboardClient({
               {formatCurrency(dynamicKpis.ticketPromedio)}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground truncate">
-              <span>Costo prod: {formatCurrency(dynamicKpis.costoFabricacionTotal)}</span>
+              <span>Costo dir: {formatCurrency(dynamicKpis.costoDirectoTotal || dynamicKpis.costoFabricacionTotal)}</span>
             </div>
           </div>
         </div>

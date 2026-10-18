@@ -268,7 +268,28 @@ function serializePedidoToVenta(p: any, filMap?: Map<string, any>) {
     total: Number(p.total),
     montoPagado: Number(p.montoPagado),
     saldoPendiente: Number(p.saldoPendiente),
-    costoPackaging: Number(p.costoEnvio || 0),
+    costoPackaging: (() => {
+      if (Array.isArray(p.cajas) && p.cajas.length > 0) {
+        return Number(p.cajas.reduce((sum: number, c: any) => sum + Number(c.costoTotal || 0), 0).toFixed(2))
+      }
+      return 0
+    })(),
+    costoTotalCajas: (() => {
+      if (Array.isArray(p.cajas) && p.cajas.length > 0) {
+        return Number(p.cajas.reduce((sum: number, c: any) => sum + Number(c.costoTotal || 0), 0).toFixed(2))
+      }
+      return 0
+    })(),
+    costoEnvio: Number(p.costoEnvio || 0),
+    cajas: Array.isArray(p.cajas) ? p.cajas.map((c: any) => ({
+      id: c.id,
+      pedidoId: c.pedidoId,
+      inversionId: c.inversionId || null,
+      nombreCaja: c.nombreCaja || 'Caja de Envío',
+      cantidad: Number(c.cantidad || 1),
+      costoUnitario: Number(c.costoUnitario || 0),
+      costoTotal: Number(c.costoTotal || 0)
+    })) : [],
     porcentajeAdicional: 0,
     estado: p.estado as any,
     diaEntregaPrometida: p.diaEntregaPrometida || null,
@@ -309,6 +330,9 @@ export async function getVentas(negocio?: TipoNegocio) {
         },
         pagos: {
           orderBy: { fecha: 'asc' }
+        },
+        cajas: {
+          include: { inversion: true }
         }
       },
       orderBy: [

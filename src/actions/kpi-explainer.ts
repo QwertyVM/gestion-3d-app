@@ -157,8 +157,15 @@ export async function getKpiExplanation(
       return sum + (cUnit * Number(v.cantidad || 1))
     }, 0)
 
-    const gananciaNeta = totalFacturado - costoProduccionTotal
-    const margenPct = costoProduccionTotal > 0 ? (gananciaNeta / costoProduccionTotal) * 100 : 0
+    const costoPackagingTotal = filteredVentas.reduce((sum: number, v: any) => {
+      return sum + Number(v.costoTotalCajas != null ? v.costoTotalCajas : (v.costoPackaging || 0))
+    }, 0)
+
+    const costoEnvioTotal = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.costoEnvio || 0), 0)
+    const costoDirectoTotal = costoProduccionTotal + costoPackagingTotal + costoEnvioTotal
+
+    const gananciaNeta = totalFacturado - costoDirectoTotal
+    const margenPct = costoDirectoTotal > 0 ? (gananciaNeta / costoDirectoTotal) * 100 : 0
 
     const transacciones: KpiTransactionItem[] = filteredVentas.map((v: any) => {
       const prodName = v.items && v.items.length > 0 
@@ -182,9 +189,9 @@ export async function getKpiExplanation(
       subtitulo: 'Volumen comercial bruto contratado en las fechas seleccionadas',
       valorFormateado: formatCurrency(totalFacturado),
       rangoFechas: { from: from || null, to: to || null, descripcion: rangoDescripcion },
-      formulaMatematica: 'Facturación Total = ∑ (Total de cada Pedido registrado en el rango)',
+      formulaMatematica: 'Utilidad Real = Facturación Total - (Fabricación + Cajas + Envío)',
       explicacionConceptual:
-        'Representa la suma de todas las ventas contratadas cuyos pedidos fueron creados dentro del rango de fechas activo. No depende de si ya se terminó de cobrar, sino del valor comercial bruto demandado por los clientes.',
+        'Representa la suma de todas las ventas contratadas cuyos pedidos fueron creados dentro del rango de fechas activo, comparada contra los costos directos reales de fabricación (filamento y luz) y empaque (cajas asignadas del stock o prorrateadas).',
       pasosCalculo: [
         {
           paso: 1,
@@ -205,16 +212,23 @@ export async function getKpiExplanation(
         },
         {
           paso: 4,
-          descripcion: 'Determinación de la utilidad neta directa y margen comercial sobre costo.',
-          operacion: `${formatCurrency(totalFacturado)} - ${formatCurrency(costoProduccionTotal)}`,
+          descripcion: 'Costo total de packaging (cajas asignadas por lote o prorrateo histórico) y envíos.',
+          operacion: '∑ (CostoCajas_i + CostoEnvio_i)',
+          resultadoParcial: formatCurrency(costoPackagingTotal + costoEnvioTotal)
+        },
+        {
+          paso: 5,
+          descripcion: 'Determinación de la utilidad neta real y margen comercial sobre costo directo total.',
+          operacion: `${formatCurrency(totalFacturado)} - ${formatCurrency(costoDirectoTotal)}`,
           resultadoParcial: `${formatCurrency(gananciaNeta)} (+${margenPct.toFixed(1)}%)`
         }
       ],
       resumenMetricas: [
         { etiqueta: 'Total Facturado', valor: formatCurrency(totalFacturado), tipo: 'destacado' },
         { etiqueta: 'Costo Fabricación', valor: formatCurrency(costoProduccionTotal), tipo: 'neutro' },
-        { etiqueta: 'Utilidad Neta', valor: formatCurrency(gananciaNeta), tipo: 'positivo' },
-        { etiqueta: 'Margen sobre Costo', valor: `+${margenPct.toFixed(1)}%`, tipo: 'positivo' },
+        { etiqueta: 'Costo Packaging (Cajas)', valor: formatCurrency(costoPackagingTotal), tipo: 'neutro' },
+        { etiqueta: 'Utilidad Neta Real', valor: formatCurrency(gananciaNeta), tipo: 'positivo' },
+        { etiqueta: 'Margen sobre Costo Real', valor: `+${margenPct.toFixed(1)}%`, tipo: 'positivo' },
         { etiqueta: 'Cantidad Pedidos', valor: `${filteredVentas.length}`, tipo: 'neutro' }
       ],
       transaccionesDetalle: transacciones,
