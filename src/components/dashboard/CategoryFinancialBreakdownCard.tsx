@@ -8,6 +8,7 @@ import {
   TooltipContent, 
   TooltipProvider 
 } from '@/components/ui/tooltip'
+import { Badge } from '@/components/ui/badge'
 import { 
   Printer, 
   Zap, 
@@ -24,7 +25,9 @@ import {
   TrendingUp,
   Layers,
   Box,
-  Info
+  Info,
+  ArrowDownRight,
+  Smartphone
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { 
@@ -130,96 +133,100 @@ export function CategoryFinancialBreakdownCard({
     return distribucion.egresos.todos
   }, [distribucion.egresos, subTipoEgresos])
 
+  // Métricas proporcionales para la vista de ventas
+  const totalBancos = distribucion.totales.totalIngresos || (distribucion.ventasReales.total + distribucion.inyeccionCapital.total)
+  const pctVentasReales = totalBancos > 0 ? (distribucion.ventasReales.total / totalBancos) * 100 : 0
+  const pctInyeccion = totalBancos > 0 ? (distribucion.inyeccionCapital.total / totalBancos) * 100 : 0
+
   return (
-    <TooltipProvider delay={100}>
-      <Card className={`bg-card border border-border rounded-2xl p-5 shadow-xs flex flex-col justify-between h-full min-h-[440px] ${className}`}>
+    <TooltipProvider delay={150}>
+      <Card className={cn("bg-card border border-border/80 rounded-2xl p-5 shadow-xs flex flex-col justify-between h-full min-h-[440px]", className)}>
         
         {/* ========================================================================= */}
-        {/* 1. CABECERA DE LA TARJETA                                                 */}
+        {/* 1. CABECERA & SEGMENTED CONTROLS                                         */}
         {/* ========================================================================= */}
-        <CardHeader className="p-0 pb-3 border-b border-border/70">
+        <CardHeader className="p-0 pb-3 space-y-3 border-b border-border/60">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base font-bold text-foreground">
+              <CardTitle className="text-base font-bold text-foreground tracking-tight">
                 {vistaPrincipal === 'ventas' 
-                  ? 'Ventas del Taller & Inyección de Capital'
+                  ? 'Ventas del Taller & Fondos'
                   : vistaPrincipal === 'egresos'
                   ? 'Distribución de Egresos & Costos'
-                  : 'Canales de Captación & Ventas'}
+                  : 'Canales de Captación'}
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-0.5">
                 {vistaPrincipal === 'ventas'
-                  ? 'Desglose entre facturación comercial a clientes y fondos externos de financiamiento'
+                  ? 'Separación clara entre facturación comercial a clientes y financiamiento'
                   : vistaPrincipal === 'egresos'
-                  ? 'Estructura operativa de insumos, logística, pauta y compromisos fijos'
-                  : 'Rendimiento y concentración de facturación por canal comercial'}
+                  ? 'Estructura operativa de insumos, envíos, pauta y compromisos fijos'
+                  : 'Rendimiento y concentración de facturación por canal'}
               </CardDescription>
             </div>
 
-            {/* Dos badges contrastados que dejan clara la diferencia contable */}
-            <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
-              <span className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 font-mono">
-                Ventas: {formatCurrency(distribucion.ventasReales.total)}
-              </span>
-              <span className="bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 text-xs font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5 ml-0 sm:ml-1 font-mono">
-                Inyección BCP: {formatCurrency(distribucion.inyeccionCapital.total)}
-              </span>
+            {/* Segmented Control de Pestañas Moderno */}
+            <div className="bg-secondary/70 border border-border/60 p-1 rounded-xl flex items-center gap-1 self-start sm:self-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setVistaPrincipal('ventas')}
+                className={cn(
+                  "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer",
+                  vistaPrincipal === 'ventas' 
+                    ? "bg-card text-foreground font-bold shadow-2xs" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <ShoppingBag className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
+                <span>Ventas & Fondos</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground">
+                  {distribucion.ventasReales.items.length + distribucion.inyeccionCapital.items.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVistaPrincipal('egresos')}
+                className={cn(
+                  "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer",
+                  vistaPrincipal === 'egresos' 
+                    ? "bg-card text-foreground font-bold shadow-2xs" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <ArrowDownRight className="w-3.5 h-3.5 text-destructive" />
+                <span>Egresos</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground">
+                  {distribucion.egresos.partidasCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVistaPrincipal('canales')}
+                className={cn(
+                  "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer",
+                  vistaPrincipal === 'canales' 
+                    ? "bg-card text-foreground font-bold shadow-2xs" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Smartphone className="w-3.5 h-3.5 text-primary" />
+                <span>Canales</span>
+              </button>
             </div>
           </div>
 
-          {/* Selector de Pestañas Principales: Ventas & Capital | Egresos | Canales */}
-          <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl flex items-center gap-1 w-full sm:w-fit mt-3">
-            <button
-              onClick={() => setVistaPrincipal('ventas')}
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer",
-                vistaPrincipal === 'ventas' 
-                  ? "bg-card text-foreground font-bold shadow-xs" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <span>🛍️ Ventas & Capital</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono">
-                {distribucion.ventasReales.items.length + distribucion.inyeccionCapital.items.length}
-              </span>
-            </button>
-            <button
-              onClick={() => setVistaPrincipal('egresos')}
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer",
-                vistaPrincipal === 'egresos' 
-                  ? "bg-card text-foreground font-bold shadow-xs" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <span>📦 Egresos</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono">
-                {distribucion.egresos.partidasCount}
-              </span>
-            </button>
-            <button
-              onClick={() => setVistaPrincipal('canales')}
-              className={cn(
-                "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer",
-                vistaPrincipal === 'canales' 
-                  ? "bg-card text-foreground font-bold shadow-xs" 
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <span>📱 Canales</span>
-            </button>
-          </div>
-
-          {/* Sub-selector para pestaña de Egresos */}
+          {/* Sub-filtros para Egresos */}
           {vistaPrincipal === 'egresos' && (
-            <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-border/40 text-[11px]">
-              <span className="text-muted-foreground font-medium text-[10px] uppercase tracking-wider mr-1">
-                Tipo:
+            <div className="flex items-center gap-1.5 pt-1 text-[11px]">
+              <span className="text-muted-foreground text-[10px] uppercase font-semibold tracking-wider mr-1">
+                Filtrar:
               </span>
               <button
+                type="button"
                 onClick={() => setSubTipoEgresos('TODOS')}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1",
+                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5",
                   subTipoEgresos === 'TODOS'
                     ? "bg-foreground text-background font-bold shadow-2xs"
                     : "bg-secondary/60 text-muted-foreground hover:text-foreground"
@@ -227,35 +234,37 @@ export function CategoryFinancialBreakdownCard({
               >
                 <span>Todos</span>
                 <span className="font-mono text-[10px] opacity-80">
-                  ({formatCurrency(distribucion.egresos.total)})
+                  {formatCurrency(distribucion.egresos.total)}
                 </span>
               </button>
               <button
+                type="button"
                 onClick={() => setSubTipoEgresos('OPERATIVO')}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1",
+                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5",
                   subTipoEgresos === 'OPERATIVO'
-                    ? "bg-amber-600 text-white font-bold shadow-2xs"
+                    ? "bg-amber-700 text-white font-bold shadow-2xs"
                     : "bg-secondary/60 text-muted-foreground hover:text-foreground"
                 )}
               >
                 <span>⚙️ Operativos</span>
                 <span className="font-mono text-[10px] opacity-80">
-                  ({formatCurrency(distribucion.egresos.totalOperativo)})
+                  {formatCurrency(distribucion.egresos.totalOperativo)}
                 </span>
               </button>
               <button
+                type="button"
                 onClick={() => setSubTipoEgresos('FINANCIERO')}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1",
+                  "px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5",
                   subTipoEgresos === 'FINANCIERO'
-                    ? "bg-[#4338CA] text-white font-bold shadow-2xs"
+                    ? "bg-indigo-700 text-white font-bold shadow-2xs"
                     : "bg-secondary/60 text-muted-foreground hover:text-foreground"
                 )}
               >
                 <span>🏛️ Financieros</span>
                 <span className="font-mono text-[10px] opacity-80">
-                  ({formatCurrency(distribucion.egresos.totalFinanciero)})
+                  {formatCurrency(distribucion.egresos.totalFinanciero)}
                 </span>
               </button>
             </div>
@@ -263,92 +272,138 @@ export function CategoryFinancialBreakdownCard({
         </CardHeader>
 
         {/* ========================================================================= */}
-        {/* 2. CUERPO DE LA TARJETA                                                   */}
+        {/* 2. CONTENIDO PRINCIPAL                                                   */}
         {/* ========================================================================= */}
         <CardContent className="p-0 pt-3.5 flex-1 flex flex-col justify-between space-y-4">
           
           {/* ======================================================================= */}
-          {/* VISTA 1: VENTAS & CAPITAL (DOS BLOQUES CONTABLES INDEPENDIENTES)         */}
+          {/* VISTA 1: VENTAS & CAPITAL                                               */}
           {/* ======================================================================= */}
           {vistaPrincipal === 'ventas' && (
-            <div className="space-y-4 animate-in fade-in-50 duration-150">
+            <div className="space-y-4 animate-in fade-in-50 duration-200">
               
-              {/* BLOQUE 1: VENTAS REALES DEL TALLER (EL PROTAGONISTA) */}
-              <div className="space-y-2.5">
-                <div className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-2 mb-2">
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>VENTAS POR FAMILIA DE PRODUCTO ({formatCurrency(distribucion.ventasReales.total)})</span>
-                  <span className="text-[10px] text-muted-foreground font-medium lowercase italic hidden sm:inline">
-                    (100% de la facturación comercial del taller)
+              {/* Tarjeta Ejecutiva de Composición de Fondos */}
+              <div className="p-3 rounded-xl bg-secondary/50 border border-border/70 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground font-medium">Total ingresado en cuenta bancaria</span>
+                  <span className="font-mono font-black text-foreground text-sm">
+                    {formatCurrency(totalBancos)}
+                  </span>
+                </div>
+
+                {/* Barra de Proporción Dual (Ventas vs Financiamiento) */}
+                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden flex">
+                  <div 
+                    className="h-full bg-emerald-600 dark:bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${Math.max(2, Math.min(100, pctVentasReales))}%` }}
+                    title={`Ventas: ${pctVentasReales.toFixed(1)}%`}
+                  />
+                  {pctInyeccion > 0 && (
+                    <div 
+                      className="h-full bg-sky-500 transition-all duration-500"
+                      style={{ width: `${Math.max(1, Math.min(100, pctInyeccion))}%` }}
+                      title={`Financiamiento: ${pctInyeccion.toFixed(1)}%`}
+                    />
+                  )}
+                </div>
+
+                {/* Leyenda concisa sin saturación */}
+                <div className="flex items-center justify-between text-[11px] font-mono pt-0.5">
+                  <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
+                    <span>Ventas Comerciales: {formatCurrency(distribucion.ventasReales.total)}</span>
+                    <span className="text-muted-foreground text-[10px]">({pctVentasReales.toFixed(1)}%)</span>
+                  </div>
+
+                  {distribucion.inyeccionCapital.total > 0 && (
+                    <div className="flex items-center gap-1.5 text-sky-800 dark:text-sky-300 font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" />
+                      <span>Financiamiento: {formatCurrency(distribucion.inyeccionCapital.total)}</span>
+                      <span className="text-muted-foreground text-[10px]">({pctInyeccion.toFixed(1)}%)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECCIÓN A: VENTAS COMERCIALES POR FAMILIA */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground font-semibold px-0.5">
+                  <div className="flex items-center gap-1.5 uppercase tracking-wider text-[10px] text-foreground font-bold">
+                    <Box className="w-3.5 h-3.5 text-primary" />
+                    <span>Líneas de Producto</span>
+                  </div>
+                  <span className="text-[11px] font-medium font-mono text-muted-foreground">
+                    {distribucion.ventasReales.totalUnidades} {distribucion.ventasReales.totalUnidades === 1 ? 'unidad vendida' : 'unidades vendidas'}
                   </span>
                 </div>
 
                 {distribucion.ventasReales.items.length === 0 ? (
                   <div className="py-4 text-center text-xs text-muted-foreground italic">
-                    Sin ventas de catálogo registradas en el período seleccionado.
+                    Sin ventas de catálogo registradas en el período.
                   </div>
                 ) : (
-                  distribucion.ventasReales.items.map((item) => (
-                    <Tooltip key={item.id}>
-                      <TooltipTrigger className="w-full text-left cursor-pointer block border-0 p-0 bg-transparent">
-                        <div className="space-y-1.5 group">
-                          <div className="flex items-center justify-between text-xs gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <Box className="w-3.5 h-3.5 text-primary shrink-0 transition-colors" />
-                              <span className="font-bold text-foreground truncate">{item.nombre}</span>
-                              <span className="text-[10px] text-muted-foreground shrink-0">
-                                ({item.count} {item.count === 1 ? 'ud' : 'uds'})
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0 font-mono">
-                              <span className="font-extrabold text-foreground">{formatCurrency(item.monto)}</span>
-                              <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded-md min-w-[42px] text-right">
-                                {item.porcentaje.toFixed(1)}%
-                              </span>
-                            </div>
+                  <div className="space-y-2.5">
+                    {distribucion.ventasReales.items.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className="p-2 -mx-2 rounded-xl hover:bg-secondary/40 transition-colors space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between text-xs gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-bold text-foreground truncate">{item.nombre}</span>
+                            <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-md font-mono shrink-0">
+                              {item.count} {item.count === 1 ? 'ud' : 'uds'}
+                            </span>
                           </div>
-
-                          {/* Barra de Progreso con Porcentaje Real sobre Ventas (100% base) */}
-                          <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                            <div
-                              className={`h-full ${item.colorBar} rounded-full transition-all duration-500`}
-                              style={{ width: `${Math.max(4, Math.min(100, item.porcentaje))}%` }}
-                            />
+                          <div className="flex items-center gap-2 shrink-0 font-mono">
+                            <span className="font-bold text-foreground">{formatCurrency(item.monto)}</span>
+                            <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded-md min-w-[42px] text-right">
+                              {item.porcentaje.toFixed(1)}%
+                            </span>
                           </div>
                         </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-card text-foreground border border-border p-2 rounded-xl shadow-lg text-xs max-w-xs">
-                        <span>
-                          <strong className="block">{item.nombre}</strong>
-                          {item.count} unidades vendidas • {formatCurrency(item.monto)} ({item.porcentaje.toFixed(1)}% de las ventas comerciales)
-                        </span>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))
+
+                        {/* Barra de progreso elegante */}
+                        <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all duration-500", item.colorBar || "bg-emerald-600")}
+                            style={{ width: `${Math.max(3, Math.min(100, item.porcentaje))}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
 
-              {/* BLOQUE 2: INYECCIÓN EXTERNA DE CAPITAL & PRÉSTAMOS */}
-              <div className="bg-secondary/40 border border-border/80 rounded-xl p-3.5 space-y-2.5">
-                {/* Cabecera del Bloque 2 */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-sky-800 dark:text-sky-300 uppercase tracking-wider">
-                    <Landmark className="w-3.5 h-3.5 text-sky-700 mr-0.5 inline shrink-0" />
-                    <span>INYECCIÓN DE CAPITAL & PRÉSTAMOS ({formatCurrency(distribucion.inyeccionCapital.total)})</span>
-                  </div>
-                  <span className="text-[9px] font-semibold text-muted-foreground bg-card border border-border px-2 py-0.5 rounded-md shadow-2xs">
-                    Deuda / Pasivo
-                  </span>
-                </div>
+              {/* SECCIÓN B: FONDOS EXTERNOS & FINANCIAMIENTO */}
+              {distribucion.inyeccionCapital.items.length > 0 && (
+                <div className="p-3 rounded-xl bg-sky-500/5 border border-sky-500/20 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Landmark className="w-3.5 h-3.5 text-sky-700 dark:text-sky-400" />
+                      <span className="font-bold text-sky-950 dark:text-sky-200 text-[11px] uppercase tracking-wide">
+                        Inyección de Capital & Préstamos
+                      </span>
+                    </div>
 
-                {/* Filas de Financiamiento */}
-                {distribucion.inyeccionCapital.items.length === 0 ? (
-                  <div className="py-2 text-center text-xs text-muted-foreground italic">
-                    Sin desembolsos de préstamos ni inyecciones de capital en este período.
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-semibold text-sky-800 dark:text-sky-300 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-md">
+                        Deuda / Pasivo
+                      </span>
+                      <Tooltip>
+                        <TooltipTrigger className="text-muted-foreground hover:text-foreground cursor-pointer inline-flex items-center">
+                          <Info className="w-3.5 h-3.5 opacity-70" />
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-card text-foreground border border-border text-xs max-w-xs p-2.5 rounded-xl shadow-lg">
+                          Estos fondos son inyecciones de liquidez y financiamiento. No computan como venta comercial ni margen de ganancia del taller.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                   </div>
-                ) : (
-                  distribucion.inyeccionCapital.items.map((item) => (
-                    <div key={item.id} className="space-y-1 group">
+
+                  {distribucion.inyeccionCapital.items.map((item) => (
+                    <div key={item.id} className="space-y-1">
                       <div className="flex items-center justify-between text-xs gap-2">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="font-semibold text-foreground truncate">{item.nombre}</span>
@@ -358,33 +413,21 @@ export function CategoryFinancialBreakdownCard({
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0 font-mono">
-                          <span className="font-bold text-sky-900 dark:text-sky-200">{formatCurrency(item.monto)}</span>
-                          <span className="text-[10px] font-medium text-muted-foreground">
-                            ({item.porcentaje.toFixed(1)}%)
-                          </span>
-                        </div>
+                        <span className="font-mono font-bold text-sky-900 dark:text-sky-200 shrink-0">
+                          {formatCurrency(item.monto)}
+                        </span>
                       </div>
 
-                      {/* Barra sutil de inyección */}
-                      <div className="h-1.5 w-full rounded-full bg-secondary/80 overflow-hidden">
+                      <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
                         <div
-                          className={`h-full ${item.colorBar} rounded-full transition-all duration-500`}
-                          style={{ width: `${Math.max(4, Math.min(100, item.porcentaje))}%` }}
+                          className="h-full bg-sky-500 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.max(2, Math.min(100, item.porcentaje))}%` }}
                         />
                       </div>
                     </div>
-                  ))
-                )}
-
-                {/* Nota Aclaratoria al Pie del Bloque 2 */}
-                <div className="text-[11px] text-muted-foreground italic flex items-center gap-1.5 pt-1 border-t border-border/50">
-                  <Info className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
-                  <span>
-                    Estos fondos son inyecciones de liquidez para maquinaria y capital de trabajo. No representan ventas comerciales ni margen del taller.
-                  </span>
+                  ))}
                 </div>
-              </div>
+              )}
 
             </div>
           )}
@@ -393,7 +436,7 @@ export function CategoryFinancialBreakdownCard({
           {/* VISTA 2: EGRESOS & COSTOS DEL TALLER                                    */}
           {/* ======================================================================= */}
           {vistaPrincipal === 'egresos' && (
-            <div className="space-y-3 animate-in fade-in-50 duration-150">
+            <div className="space-y-3 animate-in fade-in-50 duration-200">
               {activeEgresosList.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground italic space-y-1">
                   <Package className="h-6 w-6 text-muted-foreground/40 mx-auto" />
@@ -406,64 +449,60 @@ export function CategoryFinancialBreakdownCard({
                   </p>
                 </div>
               ) : (
-                activeEgresosList.map((item) => {
-                  const Icon = getIconComponent(item.iconName)
-                  const isFinanciero = item.tipo === 'FINANCIERO'
+                <div className="space-y-2">
+                  {activeEgresosList.map((item) => {
+                    const Icon = getIconComponent(item.iconName)
+                    const isFinanciero = item.tipo === 'FINANCIERO'
 
-                  return (
-                    <Tooltip key={item.id}>
-                      <TooltipTrigger className="w-full text-left cursor-pointer block border-0 p-0 bg-transparent">
-                        <div className="space-y-1.5 group">
-                          <div className="flex items-center justify-between text-xs gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0 transition-colors" />
-                              <span className="font-bold text-foreground truncate">{item.nombre}</span>
-                              
-                              {subTipoEgresos === 'TODOS' && (
-                                <span className={cn(
-                                  "text-[9px] font-semibold px-1 py-0.2 rounded shrink-0 uppercase tracking-wide",
-                                  isFinanciero 
-                                    ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20" 
-                                    : "bg-secondary text-muted-foreground"
-                                )}>
-                                  {isFinanciero ? 'Financiero' : 'Operativo'}
-                                </span>
-                              )}
-
-                              <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:inline">
-                                ({item.count} {item.count === 1 ? 'partida' : item.unidadLabel})
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0 font-mono">
-                              <span className="font-extrabold text-foreground">{formatCurrency(item.monto)}</span>
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="p-2 -mx-2 rounded-xl hover:bg-secondary/40 transition-colors space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between text-xs gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="font-bold text-foreground truncate">{item.nombre}</span>
+                            
+                            {subTipoEgresos === 'TODOS' && (
                               <span className={cn(
-                                "text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[38px] text-right",
+                                "text-[9px] font-semibold px-1 py-0.2 rounded shrink-0 uppercase tracking-wide",
                                 isFinanciero 
-                                  ? "text-indigo-700 dark:text-indigo-300 bg-indigo-500/10" 
-                                  : "text-destructive bg-destructive/10"
+                                  ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20" 
+                                  : "bg-secondary text-muted-foreground"
                               )}>
-                                {item.porcentaje.toFixed(0)}%
+                                {isFinanciero ? 'Financiero' : 'Operativo'}
                               </span>
-                            </div>
+                            )}
+
+                            <span className="text-[10px] text-muted-foreground shrink-0 hidden sm:inline">
+                              ({item.count} {item.count === 1 ? 'partida' : item.unidadLabel})
+                            </span>
                           </div>
 
-                          <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                            <div
-                              className={`h-full ${item.colorBar} rounded-full transition-all duration-500`}
-                              style={{ width: `${Math.max(4, Math.min(100, item.porcentaje))}%` }}
-                            />
+                          <div className="flex items-center gap-2 shrink-0 font-mono">
+                            <span className="font-bold text-foreground">{formatCurrency(item.monto)}</span>
+                            <span className={cn(
+                              "text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[38px] text-right",
+                              isFinanciero 
+                                ? "text-indigo-700 dark:text-indigo-300 bg-indigo-500/10" 
+                                : "text-destructive bg-destructive/10"
+                            )}>
+                              {item.porcentaje.toFixed(0)}%
+                            </span>
                           </div>
                         </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-card text-foreground border border-border p-2 rounded-xl shadow-lg text-xs max-w-xs">
-                        <span>
-                          <strong className="block">{item.nombre} ({item.tipo})</strong>
-                          {item.count} {item.count === 1 ? 'partida' : item.unidadLabel} • {item.detalleDesc} ({formatCurrency(item.monto)})
-                        </span>
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })
+
+                        <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all duration-500", item.colorBar || "bg-destructive")}
+                            style={{ width: `${Math.max(3, Math.min(100, item.porcentaje))}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           )}
@@ -472,82 +511,84 @@ export function CategoryFinancialBreakdownCard({
           {/* VISTA 3: CANALES DE VENTA                                               */}
           {/* ======================================================================= */}
           {vistaPrincipal === 'canales' && (
-            <div className="space-y-3 animate-in fade-in-50 duration-150">
+            <div className="space-y-3 animate-in fade-in-50 duration-200">
               {distribucion.canales.length === 0 ? (
                 <div className="py-8 text-center text-xs text-muted-foreground italic space-y-1">
                   <ShoppingBag className="h-6 w-6 text-muted-foreground/40 mx-auto" />
                   <p>Sin canales registrados en este período.</p>
                 </div>
               ) : (
-                distribucion.canales.map((item) => {
-                  const Icon = getIconComponent(item.iconName)
-                  return (
-                    <Tooltip key={item.canal}>
-                      <TooltipTrigger className="w-full text-left cursor-pointer block border-0 p-0 bg-transparent">
-                        <div className="space-y-1.5 group">
-                          <div className="flex items-center justify-between text-xs gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0 transition-colors" />
-                              <span className="font-bold text-foreground truncate">{item.canal}</span>
-                              <span className="text-[10px] text-muted-foreground shrink-0">
-                                ({item.count} {item.count === 1 ? 'pedido' : 'pedidos'})
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0 font-mono">
-                              <span className="font-extrabold text-foreground">{formatCurrency(item.total)}</span>
-                              <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md min-w-[38px] text-right">
-                                {item.porcentaje.toFixed(0)}%
-                              </span>
-                            </div>
+                <div className="space-y-2">
+                  {distribucion.canales.map((item) => {
+                    const Icon = getIconComponent(item.iconName)
+                    return (
+                      <div 
+                        key={item.canal} 
+                        className="p-2 -mx-2 rounded-xl hover:bg-secondary/40 transition-colors space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between text-xs gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="font-bold text-foreground truncate">{item.canal}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
+                              ({item.count} {item.count === 1 ? 'pedido' : 'pedidos'})
+                            </span>
                           </div>
-
-                          <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                            <div
-                              className={`h-full ${item.colorBar} rounded-full transition-all duration-500`}
-                              style={{ width: `${Math.max(4, Math.min(100, item.porcentaje))}%` }}
-                            />
+                          <div className="flex items-center gap-2 shrink-0 font-mono">
+                            <span className="font-bold text-foreground">{formatCurrency(item.total)}</span>
+                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md min-w-[38px] text-right">
+                              {item.porcentaje.toFixed(0)}%
+                            </span>
                           </div>
                         </div>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-card text-foreground border border-border p-2 rounded-xl shadow-lg text-xs">
-                        <span>{item.canal}: {item.count} pedidos captados ({formatCurrency(item.total)})</span>
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })
+
+                        <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                          <div
+                            className={cn("h-full rounded-full transition-all duration-500", item.colorBar || "bg-primary")}
+                            style={{ width: `${Math.max(3, Math.min(100, item.porcentaje))}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           )}
 
           {/* ========================================================================= */}
-          {/* 3. SÍNTESIS CONTABLE EN EL FOOTER DE LA TARJETA                           */}
+          {/* 3. FOOTER DE CONCILIACIÓN LIMPIO                                          */}
           {/* ========================================================================= */}
-          <div className="pt-3 border-t border-border/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+          <div className="pt-3 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
             {vistaPrincipal === 'ventas' && (
-              <>
-                <div className="font-semibold text-foreground">
-                  Total Entradas en Cuenta Bancaria:{' '}
-                  <span className="font-mono font-extrabold text-foreground">
-                    {formatCurrency(distribucion.totales.totalIngresos)}
+              <div className="flex items-center justify-between w-full text-muted-foreground font-medium text-[11px]">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-foreground font-semibold">Conciliación:</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-mono font-bold">
+                    {formatCurrency(distribucion.ventasReales.total)}
                   </span>
+                  <span>ventas</span>
+                  {distribucion.inyeccionCapital.total > 0 && (
+                    <>
+                      <span>+</span>
+                      <span className="text-sky-700 dark:text-sky-400 font-mono font-bold">
+                        {formatCurrency(distribucion.inyeccionCapital.total)}
+                      </span>
+                      <span>fondos</span>
+                    </>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-800 dark:text-emerald-300 font-bold font-mono">
-                    Ventas Reales: {formatCurrency(distribucion.ventasReales.total)}
-                  </span>
-                  <span className="text-muted-foreground">•</span>
-                  <span className="text-sky-800 dark:text-sky-300 font-bold font-mono">
-                    Deuda BCP: {formatCurrency(distribucion.inyeccionCapital.total)}
-                  </span>
+                <div className="font-mono text-foreground font-bold">
+                  = {formatCurrency(totalBancos)} en cuenta
                 </div>
-              </>
+              </div>
             )}
 
             {vistaPrincipal === 'egresos' && (
-              <>
+              <div className="flex items-center justify-between w-full text-xs">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <span className="font-medium">Total Egresos:</span>
-                  <span className="font-mono text-sm font-extrabold text-destructive">
+                  <span>Gasto Total:</span>
+                  <span className="font-mono font-extrabold text-destructive">
                     {formatCurrency(distribucion.egresos.total)}
                   </span>
                 </div>
@@ -560,13 +601,13 @@ export function CategoryFinancialBreakdownCard({
                     Financieros: <strong className="text-foreground font-mono">{formatCurrency(distribucion.egresos.totalFinanciero)}</strong>
                   </span>
                 </div>
-              </>
+              </div>
             )}
 
             {vistaPrincipal === 'canales' && (
-              <>
+              <div className="flex items-center justify-between w-full text-xs">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <span className="font-medium">Ticket Promedio:</span>
+                  <span>Ticket Promedio:</span>
                   <span className="font-mono font-bold text-foreground">
                     {formatCurrency(ticketPromedio)}
                   </span>
@@ -574,7 +615,7 @@ export function CategoryFinancialBreakdownCard({
                 <div className="text-muted-foreground text-[11px] font-medium">
                   Volumen: <span className="font-bold text-foreground">{totalPedidos} pedidos</span>
                 </div>
-              </>
+              </div>
             )}
           </div>
 

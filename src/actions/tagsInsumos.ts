@@ -17,7 +17,7 @@ function safeRevalidate() {
   }
 }
 
-export type CategoriaTag = 'INSUMO' | 'ACTIVO_FIJO' | 'SERVICIO' | 'MERCADERIA' | 'FINANCIERO'
+export type CategoriaTag = 'INSUMO' | 'ACTIVO_FIJO' | 'SERVICIO' | 'PERSONAL' | 'MERCADERIA' | 'FINANCIERO'
 
 export interface TagInsumoItem {
   id: string
@@ -58,7 +58,7 @@ export async function getTagsInsumos(negocio?: TipoNegocio): Promise<TagInsumoIt
     const gastoAcumulado = itemsConTag.reduce((acc, i) => acc + Number(i.costoTotal || 0), 0)
 
     const cat: CategoriaTag = 
-      tag.categoria === 'ACTIVO_FIJO' || tag.categoria === 'SERVICIO' || tag.categoria === 'INSUMO' || tag.categoria === 'MERCADERIA' || tag.categoria === 'FINANCIERO'
+      tag.categoria === 'ACTIVO_FIJO' || tag.categoria === 'SERVICIO' || tag.categoria === 'PERSONAL' || tag.categoria === 'INSUMO' || tag.categoria === 'MERCADERIA' || tag.categoria === 'FINANCIERO'
         ? tag.categoria as CategoriaTag
         : 'INSUMO'
 

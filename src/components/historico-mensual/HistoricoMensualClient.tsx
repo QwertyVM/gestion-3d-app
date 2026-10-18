@@ -59,7 +59,7 @@ import { formatDate } from '@/lib/utils'
 export interface EgresoItem {
   id: string
   persona: string
-  categoria: 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO' | 'APORTE_CAPITAL'
+  categoria: 'ACTIVO_FIJO' | 'INSUMO' | 'SERVICIO' | 'PERSONAL' | 'APORTE_CAPITAL' | 'MERCADERIA' | 'FINANCIERO'
   subcategoria?: string | null
   itemConcepto: string
   especificacionColor?: string | null
@@ -758,7 +758,7 @@ export function HistoricoMensualClient({
           id: `eg-${e.id}`,
           fecha: e.createdAt,
           tipo: `EGRESO_${e.categoria}`,
-          categoria: e.categoria === 'ACTIVO_FIJO' ? 'Activo Fijo' : e.categoria === 'INSUMO' ? 'Insumo' : 'Servicio',
+          categoria: e.categoria === 'ACTIVO_FIJO' ? 'Activo Fijo' : e.categoria === 'INSUMO' ? 'Insumo' : e.categoria === 'PERSONAL' ? 'Personal' : 'Servicio',
           subcategoria: subName,
           concepto: e.itemConcepto,
           entidad: e.persona || 'Taller',

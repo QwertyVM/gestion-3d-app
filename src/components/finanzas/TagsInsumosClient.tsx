@@ -24,7 +24,8 @@ import {
   Check,
   Loader2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { createTagInsumo, updateTagInsumo, deleteTagInsumo, TagInsumoItem, CategoriaTag } from '@/actions/tagsInsumos'
@@ -40,12 +41,14 @@ const ITEMS_PER_PAGE = 10
 
 const CATEGORIAS_TAG_3D: { id: CategoriaTag; label: string; icon: any; desc: string }[] = [
   { id: 'INSUMO', label: 'Insumos & Materiales', icon: ShoppingBag, desc: 'Filamentos, Packaging, Consumibles' },
+  { id: 'PERSONAL', label: 'Personal & Sueldos', icon: Users, desc: 'Colaboradores, Apoyo taller, Jamile' },
   { id: 'ACTIVO_FIJO', label: 'Activo Fijo / Equipos', icon: Wrench, desc: 'Impresoras 3D, Herramientas' },
   { id: 'SERVICIO', label: 'Servicios & Operativos', icon: Truck, desc: 'Fletes, Publicidad, Cuotas' },
 ]
 
 const CATEGORIAS_TAG_BG: { id: CategoriaTag; label: string; icon: any; desc: string }[] = [
   { id: 'MERCADERIA', label: 'Juegos & Stock', icon: Dice5, desc: 'Distribuidores, Editoriales: Devir, Asmodee' },
+  { id: 'PERSONAL', label: 'Personal & Sueldos', icon: Users, desc: 'Atención tienda, eventos, colaboradores' },
   { id: 'FINANCIERO', label: 'Gastos Bancarios & ITF', icon: Landmark, desc: 'BCP, Interbank, BBVA, etc.' },
   { id: 'SERVICIO', label: 'Servicios & Operativos', icon: Truck, desc: 'Envíos, Courier, Sleeves, Publicidad' },
   { id: 'ACTIVO_FIJO', label: 'Activos & Equipamiento', icon: Store, desc: 'Mesas de juego, estanterías, demos' },
@@ -84,6 +87,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
   const getCategoryLabel = (cat: string) => {
     if (cat === 'MERCADERIA') return 'Juegos & Stock'
+    if (cat === 'PERSONAL') return 'Personal & Sueldos'
     if (cat === 'FINANCIERO') return 'Gastos Bancarios & ITF'
     if (cat === 'ACTIVO_FIJO') return isBG ? 'Equipamiento' : 'Maquinaria & Equipos'
     if (cat === 'INSUMO') return isBG ? 'Juegos & Stock' : 'Insumos & Materiales'
@@ -99,9 +103,10 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
   const CATEGORIA_SORT_ORDER: Record<string, number> = {
     MERCADERIA: 1,
     INSUMO: 1,
-    FINANCIERO: 2,
-    SERVICIO: 3,
-    ACTIVO_FIJO: 4,
+    PERSONAL: 2,
+    FINANCIERO: 3,
+    SERVICIO: 4,
+    ACTIVO_FIJO: 5,
   }
 
   // Filtered and sorted tags
@@ -594,7 +599,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                 <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
                   Categoría Principal *
                 </Label>
-                <div className={`grid gap-2 ${CATEGORIAS_TAG.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                <div className={`grid gap-2 ${CATEGORIAS_TAG.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
                   {CATEGORIAS_TAG.map(c => {
                     const isSelected = formCategoria === c.id
                     const Icon = c.icon

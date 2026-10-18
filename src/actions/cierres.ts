@@ -139,7 +139,7 @@ export async function getDatosPreCierre(mesInput?: number, anioInput?: number, n
     .reduce((acc, e) => acc + (e.costoTotal || 0), 0)
 
   const totalEgresosServicios = egresos
-    .filter(e => e.categoria === 'SERVICIO')
+    .filter(e => e.categoria === 'SERVICIO' || e.categoria === 'PERSONAL')
     .reduce((acc, e) => acc + (e.costoTotal || 0), 0)
 
   const totalEgresos = egresos.reduce((acc, e) => acc + (e.costoTotal || 0), 0)

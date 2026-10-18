@@ -73,10 +73,9 @@ function MargenTooltip({ active, payload, label }: any) {
     const costo = Number(data.costoProduccion || 0)
     const utilidad = Number(data.utilidad || 0)
     const margenPct = data.margenPct || 0
-    const pedidos = data.pedidosDetalle || []
 
     return (
-      <div className="bg-card border border-border/80 rounded-xl shadow-xl p-3 min-w-[230px] max-w-[290px] text-xs font-sans">
+      <div className="bg-card border border-border/80 rounded-xl shadow-xl p-3 min-w-[210px] text-xs font-sans">
         <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2">
           <span className="font-bold text-foreground">{formatFechaEvolucion(label, true)}</span>
           <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-500/10 px-1.5 py-0.5 rounded">
@@ -98,28 +97,6 @@ function MargenTooltip({ active, payload, label }: any) {
               +S/ {utilidad.toFixed(2)}
             </span>
           </div>
-
-          {/* Desglose de pedidos del día con Cliente y Producto */}
-          {pedidos.length > 0 && (
-            <div className="pt-2 border-t border-border/60 space-y-1">
-              <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
-                {pedidos.length === 1 ? 'Detalle del pedido' : `${pedidos.length} pedidos registrados`}:
-              </div>
-              {pedidos.map((p: any, idx: number) => (
-                <div key={idx} className="flex justify-between items-start text-[11px] gap-2 py-0.5">
-                  <div className="truncate min-w-0 flex-1">
-                    <span className="font-semibold text-foreground block truncate">
-                      {formatClienteNombre(p.cliente)}
-                    </span>
-                    <span className="text-muted-foreground block text-[10px] truncate">{p.producto}</span>
-                  </div>
-                  <span className="font-mono font-bold text-foreground shrink-0">
-                    S/ {Number(p.total).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     )
