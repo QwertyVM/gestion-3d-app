@@ -177,7 +177,8 @@ export async function getStockCajas(negocioOverride?: TipoNegocio): Promise<Stoc
     }
   })
 
-  const totalStockDisponible = Math.max(0, totalCajasCompradas - totalCajasAsignadas)
+  const totalStockDisponible = lotes.reduce((sum, l) => sum + l.stockDisponible, 0)
+  const totalCajasAsignadasFinal = Math.max(0, totalCajasCompradas - totalStockDisponible)
   const costoUnitarioPromedio = totalStockDisponible > 0
     ? Number((valorTotalStockDisponible / totalStockDisponible).toFixed(2))
     : (lotes.length > 0 ? lotes[0].costoUnitario : 2.40)
@@ -188,7 +189,7 @@ export async function getStockCajas(negocioOverride?: TipoNegocio): Promise<Stoc
   return {
     negocio: targetNegocio,
     totalCajasCompradas,
-    totalCajasAsignadas,
+    totalCajasAsignadas: totalCajasAsignadasFinal,
     totalStockDisponible,
     valorTotalStockDisponible: Number(valorTotalStockDisponible.toFixed(2)),
     costoUnitarioPromedio,

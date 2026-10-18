@@ -254,6 +254,12 @@ export function OrderTableRow({
                 </span>
               )}
             </div>
+          ) : pedido.estado === 'ENTREGADO' ? (
+            pedido.utilidadNetaReal !== undefined ? (
+              <span className="text-[10px] text-muted-foreground font-mono mt-1 block" title="Utilidad neta estimada">
+                Neto: S/ {pedido.utilidadNetaReal.toFixed(1)}
+              </span>
+            ) : null
           ) : (
             <button
               type="button"

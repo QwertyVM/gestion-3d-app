@@ -65,7 +65,6 @@ import { RegisterMultiProductOrderModal } from './RegisterMultiProductOrderModal
 import { EditOrderModal } from './EditOrderModal'
 import { OrdersFilterBar } from './OrdersFilterBar'
 import { OrderDetailModal } from './OrderDetailModal'
-import { BoxStockCard } from './BoxStockCard'
 import { BoxLotsModal } from './BoxLotsModal'
 import {
   StockCajasResumen,
@@ -1242,20 +1241,6 @@ export function PedidosClient({
         />
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2.5. INVENTARIO DE CAJAS & PACKAGING (STOCK DE 50 UNIDADES RECIENTES)     */}
-      {/* ========================================================================= */}
-      {stockCajas && (
-        <BoxStockCard
-          stockCajas={stockCajas}
-          onOpenLotsModal={() => setIsBoxLotsModalOpen(true)}
-          onFilterSinCaja={() => {
-            setSelectedCajasFilter(prev => prev === 'SIN_CAJA' ? 'TODOS' : 'SIN_CAJA')
-            setCurrentPage(1)
-          }}
-          pedidosSinCajaCount={pedidosSinCajaCount}
-        />
-      )}
 
       {selectedCajasFilter === 'SIN_CAJA' && (
         <div className="flex items-center justify-between px-3.5 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-400">
