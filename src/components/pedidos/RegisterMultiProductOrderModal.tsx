@@ -451,10 +451,10 @@ export function RegisterMultiProductOrderModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-      <div className="max-w-4xl w-full bg-background border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200 relative">
+    <div className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
+      <div className="max-w-4xl w-full bg-background border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[95dvh] sm:max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200 relative">
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-border bg-card/50 flex items-center justify-between shrink-0">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-5 border-b border-border bg-card/50 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 text-primary p-2 rounded-xl">
               <Boxes className="h-5 w-5" />
@@ -634,7 +634,7 @@ export function RegisterMultiProductOrderModal({
           </div>
 
           {/* Sticky Bottom Footer Flotante con Backdrop Blur y Sombra Hacia Arriba */}
-          <div className="sticky bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-6 py-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+          <div className="sticky bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-4 sm:px-6 py-3 sm:py-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
             {/* Izquierda: Balance Estructurado */}
             <div className="flex items-center gap-3 flex-wrap">
               {/* Indicador Secundario de Total */}

@@ -86,7 +86,7 @@ export function OrderCustomerSection({
   onRegisterClientInline
 }: OrderCustomerSectionProps) {
   return (
-    <div className="bg-card/70 border border-border rounded-xl p-5 mb-5 space-y-4 shadow-sm">
+    <div className="bg-card/70 border border-border rounded-xl p-3.5 sm:p-5 mb-5 space-y-4 shadow-sm">
       {/* Encabezado de la Sección con Stepper Badge y Selector Segmentado */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-3">
         <div className="flex items-center">
@@ -386,7 +386,7 @@ export function OrderCustomerSection({
           </div>
 
           {/* Opción de guardar en directorio */}
-          <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/60">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-1 border-t border-border/60">
             <span className="text-[11px] text-muted-foreground">
               💡 Se registrará automáticamente con el pedido o puedes guardarlo de inmediato.
             </span>
@@ -396,7 +396,7 @@ export function OrderCustomerSection({
               variant="outline"
               disabled={!formCliente.trim() || isRegisteringClientInline}
               onClick={onRegisterClientInline}
-              className="text-[11px] h-7 border-border text-foreground bg-card hover:bg-muted rounded-xl cursor-pointer"
+              className="text-[11px] h-7 border-border text-foreground bg-card hover:bg-muted rounded-xl cursor-pointer shrink-0 self-end sm:self-auto"
             >
               {isRegisteringClientInline ? 'Guardando...' : '💾 Guardar en Directorio'}
             </Button>

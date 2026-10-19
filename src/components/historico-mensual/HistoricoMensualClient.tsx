@@ -1373,7 +1373,8 @@ export function HistoricoMensualClient({
           </span>
         </div>
 
-        <div className="w-full overflow-x-auto no-scrollbar">
+        {/* Vista Desktop (>= lg): Tabla con CERO scroll horizontal */}
+        <div className="hidden lg:block w-full overflow-hidden">
           <Table className="w-full">
             <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
               <TableRow className="border-[#E2D9CC] hover:bg-transparent text-xs font-bold text-[#75695D]">
@@ -1486,6 +1487,122 @@ export function HistoricoMensualClient({
               })}
             </TableBody>
           </Table>
+        </div>
+
+        {/* Vista Móvil y Tablet (< lg): Tarjetas Fluidas con CERO scroll horizontal */}
+        <div className="block lg:hidden p-3 space-y-3">
+          {displayedMonths.map((m) => {
+            const isPos = m.flujoNetoCalculado >= 0
+            const sumaInsumosMes = Object.values(m.egresosInsumosDetalle).reduce((s, v) => s + v, 0) + Object.values(m.egresosServiciosDetalle).reduce((s, v) => s + v, 0)
+            const sumaActivosFijosMes = Object.values(m.egresosActivosFijosDetalle).reduce((s, v) => s + v, 0)
+
+            return (
+              <div
+                key={m.monthKey}
+                onClick={() => {
+                  setSelectedMonthDetail(m)
+                  setModalCategoryFilter('TODOS')
+                  setModalSearch('')
+                }}
+                className="p-4 rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xs hover:border-[#A36F4C]/60 transition-all cursor-pointer space-y-3"
+              >
+                {/* Cabecera del Mes */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-extrabold text-base text-[#241C15]">
+                        {m.nombreMes}
+                      </span>
+                      {m.esMesActual && (
+                        <Badge variant="outline" className="bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B] text-[9px] font-bold px-1.5 py-0">
+                          En Curso
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-[#75695D] font-normal block mt-0.5">
+                      {m.cantidadPedidos} pedidos • {m.movimientos.length} movimientos
+                    </span>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedMonthDetail(m)
+                      setModalCategoryFilter('TODOS')
+                      setModalSearch('')
+                    }}
+                    className="h-7.5 px-3 text-xs font-bold border-[#E2D9CC] bg-[#FAF8F5] hover:bg-[#F4EFEA] hover:border-[#D4BEA7] text-[#241C15] rounded-xl cursor-pointer shadow-2xs inline-flex items-center gap-1.5 shrink-0"
+                  >
+                    <Eye className="h-3.5 w-3.5 text-[#A36F4C]" />
+                    <span>Auditar</span>
+                  </Button>
+                </div>
+
+                {/* Flujo Neto Destacado */}
+                <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                  isPos ? 'bg-[#EBF7EE] border-[#B4E3C0]' : 'bg-red-50 border-red-200'
+                }`}>
+                  <div>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                      isPos ? 'text-[#1E5E3A]' : 'text-[#A34335]'
+                    }`}>
+                      Flujo Neto del Mes
+                    </span>
+                    <span className={`font-mono font-black text-lg ${
+                      isPos ? 'text-[#1E5E3A]' : 'text-[#A34335]'
+                    }`}>
+                      {isPos ? `+${formatCurrency(m.flujoNetoCalculado)}` : formatCurrency(m.flujoNetoCalculado)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
+                      m.margenCalculadoPct >= 30
+                        ? 'bg-white text-[#1E5E3A] border-[#B4E3C0]'
+                        : m.margenCalculadoPct >= 0
+                        ? 'bg-white text-[#241C15] border-[#E2D9CC]'
+                        : 'bg-white text-[#A34335] border-red-200'
+                    }`}>
+                      {m.margenCalculadoPct}% margen
+                    </span>
+                  </div>
+                </div>
+
+                {/* Grid de Partidas */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1">
+                  <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
+                    <span className="text-[10px] text-[#75695D] block font-medium">Ingresos Cobrados:</span>
+                    <span className="font-mono font-bold text-[#1E5E3A] text-xs">
+                      +{formatCurrency(m.ingresosTotalesCalculados)}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
+                    <span className="text-[10px] text-[#75695D] block font-medium">Insumos & Operación:</span>
+                    <span className="font-mono font-bold text-[#A36F4C] text-xs">
+                      -{formatCurrency(sumaInsumosMes)}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
+                    <span className="text-[10px] text-[#75695D] block font-medium">Activos Fijos:</span>
+                    <span className="font-mono font-bold text-[#633E20] text-xs">
+                      {sumaActivosFijosMes > 0 ? `-${formatCurrency(sumaActivosFijosMes)}` : '—'}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#E2D9CC]/70">
+                    <span className="text-[10px] text-[#75695D] block font-medium">Cobranza:</span>
+                    <span className="font-mono font-bold text-[#241C15] text-xs">
+                      {m.efectividadCobroMesOrigenPct}% cobrado
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 

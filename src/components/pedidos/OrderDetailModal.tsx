@@ -193,90 +193,156 @@ export function OrderDetailModal({
             </span>
 
             <div className="bg-card border border-border rounded-xl overflow-hidden shadow-2xs">
-              <Table className="w-full">
-                <TableHeader className="bg-muted/40">
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableHead className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase py-2.5 pl-4">
-                      MODELO / PRODUCTO
-                    </TableHead>
-                    <TableHead className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase py-2.5 text-center w-14 shrink-0">
-                      CANT.
-                    </TableHead>
-                    <TableHead className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase py-2.5 text-right w-20 sm:w-24 shrink-0">
-                      P. UNIT
-                    </TableHead>
-                    <TableHead className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase py-2.5 text-right w-20 sm:w-24 shrink-0 pr-4">
-                      SUBTOTAL
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="text-xs divide-y divide-border">
-                  {pedido.items.map((it) => {
-                    const itemColores = getItemColors(it, filamentos)
-                    return (
-                      <TableRow key={it.id} className="border-border hover:bg-muted/20">
-                        <TableCell className="align-top py-3 pl-4 whitespace-normal break-words">
-                          <div className="space-y-1">
-                            <div className="font-semibold text-foreground text-xs sm:text-sm">
-                              {it.nombreProductoSnapshot}
-                            </div>
-
-                            {/* Fila de dots circulares de color con Tooltip al hover */}
-                            {itemColores.length > 0 && (
-                              <div className="flex items-center flex-wrap pt-0.5">
-                                {itemColores.map((col, cIdx) => (
-                                  <ColorDot key={col.id || cIdx} filamento={col} />
-                                ))}
+              {/* Desktop Table View (>= sm) */}
+              <div className="hidden sm:block">
+                <Table className="w-full">
+                  <TableHeader className="bg-muted/40">
+                    <TableRow className="border-border hover:bg-transparent">
+                      <TableHead className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase py-2.5 pl-4">
+                        MODELO / PRODUCTO
+                      </TableHead>
+                      <TableHead className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase py-2.5 text-center w-14 shrink-0">
+                        CANT.
+                      </TableHead>
+                      <TableHead className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase py-2.5 text-right w-20 sm:w-24 shrink-0">
+                        P. UNIT
+                      </TableHead>
+                      <TableHead className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase py-2.5 text-right w-20 sm:w-24 shrink-0 pr-4">
+                        SUBTOTAL
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-xs divide-y divide-border">
+                    {pedido.items.map((it) => {
+                      const itemColores = getItemColors(it, filamentos)
+                      return (
+                        <TableRow key={it.id} className="border-border hover:bg-muted/20">
+                          <TableCell className="align-top py-3 pl-4 whitespace-normal break-words">
+                            <div className="space-y-1">
+                              <div className="font-semibold text-foreground text-xs sm:text-sm">
+                                {it.nombreProductoSnapshot}
                               </div>
-                            )}
 
-                            {it.personalizacion && (
-                              <p className="text-[11px] text-muted-foreground italic">
-                                Nota: {it.personalizacion}
-                              </p>
-                            )}
-                          </div>
+                              {/* Fila de dots circulares de color con Tooltip al hover */}
+                              {itemColores.length > 0 && (
+                                <div className="flex items-center flex-wrap pt-0.5">
+                                  {itemColores.map((col, cIdx) => (
+                                    <ColorDot key={col.id || cIdx} filamento={col} />
+                                  ))}
+                                </div>
+                              )}
+
+                              {it.personalizacion && (
+                                <p className="text-[11px] text-muted-foreground italic">
+                                  Nota: {it.personalizacion}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center font-semibold text-foreground align-top py-3 shrink-0">
+                            {it.cantidad}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-muted-foreground align-top py-3 shrink-0">
+                            {formatCurrency(it.precioUnitario)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold text-foreground align-top py-3 pr-4 shrink-0">
+                            {formatCurrency(it.subtotal)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+
+                    {/* Fila opcional de flete/envío */}
+                    {pedido.costoEnvio > 0 && (
+                      <TableRow className="border-border bg-muted/20 text-xs">
+                        <TableCell colSpan={3} className="text-right text-muted-foreground py-2 pl-4">
+                          Costo de Envío / Flete:
                         </TableCell>
-                        <TableCell className="text-center font-semibold text-foreground align-top py-3 shrink-0">
-                          {it.cantidad}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-muted-foreground align-top py-3 shrink-0">
-                          {formatCurrency(it.precioUnitario)}
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-bold text-foreground align-top py-3 pr-4 shrink-0">
-                          {formatCurrency(it.subtotal)}
+                        <TableCell className="text-right font-mono font-semibold text-foreground py-2 pr-4 shrink-0">
+                          {formatCurrency(pedido.costoEnvio)}
                         </TableCell>
                       </TableRow>
-                    )
-                  })}
+                    )}
 
-                  {/* Fila opcional de flete/envío */}
-                  {pedido.costoEnvio > 0 && (
-                    <TableRow className="border-border bg-muted/20 text-xs">
-                      <TableCell colSpan={3} className="text-right text-muted-foreground py-2 pl-4">
-                        Costo de Envío / Flete:
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-semibold text-foreground py-2 pr-4 shrink-0">
-                        {formatCurrency(pedido.costoEnvio)}
+                    {/* Fila final de Total Pedido */}
+                    <TableRow className="border-t-2 border-border bg-card">
+                      <TableCell colSpan={4} className="py-3 px-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-sm font-semibold text-muted-foreground">
+                            Total Pedido:
+                          </span>
+                          <span className="text-base font-bold text-foreground font-mono">
+                            {formatCurrency(pedido.total)}
+                          </span>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  )}
+                  </TableBody>
+                </Table>
+              </div>
 
-                  {/* Fila final de Total Pedido */}
-                  <TableRow className="border-t-2 border-border bg-card">
-                    <TableCell colSpan={4} className="py-3 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="text-sm font-semibold text-muted-foreground">
-                          Total Pedido:
-                        </span>
-                        <span className="text-base font-bold text-foreground font-mono">
-                          {formatCurrency(pedido.total)}
+              {/* Mobile Cards View (< sm) */}
+              <div className="block sm:hidden divide-y divide-border">
+                {pedido.items.map((it) => {
+                  const itemColores = getItemColors(it, filamentos)
+                  return (
+                    <div key={it.id} className="p-3.5 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <span className="font-semibold text-foreground text-xs leading-snug block">
+                            {it.nombreProductoSnapshot}
+                          </span>
+                          {itemColores.length > 0 && (
+                            <div className="flex items-center flex-wrap pt-0.5">
+                              {itemColores.map((col, cIdx) => (
+                                <ColorDot key={col.id || cIdx} filamento={col} />
+                              ))}
+                            </div>
+                          )}
+                          {it.personalizacion && (
+                            <p className="text-[11px] text-muted-foreground italic">
+                              Nota: {it.personalizacion}
+                            </p>
+                          )}
+                        </div>
+
+                        <span className="text-xs font-mono font-black text-foreground shrink-0 bg-secondary px-2 py-0.5 rounded-md border border-border">
+                          {it.cantidad} {it.cantidad === 1 ? 'ud' : 'uds'}
                         </span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+
+                      <div className="flex items-center justify-between text-xs pt-1 border-t border-border/50">
+                        <span className="text-muted-foreground text-[11px]">
+                          Unit: {formatCurrency(it.precioUnitario)}
+                        </span>
+                        <span className="font-mono font-bold text-foreground">
+                          Subtotal: {formatCurrency(it.subtotal)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+
+                {pedido.costoEnvio > 0 && (
+                  <div className="p-3 bg-muted/20 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-medium">
+                      Costo de Envío / Flete:
+                    </span>
+                    <span className="font-mono font-bold text-foreground">
+                      {formatCurrency(pedido.costoEnvio)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="p-3.5 bg-card flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted-foreground">
+                    Total Pedido:
+                  </span>
+                  <span className="text-base font-black text-foreground font-mono">
+                    {formatCurrency(pedido.total)}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 

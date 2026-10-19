@@ -181,96 +181,155 @@ export function PackagingOrdersTable({
           )}
         </div>
       ) : (
-        <div className="w-full overflow-hidden">
-          <Table className="w-full table-fixed">
-            <TableHeader className="bg-secondary/40 border-y border-border/70 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
-              <TableRow className="border-none hover:bg-transparent">
-                <TableHead className="w-[18%] pl-5 pr-2 py-3 text-left">PEDIDO</TableHead>
-                <TableHead className="w-[24%] px-2 py-3 text-left">CLIENTE</TableHead>
-                <TableHead className="w-[24%] px-2 py-3 text-left">TIPO DE CAJA</TableHead>
-                <TableHead className="w-[12%] px-2 py-3 text-center">CANTIDAD</TableHead>
-                <TableHead className="w-[12%] px-2 py-3 text-right">COSTO TOTAL</TableHead>
-                <TableHead className="w-[10%] pr-5 pl-2 py-3 text-right">ACCIÓN</TableHead>
-              </TableRow>
-            </TableHeader>
+        <>
+          {/* Vista Desktop (>= md): Tabla table-fixed con CERO scroll horizontal */}
+          <div className="hidden md:block w-full overflow-hidden">
+            <Table className="w-full table-fixed">
+              <TableHeader className="bg-secondary/40 border-y border-border/70 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                <TableRow className="border-none hover:bg-transparent">
+                  <TableHead className="w-[18%] pl-5 pr-2 py-3 text-left">PEDIDO</TableHead>
+                  <TableHead className="w-[24%] px-2 py-3 text-left">CLIENTE</TableHead>
+                  <TableHead className="w-[24%] px-2 py-3 text-left">TIPO DE CAJA</TableHead>
+                  <TableHead className="w-[12%] px-2 py-3 text-center">CANTIDAD</TableHead>
+                  <TableHead className="w-[12%] px-2 py-3 text-right">COSTO TOTAL</TableHead>
+                  <TableHead className="w-[10%] pr-5 pl-2 py-3 text-right">ACCIÓN</TableHead>
+                </TableRow>
+              </TableHeader>
 
-            <TableBody>
-              {filteredAssignments.map((row) => (
-                <TableRow key={row.asignacionId} className="hover:bg-muted/30 transition-colors border-b border-border/60">
-                  {/* PEDIDO */}
-                  <TableCell className="pl-5 pr-2 py-3">
-                    <div className="flex flex-col">
-                      <span className="font-mono font-bold text-xs text-foreground">
-                        {row.codigoPedido}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Calendar className="w-2.5 h-2.5" />
-                        {formatDate(row.fechaPedido)}
-                      </span>
-                    </div>
-                  </TableCell>
+              <TableBody>
+                {filteredAssignments.map((row) => (
+                  <TableRow key={row.asignacionId} className="hover:bg-muted/30 transition-colors border-b border-border/60">
+                    {/* PEDIDO */}
+                    <TableCell className="pl-5 pr-2 py-3">
+                      <div className="flex flex-col">
+                        <span className="font-mono font-bold text-xs text-foreground">
+                          {row.codigoPedido}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <Calendar className="w-2.5 h-2.5" />
+                          {formatDate(row.fechaPedido)}
+                        </span>
+                      </div>
+                    </TableCell>
 
-                  {/* CLIENTE */}
-                  <TableCell className="px-2 py-3">
-                    <span className="text-xs font-semibold text-foreground truncate block">
+                    {/* CLIENTE */}
+                    <TableCell className="px-2 py-3">
+                      <span className="text-xs font-semibold text-foreground truncate block">
+                        {row.cliente}
+                      </span>
+                    </TableCell>
+
+                    {/* TIPO DE CAJA */}
+                    <TableCell className="px-2 py-3">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="p-1 rounded-md bg-primary/10 text-primary shrink-0">
+                          <Package className="w-3 h-3" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs text-foreground font-medium truncate block">
+                            {row.nombreCaja}
+                          </span>
+                          <span className="text-[10px] font-mono font-semibold text-primary/80 block">
+                            LOT-{row.loteId.replace(/-/g, '').slice(0, 6).toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    {/* CANTIDAD */}
+                    <TableCell className="px-2 py-3 text-center">
+                      <Badge variant="outline" className="text-xs font-mono font-bold px-2 py-0.5">
+                        {row.cantidad} ud{row.cantidad > 1 ? 's' : ''}
+                      </Badge>
+                    </TableCell>
+
+                    {/* COSTO TOTAL */}
+                    <TableCell className="px-2 py-3 text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="font-mono font-bold text-xs text-foreground">
+                          S/ {row.costoTotal.toFixed(2)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          (S/ {row.costoUnitario.toFixed(2)} c/u)
+                        </span>
+                      </div>
+                    </TableCell>
+
+                    {/* ACCIÓN: LINK AL PEDIDO */}
+                    <TableCell className="pr-5 pl-2 py-3 text-right">
+                      <Link href={`/pedidos`}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
+                          title="Ver en Pedidos"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Vista Móvil (< md): Tarjetas Individuales Fluidas (CERO scroll horizontal) */}
+          <div className="block md:hidden divide-y divide-border/60">
+            {filteredAssignments.map((row) => (
+              <div key={row.asignacionId} className="p-3.5 space-y-2.5 bg-card hover:bg-secondary/35 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="font-mono font-bold text-xs text-foreground block">
+                      {row.codigoPedido}
+                    </span>
+                    <span className="text-xs font-bold text-foreground block mt-0.5">
                       {row.cliente}
                     </span>
-                  </TableCell>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <Calendar className="w-3 h-3" />
+                      {formatDate(row.fechaPedido)}
+                    </span>
+                  </div>
 
-                  {/* TIPO DE CAJA */}
-                  <TableCell className="px-2 py-3">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="p-1 rounded-md bg-primary/10 text-primary shrink-0">
-                        <Package className="w-3 h-3" />
-                      </div>
-                      <div className="min-w-0">
-                        <span className="text-xs text-foreground font-medium truncate block">
-                          {row.nombreCaja}
-                        </span>
-                        <span className="text-[10px] font-mono font-semibold text-primary/80 block">
-                          LOT-{row.loteId.replace(/-/g, '').slice(0, 6).toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                  </TableCell>
-
-                  {/* CANTIDAD */}
-                  <TableCell className="px-2 py-3 text-center">
-                    <Badge variant="outline" className="text-xs font-mono font-bold px-2 py-0.5">
+                  <div className="text-right">
+                    <span className="font-mono font-black text-sm text-foreground block">
+                      S/ {row.costoTotal.toFixed(2)}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] font-mono font-bold px-1.5 py-0 mt-0.5">
                       {row.cantidad} ud{row.cantidad > 1 ? 's' : ''}
                     </Badge>
-                  </TableCell>
+                  </div>
+                </div>
 
-                  {/* COSTO TOTAL */}
-                  <TableCell className="px-2 py-3 text-right">
-                    <div className="flex flex-col items-end">
-                      <span className="font-mono font-bold text-xs text-foreground">
-                        S/ {row.costoTotal.toFixed(2)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        (S/ {row.costoUnitario.toFixed(2)} c/u)
-                      </span>
+                <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50 text-xs">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="p-1 rounded-md bg-primary/10 text-primary shrink-0">
+                      <Package className="w-3 h-3" />
                     </div>
-                  </TableCell>
+                    <span className="text-xs text-foreground font-medium truncate">
+                      {row.nombreCaja}
+                    </span>
+                    <span className="text-[10px] font-mono text-muted-foreground shrink-0">
+                      (LOT-{row.loteId.replace(/-/g, '').slice(0, 6).toUpperCase()})
+                    </span>
+                  </div>
 
-                  {/* ACCIÓN: LINK AL PEDIDO */}
-                  <TableCell className="pr-5 pl-2 py-3 text-right">
-                    <Link href={`/pedidos`}>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
-                        title="Ver en Pedidos"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  <Link href="/pedidos" className="shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs text-primary font-medium hover:bg-primary/10 rounded-lg cursor-pointer flex items-center gap-1"
+                    >
+                      <span>Ver Pedido</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
