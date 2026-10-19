@@ -60,9 +60,9 @@ export function OrdersFilterBar({
   }, [selectedPagoFilter])
 
   return (
-    <div className="w-full bg-card border border-border rounded-2xl p-3 shadow-2xs mb-6 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+    <div className="w-full bg-card border border-border rounded-2xl p-3 shadow-2xs mb-6 flex flex-col 2xl:flex-row items-stretch 2xl:items-center justify-between gap-3">
       {/* Bloque 1 - Izquierda (Búsqueda) */}
-      <div className="relative flex-1 min-w-[200px] max-w-sm lg:max-w-md w-full">
+      <div className="relative flex-1 min-w-[220px] max-w-md w-full">
         <Search className="left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none absolute" />
         <Input
           type="text"
@@ -84,10 +84,10 @@ export function OrdersFilterBar({
         )}
       </div>
 
-      {/* Fila 2 en móviles/tablets (< 1024px) / Desenvuelto en 1 sola fila en desktop (>= 1024px) */}
-      <div className="flex flex-wrap items-center justify-between gap-2 w-full lg:contents">
+      {/* Fila 2 en pantallas medianas (< 1536px) / Desenvuelto en 1 sola fila en monitores anchos (>= 1536px) */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 w-full 2xl:contents">
         {/* Bloque 2 - Centro (Estados de Producción) */}
-        <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl h-10 flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar">
+        <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl h-10 flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar max-w-full">
           {STATUS_TABS.map((tab) => {
             const isSelected = selectedEstadoFilter === tab.value
             const count = statusCounts ? statusCounts[tab.value] : undefined
@@ -120,7 +120,7 @@ export function OrdersFilterBar({
         </div>
 
         {/* Bloque 3 - Derecha (Pagos y Fecha alineados al borde derecho) */}
-        <div className="flex items-center gap-2 shrink-0 lg:ml-auto">
+        <div className="flex items-center gap-2 shrink-0 2xl:ml-auto">
           {/* Selector de Pagos */}
           <DropdownMenu>
             <DropdownMenuTrigger

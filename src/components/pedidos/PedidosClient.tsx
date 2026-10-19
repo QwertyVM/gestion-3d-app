@@ -76,6 +76,7 @@ import {
 import { KpiCard } from './KpiCard'
 import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 import { OrderRow } from './OrderRow'
+import { OrderCardMobile } from './OrderCardMobile'
 import { ColorDot } from './ColorDot'
 import { getItemColors, consolidateOrderItems, formatCurrency } from './orderUtils'
 
@@ -1350,112 +1351,130 @@ export function PedidosClient({
             )}
           </div>
         ) : (
-          <div className="w-full overflow-hidden">
-            <Table className="w-full table-fixed">
-              <TableHeader className="bg-secondary/40 border-y border-border/70 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
-                <TableRow className="border-none hover:bg-transparent">
-                  {/* 1. PEDIDO (14% / pl-5) */}
-                  <TableHead className="w-[14%] pl-5 pr-3 py-3 text-left">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('codigo')}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
-                    >
-                      <span>PEDIDO</span>
-                      {sortField === 'codigo' || sortField === 'fecha' ? (
-                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
-                      )}
-                    </button>
-                  </TableHead>
+          <>
+            {/* Vista Desktop (>= md): Tabla table-fixed con CERO scroll horizontal */}
+            <div className="hidden md:block w-full overflow-hidden">
+              <Table className="w-full table-fixed">
+                <TableHeader className="bg-secondary/40 border-y border-border/70 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                  <TableRow className="border-none hover:bg-transparent">
+                    {/* 1. PEDIDO (12% / pl-5) */}
+                    <TableHead className="w-[12%] pl-5 pr-3 py-3 text-left">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('codigo')}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                      >
+                        <span>PEDIDO</span>
+                        {sortField === 'codigo' || sortField === 'fecha' ? (
+                          sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
+                        )}
+                      </button>
+                    </TableHead>
 
-                  {/* 2. CLIENTE (18% / px-3) */}
-                  <TableHead className="w-[18%] px-3 py-3 text-left">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('cliente')}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
-                    >
-                      <span>CLIENTE</span>
-                      {sortField === 'cliente' ? (
-                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
-                      )}
-                    </button>
-                  </TableHead>
+                    {/* 2. CLIENTE (17% / px-3) */}
+                    <TableHead className="w-[17%] px-3 py-3 text-left">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('cliente')}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                      >
+                        <span>CLIENTE</span>
+                        {sortField === 'cliente' ? (
+                          sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
+                        )}
+                      </button>
+                    </TableHead>
 
-                  {/* 3. PRODUCTOS & FILAMENTOS (22% / px-3) */}
-                  <TableHead className="w-[22%] px-3 py-3 text-left">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('cantidad')}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
-                    >
-                      <span>PRODUCTOS & FILAMENTOS</span>
-                      {sortField === 'cantidad' ? (
-                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
-                      )}
-                    </button>
-                  </TableHead>
+                    {/* 3. PRODUCTOS & FILAMENTOS (21% / px-3) */}
+                    <TableHead className="w-[21%] px-3 py-3 text-left">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('cantidad')}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                      >
+                        <span>PRODUCTOS & FILAMENTOS</span>
+                        {sortField === 'cantidad' ? (
+                          sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
+                        )}
+                      </button>
+                    </TableHead>
 
-                  {/* 4. ENTREGA & DESTINO (18% / px-3) */}
-                  <TableHead className="w-[18%] px-3 py-3 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
-                    <span>ENTREGA & DESTINO</span>
-                  </TableHead>
+                    {/* 4. ENTREGA & DESTINO (15% / px-3) */}
+                    <TableHead className="w-[15%] px-3 py-3 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                      <span>ENTREGA & DESTINO</span>
+                    </TableHead>
 
-                  {/* 5. ESTADO & POSTVENTA (14% / px-3) */}
-                  <TableHead className="w-[14%] px-3 py-3 text-left">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('estado')}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
-                    >
-                      <span>ESTADO & POSTVENTA</span>
-                      {sortField === 'estado' ? (
-                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
-                      )}
-                    </button>
-                  </TableHead>
+                    {/* 5. ESTADO & POSTVENTA (17% / px-3) */}
+                    <TableHead className="w-[17%] px-3 py-3 text-left">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('estado')}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                      >
+                        <span>ESTADO & POSTVENTA</span>
+                        {sortField === 'estado' ? (
+                          sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
+                        )}
+                      </button>
+                    </TableHead>
 
-                  {/* 6. TOTAL & BALANCE (14% / pr-5) */}
-                  <TableHead className="w-[14%] pl-3 pr-5 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => handleSort('total')}
-                      className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase ml-auto"
-                    >
-                      <span>TOTAL & BALANCE</span>
-                      {sortField === 'total' || sortField === 'saldoPendiente' ? (
-                        sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
-                      ) : (
-                        <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
-                      )}
-                    </button>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
+                    {/* 6. TOTAL & BALANCE (18% / pr-5) */}
+                    <TableHead className="w-[18%] pl-3 pr-5 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('total')}
+                        className="inline-flex items-center justify-end gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                      >
+                        <span>TOTAL & BALANCE</span>
+                        {sortField === 'total' || sortField === 'saldoPendiente' ? (
+                          sortOrder === 'asc' ? <ArrowUp className="h-3 w-3 text-primary" /> : <ArrowDown className="h-3 w-3 text-primary" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 text-muted-foreground/40" />
+                        )}
+                      </button>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
 
-              <TableBody>
-                {paginatedPedidos.map((p) => (
-                  <OrderRow
-                    key={p.id}
-                    pedido={p}
-                    filamentos={filamentos}
-                    onSelectPedido={setSelectedPedidoDetail}
-                    onCambiarEstado={handleCambiarEstado}
-                    onTogglePostventa={handleTogglePostventa}
-                    onQuickAssignBox={handleQuickAssignBox}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                <TableBody>
+                  {paginatedPedidos.map((p) => (
+                    <OrderRow
+                      key={p.id}
+                      pedido={p}
+                      filamentos={filamentos}
+                      onSelectPedido={setSelectedPedidoDetail}
+                      onCambiarEstado={handleCambiarEstado}
+                      onTogglePostventa={handleTogglePostventa}
+                      onQuickAssignBox={handleQuickAssignBox}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Vista Móvil (< md): Tarjetas Touch-Friendly Fluidas (CERO scroll horizontal) */}
+            <div className="block md:hidden p-3 space-y-3">
+              {paginatedPedidos.map((p) => (
+                <OrderCardMobile
+                  key={p.id}
+                  pedido={p}
+                  filamentos={filamentos}
+                  onSelectPedido={setSelectedPedidoDetail}
+                  onCambiarEstado={handleCambiarEstado}
+                  onTogglePostventa={handleTogglePostventa}
+                  onQuickAssignBox={handleQuickAssignBox}
+                />
+              ))}
+            </div>
+          </>
         )}
 
         {/* ========================================================================= */}

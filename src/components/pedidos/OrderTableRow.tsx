@@ -72,8 +72,8 @@ export function OrderTableRow({
       onClick={() => onSelectPedido(pedido)}
       className="h-18 border-b border-border/60 hover:bg-secondary/35 transition-colors cursor-pointer group"
     >
-      {/* 1. PEDIDO (w-[14%] / text-left pl-5) */}
-      <TableCell className="w-[14%] pl-5 pr-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
+      {/* 1. PEDIDO (w-[12%] / text-left pl-5) */}
+      <TableCell className="w-[12%] pl-5 pr-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
         <div className="flex flex-col items-start min-w-0">
           <span className="font-mono text-xs font-extrabold text-foreground tracking-tight">
             {codigoLabel}
@@ -87,8 +87,8 @@ export function OrderTableRow({
         </div>
       </TableCell>
 
-      {/* 2. CLIENTE (w-[18%] / text-left px-3) */}
-      <TableCell className="w-[18%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
+      {/* 2. CLIENTE (w-[17%] / text-left px-3) */}
+      <TableCell className="w-[17%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
         <div className="flex flex-col items-start min-w-0">
           <span className="text-sm font-bold text-foreground leading-snug break-words">
             {pedido.cliente}
@@ -126,8 +126,8 @@ export function OrderTableRow({
         </div>
       </TableCell>
 
-      {/* 3. PRODUCTOS & FILAMENTOS (w-[22%] / text-left px-3) */}
-      <TableCell className="w-[22%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
+      {/* 3. PRODUCTOS & FILAMENTOS (w-[21%] / text-left px-3) */}
+      <TableCell className="w-[21%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
         <div className="space-y-1.5 min-w-0">
           {consolidatedItems.length > 0 ? (
             <>
@@ -161,8 +161,8 @@ export function OrderTableRow({
         </div>
       </TableCell>
 
-      {/* 4. ENTREGA & DESTINO (w-[18%] / text-left px-3) */}
-      <TableCell className="w-[18%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
+      {/* 4. ENTREGA & DESTINO (w-[15%] / text-left px-3) */}
+      <TableCell className="w-[15%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal">
         <div className="flex flex-col items-start min-w-0">
           {pedido.diaEntregaPrometida ? (
             <div
@@ -191,9 +191,9 @@ export function OrderTableRow({
         </div>
       </TableCell>
 
-      {/* 5. ESTADO & POSTVENTA (w-[14%] / text-left px-3) */}
+      {/* 5. ESTADO & POSTVENTA (w-[17%] / text-left px-3) */}
       <TableCell
-        className="w-[14%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal"
+        className="w-[17%] px-3 py-3 align-middle overflow-hidden min-w-0 text-left whitespace-normal"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col items-start min-w-0">
@@ -225,8 +225,8 @@ export function OrderTableRow({
         </div>
       </TableCell>
 
-      {/* 6. TOTAL & BALANCE (w-[14%] / text-right pr-5) */}
-      <TableCell className="w-[14%] pl-3 pr-5 py-3 align-middle overflow-hidden min-w-0 text-right whitespace-normal">
+      {/* 6. TOTAL & BALANCE (w-[18%] / text-right pr-5) */}
+      <TableCell className="w-[18%] pl-3 pr-5 py-3 align-middle overflow-hidden min-w-0 text-right whitespace-normal">
         <div className="flex flex-col items-end gap-0.5 min-w-0">
           <span className="font-mono text-sm font-extrabold text-foreground text-right">
             {formatCurrency(pedido.total)}
