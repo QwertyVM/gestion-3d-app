@@ -476,7 +476,7 @@ export function calcularDistribucionFinanciera({
       colorBar: 'bg-sky-700',
       iconName: 'landmark',
       detalleDesc: 'desembolsos de financiamiento y créditos bancarios',
-      extraBadge: 'TEA 8.70% • 24 cuotas'
+      extraBadge: totalPrestamoBCP >= 50 ? 'TEA 8.70% • 24 cuotas' : undefined
     })
   }
 

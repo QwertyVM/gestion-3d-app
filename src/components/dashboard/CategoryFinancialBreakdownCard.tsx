@@ -8,7 +8,6 @@ import {
   TooltipContent, 
   TooltipProvider 
 } from '@/components/ui/tooltip'
-import { Badge } from '@/components/ui/badge'
 import { 
   Printer, 
   Zap, 
@@ -27,7 +26,8 @@ import {
   Box,
   Info,
   ArrowDownRight,
-  Smartphone
+  Smartphone,
+  ShieldCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { 
@@ -116,7 +116,7 @@ export function CategoryFinancialBreakdownCard({
     `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // =========================================================================
-  // CÁLCULO CENTRALIZADO (Lógica Backend Compartida)
+  // CÁLCULO CENTRALIZADO
   // =========================================================================
   const distribucion: ResumenDistribucionFinanciera = useMemo(() => {
     return calcularDistribucionFinanciera({
@@ -150,17 +150,17 @@ export function CategoryFinancialBreakdownCard({
             <div>
               <CardTitle className="text-base font-bold text-foreground tracking-tight">
                 {vistaPrincipal === 'ventas' 
-                  ? 'Ventas del Taller & Fondos'
+                  ? 'Ventas & Origen de Fondos'
                   : vistaPrincipal === 'egresos'
                   ? 'Distribución de Egresos & Costos'
                   : 'Canales de Captación'}
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-0.5">
                 {vistaPrincipal === 'ventas'
-                  ? 'Separación clara entre facturación comercial a clientes y financiamiento'
+                  ? 'Facturación comercial a clientes vs. financiamiento y aportes'
                   : vistaPrincipal === 'egresos'
                   ? 'Estructura operativa de insumos, envíos, pauta y compromisos fijos'
-                  : 'Rendimiento y concentración de facturación por canal'}
+                  : 'Concentración de pedidos y rendimiento por canal'}
               </CardDescription>
             </div>
 
@@ -179,7 +179,7 @@ export function CategoryFinancialBreakdownCard({
                 <ShoppingBag className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
                 <span>Ventas & Fondos</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground">
-                  {distribucion.ventasReales.items.length + distribucion.inyeccionCapital.items.length}
+                  {distribucion.ventasReales.items.length}
                 </span>
               </button>
 
@@ -196,7 +196,7 @@ export function CategoryFinancialBreakdownCard({
                 <ArrowDownRight className="w-3.5 h-3.5 text-destructive" />
                 <span>Egresos</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground">
-                  {distribucion.egresos.partidasCount}
+                  {distribucion.egresos.todos.length}
                 </span>
               </button>
 
@@ -212,6 +212,9 @@ export function CategoryFinancialBreakdownCard({
               >
                 <Smartphone className="w-3.5 h-3.5 text-primary" />
                 <span>Canales</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground">
+                  {distribucion.canales.length}
+                </span>
               </button>
             </div>
           </div>
@@ -282,11 +285,13 @@ export function CategoryFinancialBreakdownCard({
           {vistaPrincipal === 'ventas' && (
             <div className="space-y-4 animate-in fade-in-50 duration-200">
               
-              {/* Tarjeta Ejecutiva de Composición de Fondos */}
-              <div className="p-3 rounded-xl bg-secondary/50 border border-border/70 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground font-medium">Total ingresado en cuenta bancaria</span>
-                  <span className="font-mono font-black text-foreground text-sm">
+              {/* Tarjeta Ejecutiva de Composición de Fondos (Diseño Limpio sin cajas anidadas) */}
+              <div className="p-3 rounded-xl bg-secondary/40 border border-border/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    Total Ingresado en Cuenta Bancaria
+                  </span>
+                  <span className="font-mono font-black text-foreground text-sm sm:text-base">
                     {formatCurrency(totalBancos)}
                   </span>
                 </div>
@@ -296,7 +301,7 @@ export function CategoryFinancialBreakdownCard({
                   <div 
                     className="h-full bg-emerald-600 dark:bg-emerald-500 transition-all duration-500"
                     style={{ width: `${Math.max(2, Math.min(100, pctVentasReales))}%` }}
-                    title={`Ventas: ${pctVentasReales.toFixed(1)}%`}
+                    title={`Ventas Comerciales: ${pctVentasReales.toFixed(1)}%`}
                   />
                   {pctInyeccion > 0 && (
                     <div 
@@ -307,8 +312,8 @@ export function CategoryFinancialBreakdownCard({
                   )}
                 </div>
 
-                {/* Leyenda concisa sin saturación */}
-                <div className="flex items-center justify-between text-[11px] font-mono pt-0.5">
+                {/* Leyenda concisa y limpia en una sola línea */}
+                <div className="flex items-center justify-between text-[11px] font-mono flex-wrap gap-1">
                   <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-semibold">
                     <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
                     <span>Ventas Comerciales: {formatCurrency(distribucion.ventasReales.total)}</span>
@@ -319,7 +324,9 @@ export function CategoryFinancialBreakdownCard({
                     <div className="flex items-center gap-1.5 text-sky-800 dark:text-sky-300 font-semibold">
                       <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" />
                       <span>Financiamiento: {formatCurrency(distribucion.inyeccionCapital.total)}</span>
-                      <span className="text-muted-foreground text-[10px]">({pctInyeccion.toFixed(1)}%)</span>
+                      <span className="text-muted-foreground text-[10px]">
+                        ({pctInyeccion < 0.1 ? '< 0.1%' : `${pctInyeccion.toFixed(1)}%`})
+                      </span>
                     </div>
                   )}
                 </div>
@@ -342,90 +349,120 @@ export function CategoryFinancialBreakdownCard({
                     Sin ventas de catálogo registradas en el período.
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
-                    {distribucion.ventasReales.items.map((item) => (
-                      <div 
-                        key={item.id} 
-                        className="p-2 -mx-2 rounded-xl hover:bg-secondary/40 transition-colors space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between text-xs gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="font-bold text-foreground truncate">{item.nombre}</span>
-                            <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-md font-mono shrink-0">
-                              {item.count} {item.count === 1 ? 'ud' : 'uds'}
-                            </span>
+                  <div className="space-y-2">
+                    {distribucion.ventasReales.items.map((item) => {
+                      const avgUnit = item.count > 0 ? (item.monto / item.count) : 0
+                      return (
+                        <div 
+                          key={item.id} 
+                          className="p-2 -mx-2 rounded-xl hover:bg-secondary/40 transition-colors space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between text-xs gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-bold text-foreground truncate">{item.nombre}</span>
+                              <span className="text-[10px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded-md font-mono shrink-0">
+                                {item.count} {item.count === 1 ? 'ud' : 'uds'}
+                              </span>
+                              {avgUnit > 0 && (
+                                <span className="text-[10px] text-muted-foreground/75 font-mono hidden sm:inline shrink-0">
+                                  (~ {formatCurrency(avgUnit)}/ud)
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 font-mono">
+                              <span className="font-bold text-foreground">{formatCurrency(item.monto)}</span>
+                              <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded-md min-w-[42px] text-right">
+                                {item.porcentaje.toFixed(1)}%
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0 font-mono">
-                            <span className="font-bold text-foreground">{formatCurrency(item.monto)}</span>
-                            <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 px-1.5 py-0.5 rounded-md min-w-[42px] text-right">
-                              {item.porcentaje.toFixed(1)}%
-                            </span>
-                          </div>
-                        </div>
 
-                        {/* Barra de progreso elegante */}
-                        <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full transition-all duration-500", item.colorBar || "bg-emerald-600")}
-                            style={{ width: `${Math.max(3, Math.min(100, item.porcentaje))}%` }}
-                          />
+                          {/* Barra de progreso */}
+                          <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                            <div
+                              className={cn("h-full rounded-full transition-all duration-500", item.colorBar || "bg-emerald-600")}
+                              style={{ width: `${Math.max(3, Math.min(100, item.porcentaje))}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
 
-              {/* SECCIÓN B: FONDOS EXTERNOS & FINANCIAMIENTO */}
+              {/* SECCIÓN B: FONDOS EXTERNOS & FINANCIAMIENTO (Tratamiento refinado y calibrado) */}
               {distribucion.inyeccionCapital.items.length > 0 && (
-                <div className="p-3 rounded-xl bg-sky-500/5 border border-sky-500/20 space-y-2">
+                <div className="pt-2 border-t border-border/50 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-1.5">
                       <Landmark className="w-3.5 h-3.5 text-sky-700 dark:text-sky-400" />
-                      <span className="font-bold text-sky-950 dark:text-sky-200 text-[11px] uppercase tracking-wide">
-                        Inyección de Capital & Préstamos
+                      <span className="font-bold text-foreground text-[10px] uppercase tracking-wider">
+                        Financiamiento & Fondos Externos
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
                       <span className="text-[9px] font-semibold text-sky-800 dark:text-sky-300 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-md">
-                        Deuda / Pasivo
+                        Pasivo / No Comercial
                       </span>
                       <Tooltip>
                         <TooltipTrigger className="text-muted-foreground hover:text-foreground cursor-pointer inline-flex items-center">
                           <Info className="w-3.5 h-3.5 opacity-70" />
                         </TooltipTrigger>
                         <TooltipContent className="bg-card text-foreground border border-border text-xs max-w-xs p-2.5 rounded-xl shadow-lg">
-                          Estos fondos son inyecciones de liquidez y financiamiento. No computan como venta comercial ni margen de ganancia del taller.
+                          Inyecciones de liquidez o créditos. No computan como margen operativo del taller.
                         </TooltipContent>
                       </Tooltip>
                     </div>
                   </div>
 
-                  {distribucion.inyeccionCapital.items.map((item) => (
-                    <div key={item.id} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="font-semibold text-foreground truncate">{item.nombre}</span>
-                          {item.extraBadge && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 shrink-0">
-                              {item.extraBadge}
-                            </span>
-                          )}
-                        </div>
-                        <span className="font-mono font-bold text-sky-900 dark:text-sky-200 shrink-0">
-                          {formatCurrency(item.monto)}
-                        </span>
-                      </div>
+                  <div className="space-y-2">
+                    {distribucion.inyeccionCapital.items.map((item) => {
+                      // Proporción real respecto a la totalidad de fondos ingresados al taller
+                      const pctOfTotal = totalBancos > 0 ? (item.monto / totalBancos) * 100 : 0
+                      const isMicroAmount = item.monto < 1.0
 
-                      <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
-                        <div
-                          className="h-full bg-sky-500 rounded-full transition-all duration-500"
-                          style={{ width: `${Math.max(2, Math.min(100, item.porcentaje))}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                      return (
+                        <div key={item.id} className="p-2 -mx-2 rounded-xl bg-sky-500/5 border border-sky-500/10 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="font-semibold text-foreground truncate">{item.nombre}</span>
+                              {item.extraBadge && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 shrink-0">
+                                  {item.extraBadge}
+                                </span>
+                              )}
+                              {isMicroAmount && (
+                                <span className="text-[9px] font-mono text-muted-foreground italic shrink-0">
+                                  (ajuste bancario)
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 font-mono">
+                              <span className="font-bold text-foreground">
+                                {formatCurrency(item.monto)}
+                              </span>
+                              <span className="text-[10px] font-bold text-sky-800 dark:text-sky-300 bg-sky-500/10 px-1.5 py-0.5 rounded-md min-w-[42px] text-right">
+                                {pctOfTotal < 0.1 ? '< 0.1%' : `${pctOfTotal.toFixed(1)}%`}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Barra de progreso calibrada al peso real en cuenta (sin inflar micro-montos) */}
+                          <div className="h-1.5 w-full rounded-full bg-secondary/80 overflow-hidden">
+                            <div
+                              className="h-full bg-sky-500 rounded-full transition-all duration-500"
+                              style={{ 
+                                width: `${Math.max(isMicroAmount ? 1 : 2, Math.min(100, pctOfTotal))}%`,
+                                opacity: isMicroAmount ? 0.6 : 1
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -521,6 +558,8 @@ export function CategoryFinancialBreakdownCard({
                 <div className="space-y-2">
                   {distribucion.canales.map((item) => {
                     const Icon = getIconComponent(item.iconName)
+                    const avgTicketCanal = item.count > 0 ? (item.total / item.count) : 0
+
                     return (
                       <div 
                         key={item.canal} 
@@ -533,6 +572,11 @@ export function CategoryFinancialBreakdownCard({
                             <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
                               ({item.count} {item.count === 1 ? 'pedido' : 'pedidos'})
                             </span>
+                            {avgTicketCanal > 0 && (
+                              <span className="text-[10px] text-muted-foreground/75 font-mono hidden sm:inline shrink-0">
+                                (~ {formatCurrency(avgTicketCanal)}/ped)
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0 font-mono">
                             <span className="font-bold text-foreground">{formatCurrency(item.total)}</span>
@@ -557,29 +601,25 @@ export function CategoryFinancialBreakdownCard({
           )}
 
           {/* ========================================================================= */}
-          {/* 3. FOOTER DE CONCILIACIÓN LIMPIO                                          */}
+          {/* 3. FOOTER INTELIGENTE (SIN REPETICIONES REDUNDANTES)                       */}
           {/* ========================================================================= */}
           <div className="pt-3 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
             {vistaPrincipal === 'ventas' && (
               <div className="flex items-center justify-between w-full text-muted-foreground font-medium text-[11px]">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-foreground font-semibold">Conciliación:</span>
-                  <span className="text-emerald-700 dark:text-emerald-400 font-mono font-bold">
-                    {formatCurrency(distribucion.ventasReales.total)}
-                  </span>
-                  <span>ventas</span>
-                  {distribucion.inyeccionCapital.total > 0 && (
-                    <>
-                      <span>+</span>
-                      <span className="text-sky-700 dark:text-sky-400 font-mono font-bold">
-                        {formatCurrency(distribucion.inyeccionCapital.total)}
-                      </span>
-                      <span>fondos</span>
-                    </>
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  {pctVentasReales >= 99.5 ? (
+                    <span className="text-foreground font-medium">
+                      100% de ingresos generados por facturación comercial directa
+                    </span>
+                  ) : (
+                    <span>
+                      Ventas: <strong className="text-foreground font-mono">{pctVentasReales.toFixed(1)}%</strong> • Financiamiento: <strong className="text-foreground font-mono">{pctInyeccion.toFixed(1)}%</strong>
+                    </span>
                   )}
                 </div>
-                <div className="font-mono text-foreground font-bold">
-                  = {formatCurrency(totalBancos)} en cuenta
+                <div className="font-mono text-muted-foreground font-semibold">
+                  Ticket prom: <span className="text-foreground font-bold">{formatCurrency(ticketPromedio)}</span>
                 </div>
               </div>
             )}
@@ -613,7 +653,7 @@ export function CategoryFinancialBreakdownCard({
                   </span>
                 </div>
                 <div className="text-muted-foreground text-[11px] font-medium">
-                  Volumen: <span className="font-bold text-foreground">{totalPedidos} pedidos</span>
+                  Volumen Total: <span className="font-bold text-foreground font-mono">{totalPedidos} pedidos</span>
                 </div>
               </div>
             )}
