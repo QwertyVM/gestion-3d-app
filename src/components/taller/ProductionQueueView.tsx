@@ -194,14 +194,14 @@ export function ProductionQueueView({
             )}
           </div>
 
-          {/* Segmented Control de Estados Operativos */}
+          {/* Segmented Control de Estados Operativos con Dots Semánticos de Alto Contraste */}
           <div className="bg-secondary/60 p-1 rounded-xl flex items-center gap-1 shrink-0 overflow-x-auto max-w-full">
             {[
-              { id: 'PENDIENTE', label: 'Pendientes', count: metricasActivas.totalPiezasPendientes },
-              { id: 'EN_PRODUCCION', label: 'Imprimiendo', count: metricasActivas.totalPiezasEnProduccion },
-              { id: 'EN_TALLER', label: 'Listas en taller', count: metricasActivas.totalPiezasEnTaller || 0 },
-              { id: 'EMPAQUETANDO', label: 'Empaquetando', count: (metricasActivas.totalPiezasEmpaquetando || 0) + (metricasActivas.totalPiezasListas || 0) },
-              { id: 'TODOS', label: 'Todos', count: metricasActivas.totalPiezasActivas }
+              { id: 'PENDIENTE', label: 'Pendientes', count: metricasActivas.totalPiezasPendientes, dot: 'bg-amber-500' },
+              { id: 'EN_PRODUCCION', label: 'Imprimiendo', count: metricasActivas.totalPiezasEnProduccion, dot: 'bg-blue-600' },
+              { id: 'EN_TALLER', label: 'Listas en taller', count: metricasActivas.totalPiezasEnTaller || 0, dot: 'bg-indigo-600' },
+              { id: 'EMPAQUETANDO', label: 'Empaquetando', count: (metricasActivas.totalPiezasEmpaquetando || 0) + (metricasActivas.totalPiezasListas || 0), dot: 'bg-orange-500' },
+              { id: 'TODOS', label: 'Todos', count: metricasActivas.totalPiezasActivas, dot: 'bg-muted-foreground' }
             ].map((st) => {
               const isSelected = filtroEstado === st.id
               return (
@@ -215,6 +215,7 @@ export function ProductionQueueView({
                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors'
                   }`}
                 >
+                  <span className={`w-2 h-2 rounded-full ${st.dot} shrink-0`} />
                   <span>{st.label}</span>
                   <span className="font-mono text-[11px] opacity-75">({st.count})</span>
                 </button>

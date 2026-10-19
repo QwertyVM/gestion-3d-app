@@ -33,32 +33,32 @@ export const ESTADO_PEDIDO_CONFIG: Record<EstadoPedido, EstadoConfig> = {
   EMPAQUETANDO: {
     label: 'Empaquetando',
     badgeClass:
-      'bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-500/20',
-    dotClass: 'bg-amber-500'
+      'bg-orange-500/10 text-orange-800 dark:text-orange-200 border-orange-500/25',
+    dotClass: 'bg-orange-500'
   },
   ENTREGADO: {
     label: 'Entregado',
     badgeClass:
-      'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border-emerald-500/20',
+      'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border-emerald-500/25',
     dotClass: 'bg-emerald-600'
   },
   LISTO_ENTREGA: {
     label: 'Por Entregar',
     badgeClass:
-      'bg-purple-500/10 text-purple-800 dark:text-purple-200 border-purple-500/20',
+      'bg-purple-500/10 text-purple-800 dark:text-purple-200 border-purple-500/25',
     dotClass: 'bg-purple-500'
   },
   CANCELADO: {
     label: 'Cancelado',
     badgeClass:
-      'bg-destructive/10 text-destructive border-destructive/20',
+      'bg-destructive/10 text-destructive border-destructive/25',
     dotClass: 'bg-destructive'
   },
   PENDIENTE: {
     label: 'Pendiente',
     badgeClass:
-      'bg-muted/80 text-muted-foreground border-border',
-    dotClass: 'bg-muted-foreground/70'
+      'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/25',
+    dotClass: 'bg-amber-500'
   },
   PAGO_VALIDADO: {
     label: 'Pago Validado',

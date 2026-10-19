@@ -292,9 +292,9 @@ const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; col
   },
   EMPAQUETANDO: {
     label: 'Empaquetando',
-    colorBg: 'bg-amber-50 dark:bg-amber-950/40',
-    colorText: 'text-amber-700 dark:text-amber-300',
-    colorBorder: 'border-amber-200 dark:border-amber-800',
+    colorBg: 'bg-orange-50 dark:bg-orange-950/40',
+    colorText: 'text-orange-700 dark:text-orange-300',
+    colorBorder: 'border-orange-200 dark:border-orange-800',
     icon: Package
   },
   LISTO_ENTREGA: {

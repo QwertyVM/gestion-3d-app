@@ -9,7 +9,7 @@ import {
   TooltipContent,
   TooltipProvider
 } from '@/components/ui/tooltip'
-import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil, Package, PackageCheck } from 'lucide-react'
+import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil, Package, PackageCheck, Printer, Wrench, CheckCircle2 } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 import { formatDate } from '@/lib/utils'
@@ -134,11 +134,11 @@ export function ProductionCardMobile({
     pieza.estado === 'PENDIENTE'
       ? 'border-l-4 border-l-amber-500'
       : pieza.estado === 'EN_PRODUCCION'
-      ? 'border-l-4 border-l-primary'
+      ? 'border-l-4 border-l-blue-600'
       : pieza.estado === 'EN_TALLER'
-      ? 'border-l-4 border-l-sky-500'
+      ? 'border-l-4 border-l-indigo-600'
       : pieza.estado === 'EMPAQUETANDO'
-      ? 'border-l-4 border-l-amber-600'
+      ? 'border-l-4 border-l-orange-500'
       : 'border-l-4 border-l-emerald-600'
 
   const handleIniciarClick = (e: React.MouseEvent) => {
@@ -258,42 +258,42 @@ export function ProductionCardMobile({
           </div>
         </div>
 
-        {/* Badge de estado con contraste semántico */}
+        {/* Badge de estado con iconos temáticos y contraste semántico */}
         <div className="shrink-0">
           {pieza.estado === 'PENDIENTE' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-              Pendiente
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/25 whitespace-nowrap shadow-2xs">
+              <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>En cola</span>
             </span>
           )}
           {pieza.estado === 'EN_PRODUCCION' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-primary/10 text-primary border border-primary/20 whitespace-nowrap shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
-              Imprimiendo
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/25 whitespace-nowrap shadow-2xs">
+              <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 animate-pulse" />
+              <span>Imprimiendo</span>
             </span>
           )}
           {pieza.estado === 'EN_TALLER' && (
-            <span className="bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
-              En taller (Acabada)
+            <span className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0">
+              <Wrench className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span>En taller</span>
             </span>
           )}
           {pieza.estado === 'EMPAQUETANDO' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-200 border border-amber-500/20 whitespace-nowrap shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              Empaquetando
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-orange-500/10 text-orange-700 dark:text-orange-300 border border-orange-500/25 whitespace-nowrap shadow-2xs">
+              <Package className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 shrink-0" />
+              <span>Empaque</span>
             </span>
           )}
           {pieza.estado === 'LISTO_ENTREGA' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 whitespace-nowrap shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-              Listo
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 whitespace-nowrap shadow-2xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Listo</span>
             </span>
           )}
           {pieza.estado === 'ENTREGADO' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 whitespace-nowrap">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-              Entregado
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 whitespace-nowrap shadow-2xs">
+              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Entregado</span>
             </span>
           )}
         </div>
@@ -353,7 +353,7 @@ export function ProductionCardMobile({
               size="sm"
               disabled={isLoading}
               onClick={handleIniciarClick}
-              className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 hover:shadow-sm cursor-pointer shrink-0 ml-auto"
+              className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 hover:shadow-sm cursor-pointer shrink-0 ml-auto"
             >
               {isLoading ? (
                 <>
@@ -363,7 +363,7 @@ export function ProductionCardMobile({
               ) : (
                 <>
                   <Play className="w-3.5 h-3.5 fill-current shrink-0" />
-                  <span>Iniciar</span>
+                  <span>Iniciar impresión</span>
                 </>
               )}
             </Button>
@@ -398,7 +398,7 @@ export function ProductionCardMobile({
                 disabled={isLoading}
                 onClick={handleATallerClick}
                 className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 hover:shadow-sm cursor-pointer shrink-0"
-                title="Mover a En Taller (terminar impresión)"
+                title="Terminar impresión y pasar pieza a mesa de taller"
               >
                 {isLoading ? (
                   <>
@@ -408,7 +408,7 @@ export function ProductionCardMobile({
                 ) : (
                   <>
                     <Check className="w-3.5 h-3.5 shrink-0" />
-                    <span>A taller</span>
+                    <span>Terminar impresión</span>
                   </>
                 )}
               </Button>
@@ -443,18 +443,18 @@ export function ProductionCardMobile({
                 size="sm"
                 disabled={isLoading}
                 onClick={handleEmpaquetarClick}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 cursor-pointer shrink-0"
+                className="bg-orange-600 hover:bg-orange-700 text-white font-semibold text-xs h-8 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 whitespace-nowrap transition-all active:scale-95 cursor-pointer shrink-0 hover:shadow-sm"
                 title="Enviar a Empaque"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     <span>Enviando...</span>
                   </>
                 ) : (
                   <>
-                    <PackageCheck className="w-3.5 h-3.5 shrink-0" />
-                    <span>Enviar a Empaque</span>
+                    <Package className="w-3.5 h-3.5 shrink-0" />
+                    <span>A empaque</span>
                   </>
                 )}
               </Button>

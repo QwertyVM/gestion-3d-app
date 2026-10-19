@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipProvider
 } from '@/components/ui/tooltip'
-import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil, Package, PackageCheck } from 'lucide-react'
+import { Play, Check, RotateCcw, Loader2, Sparkles, Calendar, Clock, Flame, ExternalLink, Link2, Pencil, Package, PackageCheck, Printer, Wrench, CheckCircle2 } from 'lucide-react'
 import { PiezaTaller } from '@/actions/taller'
 import { FilamentDotsGroup } from './FilamentDotsGroup'
 import { formatDate } from '@/lib/utils'
@@ -279,8 +279,8 @@ export function ProductionRow({
         </div>
       </TableCell>
 
-      {/* 2. Cliente & Pedido (w-[24%]) */}
-      <TableCell className="w-[24%] px-4 py-3 align-middle overflow-hidden min-w-0">
+      {/* 2. Cliente & Pedido (w-[22%]) */}
+      <TableCell className="w-[22%] px-4 py-3 align-middle overflow-hidden min-w-0">
         <div className="space-y-1 min-w-0">
           <span
             className="text-sm font-semibold text-foreground truncate block"
@@ -308,8 +308,8 @@ export function ProductionRow({
         </div>
       </TableCell>
 
-      {/* 3. Entrega & Antigüedad (w-[22%]) */}
-      <TableCell className="w-[22%] px-4 py-3 align-middle min-w-0">
+      {/* 3. Entrega & Antigüedad (w-[20%]) */}
+      <TableCell className="w-[20%] px-4 py-3 align-middle min-w-0">
         <div className="space-y-0.5 min-w-0">
           {/* Primera línea: Ícono de calendario y fecha con Tooltip */}
           {renderEntregaInfo(pieza.diaEntregaPrometida)}
@@ -323,62 +323,62 @@ export function ProductionRow({
         </div>
       </TableCell>
 
-      {/* 4. Estado & Acción Operativa Unificada (w-[26%], CERO recorte de badge y CERO scroll horizontal) */}
+      {/* 4. Estado & Acción Operativa Unificada (w-[30%], CERO recorte de badge y CERO scroll horizontal) */}
       <TableCell
-        className="w-[26%] pl-2 pr-6 py-3 align-middle text-right min-w-0"
+        className="w-[30%] pl-2 pr-6 py-3 align-middle text-right min-w-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-end gap-2.5 pr-2 h-full">
-          {/* Badge de Estado con shrink-0 estricto */}
+        <div className="flex items-center justify-end gap-2.5 pr-1 h-full">
+          {/* Badge de Estado con Iconos Temáticos Semánticos */}
           {pieza.estado === 'PENDIENTE' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 whitespace-nowrap shrink-0 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-              Pendiente
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/25 whitespace-nowrap shrink-0 shadow-2xs">
+              <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>En cola</span>
             </span>
           )}
 
           {pieza.estado === 'EN_PRODUCCION' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-primary/10 text-primary border border-primary/20 whitespace-nowrap shrink-0 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
-              Imprimiendo
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/25 whitespace-nowrap shrink-0 shadow-2xs">
+              <Printer className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 animate-pulse" />
+              <span>Imprimiendo</span>
             </span>
           )}
 
           {pieza.estado === 'EN_TALLER' && (
-            <span className="bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs shrink-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
-              En taller (Acabada)
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/25 whitespace-nowrap shadow-2xs shrink-0">
+              <Wrench className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span>En taller</span>
             </span>
           )}
 
           {pieza.estado === 'EMPAQUETANDO' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-200 border border-amber-500/20 whitespace-nowrap shrink-0 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              Empaquetando
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-orange-500/10 text-orange-700 dark:text-orange-300 border border-orange-500/25 whitespace-nowrap shrink-0 shadow-2xs">
+              <Package className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400 shrink-0" />
+              <span>Empaque</span>
             </span>
           )}
 
           {pieza.estado === 'LISTO_ENTREGA' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 whitespace-nowrap shrink-0 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-              Listo
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 whitespace-nowrap shrink-0 shadow-2xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Listo</span>
             </span>
           )}
 
           {pieza.estado === 'ENTREGADO' && (
-            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 whitespace-nowrap shrink-0">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
-              Entregado
+            <span className="h-7 px-2.5 rounded-full inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 whitespace-nowrap shrink-0">
+              <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Entregado</span>
             </span>
           )}
 
-          {/* Botón de Acción con shrink-0 estricto */}
+          {/* Botones de Acción Operativa con Textos Precisos */}
           {pieza.estado === 'PENDIENTE' && (
             <Button
               size="sm"
               disabled={isLoading}
               onClick={handleIniciarClick}
-              className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer hover:shadow-sm"
+              className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer hover:shadow-sm"
             >
               {isLoading ? (
                 <>
@@ -388,7 +388,7 @@ export function ProductionRow({
               ) : (
                 <>
                   <Play className="w-3.5 h-3.5 fill-current shrink-0" />
-                  <span>Iniciar</span>
+                  <span>Iniciar impresión</span>
                 </>
               )}
             </Button>
@@ -423,7 +423,7 @@ export function ProductionRow({
                 disabled={isLoading}
                 onClick={handleATallerClick}
                 className="h-8 px-3.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs flex items-center gap-1.5 shrink-0 active:scale-95 transition-all cursor-pointer hover:shadow-sm"
-                title="Mover a En Taller (terminar impresión)"
+                title="Terminar impresión y pasar pieza a mesa de taller"
               >
                 {isLoading ? (
                   <>
@@ -433,7 +433,7 @@ export function ProductionRow({
                 ) : (
                   <>
                     <Check className="w-3.5 h-3.5 shrink-0" />
-                    <span>A taller</span>
+                    <span>Terminar impresión</span>
                   </>
                 )}
               </Button>
@@ -468,7 +468,7 @@ export function ProductionRow({
                 size="sm"
                 disabled={isLoading}
                 onClick={handleEmpaquetarClick}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-8 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95 shrink-0 cursor-pointer"
+                className="bg-orange-600 hover:bg-orange-700 text-white font-semibold text-xs h-8 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95 shrink-0 cursor-pointer hover:shadow-sm"
                 title="Enviar a Empaque"
               >
                 {isLoading ? (
@@ -478,8 +478,8 @@ export function ProductionRow({
                   </>
                 ) : (
                   <>
-                    <PackageCheck className="w-3.5 h-3.5 shrink-0" />
-                    <span>Enviar a Empaque</span>
+                    <Package className="w-3.5 h-3.5 shrink-0" />
+                    <span>A empaque</span>
                   </>
                 )}
               </Button>
@@ -488,16 +488,28 @@ export function ProductionRow({
 
           {pieza.estado === 'EMPAQUETANDO' && (
             <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={isLoading}
-                onClick={handleReabrirClick}
-                className="h-8 w-8 p-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center shrink-0"
-                title="Volver a En taller"
-              >
-                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-              </Button>
+              <TooltipProvider delay={100}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={isLoading}
+                        onClick={handleReabrirClick}
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+                        aria-label="Volver a En taller"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent sideOffset={4} className="text-xs font-medium">
+                    Volver a En taller
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               <Button
                 size="sm"
                 disabled={isLoading}
@@ -522,16 +534,28 @@ export function ProductionRow({
 
           {pieza.estado === 'LISTO_ENTREGA' && (
             <div className="flex items-center gap-1.5 shrink-0">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={isLoading}
-                onClick={handleReabrirClick}
-                className="h-8 px-2.5 rounded-xl text-xs font-semibold border-border text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center gap-1 shrink-0"
-                title="Volver a En taller"
-              >
-                <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-              </Button>
+              <TooltipProvider delay={100}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={isLoading}
+                        onClick={handleReabrirClick}
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center shrink-0 cursor-pointer"
+                        aria-label="Volver a En taller"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent sideOffset={4} className="text-xs font-medium">
+                    Volver a En taller
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               <Button
                 size="sm"
                 disabled={isLoading}

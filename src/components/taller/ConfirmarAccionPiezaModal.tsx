@@ -65,8 +65,8 @@ export function ConfirmarAccionPiezaModal({
             <div
               className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border ${
                 esIniciar
-                  ? 'bg-primary/10 border-primary/20 text-primary'
-                  : 'bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400'
+                  ? 'bg-blue-500/10 border-blue-500/25 text-blue-600 dark:text-blue-400'
+                  : 'bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-400'
               }`}
             >
               {esIniciar ? (
@@ -196,7 +196,7 @@ export function ConfirmarAccionPiezaModal({
               type="button"
               disabled={isLoading}
               onClick={handleExecute}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs h-9 px-4 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
             >
               {isLoading ? (
                 <>
