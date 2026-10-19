@@ -340,7 +340,7 @@ export function PedidosClient({
     }, 200)
     return () => clearTimeout(handler)
   }, [search])
-  const [selectedEstadoFilter, setSelectedEstadoFilter] = useState<string>('TODOS')
+  const [selectedEstadoFilter, setSelectedEstadoFilter] = useState<string>('ACTIVOS')
   const [selectedPagoFilter, setSelectedPagoFilter] = useState<string>('TODOS')
   const [selectedPostventaFilter, setSelectedPostventaFilter] = useState<'TODOS' | 'PENDIENTE' | 'REALIZADO'>('TODOS')
   const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false)
@@ -356,6 +356,11 @@ export function PedidosClient({
         setPreselectedProductId(prodId)
         setIsNewOrderModalOpen(true)
         if (stored) sessionStorage.removeItem('nova_preselected_product_id')
+      }
+      const paramSearch = params.get('search') || params.get('cliente')
+      if (paramSearch) {
+        setSearch(paramSearch)
+        setSelectedEstadoFilter('TODOS')
       }
     }
   }, [])
@@ -1048,7 +1053,9 @@ export function PedidosClient({
       }
 
       if (selectedEstadoFilter !== 'TODOS') {
-        if (selectedEstadoFilter === 'EMPAQUETANDO') {
+        if (selectedEstadoFilter === 'ACTIVOS') {
+          if (p.estado === 'ENTREGADO' || p.estado === 'CANCELADO') return false
+        } else if (selectedEstadoFilter === 'EMPAQUETANDO') {
           if (p.estado !== 'EMPAQUETANDO' && p.estado !== 'LISTO_ENTREGA') return false
         } else if (p.estado !== selectedEstadoFilter) {
           return false
@@ -1068,6 +1075,18 @@ export function PedidosClient({
       return true
     })
   }, [pedidos, debouncedSearch, selectedEstadoFilter, selectedPagoFilter, selectedPostventaFilter, selectedCajasFilter, dateRange, filamentos])
+
+  const statusCounts = useMemo(() => {
+    const base = pedidos.filter(p => isDateInRange(p.fecha, dateRange.from, dateRange.to))
+    return {
+      ACTIVOS: base.filter(p => p.estado !== 'ENTREGADO' && p.estado !== 'CANCELADO').length,
+      EN_PRODUCCION: base.filter(p => p.estado === 'EN_PRODUCCION').length,
+      EN_TALLER: base.filter(p => p.estado === 'EN_TALLER').length,
+      EMPAQUETANDO: base.filter(p => p.estado === 'EMPAQUETANDO' || p.estado === 'LISTO_ENTREGA').length,
+      ENTREGADO: base.filter(p => p.estado === 'ENTREGADO').length,
+      TODOS: base.length,
+    }
+  }, [pedidos, dateRange])
 
   const pedidosSinCajaCount = useMemo(() => {
     return pedidos.filter(p => p.estado !== 'CANCELADO' && (!p.totalCajas || p.totalCajas === 0)).length
@@ -1296,6 +1315,7 @@ export function PedidosClient({
         }}
         minDate={minFechaData}
         maxDate={maxFechaData}
+        statusCounts={statusCounts}
       />
 
       {/* ========================================================================= */}
@@ -1311,13 +1331,13 @@ export function PedidosClient({
             <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
               No hay pedidos que coincidan con los filtros de búsqueda o fecha seleccionados.
             </p>
-            {(search || selectedEstadoFilter !== 'TODOS' || selectedPagoFilter !== 'TODOS' || selectedPostventaFilter !== 'TODOS') && (
+            {(search || selectedEstadoFilter !== 'ACTIVOS' || selectedPagoFilter !== 'TODOS' || selectedPostventaFilter !== 'TODOS') && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
                   setSearch('')
-                  setSelectedEstadoFilter('TODOS')
+                  setSelectedEstadoFilter('ACTIVOS')
                   setSelectedPagoFilter('TODOS')
                   setSelectedPostventaFilter('TODOS')
                   setDateRange(getPresetDateRange('TODO'))

@@ -23,14 +23,16 @@ export interface OrdersFilterBarProps {
   onDateRangeChange: (range: DateRange) => void
   minDate?: string | Date | null
   maxDate?: string | Date | null
+  statusCounts?: Record<string, number>
 }
 
 const STATUS_TABS = [
-  { value: 'TODOS', label: 'Todos' },
+  { value: 'ACTIVOS', label: 'Activos' },
   { value: 'EN_PRODUCCION', label: 'Imprimiendo' },
   { value: 'EN_TALLER', label: 'En taller' },
   { value: 'EMPAQUETANDO', label: 'Empaquetando' },
   { value: 'ENTREGADO', label: 'Entregado' },
+  { value: 'TODOS', label: 'Todos' },
 ] as const
 
 const PAYMENT_OPTIONS = [
@@ -50,6 +52,7 @@ export function OrdersFilterBar({
   onDateRangeChange,
   minDate,
   maxDate,
+  statusCounts,
 }: OrdersFilterBarProps) {
   const currentPaymentLabel = useMemo(() => {
     const match = PAYMENT_OPTIONS.find((opt) => opt.value === selectedPagoFilter)
@@ -87,18 +90,30 @@ export function OrdersFilterBar({
         <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl h-10 flex items-center gap-1 shrink-0 overflow-x-auto no-scrollbar">
           {STATUS_TABS.map((tab) => {
             const isSelected = selectedEstadoFilter === tab.value
+            const count = statusCounts ? statusCounts[tab.value] : undefined
             return (
               <button
                 key={tab.value}
                 type="button"
                 onClick={() => onEstadoFilterChange(tab.value)}
-                className={`h-full flex items-center cursor-pointer whitespace-nowrap transition-all ${
+                className={`h-full flex items-center gap-1.5 cursor-pointer whitespace-nowrap transition-all ${
                   isSelected
                     ? 'bg-card text-foreground font-bold shadow-xs text-xs px-3.5 py-1.5 rounded-lg'
                     : 'text-muted-foreground hover:text-foreground text-xs px-3 py-1.5 rounded-lg'
                 }`}
               >
-                {tab.label}
+                <span>{tab.label}</span>
+                {count !== undefined && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono transition-colors ${
+                      isSelected
+                        ? 'bg-primary/10 text-primary font-bold'
+                        : 'bg-muted/70 text-muted-foreground font-medium'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
             )
           })}
