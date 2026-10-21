@@ -44,9 +44,8 @@ import {
 import { CategoryFinancialBreakdownCard } from '@/components/dashboard/CategoryFinancialBreakdownCard'
 import { AcquisitionChannelsCard } from '@/components/dashboard/AcquisitionChannelsCard'
 import { ClienteDetalleDrawer } from '@/components/clientes/ClienteDetalleDrawer'
-import { ImmediateActionQueue } from '@/components/dashboard/ImmediateActionQueue'
+import { OperationalPulseBar } from '@/components/dashboard/OperationalPulseBar'
 import { LiveWorkshopPulse } from '@/components/dashboard/LiveWorkshopPulse'
-import { WorkshopPulseRibbon } from '@/components/dashboard/WorkshopPulseRibbon'
 import { useBusiness } from '@/context/BusinessContext'
 import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 import { KpiInfoTrigger } from '@/components/ui/KpiInfoTrigger'
@@ -1114,19 +1113,12 @@ export function DashboardClient({
       />
 
       {/* ========================================================================= */}
-      {/* 2.b PULSO OPERATIVO DE TALLER 3D (CINTA RÁPIDA DE FABRICACIÓN)            */}
+      {/* 2.b PULSO OPERATIVO UNIFICADO (TALLER 3D + LOGÍSTICA & SEGUIMIENTO)       */}
       {/* ========================================================================= */}
-      <WorkshopPulseRibbon 
+      <OperationalPulseBar 
         pedidos={rawVentas} 
         filamentos={rawFilamentos} 
-        is3D={is3D} 
-      />
-
-      {/* ========================================================================= */}
-      {/* 3. ALERTAS DE OPERACIÓN & TRIAGE                                          */}
-      {/* ========================================================================= */}
-      <ImmediateActionQueue 
-        pedidos={rawVentas} 
+        is3D={is3D}
         onOpenClienteDrawer={handleOpenClienteDetalle}
       />
 
