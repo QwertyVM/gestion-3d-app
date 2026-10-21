@@ -106,8 +106,8 @@ export function CategoryFinancialBreakdownCard({
   totalPedidos,
   className = ''
 }: CategoryFinancialBreakdownCardProps) {
-  // Pestaña Principal: 'ventas' (Ventas & Capital) | 'egresos' | 'canales'
-  const [vistaPrincipal, setVistaPrincipal] = useState<'ventas' | 'egresos' | 'canales'>('ventas')
+  // Pestaña Principal: 'ventas' (Ventas & Capital) | 'egresos' (Costos & Inversiones)
+  const [vistaPrincipal, setVistaPrincipal] = useState<'ventas' | 'egresos'>('ventas')
 
   // Sub-filtro para Egresos: 'TODOS' | 'OPERATIVO' | 'FINANCIERO'
   const [subTipoEgresos, setSubTipoEgresos] = useState<'TODOS' | 'OPERATIVO' | 'FINANCIERO'>('TODOS')
@@ -145,78 +145,55 @@ export function CategoryFinancialBreakdownCard({
         {/* ========================================================================= */}
         {/* 1. CABECERA & SEGMENTED CONTROLS                                         */}
         {/* ========================================================================= */}
-        <CardHeader className="p-0 pb-3 space-y-3 border-b border-border/60">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <CardTitle className="text-base font-bold text-foreground tracking-tight">
-                {vistaPrincipal === 'ventas' 
-                  ? 'Ventas & Origen de Fondos'
-                  : vistaPrincipal === 'egresos'
-                  ? 'Distribución de Egresos & Costos'
-                  : 'Canales de Captación'}
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                {vistaPrincipal === 'ventas'
-                  ? 'Facturación comercial a clientes vs. financiamiento y aportes'
-                  : vistaPrincipal === 'egresos'
-                  ? 'Estructura operativa de insumos, envíos, pauta y compromisos fijos'
-                  : 'Concentración de pedidos y rendimiento por canal'}
-              </CardDescription>
-            </div>
+        <CardHeader className="p-0 pb-3 space-y-2.5 border-b border-border/60">
+          <div>
+            <CardTitle className="text-sm font-bold text-foreground tracking-tight">
+              {vistaPrincipal === 'ventas' 
+                ? 'Ventas & Origen de Fondos'
+                : 'Distribución de Egresos & Costos'}
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              {vistaPrincipal === 'ventas'
+                ? 'Facturación comercial a clientes vs. financiamiento y aportes'
+                : 'Estructura operativa de insumos, envíos, pauta y compromisos fijos'}
+            </CardDescription>
+          </div>
 
-            {/* Segmented Control de Pestañas Moderno */}
-            <div className="bg-secondary/70 border border-border/60 p-1 rounded-xl flex items-center gap-1 self-start sm:self-auto shrink-0">
-              <button
-                type="button"
-                onClick={() => setVistaPrincipal('ventas')}
-                className={cn(
-                  "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer",
-                  vistaPrincipal === 'ventas' 
-                    ? "bg-card text-foreground font-bold shadow-2xs" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <ShoppingBag className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
-                <span>Ventas & Fondos</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground">
-                  {distribucion.ventasReales.items.length}
-                </span>
-              </button>
+          {/* Segmented Control Dual: Ventas & Fondos | Egresos & Costos */}
+          <div className="bg-secondary/70 border border-border/60 p-1 rounded-xl grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              onClick={() => setVistaPrincipal('ventas')}
+              className={cn(
+                "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                vistaPrincipal === 'ventas' 
+                  ? "bg-card text-foreground font-bold shadow-2xs" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+              <span>Ventas & Fondos</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground shrink-0">
+                {distribucion.ventasReales.items.length}
+              </span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setVistaPrincipal('egresos')}
-                className={cn(
-                  "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer",
-                  vistaPrincipal === 'egresos' 
-                    ? "bg-card text-foreground font-bold shadow-2xs" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <ArrowDownRight className="w-3.5 h-3.5 text-destructive" />
-                <span>Egresos</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground">
-                  {distribucion.egresos.todos.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setVistaPrincipal('canales')}
-                className={cn(
-                  "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 cursor-pointer",
-                  vistaPrincipal === 'canales' 
-                    ? "bg-card text-foreground font-bold shadow-2xs" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Smartphone className="w-3.5 h-3.5 text-primary" />
-                <span>Canales</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground">
-                  {distribucion.canales.length}
-                </span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setVistaPrincipal('egresos')}
+              className={cn(
+                "text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer",
+                vistaPrincipal === 'egresos' 
+                  ? "bg-card text-foreground font-bold shadow-2xs" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <ArrowDownRight className="w-3.5 h-3.5 text-destructive shrink-0" />
+              <span>Egresos & Costos</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-secondary font-mono text-muted-foreground shrink-0">
+                {distribucion.egresos.todos.length}
+              </span>
+            </button>
           </div>
 
           {/* Sub-filtros para Egresos */}
@@ -544,62 +521,6 @@ export function CategoryFinancialBreakdownCard({
             </div>
           )}
 
-          {/* ======================================================================= */}
-          {/* VISTA 3: CANALES DE VENTA                                               */}
-          {/* ======================================================================= */}
-          {vistaPrincipal === 'canales' && (
-            <div className="space-y-3 animate-in fade-in-50 duration-200">
-              {distribucion.canales.length === 0 ? (
-                <div className="py-8 text-center text-xs text-muted-foreground italic space-y-1">
-                  <ShoppingBag className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-                  <p>Sin canales registrados en este período.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {distribucion.canales.map((item) => {
-                    const Icon = getIconComponent(item.iconName)
-                    const avgTicketCanal = item.count > 0 ? (item.total / item.count) : 0
-
-                    return (
-                      <div 
-                        key={item.canal} 
-                        className="p-2 -mx-2 rounded-xl hover:bg-secondary/40 transition-colors space-y-1.5"
-                      >
-                        <div className="flex items-center justify-between text-xs gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            <span className="font-bold text-foreground truncate">{item.canal}</span>
-                            <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
-                              ({item.count} {item.count === 1 ? 'pedido' : 'pedidos'})
-                            </span>
-                            {avgTicketCanal > 0 && (
-                              <span className="text-[10px] text-muted-foreground/75 font-mono hidden sm:inline shrink-0">
-                                (~ {formatCurrency(avgTicketCanal)}/ped)
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0 font-mono">
-                            <span className="font-bold text-foreground">{formatCurrency(item.total)}</span>
-                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md min-w-[38px] text-right">
-                              {item.porcentaje.toFixed(0)}%
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-                          <div
-                            className={cn("h-full rounded-full transition-all duration-500", item.colorBar || "bg-primary")}
-                            style={{ width: `${Math.max(3, Math.min(100, item.porcentaje))}%` }}
-                          />
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* ========================================================================= */}
           {/* 3. FOOTER INTELIGENTE (SIN REPETICIONES REDUNDANTES)                       */}
           {/* ========================================================================= */}
@@ -640,20 +561,6 @@ export function CategoryFinancialBreakdownCard({
                   <span>
                     Financieros: <strong className="text-foreground font-mono">{formatCurrency(distribucion.egresos.totalFinanciero)}</strong>
                   </span>
-                </div>
-              </div>
-            )}
-
-            {vistaPrincipal === 'canales' && (
-              <div className="flex items-center justify-between w-full text-xs">
-                <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <span>Ticket Promedio:</span>
-                  <span className="font-mono font-bold text-foreground">
-                    {formatCurrency(ticketPromedio)}
-                  </span>
-                </div>
-                <div className="text-muted-foreground text-[11px] font-medium">
-                  Volumen Total: <span className="font-bold text-foreground font-mono">{totalPedidos} pedidos</span>
                 </div>
               </div>
             )}

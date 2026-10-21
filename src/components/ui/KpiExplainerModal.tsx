@@ -132,17 +132,17 @@ export function KpiExplainerModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
-        className="p-0 gap-0 w-full max-w-2xl sm:max-w-2xl bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="p-0 gap-0 w-full max-w-2xl sm:max-w-2xl bg-card border border-border/80 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[85vh]"
       >
         {/* ========================================================================= */}
         {/* 1. ENCABEZADO CON BADGE Y BOTÓN DE CIERRE                                 */}
         {/* ========================================================================= */}
-        <div className="px-6 py-5 border-b border-border/70 bg-card/40 flex items-start justify-between gap-4">
+        <div className="px-6 py-4 border-b border-border/60 bg-card/95 backdrop-blur-xs flex items-center justify-between gap-4 shrink-0">
           <div className="min-w-0 flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-md inline-block mb-1">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground bg-muted/60 border border-border/50 px-2 py-0.5 rounded-md inline-block mb-1 font-mono">
               AUDITORÍA DE MÉTRICA
             </span>
-            <DialogTitle className="text-xl font-bold text-foreground tracking-tight">
+            <DialogTitle className="text-base font-semibold text-foreground tracking-tight">
               {data?.titulo || 'Auditoría de Métrica'}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-0.5">
@@ -154,7 +154,7 @@ export function KpiExplainerModal({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center justify-center transition-colors cursor-pointer shrink-0"
             aria-label="Cerrar modal"
           >
             <X className="h-4 w-4" />
@@ -180,18 +180,18 @@ export function KpiExplainerModal({
               {/* ----------------------------------------------------------------- */}
               {/* BLOQUE 1: RESUMEN EJECUTIVO (GRID BALANCEADO DE 2 COLUMNAS)       */}
               {/* ----------------------------------------------------------------- */}
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 bg-card border border-border rounded-xl p-4.5 shadow-2xs">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 bg-muted/20 border border-border/50 rounded-xl p-4 shadow-none">
                 {/* Hero Metric (Columna Izquierda: 5 cols) */}
-                <div className="sm:col-span-5 border-b sm:border-b-0 sm:border-r border-border/70 pb-3 sm:pb-0 sm:pr-4 flex flex-col justify-between">
+                <div className="sm:col-span-5 border-b sm:border-b-0 sm:border-r border-border/60 pb-3 sm:pb-0 sm:pr-4 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
                       VALOR AUDITADO
                     </span>
-                    <div className="text-3xl font-extrabold text-foreground tracking-tight my-1 font-mono tabular-nums">
+                    <div className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight my-1 font-mono tabular-nums">
                       {data.valorFormateado}
                     </div>
                   </div>
-                  <div className="bg-secondary text-foreground text-[11px] font-semibold px-2.5 py-1 rounded-lg w-fit border border-border/60 mt-2 sm:mt-0">
+                  <div className="bg-muted/60 text-muted-foreground text-[11px] font-medium px-2.5 py-1 rounded-lg w-fit border border-border/50 mt-2 sm:mt-0 font-mono">
                     {data.rangoFechas.descripcion} • {data.totalTransacciones} {data.totalTransacciones === 1 ? 'ped' : 'peds'}
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export function KpiExplainerModal({
                       <span className="text-muted-foreground">
                         Total Facturado ({data.totalTransacciones} pedidos):
                       </span>
-                      <span className="font-bold text-foreground font-mono tabular-nums">
+                      <span className="font-semibold text-foreground font-mono tabular-nums">
                         {data.valorFormateado}
                       </span>
                     </div>
@@ -212,16 +212,16 @@ export function KpiExplainerModal({
                       <span className="text-muted-foreground">
                         Costo de Fabricación (Insumos):
                       </span>
-                      <span className="font-semibold text-muted-foreground font-mono tabular-nums">
+                      <span className="font-medium text-muted-foreground font-mono tabular-nums">
                         {costoMetric?.valor || 'S/ 0.00'}
                       </span>
                     </div>
 
                     <div className="text-xs flex justify-between items-center pt-1.5 border-t border-border/50">
-                      <span className="text-foreground font-semibold">
+                      <span className="text-foreground font-medium">
                         Utilidad Neta Directa:
                       </span>
-                      <span className="font-extrabold text-emerald-800 dark:text-emerald-300 font-mono tabular-nums">
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
                         {utilidadMetric?.valor
                           ? utilidadMetric.valor.startsWith('+')
                             ? utilidadMetric.valor
@@ -234,7 +234,7 @@ export function KpiExplainerModal({
                       <span className="text-muted-foreground">
                         Margen Comercial sobre Costo:
                       </span>
-                      <span className="font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md text-[11px] font-mono">
+                      <span className="font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md text-[11px] font-mono">
                         {margenMetric?.valor ? `${margenMetric.valor} markup` : '+0.0% markup'}
                       </span>
                     </div>
@@ -253,13 +253,13 @@ export function KpiExplainerModal({
                           <span className="text-muted-foreground">{m.etiqueta}:</span>
                           <span
                             className={cn(
-                              'font-mono font-bold tabular-nums',
+                              'font-mono font-medium tabular-nums',
                               m.tipo === 'positivo'
-                                ? 'text-emerald-800 dark:text-emerald-300 font-extrabold'
+                                ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
                                 : m.tipo === 'negativo'
-                                ? 'text-destructive font-extrabold'
+                                ? 'text-rose-600 dark:text-rose-400 font-semibold'
                                 : m.tipo === 'destacado'
-                                ? 'font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md text-[11px]'
+                                ? 'text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md text-[11px]'
                                 : 'text-foreground'
                             )}
                           >
@@ -279,11 +279,11 @@ export function KpiExplainerModal({
               {/* ----------------------------------------------------------------- */}
               {/* BLOQUE 2: METODOLOGÍA Y FÓRMULA OFICIAL                           */}
               {/* ----------------------------------------------------------------- */}
-              <div className="bg-secondary/40 border border-border/70 rounded-xl p-3.5 space-y-2">
-                <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-muted/20 border border-border/50 rounded-xl p-3.5 space-y-2">
+                <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
                   <span>📐 Metodología de Cálculo</span>
                 </div>
-                <div className="bg-card border border-border/80 rounded-lg px-3 py-2 font-mono text-xs font-bold text-foreground shadow-2xs break-words">
+                <div className="bg-background border border-border/60 rounded-lg px-3 py-2 font-mono text-xs font-medium text-foreground break-words">
                   {data.formulaMatematica}
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
@@ -295,21 +295,21 @@ export function KpiExplainerModal({
               {/* BLOQUE 3: PASO A PASO DEL CÁLCULO (TIMELINE LIMPIO)               */}
               {/* ----------------------------------------------------------------- */}
               <div className="space-y-2.5">
-                <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5">
+                <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2.5">
                   🪜 Paso a Paso con Valores del Período
                 </div>
                 <div className="space-y-2.5">
                   {data.pasosCalculo.map((p) => (
                     <div
                       key={p.paso}
-                      className="bg-card border border-border/70 rounded-xl p-3 flex items-start justify-between gap-3 shadow-2xs"
+                      className="bg-card border border-border/50 rounded-xl p-3 flex items-start justify-between gap-3 shadow-none"
                     >
                       <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                        <div className="w-6 h-6 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                        <div className="w-5 h-5 rounded-full bg-primary/10 text-primary font-medium text-xs flex items-center justify-center shrink-0 mt-0.5 font-mono">
                           {p.paso}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-foreground leading-snug">
+                          <p className="text-xs font-medium text-foreground leading-snug">
                             {p.descripcion}
                           </p>
                           {p.operacion && (
@@ -320,7 +320,7 @@ export function KpiExplainerModal({
                         </div>
                       </div>
                       {p.resultadoParcial && (
-                        <span className="text-xs font-bold text-foreground shrink-0 bg-secondary px-2.5 py-1 rounded-lg font-mono">
+                        <span className="text-xs font-semibold text-foreground shrink-0 bg-muted/60 px-2.5 py-1 rounded-lg font-mono tabular-nums border border-border/40">
                           {p.resultadoParcial}
                         </span>
                       )}
@@ -335,17 +335,17 @@ export function KpiExplainerModal({
               {data.transaccionesDetalle && data.transaccionesDetalle.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                       📋 Desglose de Registros ({data.transaccionesDetalle.length})
                     </span>
-                    <span className="text-[11px] font-semibold text-muted-foreground">
+                    <span className="text-[11px] text-muted-foreground">
                       Ordenados cronológicamente
                     </span>
                   </div>
 
-                  <div className="border border-border rounded-xl overflow-hidden shadow-2xs max-h-48 overflow-y-auto">
+                  <div className="border border-border/60 rounded-xl overflow-hidden shadow-none max-h-48 overflow-y-auto">
                     {/* thead */}
-                    <div className="bg-secondary/60 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-2 px-3 border-b border-border/70 flex justify-between items-center sticky top-0 z-10 backdrop-blur-xs">
+                    <div className="bg-muted/30 text-[10px] font-medium text-muted-foreground uppercase tracking-wider py-2 px-3 border-b border-border/60 flex justify-between items-center sticky top-0 z-10 backdrop-blur-xs select-none">
                       <div className="w-[50%]">Fecha &amp; Cliente</div>
                       <div className="w-[30%] px-2">Modelo</div>
                       <div className="w-[20%] text-right">Total</div>
@@ -356,18 +356,18 @@ export function KpiExplainerModal({
                       {data.transaccionesDetalle.map((item) => (
                         <div
                           key={item.id}
-                          className="py-2 px-3 flex items-center justify-between text-xs hover:bg-secondary/30 transition-colors"
+                          className="py-2 px-3 flex items-center justify-between text-xs hover:bg-muted/30 transition-colors"
                         >
                           {/* Fecha & Cliente (50%) */}
                           <div className="w-[50%] min-w-0 flex items-center gap-2">
-                            <span className="font-mono text-[11px] text-muted-foreground shrink-0">
+                            <span className="font-mono text-[11px] text-muted-foreground shrink-0 tabular-nums">
                               {formatFechaAuditoria(item.fecha)}
                             </span>
-                            <span className="font-bold text-foreground truncate">
+                            <span className="font-medium text-foreground truncate">
                               {formatClienteNombre(item.cliente)}
                             </span>
                             {item.categoriaOEstado && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0 bg-primary/10 text-primary border border-primary/20 truncate hidden sm:inline-block">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0 bg-muted/60 text-muted-foreground border border-border/50 truncate hidden sm:inline-block">
                                 {formatEstado(item.categoriaOEstado)}
                               </span>
                             )}
@@ -379,7 +379,7 @@ export function KpiExplainerModal({
                           </div>
 
                           {/* Monto (20%) */}
-                          <div className="w-[20%] font-bold text-foreground text-right shrink-0 font-mono tabular-nums">
+                          <div className="w-[20%] font-semibold text-foreground text-right shrink-0 font-mono tabular-nums">
                             {item.montoFormateado ||
                               (item.monto != null ? `S/ ${item.monto.toFixed(2)}` : '-')}
                           </div>
@@ -396,7 +396,7 @@ export function KpiExplainerModal({
         {/* ========================================================================= */}
         {/* 3. PIE DEL MODAL CON NOTA Y BOTÓN CERRAR                                   */}
         {/* ========================================================================= */}
-        <div className="px-6 py-3.5 border-t border-border/60 bg-card/40 flex items-center justify-between text-xs text-muted-foreground mt-auto">
+        <div className="px-6 py-3.5 border-t border-border/60 bg-muted/20 flex items-center justify-between text-xs text-muted-foreground mt-auto">
           <div className="flex items-center gap-1.5 min-w-0 flex-1 pr-2 truncate">
             <span className="shrink-0">ℹ️</span>
             <span className="truncate">
@@ -407,7 +407,7 @@ export function KpiExplainerModal({
             type="button"
             variant="outline"
             onClick={onClose}
-            className="rounded-xl text-xs font-semibold h-8 px-4 cursor-pointer shrink-0"
+            className="rounded-lg text-xs font-medium h-8 px-4 cursor-pointer shrink-0"
           >
             Cerrar
           </Button>

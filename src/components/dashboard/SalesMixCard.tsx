@@ -43,7 +43,7 @@ const BAR_COLORS = [
   'bg-primary',
   'bg-emerald-600',
   'bg-amber-600',
-  'bg-[#7C5835]',
+  'bg-violet-600',
   'bg-indigo-600',
   'bg-rose-600',
 ]

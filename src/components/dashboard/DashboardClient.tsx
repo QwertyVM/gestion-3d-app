@@ -30,13 +30,27 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  Plus,
+  Activity,
+  Sparkles,
+  Layers,
+  BarChart3,
+  CheckCircle2,
+  DollarSign,
+  Target
 } from 'lucide-react'
 
 import { CategoryFinancialBreakdownCard } from '@/components/dashboard/CategoryFinancialBreakdownCard'
+import { AcquisitionChannelsCard } from '@/components/dashboard/AcquisitionChannelsCard'
 import { ClienteDetalleDrawer } from '@/components/clientes/ClienteDetalleDrawer'
+import { ImmediateActionQueue } from '@/components/dashboard/ImmediateActionQueue'
+import { LiveWorkshopPulse } from '@/components/dashboard/LiveWorkshopPulse'
+import { WorkshopPulseRibbon } from '@/components/dashboard/WorkshopPulseRibbon'
+import { useBusiness } from '@/context/BusinessContext'
 import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 import { KpiInfoTrigger } from '@/components/ui/KpiInfoTrigger'
+import { StatCard } from '@/components/ui/StatCard'
 import { 
   DatePreset,
   DateRange, 
@@ -46,24 +60,7 @@ import {
   formatFechaEvolucion, 
   MESES_ES 
 } from '@/lib/date-utils'
-
-// Obtener iniciales de un nombre
-function getInitials(name: string) {
-  if (!name) return 'CL'
-  const parts = name.trim().split(/\s+/)
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
-  return (parts[0][0] + parts[1][0]).toUpperCase()
-}
-
-// Capitalizar nombres automáticamente (ej: "con rad" -> "Con Rad")
-function formatClienteNombre(name: string) {
-  if (!name) return 'Cliente'
-  return name
-    .trim()
-    .split(/\s+/)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ')
-}
+import { formatCurrency, getInitials, formatClienteNombre } from '@/lib/utils'
 
 // Tooltip interactivo para Margen por Pedido
 function MargenTooltip({ active, payload, label }: any) {
@@ -75,25 +72,25 @@ function MargenTooltip({ active, payload, label }: any) {
     const margenPct = data.margenPct || 0
 
     return (
-      <div className="bg-card border border-border/80 rounded-xl shadow-xl p-3 min-w-[210px] text-xs font-sans">
-        <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2">
-          <span className="font-bold text-foreground">{formatFechaEvolucion(label, true)}</span>
-          <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+      <div className="bg-popover/95 backdrop-blur-md border border-border/80 rounded-xl shadow-xl p-3.5 min-w-[220px] text-xs font-sans">
+        <div className="flex items-center justify-between border-b border-border/50 pb-2 mb-2">
+          <span className="font-semibold text-foreground">{formatFechaEvolucion(label, true)}</span>
+          <span className="text-[10px] font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md tabular-nums">
             {margenPct}% margen
           </span>
         </div>
         <div className="space-y-1.5 text-muted-foreground">
           <div className="flex justify-between items-center">
             <span>Venta Total:</span>
-            <span className="font-mono font-bold text-foreground">S/ {venta.toFixed(2)}</span>
+            <span className="font-mono font-semibold text-foreground tabular-nums">S/ {venta.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span>Costo de Filamento/Luz:</span>
-            <span className="font-mono font-medium text-foreground/80">S/ {costo.toFixed(2)}</span>
+            <span>Costo Insumos / Taller:</span>
+            <span className="font-mono font-medium text-foreground/80 tabular-nums">S/ {costo.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between items-center pt-1.5 border-t border-border/60 font-bold">
-            <span className="text-emerald-700">Margen Neto:</span>
-            <span className="font-mono text-sm text-emerald-700">
+          <div className="flex justify-between items-center pt-2 border-t border-border/50 font-semibold">
+            <span className="text-emerald-600 dark:text-emerald-400">Margen Neto:</span>
+            <span className="font-mono text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
               +S/ {utilidad.toFixed(2)}
             </span>
           </div>
@@ -114,11 +111,13 @@ function CurvaAcumuladaTooltip({ active, payload, label }: any) {
     const isNegative = utilidad < 0
 
     return (
-      <div className="bg-card border border-border/80 rounded-xl shadow-xl p-3 min-w-[220px] text-xs font-sans">
-        <div className="flex items-center justify-between border-b border-border/60 pb-1.5 mb-2">
-          <span className="font-bold text-foreground">{formatFechaEvolucion(label, true)}</span>
-          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-            isNegative ? 'text-destructive bg-destructive/10' : 'text-emerald-800 bg-emerald-500/10'
+      <div className="bg-popover/95 backdrop-blur-md border border-border/80 rounded-xl shadow-xl p-3.5 min-w-[230px] text-xs font-sans">
+        <div className="flex items-center justify-between border-b border-border/50 pb-2 mb-2">
+          <span className="font-semibold text-foreground">{formatFechaEvolucion(label, true)}</span>
+          <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-md border tabular-nums ${
+            isNegative 
+              ? 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20' 
+              : 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
           }`}>
             {isNegative ? 'Margen Negativo' : 'Margen Acumulado'}
           </span>
@@ -126,21 +125,25 @@ function CurvaAcumuladaTooltip({ active, payload, label }: any) {
         <div className="space-y-1.5 text-muted-foreground">
           <div className="flex justify-between items-center">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#A36F4C]" />
+              <span className="w-2 h-2 rounded-full bg-primary" />
               Venta Acumulada:
             </span>
-            <span className="font-mono font-bold text-foreground">S/ {ventas.toFixed(2)}</span>
+            <span className="font-mono font-semibold text-foreground tabular-nums">S/ {ventas.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#E2D9CC]" />
+              <span className="w-2 h-2 rounded-full bg-muted-foreground/40" />
               Costo Acumulado:
             </span>
-            <span className="font-mono font-medium text-foreground/80">S/ {costo.toFixed(2)}</span>
+            <span className="font-mono font-medium text-foreground/80 tabular-nums">S/ {costo.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between items-center pt-1.5 border-t border-border/60 font-bold">
-            <span className="text-emerald-700">Utilidad Acumulada:</span>
-            <span className={`font-mono text-sm ${isNegative ? 'text-destructive' : 'text-emerald-700'}`}>
+          <div className="flex justify-between items-center pt-2 border-t border-border/50 font-semibold">
+            <span className={isNegative ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}>
+              Utilidad Acumulada:
+            </span>
+            <span className={`font-mono text-sm tabular-nums ${
+              isNegative ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+            }`}>
               {isNegative ? `-S/ ${Math.abs(utilidad).toFixed(2)}` : `+S/ ${utilidad.toFixed(2)}`}
             </span>
           </div>
@@ -241,8 +244,10 @@ export function DashboardClient({
   rawVentas = [],
   rawInversiones = [],
   rawIngresosDirectos = [],
+  rawFilamentos = [],
 }: DashboardClientProps) {
   const router = useRouter()
+  const { is3D } = useBusiness()
 
   // Default al Mes Actual (Este Mes)
   const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('ESTE_MES'))
@@ -250,6 +255,7 @@ export function DashboardClient({
   const [chartMode, setChartMode] = useState<'DIARIO' | 'ACUMULADO'>('DIARIO')
   const [soloDiasConVentas, setSoloDiasConVentas] = useState(true)
   const [rankingArticulosMode, setRankingArticulosMode] = useState<'RENTABILIDAD' | 'VOLUMEN'>('RENTABILIDAD')
+  const [rankingTab, setRankingTab] = useState<'CLIENTES' | 'ARTICULOS'>('CLIENTES')
 
   // Drawer de Detalle del Cliente
   const [selectedClienteDrawer, setSelectedClienteDrawer] = useState<string | null>(null)
@@ -262,9 +268,6 @@ export function DashboardClient({
     setSelectedClienteDrawer(cliente)
     setDrawerOpen(true)
   }
-
-  const formatCurrency = (val: number) => 
-    `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // 1. Filtrar ventas por rango de fecha
   const filteredVentas = useMemo(() => {
@@ -287,7 +290,25 @@ export function DashboardClient({
   // 4. Calcular KPIs dinámicamente según el período seleccionado
   const dynamicKpis = useMemo(() => {
     if (rawVentas.length === 0 && rawInversiones.length === 0) {
-      return initialKpis
+      const fallbackIngresos = Number(initialKpis.ingresosVentas || 0)
+      const fallbackCostos = Number(initialKpis.costoDirectoTotal || initialKpis.costoFabricacionTotal || 0)
+      const fallbackEgresos = Number(initialKpis.egresosTotales || 0)
+      const fallbackGanancia = Number(initialKpis.gananciaNeta || 0)
+      const fallbackDirectos = Number(initialKpis.totalIngresosDirectos || 0)
+      const fallbackCobrado = Number(initialKpis.totalCobradoVentas || 0)
+      const fallbackTotalIngresos = fallbackIngresos + fallbackDirectos
+      const fallbackTotalEgresos = fallbackCostos + fallbackEgresos
+      const fallbackUtilidadOperativa = fallbackTotalIngresos - fallbackTotalEgresos
+
+      return {
+        ...initialKpis,
+        totalIngresosPeriodo: fallbackTotalIngresos,
+        totalEgresosPeriodo: fallbackTotalEgresos,
+        utilidadOperativa: fallbackUtilidadOperativa,
+        margenOperativoPct: fallbackTotalIngresos > 0 ? (fallbackUtilidadOperativa / fallbackTotalIngresos) * 100 : 0,
+        tasaCobranza: fallbackIngresos > 0 ? Math.min(100, (fallbackCobrado / fallbackIngresos) * 100) : 100,
+        margenUnitarioPromedio: fallbackGanancia
+      }
     }
 
     const ingresosVentas = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.total || 0), 0)
@@ -339,6 +360,13 @@ export function DashboardClient({
     const ticketPromedio = filteredVentas.length > 0 ? ingresosVentas / filteredVentas.length : 0
     const totalIngresosDirectos = filteredIngresosDirectos.reduce((sum: number, i: any) => sum + Number(i.monto || 0), 0)
 
+    const totalIngresosPeriodo = ingresosVentas + totalIngresosDirectos
+    const totalEgresosPeriodo = costoDirectoTotal + egresosTotales
+    const utilidadOperativa = totalIngresosPeriodo - totalEgresosPeriodo
+    const margenOperativoPct = totalIngresosPeriodo > 0 ? (utilidadOperativa / totalIngresosPeriodo) * 100 : 0
+    const tasaCobranza = ingresosVentas > 0 ? Math.min(100, (totalCobradoVentas / ingresosVentas) * 100) : 100
+    const margenUnitarioPromedio = filteredVentas.length > 0 ? gananciaNeta / filteredVentas.length : 0
+
     return {
       ingresosVentas,
       costoFabricacionTotal,
@@ -351,9 +379,20 @@ export function DashboardClient({
       saldoPorCobrar,
       egresosTotales,
       ticketPromedio,
-      totalIngresosDirectos
+      totalIngresosDirectos,
+      totalIngresosPeriodo,
+      totalEgresosPeriodo,
+      utilidadOperativa,
+      margenOperativoPct,
+      tasaCobranza,
+      margenUnitarioPromedio
     }
   }, [filteredVentas, filteredInversiones, filteredIngresosDirectos, dateRange, rawVentas, rawInversiones, initialKpis])
+
+  // Total de piezas despachadas o producidas en el período
+  const totalPiezasPeriodo = useMemo(() => {
+    return filteredVentas.reduce((sum: number, v: any) => sum + Number(v.cantidad || 1), 0)
+  }, [filteredVentas])
 
   // 5. Capacidad de gasto calculada para el período
   const gasto = useMemo(() => {
@@ -407,6 +446,25 @@ export function DashboardClient({
       gananciaProyectadaMes
     }
   }, [dateRange.to, rawVentas, rawIngresosDirectos, rawInversiones, initialCapacidadGasto, dynamicKpis.ticketPromedio, dynamicKpis.gananciaNeta, filteredVentas.length])
+
+  // 5.b Punto de Equilibrio (Break-Even Point) & Absorción de Costos Fijos
+  const breakEven = useMemo(() => {
+    const totalFijos = gasto.totalBlindadoMes || 1377.68
+    const ganancia = dynamicKpis.gananciaNeta || 0
+    const cobertura = totalFijos > 0 ? (ganancia / totalFijos) * 100 : 100
+    const margenUnit = dynamicKpis.margenUnitarioPromedio > 0 ? dynamicKpis.margenUnitarioPromedio : 97
+    const pedidosEquilibrio = Math.max(1, Math.ceil(totalFijos / margenUnit))
+    const pedidosFaltantes = Math.max(0, pedidosEquilibrio - filteredVentas.length)
+    const superavit = ganancia - totalFijos
+
+    return {
+      totalFijos,
+      cobertura,
+      pedidosEquilibrio,
+      pedidosFaltantes,
+      superavit
+    }
+  }, [gasto.totalBlindadoMes, dynamicKpis.gananciaNeta, dynamicKpis.margenUnitarioPromedio, filteredVentas.length])
 
   // 6. Métricas para el gráfico de Margen Real por Pedido & Curva Acumulada
   const metricasEvolucion = useMemo(() => {
@@ -751,20 +809,20 @@ export function DashboardClient({
     }
   }
 
-  // Label de visualización del período activo
-  const activeDateLabel = useMemo(() => {
+  // Label del mes/año actual para el navegador principal (ej: "Octubre 2026")
+  const monthNavLabel = useMemo(() => {
     if (dateRange.preset === 'ESTE_MES') {
-      return `Este Mes (${currentMonthName})`
+      return `${currentMonthName} ${now.getFullYear()}`
     }
     if (dateRange.preset === 'MES_ANTERIOR') {
       const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      return `Mes Anterior (${MESES_ES[prev.getMonth()]})`
+      return `${MESES_ES[prev.getMonth()]} ${prev.getFullYear()}`
     }
     if (dateRange.preset === 'ULTIMOS_3_MESES') {
       return 'Trimestre'
     }
     if (dateRange.preset === 'TODO') {
-      return 'Histórico'
+      return 'Histórico Completo'
     }
     if (dateRange.from && dateRange.to) {
       const [fromY, fromM, fromD] = dateRange.from.split('-').map(Number)
@@ -777,8 +835,15 @@ export function DashboardClient({
       }
       return `${formatFechaEvolucion(dateRange.from)} - ${formatFechaEvolucion(dateRange.to)}`
     }
-    return 'Este Mes'
-  }, [dateRange, currentMonthName])
+    return `${currentMonthName} ${now.getFullYear()}`
+  }, [dateRange, currentMonthName, now])
+
+  const isCurrentMonthActive = useMemo(() => {
+    if (dateRange.preset === 'ESTE_MES') return true
+    if (!dateRange.from || !dateRange.to) return false
+    const currPreset = getPresetDateRange('ESTE_MES')
+    return dateRange.from === currPreset.from && dateRange.to === currPreset.to
+  }, [dateRange])
 
   const handleManualRefresh = () => {
     setIsRefreshing(true)
@@ -795,20 +860,22 @@ export function DashboardClient({
       <div className="h-full w-full min-h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.6} />
+            <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/40" vertical={false} />
             <XAxis 
               dataKey="fecha" 
-              stroke="#75695D" 
+              stroke="currentColor" 
+              className="text-muted-foreground/60"
               fontSize={11} 
               tickLine={false} 
-              axisLine={{ stroke: '#E2D9CC' }}
+              axisLine={false}
               interval={chartData.length <= 10 ? 0 : 'preserveStartEnd'}
               minTickGap={32}
               tickFormatter={(val) => formatFechaEvolucion(val, false)}
               dy={4}
             />
             <YAxis 
-              stroke="#75695D" 
+              stroke="currentColor" 
+              className="text-muted-foreground/60"
               fontSize={11} 
               tickLine={false} 
               axisLine={false} 
@@ -818,49 +885,36 @@ export function DashboardClient({
             <Legend 
               verticalAlign="top"
               content={() => (
-                <div className="flex flex-wrap items-center justify-end gap-3.5 text-[11px] pb-2 text-muted-foreground">
-                  <div className="flex items-center gap-1.5 font-medium">
-                    <span className="w-2.5 h-2.5 bg-emerald-700 rounded-xs inline-block" />
+                <div className="flex flex-wrap items-center justify-end gap-4 text-[11px] pb-2.5 text-muted-foreground">
+                  <div className="flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+                    <span className="w-2.5 h-2.5 bg-emerald-500 rounded-xs inline-block" />
                     <span>Utilidad Neta</span>
                   </div>
                   <div className="flex items-center gap-1.5 font-medium">
-                    <span className="w-2.5 h-2.5 bg-[#E2D9CC] rounded-xs inline-block border border-border/80" />
-                    <span>Costo Producción</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 font-medium text-primary">
-                    <span className="w-3.5 h-0.5 bg-primary rounded-full inline-block" />
-                    <span>Venta Total</span>
+                    <span className="w-2.5 h-2.5 bg-slate-400/50 rounded-xs inline-block" />
+                    <span>Costo Insumos / Taller</span>
                   </div>
                 </div>
               )}
             />
-            {/* Costo de Producción en Beige NOVA #E2D9CC */}
+            {/* Costo de Producción (Base del pedido) */}
             <Bar 
               dataKey="costoProduccion" 
               name="Costo Producción" 
               stackId="venta" 
-              fill="#E2D9CC" 
+              fill="#94A3B8"
+              fillOpacity={0.4} 
               radius={[0, 0, 0, 0]}
               maxBarSize={32}
             />
-            {/* Utilidad Neta en Verde Esmeralda #047857 (emerald-700) */}
+            {/* Utilidad Neta (Margen real generado) */}
             <Bar 
               dataKey="utilidad" 
               name="Utilidad Neta" 
               stackId="venta" 
-              fill="#047857" 
+              fill="#10B981" 
               radius={[4, 4, 0, 0]}
               maxBarSize={32}
-            />
-            {/* Venta Total en Terracota #A36F4C */}
-            <Line 
-              type="monotone" 
-              dataKey="ventaTotal" 
-              name="Venta Total" 
-              stroke="#A36F4C" 
-              strokeWidth={2} 
-              dot={{ r: 3, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 1.5 }}
-              activeDot={{ r: 5, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
             />
           </ComposedChart>
         </ResponsiveContainer>
@@ -875,28 +929,30 @@ export function DashboardClient({
         <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="colorVentasAcum" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#A36F4C" stopOpacity={0.25}/>
-              <stop offset="95%" stopColor="#A36F4C" stopOpacity={0.0}/>
+              <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.2}/>
+              <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0.0}/>
             </linearGradient>
             <linearGradient id="colorCostosAcum" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#E2D9CC" stopOpacity={0.4}/>
-              <stop offset="95%" stopColor="#E2D9CC" stopOpacity={0.0}/>
+              <stop offset="5%" stopColor="var(--color-muted-foreground)" stopOpacity={0.25}/>
+              <stop offset="95%" stopColor="var(--color-muted-foreground)" stopOpacity={0.0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.6} />
+          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/40" vertical={false} />
           <XAxis 
             dataKey="fecha" 
-            stroke="#75695D" 
+            stroke="currentColor" 
+            className="text-muted-foreground/60"
             fontSize={11} 
             tickLine={false} 
-            axisLine={{ stroke: '#E2D9CC' }}
+            axisLine={false}
             interval={data.length <= 10 ? 0 : 'preserveStartEnd'}
             minTickGap={32}
             tickFormatter={(val) => formatFechaEvolucion(val, false)}
             dy={4}
           />
           <YAxis 
-            stroke="#75695D" 
+            stroke="currentColor" 
+            className="text-muted-foreground/60"
             fontSize={11} 
             tickLine={false} 
             axisLine={false} 
@@ -907,16 +963,16 @@ export function DashboardClient({
             verticalAlign="top"
             content={() => (
               <div className="flex flex-wrap items-center justify-end gap-3.5 text-[11px] pb-2 text-muted-foreground">
-                <div className="flex items-center gap-1.5 font-medium text-primary">
-                  <span className="w-2.5 h-2.5 bg-primary rounded-xs inline-block" />
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <span className="w-2 h-2 bg-primary rounded-xs inline-block" />
                   <span>Ventas Acumuladas</span>
                 </div>
                 <div className="flex items-center gap-1.5 font-medium">
-                  <span className="w-2.5 h-2.5 bg-[#E2D9CC] rounded-xs inline-block border border-border" />
+                  <span className="w-2 h-2 bg-muted-foreground/40 rounded-xs inline-block" />
                   <span>Costo Acumulado</span>
                 </div>
-                <div className="flex items-center gap-1.5 font-medium text-emerald-700">
-                  <span className="w-3.5 h-0.5 bg-emerald-700 rounded-full inline-block" />
+                <div className="flex items-center gap-1.5 font-medium text-emerald-600 dark:text-emerald-400">
+                  <span className="w-3 h-0.5 bg-emerald-500 rounded-full inline-block" />
                   <span>Utilidad Neta Acum.</span>
                 </div>
               </div>
@@ -926,7 +982,7 @@ export function DashboardClient({
             type="monotone" 
             dataKey="ventasAcum" 
             name="Venta Acumulada" 
-            stroke="#A36F4C" 
+            stroke="var(--color-primary)" 
             strokeWidth={2}
             fill="url(#colorVentasAcum)" 
           />
@@ -934,7 +990,7 @@ export function DashboardClient({
             type="monotone" 
             dataKey="costosAcum" 
             name="Costo Acumulado" 
-            stroke="#C4B8A9" 
+            stroke="var(--color-muted-foreground)" 
             strokeWidth={1.5}
             fill="url(#colorCostosAcum)" 
           />
@@ -942,7 +998,7 @@ export function DashboardClient({
             type="monotone" 
             dataKey="utilidadAcum" 
             name="Utilidad Acumulada" 
-            stroke="#047857" 
+            stroke="#10B981" 
             strokeWidth={2.5}
             dot={false}
           />
@@ -954,78 +1010,66 @@ export function DashboardClient({
   return (
     <div className="space-y-5 animate-in fade-in duration-300 pb-12 max-w-7xl mx-auto">
       {/* ========================================================================= */}
-      {/* 1. CABECERA MAESTRA CON NAVEGADOR TEMPORAL Y PRESETS RÁPIDOS              */}
+      {/* 1. CABECERA MAESTRA MINIMALISTA Y SELECTOR DE FECHAS                      */}
       {/* ========================================================================= */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3.5 pt-1">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-            DASHBOARD: Rendimiento Comercial & Taller
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            Dashboard
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Métricas de facturación, márgenes reales y rentabilidad del taller.
+            Rendimiento comercial, márgenes netos y estado operativo.
           </p>
         </div>
 
-        {/* Controles de Período y Enlaces */}
-        <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
-          
-          {/* Navegador Temporal Maestro [ < Este Mes (Octubre) > ] */}
-          <div className="inline-flex items-center bg-card border border-border rounded-xl h-9 shadow-2xs overflow-hidden">
+        {/* Controles de Período Unificados (Sin duplicidades) */}
+        <div className="flex items-center gap-1.5 self-start sm:self-auto bg-card border border-border/60 p-1 rounded-xl shadow-2xs">
+          {/* Navegador Mensual: [<] [📅 Octubre 2026] [>] */}
+          <div className="flex items-center">
             <button
               type="button"
               onClick={() => handleNavigateMonth(-1)}
               title="Mes anterior"
-              className="h-full px-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" />
             </button>
 
-            <div className="px-2.5 py-1 text-xs font-bold text-foreground border-x border-border/70 flex items-center gap-1.5 whitespace-nowrap">
-              <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
-              <span>{activeDateLabel}</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => handleSelectPreset('ESTE_MES')}
+              title="Clic para volver al mes actual"
+              className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                dateRange.preset === 'ESTE_MES' || isCurrentMonthActive
+                  ? 'bg-secondary text-foreground shadow-2xs'
+                  : 'text-foreground hover:bg-muted/50'
+              }`}
+            >
+              <Calendar className="h-3.5 w-3.5 text-primary" />
+              <span>{monthNavLabel}</span>
+            </button>
 
             <button
               type="button"
               onClick={() => handleNavigateMonth(1)}
               title="Mes siguiente"
-              className="h-full px-2 text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          {/* Presets Rápidos: [ Este Mes | Mes Anterior | Trimestre | Histórico ] */}
-          <div className="hidden sm:inline-flex items-center p-0.5 rounded-xl bg-secondary border border-border/70 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleSelectPreset('ESTE_MES')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                dateRange.preset === 'ESTE_MES'
-                  ? 'bg-primary text-primary-foreground shadow-2xs'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Este Mes
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSelectPreset('MES_ANTERIOR')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                dateRange.preset === 'MES_ANTERIOR'
-                  ? 'bg-primary text-primary-foreground shadow-2xs'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Mes Anterior
-            </button>
+          <div className="h-4 w-px bg-border/60 mx-0.5" />
+
+          {/* Horizontes Estratégicos */}
+          <div className="flex items-center gap-0.5">
             <button
               type="button"
               onClick={() => handleSelectPreset('ULTIMOS_3_MESES')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
                 dateRange.preset === 'ULTIMOS_3_MESES'
-                  ? 'bg-primary text-primary-foreground shadow-2xs'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-secondary text-foreground font-semibold shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
               }`}
             >
               Trimestre
@@ -1033,199 +1077,155 @@ export function DashboardClient({
             <button
               type="button"
               onClick={() => handleSelectPreset('TODO')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
                 dateRange.preset === 'TODO'
-                  ? 'bg-primary text-primary-foreground shadow-2xs'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-secondary text-foreground font-semibold shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
               }`}
             >
               Histórico
             </button>
           </div>
 
-          {/* Refrescar */}
+          <div className="h-4 w-px bg-border/60 mx-0.5" />
+
+          {/* Botón Refrescar */}
           <button
             onClick={handleManualRefresh}
             title="Refrescar datos"
-            className="p-2 rounded-xl bg-card hover:bg-secondary border border-border text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-xs"
+            className="p-1.5 rounded-lg hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all cursor-pointer"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
           </button>
-
-          {/* Botón Flujo de Caja → */}
-          <Link
-            href="/finanzas/flujo-caja"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-card hover:bg-secondary text-foreground border border-border shadow-xs transition-all cursor-pointer"
-          >
-            <span>Flujo de Caja</span>
-            <ArrowRight className="h-3.5 w-3.5 text-primary" />
-          </Link>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. GRID DE 4 TARJETAS DE KPIS PRINCIPALES (CON AUDITORÍA Y EXPLICADOR)     */}
+      {/* 2. SALUD FINANCIERA EJECUTIVA (4 TARJETAS MAESTRAS DE ANÁLISIS COMERCIAL)  */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        
-        {/* KPI 1: Facturación del Período */}
-        <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3 group hover:border-primary/40 transition-all">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs font-semibold text-muted-foreground truncate">Facturación del Período</span>
-              <KpiInfoTrigger
-                onClick={() => setSelectedKpiExplainer('facturacion_periodo')}
-                title="Ver fórmula y desglose de pedidos facturados"
-              />
-            </div>
-            <div className="p-1.5 rounded-lg bg-secondary text-primary shrink-0">
-              <TrendingUp className="h-4 w-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black font-mono text-foreground tracking-tight tabular-nums">
-              {formatCurrency(dynamicKpis.ingresosVentas)}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs">
-              <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                +{dynamicKpis.margenPorcentaje.toFixed(1)}% margen
-              </span>
-              <span className="text-muted-foreground">•</span>
-              <span className="text-muted-foreground truncate">
-                +{formatCurrency(dynamicKpis.gananciaNeta)} util.
-              </span>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        {/* 1. Facturación Neta Comercial */}
+        <StatCard
+          label="Facturación Neta"
+          value={formatCurrency(dynamicKpis.ingresosVentas)}
+          sublabel={`${filteredVentas.length} pedidos • Cobrado: ${formatCurrency(dynamicKpis.totalCobradoVentas)} (${dynamicKpis.tasaCobranza.toFixed(0)}%)`}
+          icon={<TrendingUp className="h-4 w-4" />}
+          delta={{ 
+            value: `${formatCurrency(dynamicKpis.ticketPromedio)} / ped`, 
+            isPositive: true, 
+            label: `${totalPiezasPeriodo} uds` 
+          }}
+          badge={
+            dynamicKpis.saldoPorCobrar > 0
+              ? { text: `Por cobrar: ${formatCurrency(dynamicKpis.saldoPorCobrar)}`, variant: 'warning' }
+              : { text: '100% Cobrado', variant: 'success' }
+          }
+          onInfoClick={() => setSelectedKpiExplainer('facturacion_periodo')}
+        />
 
-        {/* KPI 2: Gasto Disponible Libre */}
-        <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3 group hover:border-primary/40 transition-all">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs font-semibold text-muted-foreground truncate">Gasto Libre Disponible</span>
-              <KpiInfoTrigger
-                onClick={() => setSelectedKpiExplainer('gasto_libre_disponible')}
-                title="Ver fórmula y cálculo de liquidez menos fondos blindados"
-              />
-            </div>
-            <div className={`p-1.5 rounded-lg shrink-0 ${gasto.gastoDisponibleHoy > 0 ? 'bg-emerald-500/10 text-emerald-700' : 'bg-amber-500/10 text-amber-700'}`}>
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-          </div>
-          <div>
-            <div className={`text-2xl font-black font-mono tracking-tight tabular-nums ${gasto.gastoDisponibleHoy > 0 ? 'text-emerald-700' : 'text-amber-700'}`}>
-              {formatCurrency(gasto.gastoDisponibleHoy)}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground truncate">
-              <span>Caja: {formatCurrency(gasto.saldoActualCaja)}</span>
-              <span>•</span>
-              <span title={`Blindado: ${formatCurrency(gasto.totalBlindadoMes)}`}>
-                Blindado: {formatCurrency(gasto.totalBlindadoMes)}
-              </span>
-            </div>
-          </div>
-        </div>
+        {/* 2. Margen Bruto de Taller (Unit Economics Real) */}
+        <StatCard
+          label="Margen Bruto Taller"
+          value={`+${formatCurrency(dynamicKpis.gananciaNeta)}`}
+          sublabel={`Insumos & Envíos: ${formatCurrency(dynamicKpis.costoDirectoTotal)} • Ganancia: +${formatCurrency(dynamicKpis.margenUnitarioPromedio)} / ped`}
+          icon={<Layers className="h-4 w-4" />}
+          variant={dynamicKpis.gananciaNeta >= 0 ? 'success' : 'destructive'}
+          badge={{ 
+            text: `${dynamicKpis.margenPorcentaje.toFixed(1)}% margen`, 
+            variant: dynamicKpis.margenPorcentaje >= 30 ? 'success' : 'warning' 
+          }}
+          onInfoClick={() => setSelectedKpiExplainer('utilidad_operativa')}
+        />
 
-        {/* KPI 3: Total Cobrado */}
-        <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3 group hover:border-primary/40 transition-all">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs font-semibold text-muted-foreground truncate">Total Cobrado</span>
-              <KpiInfoTrigger
-                onClick={() => setSelectedKpiExplainer('total_cobrado')}
-                title="Ver fórmula y desglose de cobros recibidos"
-              />
-            </div>
-            <div className="p-1.5 rounded-lg bg-secondary text-primary shrink-0">
-              <Wallet className="h-4 w-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black font-mono text-foreground tracking-tight tabular-nums">
-              {formatCurrency(dynamicKpis.totalCobradoVentas)}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground truncate">
-              {dynamicKpis.saldoPorCobrar > 0 ? (
-                <span className="text-amber-700 font-bold">
-                  Por cobrar: {formatCurrency(dynamicKpis.saldoPorCobrar)}
-                </span>
-              ) : (
-                <span className="text-emerald-800 dark:text-emerald-300 font-semibold">
-                  ✓ Cuentas 100% al día
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+        {/* 3. Caja Real Disponible (Liquidez Neta Libre de Fijos) */}
+        <StatCard
+          label="Caja Líquida Libre"
+          value={formatCurrency(gasto.gastoDisponibleHoy)}
+          sublabel={`Total en Cuenta: ${formatCurrency(gasto.saldoActualCaja)} • Blindado Fijo: ${formatCurrency(gasto.totalBlindadoMes)}`}
+          icon={<ShieldCheck className="h-4 w-4" />}
+          variant={gasto.gastoDisponibleHoy > 0 ? 'success' : 'warning'}
+          badge={{ 
+            text: gasto.gastoDisponibleHoy > 0 ? 'Liquidez Segura' : 'Alerta de Caja', 
+            variant: gasto.gastoDisponibleHoy > 0 ? 'success' : 'warning' 
+          }}
+          onInfoClick={() => setSelectedKpiExplainer('gasto_libre_disponible')}
+        />
 
-        {/* KPI 4: Ticket Promedio */}
-        <div className="bg-card border border-border/70 rounded-2xl p-4 shadow-xs flex flex-col justify-between space-y-3 group hover:border-primary/40 transition-all">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs font-semibold text-muted-foreground truncate">Ticket Promedio</span>
-              <KpiInfoTrigger
-                onClick={() => setSelectedKpiExplainer('ticket_promedio')}
-                title="Ver fórmula y división por cantidad de pedidos"
-              />
-            </div>
-            <div className="p-1.5 rounded-lg bg-secondary text-primary shrink-0">
-              <ShoppingBag className="h-4 w-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-2xl font-black font-mono text-foreground tracking-tight tabular-nums">
-              {formatCurrency(dynamicKpis.ticketPromedio)}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground truncate">
-              <span>Costo dir: {formatCurrency(dynamicKpis.costoDirectoTotal || dynamicKpis.costoFabricacionTotal)}</span>
-            </div>
-          </div>
-        </div>
-
+        {/* 4. Punto de Equilibrio & Cobertura de Costos */}
+        <StatCard
+          label="Punto de Equilibrio"
+          value={`${breakEven.cobertura.toFixed(0)}% cubierto`}
+          sublabel={
+            breakEven.superavit >= 0 
+              ? `+${formatCurrency(breakEven.superavit)} superávit sobre fijos (${formatCurrency(breakEven.totalFijos)})` 
+              : `Faltan ${formatCurrency(Math.abs(breakEven.superavit))} (~${breakEven.pedidosFaltantes} peds p/ fijos: ${formatCurrency(breakEven.totalFijos)})`
+          }
+          icon={<Target className="h-4 w-4" />}
+          variant={breakEven.superavit >= 0 ? 'success' : 'warning'}
+          badge={{ 
+            text: breakEven.superavit >= 0 ? 'Fijos Cubiertos' : `${breakEven.pedidosFaltantes} peds faltan`, 
+            variant: breakEven.superavit >= 0 ? 'success' : 'warning' 
+          }}
+          onInfoClick={() => setSelectedKpiExplainer('break_even')}
+        />
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. ZONA CENTRAL: 2 COLUMNAS EQUILIBRADAS                                   */}
-      {/*    Columna 1: Margen Real por Pedido                                      */}
-      {/*    Columna 2: Canales de Venta & Familias (SalesMixCard)                   */}
+      {/* 2.b PULSO OPERATIVO DE TALLER 3D (CINTA RÁPIDA DE FABRICACIÓN)            */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-        
-        {/* Columna Izquierda: Gráfico Margen Real por Pedido */}
-        <Card className="bg-card border-border/70 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
-          <CardHeader className="p-4 sm:p-5 pb-2 border-b border-border/60">
+      <WorkshopPulseRibbon 
+        pedidos={rawVentas} 
+        filamentos={rawFilamentos} 
+        is3D={is3D} 
+      />
+
+      {/* ========================================================================= */}
+      {/* 3. ALERTAS DE OPERACIÓN & TRIAGE                                          */}
+      {/* ========================================================================= */}
+      <ImmediateActionQueue 
+        pedidos={rawVentas} 
+        onOpenClienteDrawer={handleOpenClienteDetalle}
+      />
+
+      {/* ========================================================================= */}
+      {/* 4. BLOQUE FINANCIERO (GRÁFICO DE MÁRGENES + DESGLOSE DE FONDOS Y COSTOS)  */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        {/* Gráfico Margen Real por Pedido & Curva Acumulada (7 cols) */}
+        <Card className="lg:col-span-7 bg-card border border-border/60 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[420px]">
+          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <CardTitle className="text-foreground text-sm sm:text-base font-bold">
+                  <CardTitle className="text-foreground text-sm font-semibold tracking-tight">
                     {chartMode === 'DIARIO' ? 'Margen Real por Pedido' : 'Curva Acumulativa del Período'}
                   </CardTitle>
                   {chartMode === 'DIARIO' && (
                     <button
                       type="button"
                       onClick={() => setSoloDiasConVentas(!soloDiasConVentas)}
-                      className="text-[10px] text-primary hover:text-primary/80 bg-secondary border border-border/70 px-2 py-0.5 rounded-md font-semibold cursor-pointer transition-colors"
+                      className="text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 border border-border/50 px-2 py-0.5 rounded-md font-medium cursor-pointer transition-colors"
                       title="Alternar entre ver solo días con ventas o todo el calendario"
                     >
                       {soloDiasConVentas ? '⚡ Días con venta' : '📅 Todo el mes'}
                     </button>
                   )}
                 </div>
-                <CardDescription className="text-xs text-muted-foreground">
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
                   {chartMode === 'DIARIO' 
-                    ? 'Barras apiladas de costo + ganancia neta día a día con curva de venta total' 
+                    ? 'Costo de producción + ganancia neta día a día con curva de venta total' 
                     : 'Tendencia acumulada de facturación y margen neto del período'}
                 </CardDescription>
               </div>
 
               {/* Selector Simplificado: [ Margen Diario | Acumulado ] */}
-              <div className="inline-flex items-center p-0.5 rounded-xl bg-secondary border border-border/70 shrink-0 self-start sm:self-auto">
+              <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shrink-0 self-start sm:self-auto">
                 <button
                   type="button"
                   onClick={() => setChartMode('DIARIO')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap ${
                     chartMode === 'DIARIO'
-                      ? 'bg-primary text-primary-foreground shadow-2xs'
+                      ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -1234,9 +1234,9 @@ export function DashboardClient({
                 <button
                   type="button"
                   onClick={() => setChartMode('ACUMULADO')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap ${
                     chartMode === 'ACUMULADO'
-                      ? 'bg-primary text-primary-foreground shadow-2xs'
+                      ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -1259,206 +1259,284 @@ export function DashboardClient({
           </CardContent>
         </Card>
 
-        {/* Columna Derecha: Distribución de Ingresos & Egresos (CategoryFinancialBreakdownCard) */}
-        <CategoryFinancialBreakdownCard
-          ventas={filteredVentas}
-          inversiones={filteredInversiones}
-          ingresosDirectos={filteredIngresosDirectos}
-          ticketPromedio={dynamicKpis.ticketPromedio}
-          totalPedidos={filteredVentas.length}
-          className="h-full min-h-[380px]"
-        />
-
+        {/* Distribución de Ingresos & Egresos (CategoryFinancialBreakdownCard) (5 cols) */}
+        <div className="lg:col-span-5 h-full">
+          <CategoryFinancialBreakdownCard
+            ventas={filteredVentas}
+            inversiones={filteredInversiones}
+            ingresosDirectos={filteredIngresosDirectos}
+            ticketPromedio={dynamicKpis.ticketPromedio}
+            totalPedidos={filteredVentas.length}
+            className="h-full min-h-[420px]"
+          />
+        </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. RANKINGS ESTRATÉGICOS (TOP CLIENTES & TOP ARTÍCULOS CON FOTO REAL)     */}
+      {/* 5. BLOQUE DE INTELIGENCIA COMERCIAL & TALLER                              */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-        
-        {/* TOP CLIENTES EN VALOR */}
-        <Card className="bg-card border-border/70 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        {/* RANKINGS DEL PERÍODO (6 cols): [ Top Clientes ] [ Top Artículos ] */}
+        <Card className="lg:col-span-6 bg-card border border-border/60 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[360px]">
           <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm sm:text-base font-bold text-foreground">
-                  Top Clientes en Valor
-                </CardTitle>
-              </div>
-              <Link
-                href="/pedidos"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 hover:underline"
-              >
-                <span>Ver pedidos</span>
-                <ArrowUpRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </CardHeader>
-
-          <CardContent className="p-0 flex-1 divide-y divide-border/60">
-            {topClientesDinamico.length === 0 ? (
-              <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
-                <Users className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-                <p>No hay compras registradas en este período.</p>
-              </div>
-            ) : (
-              topClientesDinamico.map((c, index) => (
-                <div 
-                  key={`${c.cliente}-${index}`}
-                  onClick={() => handleOpenClienteDetalle(c.cliente)}
-                  className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3 hover:bg-secondary/50 transition-colors cursor-pointer group"
-                  title={`Ver estado de cuenta de ${formatClienteNombre(c.cliente)}`}
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="text-xs font-bold text-muted-foreground w-4 text-center shrink-0">
-                      {index + 1}
-                    </span>
-
-                    <div className="w-8 h-8 rounded-lg bg-secondary border border-border/70 text-primary font-bold text-[11px] flex items-center justify-center shrink-0 group-hover:border-primary/40 transition-colors">
-                      {getInitials(c.cliente)}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-foreground truncate group-hover:text-primary transition-colors">
-                        {formatClienteNombre(c.cliente)}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                        {c.pedidosCount} {c.pedidosCount === 1 ? 'pedido' : 'pedidos'} • {c.piezasCount} piezas
-                        {c.canalPreferido && ` • ${c.canalPreferido}`}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0 space-y-0.5">
-                    <div className="text-xs sm:text-sm font-mono font-bold text-foreground tabular-nums">
-                      {formatCurrency(c.totalComprado)}
-                    </div>
-                    <div>
-                      {c.saldoPendiente > 0 ? (
-                        <span className="text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-full inline-block">
-                          Debe {formatCurrency(c.saldoPendiente)}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-500/10 px-2 py-0.5 rounded-full inline-block">
-                          Al día
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* TOP ARTÍCULOS MÁS RENTABLES (CON FOTOS REALES Y PRODUCTOS DESAGREGADOS) */}
-        <Card className="bg-card border-border/70 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between">
-          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
-                <CardTitle className="text-sm sm:text-base font-bold text-foreground">
-                  Top Artículos Más Rentables
+                <Trophy className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-sm font-semibold tracking-tight text-foreground">
+                  Rankings del Período
                 </CardTitle>
               </div>
 
-              {/* Selector de ordenamiento: Rentabilidad vs Volumen */}
-              <div className="flex items-center gap-2">
-                <div className="inline-flex items-center p-0.5 rounded-xl bg-secondary border border-border/70 shrink-0">
+              {/* Selector de Rankings: [ Top Clientes | Top Artículos ] */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shrink-0">
                   <button
                     type="button"
-                    onClick={() => setRankingArticulosMode('RENTABILIDAD')}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                      rankingArticulosMode === 'RENTABILIDAD'
-                        ? 'bg-emerald-700 text-white shadow-2xs'
+                    onClick={() => setRankingTab('CLIENTES')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                      rankingTab === 'CLIENTES'
+                        ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    💰 Ganancia
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Clientes</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRankingTab('ARTICULOS')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                      rankingTab === 'ARTICULOS'
+                        ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Package className="w-3.5 h-3.5" />
+                    <span>Artículos</span>
+                  </button>
+                </div>
+
+                {rankingTab === 'CLIENTES' ? (
+                  <Link
+                    href="/pedidos"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <span>Pedidos</span>
+                    <ArrowUpRight className="h-3 w-3" />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/catalogo"
+                    className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <span>Catálogo</span>
+                    <ArrowUpRight className="h-3 w-3" />
+                  </Link>
+                )}
+              </div>
+            </div>
+
+            {/* Sub-toggle para Artículos: Ganancia vs Unidades */}
+            {rankingTab === 'ARTICULOS' && (
+              <div className="flex items-center justify-between pt-2 text-[11px]">
+                <span className="text-muted-foreground text-[10px] uppercase font-semibold tracking-wider">
+                  Ordenar por:
+                </span>
+                <div className="inline-flex items-center p-0.5 rounded-md bg-muted/30 border border-border/50">
+                  <button
+                    type="button"
+                    onClick={() => setRankingArticulosMode('RENTABILIDAD')}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
+                      rankingArticulosMode === 'RENTABILIDAD'
+                        ? 'bg-card text-foreground font-semibold shadow-2xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Ganancia
                   </button>
                   <button
                     type="button"
                     onClick={() => setRankingArticulosMode('VOLUMEN')}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
                       rankingArticulosMode === 'VOLUMEN'
-                        ? 'bg-primary text-primary-foreground shadow-2xs'
+                        ? 'bg-card text-foreground font-semibold shadow-2xs'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
-                    📦 Unidades
+                    Unidades
                   </button>
                 </div>
-
-                <Link
-                  href="/catalogo"
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 hover:underline shrink-0"
-                >
-                  <span>Catálogo</span>
-                  <ArrowUpRight className="h-3 w-3" />
-                </Link>
               </div>
-            </div>
+            )}
           </CardHeader>
 
-          <CardContent className="p-0 flex-1 divide-y divide-border/60">
-            {topArticulosDinamico.length === 0 ? (
-              <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
-                <Package className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-                <p>No hay artículos despachados en este período.</p>
-              </div>
-            ) : (
-              topArticulosDinamico.map((art, index) => (
-                <div 
-                  key={`${art.id}-${index}`}
-                  className="px-4 sm:px-5 py-3 flex items-center justify-between gap-3 hover:bg-secondary/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="text-xs font-bold text-muted-foreground w-4 text-center shrink-0">
-                      {index + 1}
-                    </span>
-
-                    {/* Miniatura Fotográfica Real o Cubo 3D en bg-secondary */}
-                    {art.imageUrl ? (
-                      <img 
-                        src={art.imageUrl} 
-                        alt={art.nombreModelo} 
-                        className="w-10 h-10 rounded-lg object-cover border border-border/70 shrink-0" 
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-secondary border border-border/70 flex items-center justify-center shrink-0 text-muted-foreground">
-                        <Package className="h-5 w-5 stroke-[1.5]" />
-                      </div>
-                    )}
-
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-bold text-foreground leading-snug line-clamp-1" title={art.nombreModelo}>
-                        {art.nombreModelo}
-                      </h4>
-                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                        {art.unidadesVendidas} {art.unidadesVendidas === 1 ? 'unidad vendida' : 'unidades vendidas'} • Ventas: {formatCurrency(art.totalFacturado)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0 space-y-0.5">
-                    <div className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300 tabular-nums font-mono">
-                      +{formatCurrency(art.gananciaNeta || 0)}
-                    </div>
-                    <div className="text-[10px] font-medium text-muted-foreground">
-                      {art.margenPorcentaje != null ? `${art.margenPorcentaje.toFixed(0)}% margen` : ''}
-                    </div>
-                  </div>
+          <CardContent className="p-0 flex-1 divide-y divide-border/40">
+            {rankingTab === 'CLIENTES' ? (
+              topClientesDinamico.length === 0 ? (
+                <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
+                  <Users className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                  <p>No hay compras registradas en este período.</p>
                 </div>
-              ))
+              ) : (
+                topClientesDinamico.map((c, index) => {
+                  const rankClass = 
+                    index === 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
+                    index === 1 ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30' :
+                    index === 2 ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' :
+                    'bg-muted/60 text-muted-foreground border-border/60'
+
+                  return (
+                    <div 
+                      key={`${c.cliente}-${index}`}
+                      onClick={() => handleOpenClienteDetalle(c.cliente)}
+                      className="px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors cursor-pointer group"
+                      title={`Ver estado de cuenta de ${formatClienteNombre(c.cliente)}`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-mono font-bold border shrink-0 ${rankClass}`}>
+                          {index + 1}
+                        </span>
+
+                        <div className="w-8 h-8 rounded-full bg-muted border border-border/60 text-muted-foreground text-xs font-semibold flex items-center justify-center shrink-0 group-hover:border-primary/40 group-hover:text-primary transition-colors">
+                          {getInitials(c.cliente)}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                            {formatClienteNombre(c.cliente)}
+                          </h4>
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate mt-0.5">
+                            <span>{c.pedidosCount} {c.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
+                            <span>•</span>
+                            <span>{c.piezasCount} piezas</span>
+                            {c.canalPreferido && (
+                              <>
+                                <span>•</span>
+                                <span className="px-1.5 py-0.2 rounded bg-secondary text-secondary-foreground text-[10px] font-medium border border-border/40">
+                                  {c.canalPreferido}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 space-y-0.5">
+                        <div className="text-xs sm:text-sm font-mono font-semibold text-foreground tabular-nums tracking-tight">
+                          {formatCurrency(c.totalComprado)}
+                        </div>
+                        <div>
+                          {c.saldoPendiente > 0 ? (
+                            <span className="text-[10px] font-medium font-mono text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md inline-block tabular-nums">
+                              Debe {formatCurrency(c.saldoPendiente)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-medium font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md inline-block">
+                              Al día
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )
+            ) : (
+              topArticulosDinamico.length === 0 ? (
+                <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
+                  <Package className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                  <p>No hay artículos despachados en este período.</p>
+                </div>
+              ) : (
+                topArticulosDinamico.map((art, index) => {
+                  const rankClass = 
+                    index === 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
+                    index === 1 ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30' :
+                    index === 2 ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' :
+                    'bg-muted/60 text-muted-foreground border-border/60'
+
+                  return (
+                    <div 
+                      key={`${art.id}-${index}`}
+                      className="px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-mono font-bold border shrink-0 ${rankClass}`}>
+                          {index + 1}
+                        </span>
+
+                        {art.imageUrl ? (
+                          <img 
+                            src={art.imageUrl} 
+                            alt={art.nombreModelo} 
+                            className="w-8 h-8 rounded-lg object-cover border border-border/60 shrink-0" 
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center shrink-0 text-muted-foreground">
+                            <Package className="h-3.5 w-3.5 stroke-[1.5]" />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-xs font-semibold text-foreground leading-snug line-clamp-1" title={art.nombreModelo}>
+                            {art.nombreModelo}
+                          </h4>
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate mt-0.5">
+                            <span>{art.unidadesVendidas} {art.unidadesVendidas === 1 ? 'ud' : 'uds'}</span>
+                            <span>•</span>
+                            <span className="font-mono">S/ {art.totalFacturado.toFixed(2)}</span>
+                            {art.lineaCategoria && (
+                              <>
+                                <span>•</span>
+                                <span className="px-1.5 py-0.2 rounded bg-secondary text-secondary-foreground text-[10px] font-medium border border-border/40">
+                                  {art.lineaCategoria}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 space-y-0.5">
+                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums font-mono tracking-tight">
+                          +{formatCurrency(art.gananciaNeta || 0)}
+                        </div>
+                        <div className="text-[10px] font-medium font-mono text-muted-foreground tabular-nums">
+                          {art.margenPorcentaje != null ? `${art.margenPorcentaje.toFixed(0)}% margen` : ''}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )
             )}
           </CardContent>
         </Card>
 
+        {/* CANALES DE CAPTACIÓN (6 cols): Gráfico Donut (Círculo Pastel) + Rendimiento */}
+        <div className="lg:col-span-6 h-full">
+          <AcquisitionChannelsCard
+            ventas={filteredVentas}
+            ticketPromedio={dynamicKpis.ticketPromedio}
+            totalPedidos={filteredVentas.length}
+            className="h-full"
+          />
+        </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 5. DRAWER DE DETALLE DEL CLIENTE & MODAL DE AUDITORÍA DE KPIS             */}
+      {/* 6. OPERACIONES DE FABRICACIÓN & DISPONIBILIDAD DE MATERIAL (EN DETALLE)   */}
+      {/* ========================================================================= */}
+      {is3D && (
+        <LiveWorkshopPulse 
+          pedidos={rawVentas} 
+          filamentos={rawFilamentos}
+          is3D={is3D}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* 7. DRAWER DE DETALLE DEL CLIENTE & MODAL DE AUDITORÍA DE KPIS             */}
       {/* ========================================================================= */}
       <ClienteDetalleDrawer 
         isOpen={drawerOpen}

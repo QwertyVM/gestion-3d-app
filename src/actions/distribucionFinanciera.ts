@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
 import { isDateInRange } from '@/lib/date-utils'
-import { getVentas } from '@/actions/ventas'
+import { getPedidos } from '@/actions/pedidos'
 import { calcularDistribucionFinanciera, ResumenDistribucionFinanciera } from '@/lib/distribucion'
 
 export type { ItemDistribucion, CanalDistribucion, ResumenDistribucionFinanciera } from '@/lib/distribucion'
@@ -23,12 +23,12 @@ export async function getDistribucionFinanciera({
 } = {}): Promise<ResumenDistribucionFinanciera> {
   const targetNegocio = negocio || await getActiveNegocioServer()
 
-  const [inversiones, ventas, ingresosDirectos] = await Promise.all([
+  const [inversiones, pedidos, ingresosDirectos] = await Promise.all([
     prisma.inversion.findMany({
       where: { negocio: targetNegocio },
       orderBy: { createdAt: 'desc' }
     }),
-    getVentas(targetNegocio),
+    getPedidos(targetNegocio),
     prisma.ingreso.findMany({
       where: { negocio: targetNegocio },
       orderBy: { fecha: 'desc' }
@@ -40,8 +40,8 @@ export async function getDistribucionFinanciera({
     isDateInRange(inv.createdAt, desde, hasta)
   )
 
-  const filteredVentas = ventas.filter((v: any) =>
-    isDateInRange(v.fecha, desde, hasta)
+  const filteredPedidos = pedidos.filter((p: any) =>
+    isDateInRange(p.fecha, desde, hasta)
   )
 
   const filteredIngresosDirectos = ingresosDirectos.filter((ing) =>
@@ -49,7 +49,7 @@ export async function getDistribucionFinanciera({
   )
 
   return calcularDistribucionFinanciera({
-    ventas: filteredVentas,
+    ventas: filteredPedidos,
     inversiones: filteredInversiones,
     ingresosDirectos: filteredIngresosDirectos
   })

@@ -1,8 +1,8 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { getVentas, registrarAbono } from '@/actions/ventas'
-import { addPagoPedido } from '@/actions/pedidos'
+import { getPedidos, addPagoPedido } from '@/actions/pedidos'
+import { registrarAbono } from '@/actions/ventas'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
 import { getResumenBlindadoOficial } from '@/actions/presupuesto'
@@ -10,12 +10,12 @@ import { getResumenBlindadoOficial } from '@/actions/presupuesto'
 export async function getDashboardData(negocio?: TipoNegocio) {
   const targetNegocio = negocio || await getActiveNegocioServer()
 
-  const [inversiones, ventas, ingresosDirectos, filamentos] = await Promise.all([
+  const [inversiones, pedidos, ingresosDirectos, filamentos] = await Promise.all([
     prisma.inversion.findMany({
       where: { negocio: targetNegocio },
       orderBy: { createdAt: 'desc' }
     }),
-    getVentas(targetNegocio),
+    getPedidos(targetNegocio),
     prisma.ingreso.findMany({
       where: { negocio: targetNegocio },
       orderBy: { fecha: 'desc' }
@@ -29,19 +29,14 @@ export async function getDashboardData(negocio?: TipoNegocio) {
   const egresosTotales = inversiones.reduce((sum, item) => sum + Number(item.costoTotal), 0)
 
   // 2. Ingresos por Ventas de Catálogo
-  const ingresosVentas = ventas.reduce((sum, item) => sum + Number(item.total), 0)
+  const ingresosVentas = pedidos.reduce((sum, item) => sum + Number(item.total), 0)
 
-  // 3. Costo Total de Fabricación de los productos vendidos (usando snapshot histórico)
-  const costoFabricacionTotal = ventas.reduce((sum, v) => {
-    const costoBaseUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
-      ? Number(v.costoBaseSnapshot) 
-      : (Number(v.producto?.costoBase) || 0)
-    return sum + (costoBaseUnit * v.cantidad)
-  }, 0)
+  // 3. Costo Total de Fabricación de los productos vendidos
+  const costoFabricacionTotal = pedidos.reduce((sum, p) => sum + Number(p.costoBaseTotal || 0), 0)
 
   // 3.b Costo Total de Packaging (Cajas) y Envío
-  const costoCajasTotal = ventas.reduce((sum, v: any) => sum + Number(v.costoTotalCajas || v.costoPackaging || 0), 0)
-  const costoEnvioTotal = ventas.reduce((sum, v: any) => sum + Number(v.costoEnvio || 0), 0)
+  const costoCajasTotal = pedidos.reduce((sum, p) => sum + Number(p.costoTotalCajas || 0), 0)
+  const costoEnvioTotal = pedidos.reduce((sum, p) => sum + Number(p.costoEnvio || 0), 0)
   const costoDirectoTotal = costoFabricacionTotal + costoCajasTotal + costoEnvioTotal
 
   // 4. GANANCIA NETA EN VENTAS (Ingresos por Venta - Costos Directos: Fabricación + Cajas + Envío)
@@ -53,19 +48,13 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     : 0
 
   // 6. Total Cobrado en Efectivo de Ventas (calculado desde pagos o montoPagado)
-  const totalCobradoVentas = ventas.reduce((sum: number, v: any) => {
-    if (v.pagos && v.pagos.length > 0) {
-      const sumP = v.pagos.reduce((pSum: number, p: any) => pSum + Number(p.monto), 0)
-      return sum + Math.max(sumP, Number(v.montoPagado || 0))
-    }
-    return sum + Number(v.montoPagado || 0)
-  }, 0)
+  const totalCobradoVentas = pedidos.reduce((sum: number, p) => sum + Number(p.montoPagado || 0), 0)
 
   // 7. Saldo Total por Cobrar a Clientes
-  const saldoPorCobrar = ventas.reduce((sum, item) => sum + Number(item.saldoPendiente), 0)
+  const saldoPorCobrar = pedidos.reduce((sum, item) => sum + Number(item.saldoPendiente || 0), 0)
 
   // 8. Ticket Promedio
-  const ticketPromedio = ventas.length > 0 ? ingresosVentas / ventas.length : 0
+  const ticketPromedio = pedidos.length > 0 ? ingresosVentas / pedidos.length : 0
 
   // 9. Total Ingresos Directos / Financiamiento
   const totalIngresosDirectos = ingresosDirectos.reduce((sum, i) => sum + Number(i.monto), 0)
@@ -74,33 +63,26 @@ export async function getDashboardData(negocio?: TipoNegocio) {
   const timelineMap: Record<string, { ingresos: number; costo: number; ganancia: number }> = {}
 
   // A. Procesar costos y ventas base en la fecha de registro
-  ventas.forEach((venta: any) => {
-    const rawFecha = venta.fecha instanceof Date ? venta.fecha.toISOString() : String(venta.fecha)
-    const vDate = rawFecha.split('T')[0]
+  pedidos.forEach((p) => {
+    const vDate = String(p.fecha).split('T')[0]
     if (!timelineMap[vDate]) {
       timelineMap[vDate] = { ingresos: 0, costo: 0, ganancia: 0 }
     }
 
-    const costoBaseUnit = venta.costoBaseSnapshot != null && Number(venta.costoBaseSnapshot) > 0 
-      ? Number(venta.costoBaseSnapshot) 
-      : (Number(venta.producto?.costoBase) || 0)
-    const ventaCaja = Number(venta.costoTotalCajas || venta.costoPackaging || 0)
-    const ventaEnvio = Number(venta.costoEnvio || 0)
-    const ventaCosto = (costoBaseUnit * Number(venta.cantidad || 1)) + ventaCaja + ventaEnvio
-    timelineMap[vDate].costo += ventaCosto
+    const pCosto = Number(p.costoBaseTotal || 0) + Number(p.costoTotalCajas || 0) + Number(p.costoEnvio || 0)
+    timelineMap[vDate].costo += pCosto
 
-    // Si la venta no cuenta con desglose de pagos (ventas anteriores a la tabla PagoVenta)
-    if (!venta.pagos || venta.pagos.length === 0) {
-      timelineMap[vDate].ingresos += Number(venta.montoPagado != null ? venta.montoPagado : venta.total)
+    // Si el pedido no cuenta con desglose de pagos
+    if (!p.pagos || p.pagos.length === 0) {
+      timelineMap[vDate].ingresos += Number(p.montoPagado != null ? p.montoPagado : p.total)
     }
   })
 
-  // B. Procesar recaudaciones/abonos en sus fechas efectivas de pago (incluyendo Septiembre)
-  ventas.forEach((venta: any) => {
-    if (venta.pagos && venta.pagos.length > 0) {
-      venta.pagos.forEach((pago: any) => {
-        const rawPagoFecha = pago.fecha instanceof Date ? pago.fecha.toISOString() : String(pago.fecha)
-        const pDate = rawPagoFecha.split('T')[0]
+  // B. Procesar recaudaciones/abonos en sus fechas efectivas de pago
+  pedidos.forEach((p) => {
+    if (p.pagos && p.pagos.length > 0) {
+      p.pagos.forEach((pago: any) => {
+        const pDate = String(pago.fecha).split('T')[0]
         if (!timelineMap[pDate]) {
           timelineMap[pDate] = { ingresos: 0, costo: 0, ganancia: 0 }
         }
@@ -138,55 +120,62 @@ export async function getDashboardData(negocio?: TipoNegocio) {
   const graficoInversion = Object.entries(distribucionInversion).map(([name, value]) => ({ name, value }))
 
   // Cuentas por cobrar
-  const cuentasPorCobrar = ventas
-    .filter((v: any) => Number(v.saldoPendiente) > 0)
+  const cuentasPorCobrar = pedidos
+    .filter((p: any) => Number(p.saldoPendiente) > 0)
     .sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-    .map((v: any) => ({
-      id: v.id,
-      fecha: v.fecha instanceof Date ? v.fecha.toISOString() : String(v.fecha),
-      cliente: v.cliente,
-      productoId: v.productoId,
-      nombreProductoSnapshot: v.nombreProductoSnapshot || v.producto?.nombreModelo || '',
-      costoBaseSnapshot: v.costoBaseSnapshot != null ? Number(v.costoBaseSnapshot) : (v.producto ? Number(v.producto.costoBase) : 0),
-      colorFilamentoId: v.colorFilamentoId || null,
-      personalizacion: v.personalizacion || null,
-      gramosConsumidos: v.gramosConsumidos != null ? Number(v.gramosConsumidos) : 0,
-      cantidad: Number(v.cantidad),
-      tipoPrecio: v.tipoPrecio,
-      precioUnitario: Number(v.precioUnitario),
-      total: Number(v.total),
-      montoPagado: Number(v.montoPagado),
-      saldoPendiente: Number(v.saldoPendiente),
-      costoPackaging: v.costoPackaging != null ? Number(v.costoPackaging) : 0,
-      porcentajeAdicional: v.porcentajeAdicional != null ? Number(v.porcentajeAdicional) : 0,
-      estado: v.estado,
-      diaEntregaPrometida: v.diaEntregaPrometida || null,
-      destinoEnvio: v.destinoEnvio || null,
-      canalVenta: v.canalVenta || null,
-      createdAt: v.createdAt instanceof Date ? v.createdAt.toISOString() : String(v.createdAt),
-      updatedAt: v.updatedAt instanceof Date ? v.updatedAt.toISOString() : String(v.updatedAt),
-      producto: v.producto ? {
-        id: v.producto.id,
-        lineaCategoria: v.producto.lineaCategoria,
-        nombreModelo: v.producto.nombreModelo,
-        costoBase: Number(v.producto.costoBase),
-        precioMayor: Number(v.producto.precioMayor),
-        precioMenor: Number(v.producto.precioMenor),
-        activo: v.producto.activo,
-        createdAt: v.producto.createdAt instanceof Date ? v.producto.createdAt.toISOString() : String(v.producto.createdAt),
-        updatedAt: v.producto.updatedAt instanceof Date ? v.producto.updatedAt.toISOString() : String(v.producto.updatedAt),
-      } : {
-        id: v.productoId,
-        lineaCategoria: 'General',
-        nombreModelo: v.nombreProductoSnapshot || 'Producto',
-        costoBase: 0,
-        precioMayor: 0,
-        precioMenor: 0,
-        activo: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+    .map((p: any) => {
+      const firstItem = p.items?.[0]
+      const prodName = p.items && p.items.length > 0
+        ? p.items.map((it: any) => `${it.cantidad}x ${it.nombreProductoSnapshot || it.producto?.nombreModelo || 'Pieza'}`).join(', ')
+        : 'Pedido'
+
+      return {
+        id: p.id,
+        fecha: p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha),
+        cliente: p.cliente,
+        productoId: firstItem?.productoId || p.id,
+        nombreProductoSnapshot: prodName,
+        costoBaseSnapshot: Number(p.costoBaseTotal || 0),
+        colorFilamentoId: firstItem?.colorFilamentoId || null,
+        personalizacion: p.notas || null,
+        gramosConsumidos: p.items?.reduce((sum: number, it: any) => sum + Number(it.gramosConsumidos || 0), 0) || 0,
+        cantidad: p.items?.reduce((sum: number, it: any) => sum + Number(it.cantidad || 1), 0) || 1,
+        tipoPrecio: firstItem?.tipoPrecio || 'MENOR',
+        precioUnitario: Number(p.total),
+        total: Number(p.total),
+        montoPagado: Number(p.montoPagado),
+        saldoPendiente: Number(p.saldoPendiente),
+        costoPackaging: Number(p.costoTotalCajas || 0),
+        porcentajeAdicional: 0,
+        estado: p.estado,
+        diaEntregaPrometida: p.diaEntregaPrometida || null,
+        destinoEnvio: p.destinoEnvio || null,
+        canalVenta: p.canalVenta || null,
+        createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : String(p.createdAt),
+        updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt),
+        producto: firstItem?.producto ? {
+          id: firstItem.producto.id,
+          lineaCategoria: firstItem.producto.lineaCategoria,
+          nombreModelo: firstItem.producto.nombreModelo,
+          costoBase: Number(firstItem.producto.costoBase),
+          precioMayor: Number(firstItem.producto.precioMayor),
+          precioMenor: Number(firstItem.producto.precioMenor),
+          activo: firstItem.producto.activo,
+          createdAt: firstItem.producto.createdAt instanceof Date ? firstItem.producto.createdAt.toISOString() : String(firstItem.producto.createdAt),
+          updatedAt: firstItem.producto.updatedAt instanceof Date ? firstItem.producto.updatedAt.toISOString() : String(firstItem.producto.updatedAt),
+        } : {
+          id: firstItem?.productoId || p.id,
+          lineaCategoria: 'General',
+          nombreModelo: prodName,
+          costoBase: 0,
+          precioMayor: 0,
+          precioMenor: 0,
+          activo: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
       }
-    }))
+    })
 
   // 11. Top 5 Colores Más Utilizados en Taller
   const colorUsageMap: Record<string, {
@@ -202,42 +191,44 @@ export async function getDashboardData(negocio?: TipoNegocio) {
 
   let totalGramosGeneral = 0
 
-  ventas.forEach((v) => {
-    if (v.colorFilamentoId || v.colorFilamento) {
-      const colorId = v.colorFilamentoId || v.colorFilamento?.id || 'otro'
-      const colorNombre = v.colorFilamento?.nombreColor || 'Color Taller'
-      const colorHex = v.colorFilamento?.codigoHex || '#18181B'
+  pedidos.forEach((p) => {
+    (p.items || []).forEach((it: any) => {
+      if (it.colorFilamentoId || it.colorFilamento) {
+        const colorId = it.colorFilamentoId || it.colorFilamento?.id || 'otro'
+        const colorNombre = it.colorFilamento?.nombreColor || 'Color Taller'
+        const colorHex = it.colorFilamento?.codigoHex || '#18181B'
 
-      const costoBaseUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0
-        ? Number(v.costoBaseSnapshot)
-        : (Number(v.producto?.costoBase) || 0)
+        const costoBaseUnit = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+          ? Number(it.costoBaseSnapshot)
+          : (Number(it.producto?.costoBase) || 0)
 
-      const gramosConsumidos = v.gramosConsumidos != null && Number(v.gramosConsumidos) > 0
-        ? Number(v.gramosConsumidos)
-        : Number(((costoBaseUnit / 0.065) * Number(v.cantidad || 1)).toFixed(1))
+        const gramosConsumidos = it.gramosConsumidos != null && Number(it.gramosConsumidos) > 0
+          ? Number(it.gramosConsumidos)
+          : Number(((costoBaseUnit / 0.065) * Number(it.cantidad || 1)).toFixed(1))
 
-      const filamentoEnTaller = filamentos.find(f => f.id === colorId || f.nombreColor.toLowerCase() === colorNombre.toLowerCase())
-      const stockGramosActual = filamentoEnTaller ? Number(filamentoEnTaller.stockGramos || 0) : Number(v.colorFilamento?.stockGramos || 1000)
-      const alertaCritica = stockGramosActual < 300 || Boolean(filamentoEnTaller?.alertaCritica)
+        const filamentoEnTaller = filamentos.find(f => f.id === colorId || f.nombreColor.toLowerCase() === colorNombre.toLowerCase())
+        const stockGramosActual = filamentoEnTaller ? Number(filamentoEnTaller.stockGramos || 0) : Number(it.colorFilamento?.stockGramos || 1000)
+        const alertaCritica = stockGramosActual < 300 || Boolean(filamentoEnTaller?.alertaCritica)
 
-      if (!colorUsageMap[colorNombre]) {
-        colorUsageMap[colorNombre] = {
-          id: colorId,
-          nombreColor: colorNombre,
-          codigoHex: colorHex,
-          pedidosCount: 0,
-          unidadesCount: 0,
-          gramosTotal: 0,
-          stockGramosActual,
-          alertaCritica
+        if (!colorUsageMap[colorNombre]) {
+          colorUsageMap[colorNombre] = {
+            id: colorId,
+            nombreColor: colorNombre,
+            codigoHex: colorHex,
+            pedidosCount: 0,
+            unidadesCount: 0,
+            gramosTotal: 0,
+            stockGramosActual,
+            alertaCritica
+          }
         }
-      }
 
-      colorUsageMap[colorNombre].pedidosCount += 1
-      colorUsageMap[colorNombre].unidadesCount += Number(v.cantidad || 1)
-      colorUsageMap[colorNombre].gramosTotal += gramosConsumidos
-      totalGramosGeneral += gramosConsumidos
-    }
+        colorUsageMap[colorNombre].pedidosCount += 1
+        colorUsageMap[colorNombre].unidadesCount += Number(it.cantidad || 1)
+        colorUsageMap[colorNombre].gramosTotal += gramosConsumidos
+        totalGramosGeneral += gramosConsumidos
+      }
+    })
   })
 
   const topColores = Object.values(colorUsageMap)
@@ -281,22 +272,8 @@ export async function getDashboardData(negocio?: TipoNegocio) {
 
   let totalUnidadesVendidas = 0
 
-  // Procesar pedidos de la base de datos
-  const rawPedidos = await prisma.pedido.findMany({
-    where: { negocio: targetNegocio },
-    include: {
-      items: {
-        include: {
-          producto: true,
-          colorFilamento: true
-        }
-      },
-      pagos: true
-    },
-    orderBy: { fecha: 'desc' }
-  })
-
-  rawPedidos.forEach((p) => {
+  // Procesar pedidos ya cargados en memoria
+  pedidos.forEach((p) => {
     const rawCliente = (p.cliente || 'Cliente sin nombre').trim()
     const cKey = rawCliente.toLowerCase()
 
@@ -309,7 +286,7 @@ export async function getDashboardData(negocio?: TipoNegocio) {
         pedidosCount: 0,
         piezasCount: 0,
         canales: {},
-        ultimoPedidoFecha: p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha)
+        ultimoPedidoFecha: String(p.fecha)
       }
     }
 
@@ -328,7 +305,7 @@ export async function getDashboardData(negocio?: TipoNegocio) {
       c.canales[p.canalVenta] = (c.canales[p.canalVenta] || 0) + 1
     }
 
-    const pFecha = p.fecha instanceof Date ? p.fecha.toISOString() : String(p.fecha)
+    const pFecha = String(p.fecha)
     if (new Date(pFecha).getTime() > new Date(c.ultimoPedidoFecha).getTime()) {
       c.ultimoPedidoFecha = pFecha
     }
@@ -440,8 +417,8 @@ export async function getDashboardData(negocio?: TipoNegocio) {
   const saldoActualCaja = Math.max(0, (totalCobradoVentas + totalIngresosDirectos) - egresosTotales)
   const totalBlindadoMes = resumenBlindado.totalBlindadoMes
   const gastoDisponibleHoy = Math.max(0, saldoActualCaja - totalBlindadoMes)
-  const margenUnitarioPromedio = ticketPromedio > 0 ? (gananciaNeta / Math.max(1, ventas.length)) : 97.00
-  const pedidosProyectadosMes = Math.max(8, Math.min(30, Math.round(ventas.length / Math.max(1, 2)) || 18))
+  const margenUnitarioPromedio = ticketPromedio > 0 ? (gananciaNeta / Math.max(1, pedidos.length)) : 97.00
+  const pedidosProyectadosMes = Math.max(8, Math.min(30, Math.round(pedidos.length / Math.max(1, 2)) || 18))
   const gananciaProyectadaMes = pedidosProyectadosMes * margenUnitarioPromedio
   const gastoDisponibleProyectado = Math.max(0, (saldoActualCaja + gananciaProyectadaMes) - totalBlindadoMes)
 
@@ -507,7 +484,7 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     topColores,
     topClientes,
     topArticulos,
-    rawVentas: ventas,
+    rawVentas: pedidos,
     rawInversiones: serializedInversiones,
     rawIngresosDirectos: serializedIngresosDirectos,
     rawFilamentos: serializedFilamentos

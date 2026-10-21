@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { getVentas } from '@/actions/ventas'
+import { getPedidos } from '@/actions/pedidos'
 import { getResumenBlindadoOficial } from '@/actions/presupuesto'
 import { getTallerData } from '@/actions/taller'
 import { TipoNegocio } from '@/lib/business'
@@ -82,8 +82,8 @@ export async function getKpiExplanation(
   const rangoDescripcion = getRangoDescripcion(from || null, to || null)
 
   // Consultar datos base
-  const [ventas, inversiones, ingresosDirectos, blindado] = await Promise.all([
-    getVentas(targetNegocio),
+  const [pedidos, inversiones, ingresosDirectos, blindado] = await Promise.all([
+    getPedidos(targetNegocio),
     prisma.inversion.findMany({
       where: { negocio: targetNegocio },
       orderBy: { createdAt: 'desc' }
@@ -96,7 +96,7 @@ export async function getKpiExplanation(
   ])
 
   // Filtrar según el rango de fechas
-  const filteredVentas = ventas.filter((v: any) => isDateInRange(v.fecha, from, to))
+  const filteredVentas = pedidos.filter((v: any) => isDateInRange(v.fecha, from, to))
   const filteredInversiones = inversiones.filter((inv: any) => isDateInRange(inv.createdAt, from, to))
   const filteredIngresosDirectos = ingresosDirectos.filter((i: any) => isDateInRange(i.fecha, from, to))
 
@@ -110,7 +110,7 @@ export async function getKpiExplanation(
     codigoRef?: string
   }> = []
 
-  ventas.forEach((v: any) => {
+  pedidos.forEach((v: any) => {
     if (Array.isArray(v.pagos) && v.pagos.length > 0) {
       v.pagos.forEach((p: any) => {
         if (isDateInRange(p.fecha, from, to)) {
@@ -238,6 +238,195 @@ export async function getKpiExplanation(
   }
 
   // =========================================================================
+  // 1.b DASHBOARD: UTILIDAD NETA OPERATIVA (EBITDA / RESULTADO OPERATIVO)
+  // =========================================================================
+  if (kpiId === 'utilidad_operativa') {
+    const totalFacturado = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.total || 0), 0)
+    const totalDirectos = ingresosDirectos.filter((i: any) => isDateInRange(i.fecha, from, to)).reduce((sum: number, i: any) => sum + Number(i.monto || 0), 0)
+    const ingresosTotales = totalFacturado + totalDirectos
+
+    const costoProduccionTotal = filteredVentas.reduce((sum: number, v: any) => {
+      if (Array.isArray(v.items) && v.items.length > 0) {
+        return sum + v.items.reduce((iSum: number, it: any) => {
+          const cUnit = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+            ? Number(it.costoBaseSnapshot)
+            : (Number(it.producto?.costoBase) || 0)
+          return iSum + (cUnit * Number(it.cantidad || 1))
+        }, 0)
+      }
+      const cUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
+        ? Number(v.costoBaseSnapshot) 
+        : (Number(v.producto?.costoBase) || 0)
+      return sum + (cUnit * Number(v.cantidad || 1))
+    }, 0)
+
+    const costoPackagingTotal = filteredVentas.reduce((sum: number, v: any) => {
+      return sum + Number(v.costoTotalCajas != null ? v.costoTotalCajas : (v.costoPackaging || 0))
+    }, 0)
+
+    const costoEnvioTotal = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.costoEnvio || 0), 0)
+    const costoDirectoTotal = costoProduccionTotal + costoPackagingTotal + costoEnvioTotal
+    const egresosTotales = filteredInversiones.reduce((sum: number, inv: any) => sum + Number(inv.costoTotal || 0), 0)
+    const egresosGlobales = costoDirectoTotal + egresosTotales
+
+    const utilidadOperativa = ingresosTotales - egresosGlobales
+    const margenOperativo = ingresosTotales > 0 ? (utilidadOperativa / ingresosTotales) * 100 : 0
+
+    const transacciones: KpiTransactionItem[] = [
+      ...filteredVentas.map((v: any) => ({
+        id: v.id,
+        fecha: String(v.fecha).split('T')[0],
+        concepto: `Venta #${v.codigo || v.id.slice(0, 6)} • ${v.cliente || 'Cliente'}`,
+        monto: Number(v.total || 0),
+        montoFormateado: `+${formatCurrency(Number(v.total || 0))}`,
+        cliente: v.cliente || 'Cliente',
+        categoriaOEstado: 'VENTA'
+      })),
+      ...filteredInversiones.map((inv: any) => ({
+        id: inv.id,
+        fecha: String(inv.fecha || inv.createdAt).split('T')[0],
+        concepto: `Egreso: ${inv.itemConcepto || inv.categoria}`,
+        monto: -Number(inv.costoTotal || 0),
+        montoFormateado: `-${formatCurrency(Number(inv.costoTotal || 0))}`,
+        cliente: inv.persona || 'Taller',
+        categoriaOEstado: inv.categoria || 'EGRESO'
+      }))
+    ].sort((a, b) => b.fecha.localeCompare(a.fecha))
+
+    return {
+      kpiId,
+      titulo: 'Utilidad Neta Operativa (EBITDA)',
+      subtitulo: 'Rendimiento financiero neto del taller deduciendo costos y egresos del período',
+      valorFormateado: formatCurrency(utilidadOperativa),
+      rangoFechas: { from: from || null, to: to || null, descripcion: rangoDescripcion },
+      formulaMatematica: 'Utilidad Operativa = (Ventas + Ingresos Directos) - (Costos Directos + Egresos Totales)',
+      explicacionConceptual:
+        'En análisis financiero y contabilidad gerencial, la utilidad neta operativa revela el verdadero resultado de explotación. A diferencia del margen bruto de ventas (que solo descuenta insumos de catálogo), este indicador deduce absolutamente todos los egresos devengados en el mes (compra de maquinaria, insumos, sueldos, servicios y costos operativos), permitiendo saber si la operación del taller genera superávit o déficit neto.',
+      pasosCalculo: [
+        {
+          paso: 1,
+          descripcion: 'Suma de todos los ingresos comerciales y directos del período.',
+          resultadoParcial: formatCurrency(ingresosTotales)
+        },
+        {
+          paso: 2,
+          descripcion: 'Cálculo de costos directos de catálogo (insumos de fabricación + cajas de empaque + envíos).',
+          resultadoParcial: formatCurrency(costoDirectoTotal)
+        },
+        {
+          paso: 3,
+          descripcion: 'Suma de egresos, inversiones y gastos operativos registrados en el taller durante el período.',
+          resultadoParcial: formatCurrency(egresosTotales)
+        },
+        {
+          paso: 4,
+          descripcion: 'Deducción final de egresos sobre ingresos para determinar la ganancia operativa.',
+          resultadoParcial: `${formatCurrency(utilidadOperativa)} (${margenOperativo >= 0 ? '+' : ''}${margenOperativo.toFixed(1)}% margen neto)`
+        }
+      ],
+      resumenMetricas: [
+        { etiqueta: 'Ingresos Totales', valor: formatCurrency(ingresosTotales), tipo: 'destacado' },
+        { etiqueta: 'Costos Directos Ventas', valor: formatCurrency(costoDirectoTotal), tipo: 'neutro' },
+        { etiqueta: 'Egresos & Compras Taller', valor: formatCurrency(egresosTotales), tipo: 'neutro' },
+        { etiqueta: 'Utilidad Operativa Neta', valor: formatCurrency(utilidadOperativa), tipo: utilidadOperativa >= 0 ? 'positivo' : 'negativo' },
+        { etiqueta: 'Margen Operativo', valor: `${margenOperativo.toFixed(1)}%`, tipo: margenOperativo >= 0 ? 'positivo' : 'negativo' }
+      ],
+      transaccionesDetalle: transacciones,
+      totalTransacciones: transacciones.length,
+      notaAuditoria: 'Concilia los ingresos facturados frente a la totalidad de salidas de capital del período.'
+    }
+  }
+
+  // =========================================================================
+  // 1.c DASHBOARD: PUNTO DE EQUILIBRIO (BREAK-EVEN POINT)
+  // =========================================================================
+  if (kpiId === 'break_even') {
+    const totalFacturado = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.total || 0), 0)
+    const costoProduccionTotal = filteredVentas.reduce((sum: number, v: any) => {
+      if (Array.isArray(v.items) && v.items.length > 0) {
+        return sum + v.items.reduce((iSum: number, it: any) => {
+          const cUnit = it.costoBaseSnapshot != null && Number(it.costoBaseSnapshot) > 0
+            ? Number(it.costoBaseSnapshot)
+            : (Number(it.producto?.costoBase) || 0)
+          return iSum + (cUnit * Number(it.cantidad || 1))
+        }, 0)
+      }
+      const cUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0 
+        ? Number(v.costoBaseSnapshot) 
+        : (Number(v.producto?.costoBase) || 0)
+      return sum + (cUnit * Number(v.cantidad || 1))
+    }, 0)
+
+    const costoPackagingTotal = filteredVentas.reduce((sum: number, v: any) => {
+      return sum + Number(v.costoTotalCajas != null ? v.costoTotalCajas : (v.costoPackaging || 0))
+    }, 0)
+    const costoEnvioTotal = filteredVentas.reduce((sum: number, v: any) => sum + Number(v.costoEnvio || 0), 0)
+    const costoDirectoTotal = costoProduccionTotal + costoPackagingTotal + costoEnvioTotal
+    const margenContribucionTotal = totalFacturado - costoDirectoTotal
+
+    const fijosMes = blindado.totalBlindadoMes || 1377.68
+    const coberturaPct = fijosMes > 0 ? (margenContribucionTotal / fijosMes) * 100 : 100
+    const margenUnitario = filteredVentas.length > 0 ? (margenContribucionTotal / filteredVentas.length) : 97.00
+    const pedidosEquilibrio = Math.max(1, Math.ceil(fijosMes / margenUnitario))
+    const pedidosFaltantes = Math.max(0, pedidosEquilibrio - filteredVentas.length)
+    const superavit = margenContribucionTotal - fijosMes
+
+    return {
+      kpiId,
+      titulo: 'Punto de Equilibrio (Break-Even)',
+      subtitulo: 'Nivel de absorción de compromisos fijos y cuotas blindadas del mes',
+      valorFormateado: `${coberturaPct.toFixed(0)}% cubierto`,
+      rangoFechas: { from: from || null, to: to || null, descripcion: rangoDescripcion },
+      formulaMatematica: 'Cobertura Fijos = (Margen de Contribución Total / Costos Fijos Blindados) * 100',
+      explicacionConceptual:
+        'El punto de equilibrio indica el umbral mínimo que el taller necesita generar para cubrir todos sus compromisos ineludibles (cuota de préstamo bancario, reserva CAPEX para renovación de impresoras y gastos fijos de taller). Cuando la cobertura supera el 100%, el negocio entra en zona de ganancia neta libre, garantizando que el taller no dependa de préstamos para subsistir.',
+      pasosCalculo: [
+        {
+          paso: 1,
+          descripcion: 'Suma de compromisos fijos mensuales blindados (cuota préstamo + capex maquinaria + fijos taller).',
+          resultadoParcial: formatCurrency(fijosMes)
+        },
+        {
+          paso: 2,
+          descripcion: 'Cálculo del margen de contribución generado por los pedidos del período (Ventas - Costos Directos).',
+          resultadoParcial: formatCurrency(margenContribucionTotal)
+        },
+        {
+          paso: 3,
+          descripcion: 'Determinación del margen de contribución promedio por orden atendida.',
+          resultadoParcial: `${formatCurrency(margenUnitario)} / pedido`
+        },
+        {
+          paso: 4,
+          descripcion: `Cálculo de pedidos requeridos (${pedidosEquilibrio} pedidos necesarios para cubrir ${formatCurrency(fijosMes)}).`,
+          resultadoParcial: superavit >= 0 
+            ? `¡Punto de equilibrio superado! Superávit: +${formatCurrency(superavit)}`
+            : `Faltan ${pedidosFaltantes} pedidos para alcanzar el equilibrio del mes`
+        }
+      ],
+      resumenMetricas: [
+        { etiqueta: 'Costos Fijos Blindados', valor: formatCurrency(fijosMes), tipo: 'destacado' },
+        { etiqueta: 'Margen Contribución Total', valor: formatCurrency(margenContribucionTotal), tipo: 'positivo' },
+        { etiqueta: 'Cobertura de Fijos', valor: `${coberturaPct.toFixed(1)}%`, tipo: coberturaPct >= 100 ? 'positivo' : 'negativo' },
+        { etiqueta: 'Pedidos de Equilibrio', valor: `${pedidosEquilibrio} pedidos`, tipo: 'neutro' },
+        { etiqueta: 'Pedidos Actuales', valor: `${filteredVentas.length} pedidos`, tipo: 'destacado' },
+        { etiqueta: 'Resultado del Período', valor: superavit >= 0 ? `+${formatCurrency(superavit)}` : `-${formatCurrency(Math.abs(superavit))}`, tipo: superavit >= 0 ? 'positivo' : 'negativo' }
+      ],
+      transaccionesDetalle: filteredVentas.map((v: any) => ({
+        id: v.id,
+        fecha: String(v.fecha).split('T')[0],
+        concepto: `Pedido #${v.codigo || v.id.slice(0, 6)} • ${v.cliente || 'Cliente'}`,
+        monto: Number(v.total || 0),
+        montoFormateado: formatCurrency(Number(v.total || 0)),
+        cliente: v.cliente || 'Cliente',
+        categoriaOEstado: v.estado || 'REGISTRADO'
+      })),
+      totalTransacciones: filteredVentas.length,
+      notaAuditoria: `Costos fijos oficiales: Cuota Préstamo ${formatCurrency(blindado.cuotaPrestamoMensual)} + Capex ${formatCurrency(blindado.reservaCapexMensual)} + Fijos ${formatCurrency(blindado.gastosFijosTaller)}.`
+    }
+  }
+
+  // =========================================================================
   // 2. DASHBOARD & FINANZAS: GASTO LIBRE DISPONIBLE
   // =========================================================================
   if (kpiId === 'gasto_libre_disponible' || kpiId === 'finanzas_gasto_libre') {
@@ -253,7 +442,7 @@ export async function getKpiExplanation(
       codigoRef?: string
     }> = []
 
-    ventas.forEach((v: any) => {
+    pedidos.forEach((v: any) => {
       if (Array.isArray(v.pagos) && v.pagos.length > 0) {
         v.pagos.forEach((p: any) => {
           if (isDateInRange(p.fecha, null, to)) {
