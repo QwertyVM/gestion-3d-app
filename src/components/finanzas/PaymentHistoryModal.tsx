@@ -51,6 +51,9 @@ export function PaymentHistoryModal({
 
   const esPrestamo = item.tipo === 'PRESTAMO'
   const listaPagos = item.historialPagos || []
+  const pagosRealizados = listaPagos
+  const totalAbonado = item.totalAbonado
+  const presupuestoMensual = item.montoMensualPresupuesto
   const tienePagos = listaPagos.length > 0
 
   const handlePagarCuota = (periodo?: string) => {
@@ -64,7 +67,7 @@ export function PaymentHistoryModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="w-full max-w-lg sm:max-w-lg bg-background border border-border rounded-2xl shadow-2xl p-6 space-y-5 overflow-hidden flex flex-col max-h-[85vh]"
+        className="w-full max-w-lg sm:max-w-lg bg-background border border-border rounded-2xl shadow-2xl p-6 space-y-5 overflow-y-auto flex flex-col max-h-[85vh]"
       >
         {/* 1. Encabezado del Servicio */}
         <div className="flex items-start justify-between pb-4 border-b border-border/70">
@@ -78,14 +81,14 @@ export function PaymentHistoryModal({
                   Historial de Pagos
                 </h3>
                 <span
-                  className="bg-secondary border border-border text-foreground text-xs font-semibold px-2.5 py-0.5 rounded-md truncate max-w-[200px]"
+                  className="bg-secondary border border-border text-foreground text-xs font-semibold px-2.5 py-0.5 rounded-md ml-2 truncate max-w-[200px]"
                   title={item.concepto}
                 >
                   {item.concepto}
                 </span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 pl-[52px]">
+            <p className="text-xs text-muted-foreground mt-1 pl-13">
               {esPrestamo
                 ? 'Registro cronológico de amortización de cuotas del préstamo de capital'
                 : 'Registro de egresos contables asentados en caja para este servicio'}
@@ -110,16 +113,14 @@ export function PaymentHistoryModal({
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               Resumen Financiero del Servicio
             </span>
-            {onPagarNuevo && (
-              <Button
-                type="button"
-                onClick={() => handlePagarCuota()}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-8 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Pagar Cuota Actual</span>
-              </Button>
-            )}
+            <Button
+              type="button"
+              onClick={() => handlePagarCuota()}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-8 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Pagar Cuota Actual</span>
+            </Button>
           </div>
 
           {/* Grid de 3 Cajas Independientes con Gap Estricto */}
@@ -129,10 +130,10 @@ export function PaymentHistoryModal({
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block truncate">
                 {esPrestamo ? 'Cuotas Pagadas' : 'Pagos Realizados'}
               </span>
-              <span className="text-base font-extrabold text-foreground mt-1 font-mono">
+              <span className="text-base font-extrabold text-foreground mt-1">
                 {esPrestamo
                   ? `${item.cuotasPagadas} / ${item.totalCuotas || 24}`
-                  : `${item.cuotasPagadas} ${item.cuotasPagadas === 1 ? 'pago' : 'pagos'}`}
+                  : `${pagosRealizados.length} ${pagosRealizados.length === 1 ? 'pago' : 'pagos'}`}
               </span>
             </div>
 
@@ -141,22 +142,18 @@ export function PaymentHistoryModal({
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block truncate">
                 Total Abonado
               </span>
-              <span className="text-base font-extrabold text-emerald-800 dark:text-emerald-300 mt-1 font-mono">
-                S/ {item.totalAbonado.toFixed(2)}
+              <span className="text-base font-extrabold text-emerald-800 dark:text-emerald-300 mt-1">
+                S/ {totalAbonado.toFixed(2)}
               </span>
             </div>
 
-            {/* Caja 3: Presupuesto Mes */}
+            {/* Caja 3: Presupuesto Mensual */}
             <div className="bg-card border border-border rounded-xl p-3 text-center flex flex-col justify-between shadow-2xs">
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block truncate">
                 {esPrestamo ? 'Cap. Restante' : 'Presupuesto Mes'}
               </span>
-              <span className="text-base font-extrabold text-foreground mt-1 font-mono">
-                S/{' '}
-                {(esPrestamo
-                  ? item.capitalRestante ?? 0
-                  : item.montoMensualPresupuesto
-                ).toFixed(2)}
+              <span className="text-base font-extrabold text-foreground mt-1">
+                S/ {(esPrestamo ? item.capitalRestante ?? 0 : presupuestoMensual).toFixed(2)}
               </span>
             </div>
           </div>
@@ -248,36 +245,21 @@ export function PaymentHistoryModal({
                 </div>
                 <div className="space-y-1 max-w-sm">
                   <h4 className="text-xs font-bold text-foreground">
-                    Aún no se registran pagos para este {esPrestamo ? 'compromiso' : 'servicio'}.
+                    Aún no se registran pagos para este {esPrestamo ? 'préstamo' : 'compromiso'}
                   </h4>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Puedes registrar el pago de Octubre o regularizar el mes de Septiembre anterior.
+                    Puedes asentar el egreso del mes en curso para descontarlo de tu caja disponible.
                   </p>
                 </div>
-                {onPagarNuevo && (
-                  <div className="flex items-center gap-2 flex-wrap justify-center pt-1">
-                    <Button
-                      type="button"
-                      onClick={() => handlePagarCuota('Octubre 2026')}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold h-8 px-4 rounded-xl shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>
-                        Registrar Octubre (S/{' '}
-                        {item.montoMensualPresupuesto.toFixed(2)})
-                      </span>
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => handlePagarCuota('Septiembre 2026')}
-                      variant="outline"
-                      className="border-border hover:bg-secondary text-foreground text-xs font-semibold h-8 px-3.5 rounded-xl shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all active:scale-[0.98]"
-                    >
-                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span>Registrar Septiembre</span>
-                    </Button>
-                  </div>
-                )}
+                <Button
+                  type="button"
+                  onClick={() => handlePagarCuota()}
+                  variant="outline"
+                  className="border-primary/40 text-primary hover:bg-primary/10 text-xs font-semibold h-8 px-4 rounded-xl shadow-2xs flex items-center gap-1.5 mt-1 cursor-pointer transition-all active:scale-[0.98]"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Registrar Pago (S/ {presupuestoMensual.toFixed(2)})</span>
+                </Button>
               </div>
             )}
           </div>

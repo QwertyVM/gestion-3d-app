@@ -166,31 +166,31 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-2.5 sm:gap-3">
-              <div className="p-2 sm:p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shadow-sm shrink-0">
-                <FileCheck className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary shrink-0">
+                <FileCheck className="h-5 w-5" />
               </div>
               <span>Cierres Mensuales & Arqueo</span>
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-[#75695D] mt-1">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Auditoría mensual de caja, conciliación bancaria y congelación oficial de resultados por período.
           </p>
         </div>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
           <Link href="/finanzas/flujo-caja" className="flex-1 sm:flex-initial">
-            <Button variant="outline" className="w-full sm:w-auto border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-10 shadow-sm font-medium">
-              <Landmark className="h-4 w-4 mr-1.5 text-[#A36F4C]" />
+            <Button variant="outline" className="w-full sm:w-auto border-border/60 bg-background text-foreground hover:bg-muted/50 cursor-pointer rounded-lg text-xs h-9 shadow-none font-medium">
+              <Landmark className="h-4 w-4 mr-1.5 text-muted-foreground" />
               Flujo de Caja
             </Button>
           </Link>
 
           <Button 
             onClick={handleOpenWizard}
-            className="flex-1 sm:flex-initial bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-md shadow-[#A36F4C]/20 transition-all cursor-pointer rounded-xl px-4 py-2.5 text-xs h-10 active:scale-[0.98]"
+            className="flex-1 sm:flex-initial bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-none transition-all cursor-pointer rounded-lg px-3 py-2 text-xs h-9 active:scale-[0.98]"
           >
-            <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
+            <Plus className="h-4 w-4 mr-1.5" />
             Nuevo Cierre
           </Button>
         </div>
@@ -198,83 +198,83 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
 
       {/* KPI Cards Minimalistas */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">Cierres Registrados</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-wider select-none">Cierres Registrados</span>
+            <div className="p-1 rounded-md bg-muted/60 text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
-              {cierres.length} <span className="text-xs font-normal font-sans text-[#75695D]">meses</span>
+            <div className="text-2xl font-semibold text-foreground font-mono tabular-nums tracking-tight">
+              {cierres.length} <span className="text-xs font-normal font-sans text-muted-foreground">meses</span>
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">Historial oficial</span>
+            <span className="text-[11px] text-muted-foreground mt-0.5 block truncate">Historial oficial</span>
           </div>
         </div>
 
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">Estado de Cierres</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-wider select-none">Estado de Cierres</span>
+            <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
+            <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums tracking-tight">
               {cierres.length > 0 ? 'Al día' : 'Pendiente'}
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+            <span className="text-[11px] text-muted-foreground mt-0.5 block truncate">
               {cierres.length > 0 ? `Último: ${cierres[0].nombrePeriodo}` : 'Sin cierres previos'}
             </span>
           </div>
         </div>
 
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">Saldo Caja Actual</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#633E20]">
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-wider select-none">Saldo Caja Actual</span>
+            <div className="p-1 rounded-md bg-muted/60 text-muted-foreground">
               <Wallet className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
+            <div className="text-2xl font-semibold text-foreground font-mono tabular-nums tracking-tight">
               {formatCurrency(datosPreCierre.saldoSistemaCaja)}
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">Saldo en sistema</span>
+            <span className="text-[11px] text-muted-foreground mt-0.5 block truncate">Saldo en sistema</span>
           </div>
         </div>
 
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">Cuentas por Cobrar</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#8C6D1F]">
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-wider select-none">Cuentas por Cobrar</span>
+            <div className="p-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <DollarSign className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#8C6D1F] font-mono tabular-nums">
+            <div className="text-2xl font-semibold text-amber-600 dark:text-amber-400 font-mono tabular-nums tracking-tight">
               {formatCurrency(datosPreCierre.cuentasPorCobrar)}
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">Traspaso al nuevo mes</span>
+            <span className="text-[11px] text-muted-foreground mt-0.5 block truncate">Traspaso al nuevo mes</span>
           </div>
         </div>
       </div>
 
       {/* Historial de Cierres Registrados */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] shadow-md rounded-2xl overflow-hidden">
-        <CardHeader className="pb-3 border-b border-[#E2D9CC] bg-[#FDFBF7]">
+      <Card className="bg-card border border-border/60 shadow-none rounded-xl overflow-hidden">
+        <CardHeader className="pb-3 border-b border-border/60 bg-card">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base font-bold text-[#241C15] flex items-center gap-2">
-                <FileCheck className="h-5 w-5 text-[#A36F4C]" />
+              <CardTitle className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
+                <FileCheck className="h-4 w-4 text-primary" />
                 Historial Oficial de Cierres Mensuales
               </CardTitle>
-              <CardDescription className="text-xs text-[#75695D] mt-0.5">
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
                 Fotografías financieras oficiales guardadas al final de cada mes con sus arqueos y fondos blindados.
               </CardDescription>
             </div>
-            <Badge variant="outline" className="bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] font-bold text-xs">
+            <Badge variant="outline" className="bg-muted/60 border-border/50 text-muted-foreground font-medium text-xs">
               {cierres.length} Registros
             </Badge>
           </div>
@@ -282,16 +282,16 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
 
         {cierres.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#EFE5D8] text-[#A36F4C] flex items-center justify-center mx-auto shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-muted/50 text-muted-foreground flex items-center justify-center mx-auto">
               <FileCheck className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-bold text-[#241C15]">No hay cierres mensuales registrados aún</h3>
-            <p className="text-xs text-[#75695D] max-w-md mx-auto">
+            <h3 className="text-sm font-semibold text-foreground">No hay cierres mensuales registrados aún</h3>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
               Como Agosto está por finalizar, puedes realizar el primer cierre de prueba para conciliar saldos de cuentas y congelar el resultado del mes.
             </p>
             <Button
               onClick={handleOpenWizard}
-              className="mt-2 bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl text-xs"
+              className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg text-xs"
             >
               <Plus className="h-4 w-4 mr-1.5" />
               Realizar Cierre de Agosto (Prueba)
@@ -299,22 +299,22 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
           </div>
         ) : (
           <>
-            <div className="divide-y divide-[#E2D9CC]/70">
+            <div className="divide-y divide-border/40">
               {paginatedCierres.map((c) => (
-                <div key={c.id} className="p-5 hover:bg-[#FDFBF7] transition-colors space-y-4">
+                <div key={c.id} className="p-4 hover:bg-muted/20 transition-colors space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#633E20]">
-                        <Calendar className="h-5 w-5" />
+                      <div className="p-2 rounded-lg bg-muted/60 border border-border/60 text-foreground">
+                        <Calendar className="h-4 w-4" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-base text-[#241C15]">{c.nombrePeriodo}</span>
-                          <Badge variant="outline" className="bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0] text-[10px] font-bold">
+                          <span className="font-semibold text-sm text-foreground">{c.nombrePeriodo}</span>
+                          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium">
                             Cierre Oficial
                           </Badge>
                         </div>
-                        <span className="text-xs text-[#75695D]">
+                        <span className="text-xs text-muted-foreground">
                           Cerrado el {formatDate(c.fechaCierre)} • {c.totalPedidosMes} pedidos producidos
                         </span>
                       </div>
@@ -325,7 +325,7 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
                         size="sm"
                         variant="ghost"
                         onClick={() => handleDeleteCierre(c.id, c.nombrePeriodo)}
-                        className="text-[#A34335] hover:text-red-700 hover:bg-red-50 text-xs rounded-xl cursor-pointer"
+                        className="text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 text-xs rounded-lg cursor-pointer"
                         title="Eliminar registro de prueba"
                       >
                         <Trash2 className="h-3.5 w-3.5 mr-1" />
@@ -335,39 +335,39 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
                   </div>
 
                   {/* Grid de métricas del cierre */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-                      <span className="text-[11px] text-[#75695D] block font-medium">Ingresos Cobrados:</span>
-                      <span className="text-sm font-bold font-mono text-[#1E5E3A]">+{formatCurrency(c.totalIngresos)}</span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                      <span className="text-[11px] text-muted-foreground block font-medium">Ingresos Cobrados:</span>
+                      <span className="text-sm font-semibold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">+{formatCurrency(c.totalIngresos)}</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-                      <span className="text-[11px] text-[#75695D] block font-medium">Egresos Totales:</span>
-                      <span className="text-sm font-bold font-mono text-[#944917]">-{formatCurrency(c.totalEgresos)}</span>
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                      <span className="text-[11px] text-muted-foreground block font-medium">Egresos Totales:</span>
+                      <span className="text-sm font-semibold font-mono text-foreground tabular-nums">-{formatCurrency(c.totalEgresos)}</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-                      <span className="text-[11px] text-[#75695D] block font-medium">Fondos Blindados:</span>
-                      <span className="text-sm font-bold font-mono text-[#633E20]">{formatCurrency(c.totalFondosBlindados)}</span>
+                    <div className="p-2.5 rounded-lg bg-muted/30 border border-border/40">
+                      <span className="text-[11px] text-muted-foreground block font-medium">Fondos Blindados:</span>
+                      <span className="text-sm font-semibold font-mono text-foreground tabular-nums">{formatCurrency(c.totalFondosBlindados)}</span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#F4FAF5] border border-[#B4E3C0]">
-                      <span className="text-[11px] text-[#1E5E3A] block font-bold">Liquidez Libre de Cierre:</span>
-                      <span className="text-sm font-extrabold font-mono text-[#1E5E3A]">{formatCurrency(c.liquidezLibreFinal)}</span>
+                    <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 block font-medium">Liquidez Libre de Cierre:</span>
+                      <span className="text-sm font-semibold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">{formatCurrency(c.liquidezLibreFinal)}</span>
                     </div>
                   </div>
 
                   {/* Conciliación bancaria */}
-                  <div className="p-3 rounded-xl bg-[#F4EFEA] border border-[#DCD3C6] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="p-2.5 rounded-lg bg-muted/40 border border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-[#1E5E3A]" />
-                      <span className="text-[#241C15] font-bold">Conciliación Bancaria:</span>
-                      <span className="font-mono text-[#75695D]">BCP: {formatCurrency(c.saldoRealBCP)} | Yape: {formatCurrency(c.saldoRealYape)}</span>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-foreground font-medium">Conciliación Bancaria:</span>
+                      <span className="font-mono text-muted-foreground">BCP: {formatCurrency(c.saldoRealBCP)} | Yape: {formatCurrency(c.saldoRealYape)}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={`font-mono text-[10px] font-bold ${
-                        c.descuadreCaja === 0 ? 'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]' : 'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]'
+                      <Badge variant="outline" className={`font-mono text-[10px] font-medium tabular-nums ${
+                        c.descuadreCaja === 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                       }`}>
                         Descuadre: {formatCurrency(c.descuadreCaja)}
                       </Badge>
@@ -375,8 +375,8 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
                   </div>
 
                   {c.notas && (
-                    <p className="text-xs text-[#75695D] bg-[#FFFFFF] p-2.5 rounded-xl border border-[#E2D9CC]">
-                      <strong>Notas del cierre:</strong> {c.notas}
+                    <p className="text-xs text-muted-foreground bg-muted/20 p-2.5 rounded-lg border border-border/40">
+                      <strong className="text-foreground">Notas del cierre:</strong> {c.notas}
                     </p>
                   )}
                 </div>
@@ -385,9 +385,9 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
 
             {/* Paginación */}
             {totalPages > 1 && (
-              <div className="p-4 bg-[#FDFBF7] border-t border-[#E2D9CC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                <span className="text-[#75695D]">
-                  Mostrando página <strong className="text-[#241C15]">{currentPage}</strong> de <strong className="text-[#241C15]">{totalPages}</strong> ({cierres.length} periodos)
+              <div className="p-3 bg-muted/10 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <span className="text-muted-foreground">
+                  Mostrando página <strong className="text-foreground">{currentPage}</strong> de <strong className="text-foreground">{totalPages}</strong> ({cierres.length} periodos)
                 </span>
                 <div className="flex items-center gap-2">
                   <Button
@@ -395,7 +395,7 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+                    className="h-8 px-2.5 border-border/60 bg-background text-foreground hover:bg-muted/50 disabled:opacity-40 cursor-pointer shadow-none"
                   >
                     <ChevronLeft className="h-4 w-4 mr-1" />
                     Anterior
@@ -405,10 +405,10 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`h-8 w-8 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        className={`h-8 w-8 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                           currentPage === page
-                            ? 'bg-[#A36F4C] text-[#FFFFFF] shadow-sm'
-                            : 'bg-[#FFFFFF] border border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]'
+                            ? 'bg-primary text-primary-foreground font-semibold shadow-none'
+                            : 'bg-background border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/50'
                         }`}
                       >
                         {page}
@@ -420,7 +420,7 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
                     size="sm"
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer"
+                    className="h-8 px-2.5 border-border/60 bg-background text-foreground hover:bg-muted/50 disabled:opacity-40 cursor-pointer shadow-none"
                   >
                     Siguiente
                     <ChevronRight className="h-4 w-4 ml-1" />
@@ -436,23 +436,23 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
       {/* MODAL / WIZARD DE CIERRE DE MES (PRUEBA)                                  */}
       {/* ========================================================================= */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[620px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card border border-border/80 text-foreground w-[95vw] sm:max-w-[620px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-xl rounded-2xl z-50">
           {/* Header Fijo */}
-          <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+          <div className="px-6 py-4 border-b border-border/60 bg-card/95 backdrop-blur-xs flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] flex items-center justify-center text-[#A36F4C] shadow-sm">
-                <FileCheck className="h-5 w-5" />
+              <div className="h-9 w-9 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <FileCheck className="h-4 w-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <DialogTitle className="text-base font-bold text-[#241C15]">
+                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                     Asistente de Cierre de Mes: {formPeriodo}
                   </DialogTitle>
-                  <Badge variant="outline" className="bg-[#EFE5D8] border-[#D4BEA7] text-[#633E20] text-[10px] font-bold">
+                  <Badge variant="outline" className="bg-muted/60 border-border/50 text-muted-foreground text-[10px] font-medium">
                     PRUEBA
                   </Badge>
                 </div>
-                <DialogDescription className="text-xs text-[#75695D]">
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   Paso {pasoWizard} de 3: {pasoWizard === 1 ? 'Rendimiento' : pasoWizard === 2 ? 'Arqueo Bancario' : 'Blindaje de Fondos'}
                 </DialogDescription>
               </div>
@@ -461,19 +461,19 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
             <button
               type="button"
               onClick={() => setOpenModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Stepper Tabs Header Fijo */}
-          <div className="grid grid-cols-3 bg-[#F4EFEA] border-b border-[#E2D9CC] text-xs font-bold text-center flex-shrink-0">
+          <div className="grid grid-cols-3 bg-muted/40 border-b border-border/60 text-xs font-medium text-center flex-shrink-0">
             <button
               type="button"
               onClick={() => setPasoWizard(1)}
               className={`py-2.5 transition-colors cursor-pointer border-b-2 ${
-                pasoWizard === 1 ? 'border-[#A36F4C] text-[#A36F4C] bg-[#FFFFFF]' : 'border-transparent text-[#75695D]'
+                pasoWizard === 1 ? 'border-primary text-foreground bg-card font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               1. Rendimiento
@@ -482,7 +482,7 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
               type="button"
               onClick={() => setPasoWizard(2)}
               className={`py-2.5 transition-colors cursor-pointer border-b-2 ${
-                pasoWizard === 2 ? 'border-[#A36F4C] text-[#A36F4C] bg-[#FFFFFF]' : 'border-transparent text-[#75695D]'
+                pasoWizard === 2 ? 'border-primary text-foreground bg-card font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               2. Arqueo Caja
@@ -491,7 +491,7 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
               type="button"
               onClick={() => setPasoWizard(3)}
               className={`py-2.5 transition-colors cursor-pointer border-b-2 ${
-                pasoWizard === 3 ? 'border-[#A36F4C] text-[#A36F4C] bg-[#FFFFFF]' : 'border-transparent text-[#75695D]'
+                pasoWizard === 3 ? 'border-primary text-foreground bg-card font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               3. Blindaje Final
@@ -499,37 +499,37 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
           </div>
 
           <form onSubmit={handleSubmitCierre} className="flex flex-col flex-1 overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 touch-pan-y">
               {/* PASO 1: RENDIMIENTO DEL PERÍODO */}
               {pasoWizard === 1 && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="p-4 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-3">
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#241C15] block">
+                  <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-3">
+                    <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground block">
                       Resumen Financiero del Período ({formPeriodo}):
                     </span>
 
                     <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
-                        <span className="text-[#75695D] block">Ventas Cobradas:</span>
-                        <span className="font-bold text-[#1E5E3A] font-mono">{formatCurrency(datosPreCierre.totalIngresosVentas)}</span>
+                      <div className="p-2.5 rounded-lg bg-card border border-border/60">
+                        <span className="text-muted-foreground block text-[11px]">Ventas Cobradas:</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">{formatCurrency(datosPreCierre.totalIngresosVentas)}</span>
                       </div>
-                      <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
-                        <span className="text-[#75695D] block">Servicios Directos:</span>
-                        <span className="font-bold text-[#1E5E3A] font-mono">{formatCurrency(datosPreCierre.totalIngresosDirectos)}</span>
+                      <div className="p-2.5 rounded-lg bg-card border border-border/60">
+                        <span className="text-muted-foreground block text-[11px]">Servicios Directos:</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">{formatCurrency(datosPreCierre.totalIngresosDirectos)}</span>
                       </div>
-                      <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
-                        <span className="text-[#75695D] block">Compras Insumos:</span>
-                        <span className="font-bold text-[#944917] font-mono">-{formatCurrency(datosPreCierre.totalEgresosInsumos)}</span>
+                      <div className="p-2.5 rounded-lg bg-card border border-border/60">
+                        <span className="text-muted-foreground block text-[11px]">Compras Insumos:</span>
+                        <span className="font-semibold text-foreground font-mono tabular-nums">-{formatCurrency(datosPreCierre.totalEgresosInsumos)}</span>
                       </div>
-                      <div className="p-2.5 rounded-lg bg-[#FFFFFF] border border-[#E2D9CC]">
-                        <span className="text-[#75695D] block">Maquinaria & Equipos:</span>
-                        <span className="font-bold text-[#944917] font-mono">-{formatCurrency(datosPreCierre.totalEgresosMaquinaria)}</span>
+                      <div className="p-2.5 rounded-lg bg-card border border-border/60">
+                        <span className="text-muted-foreground block text-[11px]">Maquinaria & Equipos:</span>
+                        <span className="font-semibold text-foreground font-mono tabular-nums">-{formatCurrency(datosPreCierre.totalEgresosMaquinaria)}</span>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-lg bg-[#F4FAF5] border border-[#B4E3C0] flex items-center justify-between text-xs">
-                      <span className="font-bold text-[#1E5E3A]">Saldo Neto Calculado por el Sistema:</span>
-                      <span className="text-base font-extrabold text-[#1E5E3A] font-mono">
+                    <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-xs">
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">Saldo Neto Calculado por el Sistema:</span>
+                      <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums">
                         {formatCurrency(datosPreCierre.saldoSistemaCaja)}
                       </span>
                     </div>
@@ -540,47 +540,47 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
               {/* PASO 2: ARQUEO Y CONCILIACIÓN BANCARIA */}
               {pasoWizard === 2 && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="p-3.5 rounded-xl bg-[#FDF6E2] border border-[#E8D49B] text-xs text-[#8C6D1F]">
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 dark:text-amber-400">
                     <strong>Arqueo de Caja:</strong> Ingresa los saldos que figuran en tus aplicaciones bancarias al cierre de mes para conciliar posibles diferencias.
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-[#241C15]">Saldo Real en BCP (S/):</Label>
+                      <Label className="text-xs font-medium text-foreground/90 block mb-1">Saldo Real en BCP (S/):</Label>
                       <Input
                         type="number"
                         step="0.01"
                         value={formRealBCP}
                         onChange={(e) => setFormRealBCP(e.target.value)}
-                        className="bg-[#F4EFEA] border-[#DCD3C6] font-mono font-bold text-sm h-9 rounded-xl"
+                        className="bg-background border-border/80 font-mono font-semibold text-sm h-9 rounded-lg"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-[#241C15]">Saldo Real en Yape (S/):</Label>
+                      <Label className="text-xs font-medium text-foreground/90 block mb-1">Saldo Real en Yape (S/):</Label>
                       <Input
                         type="number"
                         step="0.01"
                         value={formRealYape}
                         onChange={(e) => setFormRealYape(e.target.value)}
-                        className="bg-[#F4EFEA] border-[#DCD3C6] font-mono font-bold text-sm h-9 rounded-xl"
+                        className="bg-background border-border/80 font-mono font-semibold text-sm h-9 rounded-lg"
                       />
                     </div>
                   </div>
 
                   {/* Comparación y descuadre */}
-                  <div className="p-4 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-2 text-xs">
+                  <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-[#75695D]">Saldo Real Total Ingresado:</span>
-                      <span className="font-mono font-bold text-[#241C15]">{formatCurrency(saldoRealTotalCalculado)}</span>
+                      <span className="text-muted-foreground">Saldo Real Total Ingresado:</span>
+                      <span className="font-mono font-semibold text-foreground tabular-nums">{formatCurrency(saldoRealTotalCalculado)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#75695D]">Saldo Registrado en Sistema:</span>
-                      <span className="font-mono text-[#75695D]">{formatCurrency(datosPreCierre.saldoSistemaCaja)}</span>
+                      <span className="text-muted-foreground">Saldo Registrado en Sistema:</span>
+                      <span className="font-mono text-muted-foreground tabular-nums">{formatCurrency(datosPreCierre.saldoSistemaCaja)}</span>
                     </div>
-                    <div className="flex justify-between pt-2 border-t border-[#E2D9CC] font-bold">
+                    <div className="flex justify-between pt-2 border-t border-border/50 font-medium">
                       <span>Descuadre / Diferencia:</span>
-                      <span className={`font-mono ${descuadreCalculado === 0 ? 'text-[#1E5E3A]' : 'text-[#8C6D1F]'}`}>
+                      <span className={`font-mono tabular-nums ${descuadreCalculado === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                         {descuadreCalculado >= 0 ? '+' : ''}{formatCurrency(descuadreCalculado)} ({descuadreCalculado === 0 ? 'Cuadrado perfecto' : 'Ajuste registrado'})
                       </span>
                     </div>
@@ -592,58 +592,58 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
               {pasoWizard === 3 && (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
-                      <Label className="text-[11px] text-[#75695D]">Cuota Préstamo:</Label>
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-1">
+                      <Label className="text-[11px] text-muted-foreground block mb-1">Cuota Préstamo:</Label>
                       <Input
                         type="number"
                         step="10"
                         value={formCuotaPrestamo}
                         onChange={(e) => setFormCuotaPrestamo(e.target.value)}
-                        className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
+                        className="bg-background border-border/80 font-mono text-xs font-semibold h-8 rounded-lg"
                       />
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
-                      <Label className="text-[11px] text-[#75695D]">Reserva Máquina:</Label>
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-1">
+                      <Label className="text-[11px] text-muted-foreground block mb-1">Reserva Máquina:</Label>
                       <Input
                         type="number"
                         step="50"
                         value={formReservaMaquina}
                         onChange={(e) => setFormReservaMaquina(e.target.value)}
-                        className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
+                        className="bg-background border-border/80 font-mono text-xs font-semibold h-8 rounded-lg"
                       />
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC] space-y-1">
-                      <Label className="text-[11px] text-[#75695D]">Colchón Emergencia:</Label>
+                    <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-1">
+                      <Label className="text-[11px] text-muted-foreground block mb-1">Colchón Emergencia:</Label>
                       <Input
                         type="number"
                         step="25"
                         value={formColchonEmergencia}
                         onChange={(e) => setFormColchonEmergencia(e.target.value)}
-                        className="bg-[#FFFFFF] border-[#DCD3C6] font-mono text-xs font-bold h-8 rounded-xl"
+                        className="bg-background border-border/80 font-mono text-xs font-semibold h-8 rounded-lg"
                       />
                     </div>
                   </div>
 
                   {/* Resumen de liquidez final */}
-                  <div className="p-4 rounded-xl bg-[#F4FAF5] border-2 border-[#1E5E3A] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
                     <div>
-                      <span className="font-extrabold text-[#1E5E3A] block text-sm">Liquidez Libre Oficial de Cierre:</span>
-                      <span className="text-[11px] text-[#1E5E3A]/80">Saldo Real ({formatCurrency(saldoRealTotalCalculado)}) - Blindado ({formatCurrency(totalBlindadoCalculado)})</span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400 block text-sm">Liquidez Libre Oficial de Cierre:</span>
+                      <span className="text-[11px] text-muted-foreground">Saldo Real ({formatCurrency(saldoRealTotalCalculado)}) - Blindado ({formatCurrency(totalBlindadoCalculado)})</span>
                     </div>
-                    <div className="text-2xl font-extrabold font-mono text-[#1E5E3A]">
+                    <div className="text-xl font-semibold font-mono text-emerald-600 dark:text-emerald-400 tabular-nums">
                       {formatCurrency(liquidezLibreFinalCalculada)}
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-[#241C15]">Notas u Observaciones del Cierre (Opcional):</Label>
+                    <Label className="text-xs font-medium text-foreground/90 block mb-1">Notas u Observaciones del Cierre (Opcional):</Label>
                     <Input
                       placeholder="Ej: Cuota bancaria pagada el 28, preventa A2L reservada..."
                       value={formNotas}
                       onChange={(e) => setFormNotas(e.target.value)}
-                      className="bg-[#F4EFEA] border-[#DCD3C6] text-xs text-[#241C15] rounded-xl"
+                      className="h-9 bg-background border-border/80 text-xs text-foreground rounded-lg"
                     />
                   </div>
                 </div>
@@ -651,13 +651,14 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
             </div>
 
             {/* Footer Fijo con Navegación y Botones */}
-            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FDFBF7] flex items-center justify-between flex-shrink-0">
+            <div className="px-6 py-3.5 border-t border-border/60 bg-muted/20 flex items-center justify-between flex-shrink-0">
               {pasoWizard > 1 ? (
                 <Button
                   type="button"
                   variant="ghost"
+                  size="sm"
                   onClick={() => setPasoWizard((p) => Math.max(1, p - 1) as any)}
-                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
+                  className="text-muted-foreground hover:text-foreground text-xs rounded-lg cursor-pointer"
                 >
                   Volver
                 </Button>
@@ -665,8 +666,9 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
                 <Button
                   type="button"
                   variant="ghost"
+                  size="sm"
                   onClick={() => setOpenModal(false)}
-                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer active:scale-[0.98]"
+                  className="text-muted-foreground hover:text-foreground text-xs rounded-lg cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -675,8 +677,9 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
               {pasoWizard < 3 ? (
                 <Button
                   type="button"
+                  size="sm"
                   onClick={() => setPasoWizard((p) => Math.min(3, p + 1) as any)}
-                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold rounded-xl text-xs px-5 py-2.5 cursor-pointer active:scale-[0.98]"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg text-xs cursor-pointer shadow-none"
                 >
                   Siguiente
                   <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
@@ -684,8 +687,9 @@ export function CierresClient({ cierres: initialCierres, datosPreCierre }: Cierr
               ) : (
                 <Button
                   type="submit"
+                  size="sm"
                   disabled={isSubmitting}
-                  className="bg-[#1E5E3A] hover:bg-[#16472C] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md cursor-pointer disabled:opacity-50 active:scale-[0.98]"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs rounded-lg shadow-none cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>

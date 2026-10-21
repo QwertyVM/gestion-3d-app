@@ -83,32 +83,32 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
       {/* ========================================================================= */}
       {/* 1. CABECERA & CONTROLES DE NAVEGACIÓN                                     */}
       {/* ========================================================================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#E2D9CC]">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/60">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="outline" className="text-[11px] font-bold border-[#E2D9CC] text-[#75695D] bg-white">
+            <Badge variant="outline" className="text-[11px] font-medium border-border/50 text-muted-foreground bg-muted/60">
               {initialData.negocio === '3D' ? 'Taller 3D' : 'Board Games'}
             </Badge>
-            <span className="text-xs text-[#75695D] flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
               Modelo Financiero P&L + Carry-over
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#241C15] tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
             Rentabilidad Mensual & Asignación de Sueldos
           </h1>
-          <p className="text-xs sm:text-sm text-[#75695D] mt-1 max-w-3xl">
+          <p className="text-xs text-muted-foreground mt-0.5 max-w-3xl">
             Evalúa la utilidad real del mes frente al colchón acumulado en caja, asegurando el pago de obligaciones antes de asignar retiros de socios o sueldos.
           </p>
         </div>
 
         {/* Selector de Mes Activo */}
-        <div className="flex items-center gap-2 self-start md:self-auto bg-white p-1.5 rounded-2xl border border-[#E2D9CC] shadow-2xs">
-          <Calendar className="w-4 h-4 text-[#75695D] ml-2 shrink-0" />
+        <div className="flex items-center gap-2 self-start md:self-auto bg-card p-1.5 rounded-lg border border-border/60 shadow-none">
+          <Calendar className="w-4 h-4 text-muted-foreground ml-2 shrink-0" />
           <select
             value={selectedMesKey}
             onChange={(e) => setSelectedMesKey(e.target.value)}
-            className="text-xs font-bold text-[#241C15] bg-transparent outline-none cursor-pointer pr-2"
+            className="text-xs font-semibold text-foreground bg-transparent outline-none cursor-pointer pr-2"
           >
             {initialData.meses.map((m) => (
               <option key={m.mesKey} value={m.mesKey}>
@@ -124,18 +124,18 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* TARJETA 1: UTILIDAD DEL MES (P&L PURO) */}
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-5 shadow-xs flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2 border-b border-[#F1ECE4]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#75695D] flex items-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-700" />
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between relative overflow-hidden">
+          <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               1. Utilidad del Mes ({activeMes.nombreMes.split(' ')[0]})
             </span>
             <span
               className={cn(
-                'text-[10px] font-bold px-2 py-0.5 rounded-full border',
+                'text-[10px] font-medium px-2 py-0.5 rounded-md border',
                 activeMes.utilidadMes >= 0
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : 'bg-red-50 text-red-800 border-red-200'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
               )}
             >
               {activeMes.margenOperativoPct}% Margen
@@ -145,68 +145,68 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
           <div className="my-3">
             <div
               className={cn(
-                'text-3xl font-extrabold font-mono tracking-tight',
-                activeMes.utilidadMes >= 0 ? 'text-emerald-800' : 'text-red-700'
+                'text-2xl font-semibold font-mono tracking-tight tabular-nums',
+                activeMes.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
               )}
             >
               {activeMes.utilidadMes >= 0 ? '+' : ''}
               {formatCurrency(activeMes.utilidadMes)}
             </div>
-            <p className="text-[11px] text-[#75695D] mt-1 font-medium">
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-normal">
               Rendimiento operativo generado exclusivamente en estos 30 días.
             </p>
           </div>
 
           {/* Micro cascada del mes */}
-          <div className="pt-2 border-t border-[#F1ECE4] space-y-1 text-xs">
-            <div className="flex justify-between text-[#75695D]">
+          <div className="pt-2 border-t border-border/40 space-y-1 text-xs">
+            <div className="flex justify-between text-muted-foreground">
               <span>Ventas Cobradas:</span>
-              <span className="font-mono font-bold text-[#241C15]">
+              <span className="font-mono font-semibold text-foreground tabular-nums">
                 {formatCurrency(activeMes.ventasCobradas)}
               </span>
             </div>
-            <div className="flex justify-between text-[#75695D]">
+            <div className="flex justify-between text-muted-foreground">
               <span>(-) Compras Material:</span>
-              <span className="font-mono font-bold text-amber-800">
+              <span className="font-mono font-medium text-amber-600 dark:text-amber-400 tabular-nums">
                 -{formatCurrency(activeMes.comprasDirectas)}
               </span>
             </div>
             {activeMes.gastosPersonal > 0 && (
-              <div className="flex justify-between text-[#75695D]">
+              <div className="flex justify-between text-muted-foreground">
                 <span>(-) Personal & Colaboradores:</span>
-                <span className="font-mono font-bold text-sky-700">
+                <span className="font-mono font-medium text-blue-600 dark:text-blue-400 tabular-nums">
                   -{formatCurrency(activeMes.gastosPersonal)}
                 </span>
               </div>
             )}
-            <div className="flex justify-between text-[#75695D]">
-              <span>(-) Gastos Operativos (Pauta & Envíos):</span>
-              <span className="font-mono font-bold text-orange-700">
+            <div className="flex justify-between text-muted-foreground">
+              <span>(-) Gastos Operativos:</span>
+              <span className="font-mono font-medium text-muted-foreground tabular-nums">
                 -{formatCurrency(activeMes.gastosOperativos)}
               </span>
             </div>
             {activeMes.gastosBlindadosPagados > 0 && (
-              <div className="flex justify-between text-[#75695D]">
-                <span>(-) Gastos Blindados Pagados (BCP/Taller):</span>
-                <span className="font-mono font-bold text-red-700">
+              <div className="flex justify-between text-muted-foreground">
+                <span>(-) Blindados Pagados:</span>
+                <span className="font-mono font-medium text-rose-600 dark:text-rose-400 tabular-nums">
                   -{formatCurrency(activeMes.gastosBlindadosPagados)}
                 </span>
               </div>
             )}
             {activeMes.compromisosPendientes > 0 && (
               <>
-                <div className="flex justify-between text-[#75695D] bg-amber-50/70 px-1.5 py-0.5 rounded border border-amber-200/60">
-                  <span className="text-amber-900 font-medium">(-) Blindados a Fin de Mes:</span>
-                  <span className="font-mono font-bold text-amber-900">
+                <div className="flex justify-between text-muted-foreground bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                  <span className="text-amber-600 dark:text-amber-400 font-medium">(-) Blindados a Fin de Mes:</span>
+                  <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
                     -{formatCurrency(activeMes.compromisosPendientes)}
                   </span>
                 </div>
-                <div className="flex justify-between text-xs pt-1 border-t border-[#F1ECE4] font-bold">
-                  <span className="text-[#241C15]">Utilidad Proyectada Cierre:</span>
+                <div className="flex justify-between text-xs pt-1 border-t border-border/40 font-semibold">
+                  <span className="text-foreground">Utilidad Proyectada Cierre:</span>
                   <span
                     className={cn(
-                      'font-mono',
-                      activeMes.utilidadProyectadaCierre >= 0 ? 'text-emerald-800' : 'text-red-700'
+                      'font-mono tabular-nums',
+                      activeMes.utilidadProyectadaCierre >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                     )}
                   >
                     {activeMes.utilidadProyectadaCierre >= 0 ? '+' : ''}
@@ -219,13 +219,13 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
         </div>
 
         {/* TARJETA 2: UTILIDAD / LIQUIDEZ ACUMULADA (CARRY-OVER) */}
-        <div className="bg-white border border-[#E2D9CC] rounded-2xl p-5 shadow-xs flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2 border-b border-[#F1ECE4]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#75695D] flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5 text-[#A36F4C]" />
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between relative overflow-hidden">
+          <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Wallet className="w-3.5 h-3.5 text-primary" />
               2. Liquidez Acumulada (Caja)
             </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC]">
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground border border-border/50">
               Colchón Histórico
             </span>
           </div>
@@ -233,38 +233,38 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
           <div className="my-3">
             <div
               className={cn(
-                'text-3xl font-extrabold font-mono tracking-tight',
-                activeMes.saldoAcumulado >= 0 ? 'text-[#241C15]' : 'text-red-700'
+                'text-2xl font-semibold font-mono tracking-tight tabular-nums',
+                activeMes.saldoAcumulado >= 0 ? 'text-foreground' : 'text-rose-600 dark:text-rose-400'
               )}
             >
               {formatCurrency(activeMes.saldoAcumulado)}
             </div>
-            <p className="text-[11px] text-[#75695D] mt-1 font-medium">
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-normal">
               Efectivo real total en cuenta al cierre de {activeMes.nombreMes}.
             </p>
           </div>
 
-          <div className="pt-2 border-t border-[#F1ECE4] space-y-1 text-xs">
-            <div className="flex justify-between text-[#75695D]">
+          <div className="pt-2 border-t border-border/40 space-y-1 text-xs">
+            <div className="flex justify-between text-muted-foreground">
               <span>Saldo Inicial (Arrastre):</span>
-              <span className="font-mono font-bold text-[#241C15]">
+              <span className="font-mono font-semibold text-foreground tabular-nums">
                 {formatCurrency(activeMes.saldoInicial)}
               </span>
             </div>
             {activeMes.inyeccionCapital > 0 && (
-              <div className="flex justify-between text-[#75695D] bg-sky-50/70 px-1.5 py-0.5 rounded border border-sky-200/60">
-                <span className="text-sky-900 font-medium">(+) Préstamo / Aportes:</span>
-                <span className="font-mono font-bold text-sky-900">
+              <div className="flex justify-between text-muted-foreground bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+                <span className="text-blue-600 dark:text-blue-400 font-medium">(+) Préstamo / Aportes:</span>
+                <span className="font-mono font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
                   +{formatCurrency(activeMes.inyeccionCapital)}
                 </span>
               </div>
             )}
-            <div className="flex justify-between text-[#75695D]">
+            <div className="flex justify-between text-muted-foreground">
               <span>(+) Utilidad Operativa del Mes:</span>
               <span
                 className={cn(
-                  'font-mono font-bold',
-                  activeMes.utilidadMes >= 0 ? 'text-emerald-800' : 'text-red-700'
+                  'font-mono font-semibold tabular-nums',
+                  activeMes.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                 )}
               >
                 {activeMes.utilidadMes >= 0 ? '+' : ''}
@@ -272,9 +272,9 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
               </span>
             </div>
             {activeMes.activosFijosCapex > 0 && (
-              <div className="flex justify-between text-[#75695D]">
+              <div className="flex justify-between text-muted-foreground">
                 <span>(-) Equipos / Capex:</span>
-                <span className="font-mono font-bold text-[#A36F4C]">
+                <span className="font-mono font-semibold text-foreground tabular-nums">
                   -{formatCurrency(activeMes.activosFijosCapex)}
                 </span>
               </div>
@@ -283,56 +283,56 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
         </div>
 
         {/* TARJETA 3: CAPACIDAD REAL DE SUELDO SEGURO */}
-        <div className="bg-gradient-to-br from-white to-emerald-50/40 border-2 border-emerald-600/30 rounded-2xl p-5 shadow-xs flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2 border-b border-emerald-100">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between relative overflow-hidden">
+          <div className="flex items-center justify-between pb-2 border-b border-border/40">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               3. Capacidad Máxima de Sueldo
             </span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-              <Users className="w-3 h-3 text-emerald-700" />
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+              <Users className="w-3 h-3" />
               {numSocios} Socios (50/50)
             </span>
           </div>
 
           <div className="my-3">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-3xl font-extrabold font-mono tracking-tight text-emerald-800">
+              <span className="text-2xl font-semibold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {formatCurrency(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)}
               </span>
-              <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 c/u (por socio)
               </span>
             </div>
-            <p className="text-[11px] text-emerald-900 mt-1 font-medium">
-              Total disponible para ambos socios: <strong className="font-mono font-bold text-emerald-950">{formatCurrency(activeMes.capacidadSueldoSeguro)}</strong> ({formatCurrency(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)} para cada uno de los {numSocios}).
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-normal">
+              Total disponible para ambos socios: <strong className="font-mono font-semibold text-foreground tabular-nums">{formatCurrency(activeMes.capacidadSueldoSeguro)}</strong> ({formatCurrency(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)} c/u).
             </p>
           </div>
 
-          <div className="pt-2 border-t border-emerald-100 space-y-1 text-xs">
+          <div className="pt-2 border-t border-border/40 space-y-1 text-xs">
             {activeMes.compromisosPendientes > 0 && (
-              <div className="flex justify-between text-amber-900 font-semibold bg-amber-50/70 px-1.5 py-0.5 rounded border border-amber-200/60">
+              <div className="flex justify-between text-amber-600 dark:text-amber-400 font-medium bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
                 <span>Cuotas / Servicios pendientes:</span>
-                <span className="font-mono font-bold">
+                <span className="font-mono font-semibold tabular-nums">
                   {formatCurrency(activeMes.compromisosPendientes)}
                 </span>
               </div>
             )}
-            <div className="flex justify-between text-[#75695D]">
+            <div className="flex justify-between text-muted-foreground">
               <span>Fondo de Reserva Total:</span>
-              <span className="font-mono font-bold text-amber-800">
+              <span className="font-mono font-medium text-amber-600 dark:text-amber-400 tabular-nums">
                 {formatCurrency(activeMes.reservaObligaciones)}
               </span>
             </div>
-            <div className="flex justify-between text-[#75695D]">
-              <span>Diagnóstico Operativo:</span>
+            <div className="flex justify-between text-muted-foreground pt-1 border-t border-border/40 font-medium">
+              <span className="text-foreground">Diagnóstico Operativo:</span>
               <span
                 className={cn(
-                  'font-bold text-[11px]',
-                  activeMes.estadoDiagnostico === 'EXCELENTE' && 'text-emerald-800',
-                  activeMes.estadoDiagnostico === 'RENTABLE' && 'text-emerald-700',
-                  activeMes.estadoDiagnostico === 'EQUILIBRIO' && 'text-amber-800',
-                  activeMes.estadoDiagnostico === 'DEFICIT' && 'text-red-700'
+                  'font-medium text-[11px]',
+                  activeMes.estadoDiagnostico === 'EXCELENTE' && 'text-emerald-600 dark:text-emerald-400',
+                  activeMes.estadoDiagnostico === 'RENTABLE' && 'text-emerald-600 dark:text-emerald-400',
+                  activeMes.estadoDiagnostico === 'EQUILIBRIO' && 'text-amber-600 dark:text-amber-400',
+                  activeMes.estadoDiagnostico === 'DEFICIT' && 'text-rose-600 dark:text-rose-400'
                 )}
               >
                 {activeMes.estadoDiagnostico}
@@ -345,24 +345,24 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
       {/* ========================================================================= */}
       {/* 3. CASCADA DE DISTRIBUCIÓN DEL INGRESO DEL MES                            */}
       {/* ========================================================================= */}
-      <div className="bg-white border border-[#E2D9CC] rounded-2xl p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#F1ECE4]">
+      <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
           <div>
-            <h3 className="text-sm font-bold text-[#241C15]">
+            <h3 className="text-sm font-semibold text-foreground">
               Estructura de Distribución de Ventas ({activeMes.nombreMes})
             </h3>
-            <p className="text-[11px] text-[#75695D] mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Cómo se consumen las ventas cobradas antes de llegar a la utilidad neta.
             </p>
           </div>
-          <div className="text-xs font-mono font-bold text-[#241C15]">
+          <div className="text-xs font-mono font-semibold text-foreground tabular-nums">
             Total Ventas: {formatCurrency(activeMes.ventasCobradas)}
           </div>
         </div>
 
         {/* Barra Proporcional */}
         <div className="my-4">
-          <div className="h-6 w-full rounded-xl overflow-hidden bg-[#F4EFEA] flex border border-[#E2D9CC] p-0.5">
+          <div className="h-6 w-full rounded-xl overflow-hidden bg-muted/40 flex border border-border/60 p-0.5">
             {pctCompras > 0 && (
               <div
                 style={{ width: `${pctCompras}%` }}
@@ -384,7 +384,7 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
             {pctBlindados > 0 && (
               <div
                 style={{ width: `${pctBlindados}%` }}
-                className="bg-red-500 flex items-center justify-center text-[10px] font-bold text-white truncate px-1 transition-all"
+                className="bg-rose-500 flex items-center justify-center text-[10px] font-bold text-white truncate px-1 transition-all"
                 title={`Gastos Blindados (BCP/Taller): ${formatCurrency(activeMes.totalBlindadosMes)} (${pctBlindados}%)`}
               >
                 {pctBlindados > 12 ? `${pctBlindados}% Blindado` : ''}
@@ -403,41 +403,41 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
 
           {/* Leyenda de la Barra */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 mt-3 text-xs">
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+            <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/20 border border-border/50">
               <div className="w-3 h-3 rounded-full bg-amber-500 shrink-0" />
               <div className="min-w-0">
-                <span className="text-[#75695D] block text-[10px]">Compras Material:</span>
-                <span className="font-mono font-bold text-[#241C15]">
+                <span className="text-muted-foreground block text-[10px]">Compras Material:</span>
+                <span className="font-mono font-semibold text-foreground tabular-nums">
                   {formatCurrency(activeMes.comprasDirectas)} ({pctCompras}%)
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+            <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/20 border border-border/50">
               <div className="w-3 h-3 rounded-full bg-orange-500 shrink-0" />
               <div className="min-w-0">
-                <span className="text-[#75695D] block text-[10px]">Gastos Operativos:</span>
-                <span className="font-mono font-bold text-[#241C15]">
+                <span className="text-muted-foreground block text-[10px]">Gastos Operativos:</span>
+                <span className="font-mono font-semibold text-foreground tabular-nums">
                   {formatCurrency(activeMes.gastosOperativos)} ({pctOperativos}%)
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
-              <div className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
+            <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/20 border border-border/50">
+              <div className="w-3 h-3 rounded-full bg-rose-500 shrink-0" />
               <div className="min-w-0">
-                <span className="text-[#75695D] block text-[10px]">Gastos Blindados (BCP/Fijos):</span>
-                <span className="font-mono font-bold text-red-700">
+                <span className="text-muted-foreground block text-[10px]">Gastos Blindados (BCP/Fijos):</span>
+                <span className="font-mono font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
                   {formatCurrency(activeMes.totalBlindadosMes)} ({pctBlindados}%)
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-[#F8F6F2] border border-[#E2D9CC]">
+            <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/20 border border-border/50">
               <div className="w-3 h-3 rounded-full bg-emerald-600 shrink-0" />
               <div className="min-w-0">
-                <span className="text-[#75695D] block text-[10px]">Utilidad Pura del Mes:</span>
-                <span className="font-mono font-bold text-emerald-800">
+                <span className="text-muted-foreground block text-[10px]">Utilidad Pura del Mes:</span>
+                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                   {formatCurrency(activeMes.utilidadMes)} ({pctUtilidad}%)
                 </span>
               </div>
@@ -447,24 +447,21 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
       </div>
 
       {/* ========================================================================= */}
-      {/* 4. SIMULADOR INTERACTIVO DE ASIGNACIÓN DE SUELDO                          */}
-      {/* ========================================================================= */}
-      {/* ========================================================================= */}
       {/* 4. SIMULADOR INTERACTIVO DE ASIGNACIÓN DE SUELDO (2 SOCIOS)               */}
       {/* ========================================================================= */}
-      <div className="bg-white border border-[#E2D9CC] rounded-2xl p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#F1ECE4]">
+      <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
           <div>
-            <h3 className="text-sm font-bold text-[#241C15] flex items-center gap-1.5">
-              <Sliders className="w-4 h-4 text-[#A36F4C]" />
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-primary" />
               Simulador de Asignación de Sueldo o Retiro ({numSocios} Socios)
             </h3>
-            <p className="text-[11px] text-[#75695D] mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Evalúa el impacto en la caja acumulada al retirar sueldos para los {numSocios} socios protegiendo la reserva técnica.
             </p>
           </div>
-          <Badge variant="outline" className="text-[11px] font-bold border-emerald-300 text-emerald-800 bg-emerald-50 self-start sm:self-auto flex items-center gap-1">
-            <Users className="w-3.5 h-3.5 text-emerald-700" />
+          <Badge variant="outline" className="text-[11px] font-semibold border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 self-start sm:self-auto flex items-center gap-1">
+            <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             Equipo de {numSocios} personas (50/50)
           </Badge>
         </div>
@@ -473,15 +470,15 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
           {/* Input de simulación */}
           <div className="lg:col-span-5 space-y-3">
             {/* Selector de modo: Por socio vs Total equipo */}
-            <div className="flex items-center gap-1 p-1 bg-[#F4EFEA] rounded-xl border border-[#E2D9CC] text-xs font-bold text-[#75695D]">
+            <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-xl border border-border/60 text-xs font-medium text-muted-foreground">
               <button
                 type="button"
                 onClick={() => setModoSimulacion('POR_SOCIO')}
                 className={cn(
                   'flex-1 py-1.5 px-2.5 rounded-lg transition-all text-center cursor-pointer',
                   modoSimulacion === 'POR_SOCIO'
-                    ? 'bg-white text-[#241C15] shadow-2xs font-extrabold'
-                    : 'hover:text-[#241C15]'
+                    ? 'bg-background text-foreground shadow-xs font-semibold'
+                    : 'hover:text-foreground'
                 )}
               >
                 Por Socio (c/u × {numSocios})
@@ -492,8 +489,8 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                 className={cn(
                   'flex-1 py-1.5 px-2.5 rounded-lg transition-all text-center cursor-pointer',
                   modoSimulacion === 'TOTAL'
-                    ? 'bg-white text-[#241C15] shadow-2xs font-extrabold'
-                    : 'hover:text-[#241C15]'
+                    ? 'bg-background text-foreground shadow-xs font-semibold'
+                    : 'hover:text-foreground'
                 )}
               >
                 Total Empresa (ambos)
@@ -501,12 +498,12 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
             </div>
 
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-bold text-[#241C15]">
+              <Label className="text-xs font-semibold text-foreground">
                 {modoSimulacion === 'POR_SOCIO'
                   ? `¿Cuánto sueldo o retiro por socio deseas? (c/u)`
                   : `¿Cuánto retiro total deseas para los ${numSocios} socios?`}
               </Label>
-              <span className="text-[11px] font-mono font-semibold text-[#75695D]">
+              <span className="text-[11px] font-mono font-medium text-muted-foreground tabular-nums">
                 {modoSimulacion === 'POR_SOCIO'
                   ? `Total: ${formatCurrency(sueldoTotalEmpresa)}`
                   : `c/u: ${formatCurrency(sueldoPorSocio)}`}
@@ -514,7 +511,7 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
             </div>
 
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-[#75695D]">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
                 S/
               </span>
               <Input
@@ -524,7 +521,7 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                 value={sueldoSimulado}
                 onChange={(e) => setSueldoSimulado(e.target.value)}
                 placeholder={modoSimulacion === 'POR_SOCIO' ? 'Ej. 400.00' : 'Ej. 800.00'}
-                className="pl-9 h-11 text-base font-mono font-bold border-[#E2D9CC] bg-[#F8F6F2] text-[#241C15] rounded-xl focus:bg-white"
+                className="pl-9 h-11 text-base font-mono font-semibold border-border/80 bg-background text-foreground rounded-xl focus-visible:ring-ring"
               />
             </div>
 
@@ -538,7 +535,7 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                   key={v}
                   type="button"
                   onClick={() => setSueldoSimulado(String(v))}
-                  className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-[#E2D9CC] bg-[#F4EFEA] hover:bg-[#EAE4DB] text-[#241C15] transition-colors cursor-pointer"
+                  className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 text-foreground transition-colors cursor-pointer tabular-nums"
                 >
                   S/ {v} {modoSimulacion === 'POR_SOCIO' ? 'c/u' : 'total'}
                 </button>
@@ -547,27 +544,27 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
           </div>
 
           {/* Resultado de la simulación */}
-          <div className="lg:col-span-7 bg-[#F8F6F2] border border-[#E2D9CC] rounded-xl p-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]">
-              <span className="text-xs font-bold text-[#75695D]">
+          <div className="lg:col-span-7 bg-muted/20 border border-border/60 rounded-xl p-4">
+            <div className="flex items-center justify-between pb-2 border-b border-border/40">
+              <span className="text-xs font-semibold text-muted-foreground">
                 Diagnóstico del Retiro Simulado ({numSocios} personas)
               </span>
               {sueldoTotalEmpresa === 0 ? (
-                <Badge variant="outline" className="text-[10px] bg-white border-[#E2D9CC]">
+                <Badge variant="outline" className="text-[10px] bg-background border-border/60 text-muted-foreground">
                   Sin retiro ingresado
                 </Badge>
               ) : esSueldoSeguro ? (
-                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-bold flex items-center gap-1">
+                <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-semibold flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
                   100% Sostenible y Seguro
                 </Badge>
               ) : esSueldoAlerta ? (
-                <Badge className="bg-amber-100 text-amber-900 border-amber-300 text-[10px] font-bold flex items-center gap-1">
+                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] font-semibold flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   Atención: Consume Reserva
                 </Badge>
               ) : (
-                <Badge className="bg-red-100 text-red-900 border-red-300 text-[10px] font-bold flex items-center gap-1">
+                <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 text-[10px] font-semibold flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   Peligro: Fondos Insuficientes
                 </Badge>
@@ -576,47 +573,47 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
 
             {/* 4 Tarjetas de desglose exacto */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-3 text-xs">
-              <div className="bg-white p-2 rounded-lg border border-[#E2D9CC]/70">
-                <span className="text-[#75695D] block text-[10px] font-medium truncate">Retiro c/u:</span>
-                <span className="text-sm font-mono font-extrabold text-[#241C15] block">
+              <div className="bg-card p-2 rounded-lg border border-border/50">
+                <span className="text-muted-foreground block text-[10px] font-medium truncate">Retiro c/u:</span>
+                <span className="text-sm font-mono font-bold text-foreground block tabular-nums">
                   {formatCurrency(sueldoPorSocio)}
                 </span>
-                <span className="text-[9px] text-[#75695D]">por socio</span>
+                <span className="text-[9px] text-muted-foreground">por socio</span>
               </div>
-              <div className="bg-white p-2 rounded-lg border border-[#E2D9CC]/70">
-                <span className="text-[#75695D] block text-[10px] font-medium truncate">Total Empresa:</span>
-                <span className="text-sm font-mono font-extrabold text-[#241C15] block">
+              <div className="bg-card p-2 rounded-lg border border-border/50">
+                <span className="text-muted-foreground block text-[10px] font-medium truncate">Total Empresa:</span>
+                <span className="text-sm font-mono font-bold text-foreground block tabular-nums">
                   {formatCurrency(sueldoTotalEmpresa)}
                 </span>
-                <span className="text-[9px] text-[#75695D]">{numSocios} personas</span>
+                <span className="text-[9px] text-muted-foreground">{numSocios} personas</span>
               </div>
-              <div className="bg-white p-2 rounded-lg border border-[#E2D9CC]/70">
-                <span className="text-[#75695D] block text-[10px] font-medium truncate">Caja Restante:</span>
+              <div className="bg-card p-2 rounded-lg border border-border/50">
+                <span className="text-muted-foreground block text-[10px] font-medium truncate">Caja Restante:</span>
                 <span
                   className={cn(
-                    'text-sm font-mono font-extrabold block',
-                    saldoPostSueldo >= 0 ? 'text-[#241C15]' : 'text-red-700'
+                    'text-sm font-mono font-bold block tabular-nums',
+                    saldoPostSueldo >= 0 ? 'text-foreground' : 'text-rose-600 dark:text-rose-400'
                   )}
                 >
                   {formatCurrency(saldoPostSueldo)}
                 </span>
-                <span className="text-[9px] text-[#75695D]">en cuenta</span>
+                <span className="text-[9px] text-muted-foreground">en cuenta</span>
               </div>
-              <div className="bg-white p-2 rounded-lg border border-[#E2D9CC]/70">
-                <span className="text-[#75695D] block text-[10px] font-medium truncate">Reserva Fija:</span>
+              <div className="bg-card p-2 rounded-lg border border-border/50">
+                <span className="text-muted-foreground block text-[10px] font-medium truncate">Reserva Fija:</span>
                 <span
                   className={cn(
-                    'text-sm font-mono font-extrabold block',
-                    colchonRestante >= 0 ? 'text-emerald-800' : 'text-amber-800'
+                    'text-sm font-mono font-bold block tabular-nums',
+                    colchonRestante >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
                   )}
                 >
                   {formatCurrency(activeMes.reservaObligaciones)} {colchonRestante >= 0 ? '✓' : '⚠️'}
                 </span>
-                <span className="text-[9px] text-[#75695D]">blindada</span>
+                <span className="text-[9px] text-muted-foreground">blindada</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-[#75695D] leading-relaxed pt-2 border-t border-[#E2D9CC]/70">
+            <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-border/40">
               {sueldoTotalEmpresa === 0 ? (
                 'Ingresa un monto para simular la salud de la caja tras el retiro de ambos socios.'
               ) : esSueldoSeguro ? (
@@ -634,26 +631,26 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
       {/* ========================================================================= */}
       {/* 5. TABLA DE AUDITORÍA & EVOLUCIÓN HISTÓRICA (SIN SCROLL HORIZONTAL)       */}
       {/* ========================================================================= */}
-      <div className="bg-white border border-[#E2D9CC] rounded-2xl p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#F1ECE4]">
+      <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
           <div>
-            <h3 className="text-sm font-bold text-[#241C15] flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-[#A36F4C]" />
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <Layers className="w-4 h-4 text-primary" />
               Evolución Mensual Consolidada (Auditoría de Arrastre)
             </h3>
-            <p className="text-[11px] text-[#75695D] mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Demostración cronológica de cómo el saldo anterior alimenta el acumulado de cada mes, separando costos directos, gastos operativos y compromisos blindados.
             </p>
           </div>
-          <div className="text-xs text-[#75695D]">
-            Total Meses Auditados: <strong className="text-[#241C15]">{initialData.meses.length}</strong>
+          <div className="text-xs text-muted-foreground">
+            Total Meses Auditados: <strong className="text-foreground">{initialData.meses.length}</strong>
           </div>
         </div>
 
         {/* Tabla Responsiva adaptada sin scroll horizontal (layout fluido) */}
         <div className="w-full">
           {/* Encabezados visibles en desktop */}
-          <div className="hidden lg:grid grid-cols-12 gap-2 px-3 py-2 bg-[#F8F6F2] rounded-xl text-[11px] font-bold text-[#75695D] border border-[#E2D9CC] mb-2">
+          <div className="hidden lg:grid grid-cols-12 gap-2 px-3 py-2 bg-muted/30 rounded-xl text-[11px] font-semibold text-muted-foreground border border-border/50 mb-2">
             <div className="col-span-2">Período / Mes</div>
             <div className="col-span-1 text-right">Saldo Inicial</div>
             <div className="col-span-2 text-right">Ventas Cobradas</div>
@@ -676,71 +673,71 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                   className={cn(
                     'p-3.5 rounded-xl border transition-all cursor-pointer text-xs',
                     isSelected
-                      ? 'bg-amber-50/50 border-amber-600/40 shadow-xs'
-                      : 'bg-white border-[#E2D9CC] hover:bg-[#F8F6F2]'
+                      ? 'bg-primary/5 border-primary/40 shadow-xs'
+                      : 'bg-card border-border/50 hover:bg-muted/30'
                   )}
                 >
                   {/* Vista Desktop (Grid fluido de 12 columnas sin scroll horizontal) */}
                   <div className="hidden lg:grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-2 font-bold text-[#241C15] flex flex-col justify-center truncate">
+                    <div className="col-span-2 font-semibold text-foreground flex flex-col justify-center truncate">
                       <div className="flex items-center gap-1.5 truncate">
-                        <span className={cn('w-2 h-2 rounded-full shrink-0', isSelected ? 'bg-amber-600' : 'bg-transparent')} />
+                        <span className={cn('w-2 h-2 rounded-full shrink-0', isSelected ? 'bg-primary' : 'bg-transparent')} />
                         <span className="truncate">{m.nombreMes}</span>
                       </div>
                       {m.inyeccionCapital > 0 && (
-                        <span className="text-[10px] text-sky-700 font-medium pl-3.5 truncate">
+                        <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium pl-3.5 truncate tabular-nums">
                           +{formatCurrency(m.inyeccionCapital)} financiamiento
                         </span>
                       )}
                     </div>
 
-                    <div className="col-span-1 text-right font-mono font-medium text-[#75695D]">
+                    <div className="col-span-1 text-right font-mono font-medium text-muted-foreground tabular-nums">
                       {formatCurrency(m.saldoInicial)}
                     </div>
 
-                    <div className="col-span-2 text-right font-mono font-bold text-emerald-800">
+                    <div className="col-span-2 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                       +{formatCurrency(m.ventasCobradas)}
                     </div>
 
-                    <div className="col-span-1 text-right font-mono font-medium text-amber-800">
+                    <div className="col-span-1 text-right font-mono font-medium text-amber-600 dark:text-amber-400 tabular-nums">
                       -{formatCurrency(m.comprasDirectas)}
                     </div>
 
-                    <div className="col-span-2 text-right font-mono font-medium text-orange-700">
+                    <div className="col-span-2 text-right font-mono font-medium text-orange-600 dark:text-orange-400 tabular-nums">
                       -{formatCurrency(m.gastosOperativos)}
                     </div>
 
-                    <div className="col-span-2 text-right font-mono font-medium text-red-700">
+                    <div className="col-span-2 text-right font-mono font-medium text-rose-600 dark:text-rose-400 tabular-nums">
                       -{formatCurrency(m.totalBlindadosMes)}
                     </div>
 
                     <div className="col-span-1 text-right">
                       <span
                         className={cn(
-                          'font-mono font-bold block',
-                          m.utilidadMes >= 0 ? 'text-emerald-800' : 'text-red-700'
+                          'font-mono font-semibold block tabular-nums',
+                          m.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                         )}
                       >
                         {m.utilidadMes >= 0 ? '+' : ''}{formatCurrency(m.utilidadMes)}
                       </span>
                     </div>
 
-                    <div className="col-span-1 text-right font-mono font-extrabold text-[#241C15]">
+                    <div className="col-span-1 text-right font-mono font-bold text-foreground tabular-nums">
                       {formatCurrency(m.saldoAcumulado)}
                     </div>
                   </div>
 
                   {/* Vista Móvil / Tablet Compacta (Cards fluidas sin scroll) */}
                   <div className="lg:hidden space-y-2">
-                    <div className="flex items-center justify-between pb-1.5 border-b border-[#E2D9CC]">
-                      <span className="font-bold text-[#241C15] text-sm">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                      <span className="font-semibold text-foreground text-sm">
                         {m.nombreMes}
                       </span>
                       <Badge
                         variant="outline"
                         className={cn(
-                          'text-[10px] font-mono',
-                          m.utilidadMes >= 0 ? 'text-emerald-800 border-emerald-300' : 'text-red-800 border-red-300'
+                          'text-[10px] font-mono tabular-nums',
+                          m.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'text-rose-600 dark:text-rose-400 border-rose-500/20'
                         )}
                       >
                         {m.margenOperativoPct}% Margen
@@ -749,51 +746,51 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
                       <div>
-                        <span className="text-[#75695D] block">Ventas Cobradas:</span>
-                        <span className="font-mono font-semibold text-emerald-800">
+                        <span className="text-muted-foreground block">Ventas Cobradas:</span>
+                        <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                           +{formatCurrency(m.ventasCobradas)}
                         </span>
                       </div>
                       {m.inyeccionCapital > 0 && (
                         <div>
-                          <span className="text-sky-900 block font-medium">Inyección / Préstamo:</span>
-                          <span className="font-mono font-semibold text-sky-700">
+                          <span className="text-sky-600 dark:text-sky-400 block font-medium">Inyección / Préstamo:</span>
+                          <span className="font-mono font-semibold text-sky-600 dark:text-sky-400 tabular-nums">
                             +{formatCurrency(m.inyeccionCapital)}
                           </span>
                         </div>
                       )}
                       <div>
-                        <span className="text-[#75695D] block">Compras Material:</span>
-                        <span className="font-mono font-semibold text-amber-800">
+                        <span className="text-muted-foreground block">Compras Material:</span>
+                        <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
                           -{formatCurrency(m.comprasDirectas)}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[#75695D] block">Gastos Operativos:</span>
-                        <span className="font-mono font-semibold text-orange-700">
+                        <span className="text-muted-foreground block">Gastos Operativos:</span>
+                        <span className="font-mono font-semibold text-orange-600 dark:text-orange-400 tabular-nums">
                           -{formatCurrency(m.gastosOperativos)}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[#75695D] block">Gastos Blindados:</span>
-                        <span className="font-mono font-semibold text-red-700">
+                        <span className="text-muted-foreground block">Gastos Blindados:</span>
+                        <span className="font-mono font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
                           -{formatCurrency(m.totalBlindadosMes)}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[#75695D] block">Utilidad del Mes:</span>
+                        <span className="text-muted-foreground block">Utilidad del Mes:</span>
                         <span
                           className={cn(
-                            'font-mono font-bold',
-                            m.utilidadMes >= 0 ? 'text-emerald-800' : 'text-red-700'
+                            'font-mono font-semibold tabular-nums',
+                            m.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                           )}
                         >
                           {m.utilidadMes >= 0 ? '+' : ''}{formatCurrency(m.utilidadMes)}
                         </span>
                       </div>
                       <div>
-                        <span className="text-[#75695D] block">Saldo Acumulado:</span>
-                        <span className="font-mono font-bold text-[#241C15]">
+                        <span className="text-muted-foreground block">Saldo Acumulado:</span>
+                        <span className="font-mono font-bold text-foreground tabular-nums">
                           {formatCurrency(m.saldoAcumulado)}
                         </span>
                       </div>
@@ -809,9 +806,9 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
       {/* ========================================================================= */}
       {/* 6. GUÍA CONCEPTUAL RÁPIDA (REGLAS DE ORO FINANCIERAS)                     */}
       {/* ========================================================================= */}
-      <div className="bg-[#F4EFEA] border border-[#E2D9CC] rounded-2xl p-5 text-xs text-[#75695D] space-y-2">
-        <div className="font-bold text-[#241C15] flex items-center gap-1.5">
-          <Info className="w-4 h-4 text-amber-700" />
+      <div className="bg-muted/20 border border-border/60 rounded-2xl p-5 text-xs text-muted-foreground space-y-2">
+        <div className="font-semibold text-foreground flex items-center gap-1.5">
+          <Info className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           <span>Reglas de Oro del Asesor Financiero para la Asignación de Sueldos:</span>
         </div>
         <ul className="list-disc pl-5 space-y-1 leading-relaxed">

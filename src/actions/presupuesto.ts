@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { getVentas } from '@/actions/ventas'
+import { getPedidos } from '@/actions/pedidos'
 import { getActiveNegocioServer } from '@/lib/business-server'
 import { TipoNegocio } from '@/lib/business'
 import { revalidatePath } from 'next/cache'
@@ -259,12 +259,12 @@ async function ejecutarConReintentoDB<T>(fn: () => Promise<T>, intentos = 2): Pr
 
 export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Promise<DatosPresupuestoTranquilidad> {
   const targetNegocio = negocio || await getActiveNegocioServer()
-  const [inversiones, ventas, ingresosDirectos, filamentos] = await ejecutarConReintentoDB(() =>
+  const [inversiones, pedidos, ingresosDirectos, filamentos] = await ejecutarConReintentoDB(() =>
     Promise.all([
       prisma.inversion.findMany({
         where: { negocio: targetNegocio }
       }),
-      getVentas(targetNegocio),
+      getPedidos(targetNegocio),
       prisma.ingreso.findMany({
         where: { negocio: targetNegocio },
         orderBy: { fecha: 'desc' }
@@ -276,14 +276,14 @@ export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Pr
   )
 
   // 1. Saldo actual en caja (Ingresos cobrados - Egresos pagados)
-  const totalCobradoVentas = ventas.reduce((sum, v) => sum + Number(v.montoPagado || 0), 0)
+  const totalCobradoVentas = pedidos.reduce((sum, p) => sum + Number(p.montoPagado || 0), 0)
   const totalIngresosDirectos = ingresosDirectos.reduce((sum, i) => sum + Number(i.monto || 0), 0)
   const totalIngresosCobrados = totalCobradoVentas + totalIngresosDirectos
 
   const totalEgresosAcumulados = inversiones.reduce((sum, e) => sum + Number(e.costoTotal || 0), 0)
   const saldoActualCaja = Math.max(0, totalIngresosCobrados - totalEgresosAcumulados)
 
-  const cuentasPorCobrar = ventas.reduce((sum, v) => sum + Number(v.saldoPendiente || 0), 0)
+  const cuentasPorCobrar = pedidos.reduce((sum, p) => sum + Number(p.saldoPendiente || 0), 0)
 
   // 2. Inventario de Filamentos
   const filamentosDisponibles = filamentos.filter(f => f.estado === 'DISPONIBLE')
@@ -303,24 +303,19 @@ export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Pr
   }))
 
   // 3. Métricas de Producción y Ventas
-  const totalFacturadoVentas = ventas.reduce((sum, v) => sum + Number(v.total || 0), 0)
-  const ticketPromedio = ventas.length > 0 ? Number((totalFacturadoVentas / ventas.length).toFixed(2)) : 135.00
+  const totalFacturadoVentas = pedidos.reduce((sum, p) => sum + Number(p.total || 0), 0)
+  const ticketPromedio = pedidos.length > 0 ? Number((totalFacturadoVentas / pedidos.length).toFixed(2)) : 135.00
 
-  const totalCostosFabricacion = ventas.reduce((sum, v) => {
-    const costoUnit = v.costoBaseSnapshot != null && Number(v.costoBaseSnapshot) > 0
-      ? Number(v.costoBaseSnapshot)
-      : (Number(v.producto?.costoBase) || 0)
-    return sum + (costoUnit * (v.cantidad || 1))
-  }, 0)
+  const totalCostosFabricacion = pedidos.reduce((sum, p) => sum + Number(p.costoBaseTotal || 0), 0)
 
-  const costoPromedioFabricacion = ventas.length > 0 
-    ? Number((totalCostosFabricacion / ventas.length).toFixed(2)) 
+  const costoPromedioFabricacion = pedidos.length > 0 
+    ? Number((totalCostosFabricacion / pedidos.length).toFixed(2)) 
     : 38.00
 
   const margenPromedioUnitario = Math.max(0, ticketPromedio - costoPromedioFabricacion)
 
   // Pedidos del último mes o promedio estimado
-  const promedioPedidosMensuales = Math.max(8, Math.min(40, ventas.length > 0 ? Math.round(ventas.length / Math.max(1, 2)) : 18))
+  const promedioPedidosMensuales = Math.max(8, Math.min(40, pedidos.length > 0 ? Math.round(pedidos.length / Math.max(1, 2)) : 18))
 
   // 4. Costos Fijos de Servicios y Taller
   const gastosFijosServicios = inversiones

@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
 import { getInversiones } from '@/actions/inversiones'
-import { getVentas } from '@/actions/ventas'
+import { getPedidos } from '@/actions/pedidos'
 import { getIngresos } from '@/actions/ingresos'
 import { getDatosPresupuestoTranquilidad } from '@/actions/presupuesto'
 
@@ -71,9 +71,9 @@ export async function getRentabilidadSueldos(
   const negocio = negocioOverride || await getActiveNegocioServer()
 
   // 1. Obtener datos reales de la base de datos
-  const [inversiones, ventas, ingresosDirectos, presupuestoData] = await Promise.all([
+  const [inversiones, pedidos, ingresosDirectos, presupuestoData] = await Promise.all([
     getInversiones(negocio),
-    getVentas(negocio),
+    getPedidos(negocio),
     getIngresos(negocio),
     getDatosPresupuestoTranquilidad(negocio)
   ])
@@ -105,19 +105,19 @@ export async function getRentabilidadSueldos(
     }
   }
 
-  // A. Procesar Ventas y Pagos reales
-  ventas.forEach(v => {
-    if (Array.isArray(v.pagos) && v.pagos.length > 0) {
-      v.pagos.forEach(p => {
-        if (!p.fecha || p.monto <= 0) return
-        const key = p.fecha.slice(0, 7) // "YYYY-MM"
+  // A. Procesar Pedidos y Pagos reales
+  pedidos.forEach(p => {
+    if (Array.isArray(p.pagos) && p.pagos.length > 0) {
+      p.pagos.forEach(pago => {
+        if (!pago.fecha || pago.monto <= 0) return
+        const key = pago.fecha.slice(0, 7) // "YYYY-MM"
         ensureMonth(key)
-        monthMap[key].ventasCobradas += Number(p.monto)
+        monthMap[key].ventasCobradas += Number(pago.monto)
       })
-    } else if (v.montoPagado > 0 && v.fecha) {
-      const key = v.fecha.slice(0, 7)
+    } else if (p.montoPagado > 0 && p.fecha) {
+      const key = p.fecha.slice(0, 7)
       ensureMonth(key)
-      monthMap[key].ventasCobradas += Number(v.montoPagado)
+      monthMap[key].ventasCobradas += Number(p.montoPagado)
     }
   })
 

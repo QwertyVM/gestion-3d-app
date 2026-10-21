@@ -1,9 +1,9 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidateDomain } from '@/core/cache/revalidation-bus'
 import { getInversiones } from './inversiones'
-import { getVentas } from './ventas'
+import { getPedidos } from './pedidos'
 import { getIngresos } from './ingresos'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
@@ -119,14 +119,14 @@ export async function getDatosPreCierre(mesInput?: number, anioInput?: number, n
   const anio = anioInput || now.getFullYear()
   const nombrePeriodo = `${NOMBRES_MESES[mes - 1]} ${anio}`
 
-  const [egresos, ventas, ingresosDirectos] = await Promise.all([
+  const [egresos, pedidos, ingresosDirectos] = await Promise.all([
     getInversiones(targetNegocio),
-    getVentas(targetNegocio),
+    getPedidos(targetNegocio),
     getIngresos(targetNegocio),
   ])
 
   // Filtrar o considerar movimientos del período o acumulados para conciliación
-  const totalVentasCobrado = ventas.reduce((acc, v) => acc + (v.montoPagado || 0), 0)
+  const totalVentasCobrado = pedidos.reduce((acc, p) => acc + (p.montoPagado || 0), 0)
   const totalIngresosDirectos = ingresosDirectos.reduce((acc, i) => acc + (i.monto || 0), 0)
   const totalIngresos = totalVentasCobrado + totalIngresosDirectos
 
@@ -146,8 +146,8 @@ export async function getDatosPreCierre(mesInput?: number, anioInput?: number, n
   const flujoNetoMes = totalIngresos - totalEgresos
   const saldoSistemaCaja = flujoNetoMes
 
-  const cuentasPorCobrar = ventas.reduce((acc, v) => acc + (v.saldoPendiente || 0), 0)
-  const totalPedidos = ventas.length
+  const cuentasPorCobrar = pedidos.reduce((acc, p) => acc + (p.saldoPendiente || 0), 0)
+  const totalPedidos = pedidos.length
 
   return {
     mes,
@@ -230,9 +230,7 @@ export async function createCierreMes(data: {
       }
     })
 
-    revalidatePath('/finanzas/cierres')
-    revalidatePath('/finanzas/flujo-caja')
-    revalidatePath('/')
+    revalidateDomain('finance')
 
     return {
       success: true,
@@ -251,9 +249,7 @@ export async function deleteCierreMes(id: string) {
       where: { id }
     })
 
-    revalidatePath('/finanzas/cierres')
-    revalidatePath('/finanzas/flujo-caja')
-    revalidatePath('/')
+    revalidateDomain('finance')
 
     return { success: true, message: 'Registro de cierre eliminado exitosamente.' }
   } catch (error: any) {

@@ -55,12 +55,12 @@ const CATEGORIAS_TAG_BG: { id: CategoriaTag; label: string; icon: any; desc: str
 ]
 
 const COLOR_OPTIONS = [
-  { id: 'amber', name: 'Ámbar', bg: 'bg-[#FDF6E2]', text: 'text-[#8C6D1F]', border: 'border-[#E8D49B]' },
-  { id: 'blue', name: 'Terracota', bg: 'bg-[#EFE5D8]', text: 'text-[#633E20]', border: 'border-[#D4BEA7]' },
-  { id: 'emerald', name: 'Verde Taller', bg: 'bg-[#EBF7EE]', text: 'text-[#1E5E3A]', border: 'border-[#B4E3C0]' },
-  { id: 'purple', name: 'Púrpura', bg: 'bg-[#F3EDFA]', text: 'text-[#6A389D]', border: 'border-[#D6C2ED]' },
-  { id: 'pink', name: 'Cobre Suave', bg: 'bg-[#FDF0EE]', text: 'text-[#A34335]', border: 'border-[#F2C0B8]' },
-  { id: 'indigo', name: 'Crema Arena', bg: 'bg-[#F4EFEA]', text: 'text-[#241C15]', border: 'border-[#DCD3C6]' },
+  { id: 'amber', name: 'Ámbar', bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-500/20' },
+  { id: 'blue', name: 'Terracota', bg: 'bg-orange-500/10', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-500/20' },
+  { id: 'emerald', name: 'Verde Taller', bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20' },
+  { id: 'purple', name: 'Púrpura', bg: 'bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/20' },
+  { id: 'pink', name: 'Cobre Suave', bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400', border: 'border-rose-500/20' },
+  { id: 'indigo', name: 'Neutro', bg: 'bg-muted/60', text: 'text-foreground', border: 'border-border/60' },
 ]
 
 export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
@@ -225,36 +225,36 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
           <div className="flex items-center gap-2">
             <Link 
               href="/finanzas/egresos" 
-              className="p-1.5 rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#FFFFFF] transition-colors border border-transparent hover:border-[#E2D9CC] shadow-2xs shrink-0"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors border border-transparent hover:border-border/60 shrink-0"
               title="Volver a Egresos"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#241C15] flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C] shrink-0">
-                <Tag className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground flex items-center gap-2.5">
+              <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary shrink-0">
+                <Tag className="h-5 w-5" />
               </div>
               <span>Gestión de Tags & Subcategorías</span>
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-[#75695D] mt-1">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Clasificación dinámica de compras, materiales y servicios por etiquetas.
           </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <Link href="/finanzas/egresos">
-            <Button variant="outline" className="border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#F4EFEA] hover:border-[#DCD3C6] cursor-pointer rounded-xl text-xs h-9 shadow-2xs font-medium px-3">
-              <ShoppingBag className="h-3.5 w-3.5 mr-1.5 text-[#A36F4C]" />
+            <Button variant="outline" className="border-border/60 bg-background text-foreground hover:bg-muted/50 cursor-pointer rounded-lg text-xs h-9 font-medium px-3 shadow-none">
+              <ShoppingBag className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
               Ver Egresos
             </Button>
           </Link>
 
           <Button 
             onClick={handleOpenCreate}
-            className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold shadow-xs transition-all cursor-pointer rounded-xl px-3.5 h-9 text-xs active:scale-[0.98]"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium shadow-none transition-all cursor-pointer rounded-lg px-3 h-9 text-xs active:scale-[0.98]"
           >
-            <Plus className="h-4 w-4 mr-1.5 stroke-[2.5]" />
+            <Plus className="h-4 w-4 mr-1.5" />
             Nuevo Tag
           </Button>
         </div>
@@ -262,52 +262,52 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
       {/* KPI Cards Minimalistas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">{categoriaFilter === 'TODOS' && !search ? 'Tags Creados' : 'Tags Filtrados'}</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-wider select-none">{categoriaFilter === 'TODOS' && !search ? 'Tags Creados' : 'Tags Filtrados'}</span>
+            <div className="p-1 rounded-md bg-muted/60 text-muted-foreground">
               <Tag className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
-              {totalTagsFiltrados} <span className="text-xs font-normal text-[#75695D] font-sans">{totalTagsFiltrados === 1 ? 'etiqueta' : 'etiquetas'}</span>
+            <div className="text-2xl font-semibold text-foreground font-mono tabular-nums tracking-tight">
+              {totalTagsFiltrados} <span className="text-xs font-normal text-muted-foreground font-sans">{totalTagsFiltrados === 1 ? 'etiqueta' : 'etiquetas'}</span>
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+            <span className="text-[11px] text-muted-foreground mt-0.5 block truncate">
               {categoriaFilter === 'TODOS' && !search ? 'Clasificación activa' : 'Según filtros'}
             </span>
           </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">Insumos Asignados</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#633E20]">
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-wider select-none">Insumos Asignados</span>
+            <div className="p-1 rounded-md bg-muted/60 text-muted-foreground">
               <ShoppingBag className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
-              {totalItemsFiltrados} <span className="text-xs font-normal text-[#75695D] font-sans">{totalItemsFiltrados === 1 ? 'compra' : 'compras'}</span>
+            <div className="text-2xl font-semibold text-foreground font-mono tabular-nums tracking-tight">
+              {totalItemsFiltrados} <span className="text-xs font-normal text-muted-foreground font-sans">{totalItemsFiltrados === 1 ? 'compra' : 'compras'}</span>
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+            <span className="text-[11px] text-muted-foreground mt-0.5 block truncate">
               {categoriaFilter === 'TODOS' && !search ? 'Compras etiquetadas' : 'En tags seleccionados'}
             </span>
           </div>
         </div>
 
-        <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[#6B7280]">
-            <span className="text-xs font-semibold">Gasto Total Etiquetado</span>
-            <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-medium uppercase tracking-wider select-none">Gasto Total Etiquetado</span>
+            <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <DollarSign className="h-3.5 w-3.5" />
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
+            <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 font-mono tabular-nums tracking-tight">
               {formatCurrency(totalGastoFiltrado)}
             </div>
-            <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+            <span className="text-[11px] text-muted-foreground mt-0.5 block truncate">
               {categoriaFilter === 'TODOS' && !search ? 'Acumulado en compras' : 'Total en filtro activo'}
             </span>
           </div>
@@ -315,22 +315,22 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
       </div>
 
       {/* Main Container: Master Card (Toolbar + Zero-Scroll Table) */}
-      <Card className="bg-[#FFFFFF] border-[#E2D9CC] overflow-hidden shadow-2xs rounded-2xl">
+      <Card className="bg-card border border-border/60 overflow-hidden shadow-none rounded-xl">
         {/* Unified Integrated Toolbar */}
-        <div className="p-3 sm:p-3.5 border-b border-[#E2D9CC]/70 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#FFFFFF]">
+        <div className="p-3 sm:p-3.5 border-b border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3 bg-card">
           {/* Lado Izquierdo: Campo de Búsqueda */}
           <div className="relative w-full sm:w-80 flex-shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Buscar tag o descripción..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs md:text-sm rounded-xl h-9 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all"
+              className="pl-9 pr-8 bg-background border-border/80 text-foreground placeholder:text-muted-foreground text-xs md:text-sm rounded-lg h-9 focus-visible:ring-1 focus-visible:ring-ring transition-all"
             />
             {search && (
               <button 
                 onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-0.5 rounded cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -338,13 +338,13 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
           </div>
 
           {/* Lado Derecho: Segmented Control Tabs */}
-          <div className="flex items-center gap-1 bg-[#F4EFEA] p-1 rounded-xl border border-[#E2D9CC] overflow-x-auto max-w-full w-full sm:w-auto justify-center sm:justify-start">
+          <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-lg border border-border/50 overflow-x-auto max-w-full w-full sm:w-auto justify-center sm:justify-start">
             <button
               onClick={() => { setCategoriaFilter('TODOS'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
                 categoriaFilter === 'TODOS'
-                  ? 'bg-[#241C15] text-white shadow-2xs'
-                  : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+                  ? 'bg-card text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Todos ({items.length})
@@ -356,10 +356,10 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                 <button
                   key={cat.id}
                   onClick={() => { setCategoriaFilter(cat.id); setCurrentPage(1); }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
                     categoriaFilter === cat.id
-                      ? 'bg-[#A36F4C] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:bg-[#FFFFFF] hover:text-[#241C15]'
+                      ? 'bg-card text-foreground shadow-xs font-semibold'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Icon className="h-3 w-3" />
@@ -371,9 +371,9 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
         </div>
 
         {/* Mobile View: Cards */}
-        <div className="block md:hidden divide-y divide-[#E2D9CC]/70">
+        <div className="block md:hidden divide-y divide-border/40">
           {paginatedTags.length === 0 ? (
-            <div className="p-8 text-center text-[#75695D] text-xs">
+            <div className="p-8 text-center text-muted-foreground text-xs">
               No hay tags registrados con los filtros actuales.
             </div>
           ) : (
@@ -381,29 +381,29 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
               <div 
                 key={tag.id} 
                 onClick={() => handleOpenEdit(tag)}
-                className="p-3.5 space-y-2 bg-[#FFFFFF] hover:bg-[#FDFBF7] transition-colors cursor-pointer group"
+                className="p-3.5 space-y-2 bg-card hover:bg-muted/20 transition-colors cursor-pointer group"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-1">
-                    <Badge variant="outline" className={`text-xs font-semibold py-0.5 px-2 gap-1.5 ${getTagColorClasses(tag.color)}`}>
+                    <Badge variant="outline" className={`text-xs font-medium py-0.5 px-2 gap-1.5 ${getTagColorClasses(tag.color)}`}>
                       <Tag className="h-3 w-3" />
                       {tag.nombre}
                     </Badge>
-                    <span className="text-[10px] text-[#75695D] block">
+                    <span className="text-[10px] text-muted-foreground block">
                       {getCategoryLabel(tag.categoria)}
                     </span>
                     {tag.descripcion && (
-                      <p className="text-xs text-[#75695D] line-clamp-1">
+                      <p className="text-xs text-muted-foreground line-clamp-1">
                         {tag.descripcion}
                       </p>
                     )}
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <span className="font-mono font-bold text-[#A36F4C] text-sm block">
+                    <span className="font-mono font-semibold text-foreground text-sm block tabular-nums">
                       {formatCurrency(tag.gastoAcumulado)}
                     </span>
-                    <span className="text-[10px] text-[#75695D] font-mono block">
+                    <span className="text-[10px] text-muted-foreground font-mono block">
                       {tag.totalEgresos} {tag.totalEgresos === 1 ? 'ítem' : 'ítems'}
                     </span>
                   </div>
@@ -416,21 +416,21 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
         {/* Desktop View: Clean Zero-Scroll Table (5 Columns / table-fixed) */}
         <div className="hidden md:block">
           <Table className="w-full table-fixed">
-            <TableHeader className="bg-[#FAF8F5]/80 border-b border-[#E2D9CC]">
-              <TableRow className="border-[#E2D9CC] hover:bg-transparent">
-                <TableHead className="w-[180px] px-4 py-3 text-xs font-bold text-[#75695D] text-left">
+            <TableHeader className="bg-muted/20 border-b border-border/60">
+              <TableRow className="border-border/60 hover:bg-transparent">
+                <TableHead className="w-[180px] px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground select-none text-left">
                   Tag & Categoría
                 </TableHead>
-                <TableHead className="px-3 py-3 text-xs font-bold text-[#75695D] text-left">
+                <TableHead className="px-3 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground select-none text-left">
                   Descripción / Uso
                 </TableHead>
-                <TableHead className="w-[130px] px-3 py-3 text-xs font-bold text-[#75695D] text-center">
+                <TableHead className="w-[130px] px-3 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground select-none text-center">
                   Compras / Ítems
                 </TableHead>
-                <TableHead className="w-[130px] px-4 py-3 text-xs font-bold text-[#75695D] text-right">
+                <TableHead className="w-[130px] px-4 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground select-none text-right">
                   Gasto Acumulado
                 </TableHead>
-                <TableHead className="w-[80px] px-3 py-3 text-xs font-bold text-[#75695D] text-right">
+                <TableHead className="w-[80px] px-3 py-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground select-none text-right">
                   Acción
                 </TableHead>
               </TableRow>
@@ -438,7 +438,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
             <TableBody>
               {filteredTags.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-36 text-center text-[#75695D] text-xs">
+                  <TableCell colSpan={5} className="h-36 text-center text-muted-foreground text-xs">
                     No hay tags registrados con los filtros actuales.
                   </TableCell>
                 </TableRow>
@@ -447,16 +447,16 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                   <TableRow 
                     key={tag.id}
                     onClick={() => handleOpenEdit(tag)}
-                    className="border-b border-[#E2D9CC]/60 hover:bg-[#FAF8F5]/60 transition-colors cursor-pointer group"
+                    className="border-b border-border/40 hover:bg-muted/20 transition-colors cursor-pointer group"
                   >
                     {/* 1. Tag & Categoría */}
                     <TableCell className="px-4 py-3 align-middle">
                       <div className="space-y-1">
-                        <Badge variant="outline" className={`text-xs font-semibold py-0.5 px-2 gap-1.5 ${getTagColorClasses(tag.color)}`}>
+                        <Badge variant="outline" className={`text-xs font-medium py-0.5 px-2 gap-1.5 ${getTagColorClasses(tag.color)}`}>
                           <Tag className="h-3 w-3" />
                           {tag.nombre}
                         </Badge>
-                        <span className="text-[10px] text-[#75695D] block truncate">
+                        <span className="text-[10px] text-muted-foreground block truncate">
                           {getCategoryLabel(tag.categoria)}
                         </span>
                       </div>
@@ -466,21 +466,21 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                     <TableCell className="px-3 py-3 align-middle min-w-0">
                       <span 
                         title={tag.descripcion || ''} 
-                        className="text-xs text-[#241C15] block truncate"
+                        className="text-xs text-foreground block truncate"
                       >
-                        {tag.descripcion || <span className="text-[#A89B8D] italic">Sin descripción</span>}
+                        {tag.descripcion || <span className="text-muted-foreground/60 italic">Sin descripción</span>}
                       </span>
                     </TableCell>
 
                     {/* 3. Compras / Ítems */}
                     <TableCell className="px-3 py-3 align-middle text-center whitespace-nowrap">
-                      <Badge variant="outline" className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] font-mono text-xs px-2 py-0.5 font-semibold">
+                      <Badge variant="outline" className="bg-muted/60 border-border/50 text-foreground font-mono text-xs px-2 py-0.5 font-medium tabular-nums">
                         {tag.totalEgresos} {tag.totalEgresos === 1 ? 'ítem' : 'ítems'}
                       </Badge>
                     </TableCell>
 
                     {/* 4. Gasto Acumulado */}
-                    <TableCell className="px-4 py-3 align-middle text-right font-mono font-bold text-[#A36F4C] text-xs sm:text-sm whitespace-nowrap">
+                    <TableCell className="px-4 py-3 align-middle text-right font-mono font-semibold text-foreground text-xs sm:text-sm whitespace-nowrap tabular-nums">
                       {formatCurrency(tag.gastoAcumulado)}
                     </TableCell>
 
@@ -491,7 +491,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                           size="icon"
                           variant="ghost"
                           onClick={() => handleOpenEdit(tag)}
-                          className="h-7 w-7 text-[#75695D] hover:text-[#A36F4C] hover:bg-[#EFE5D8] rounded-lg cursor-pointer"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md cursor-pointer"
                           title="Editar tag"
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -500,7 +500,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                           size="icon"
                           variant="ghost"
                           onClick={() => handleDelete(tag.id, tag.nombre)}
-                          className="h-7 w-7 text-[#75695D] hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                          className="h-7 w-7 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 rounded-md cursor-pointer"
                           title="Eliminar tag"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -516,9 +516,9 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E2D9CC] bg-[#FAF8F5]/80 text-xs text-[#75695D]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-border/60 bg-muted/10 text-xs text-muted-foreground">
             <div>
-              Mostrando <span className="text-[#241C15] font-bold">{paginatedTags.length}</span> de <span className="text-[#241C15] font-bold">{filteredTags.length}</span> tags (Página {currentPage} de {totalPages})
+              Mostrando <span className="text-foreground font-semibold">{paginatedTags.length}</span> de <span className="text-foreground font-semibold">{filteredTags.length}</span> tags (Página {currentPage} de {totalPages})
             </div>
 
             <div className="flex items-center gap-1.5">
@@ -527,7 +527,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-2xs"
+                className="h-8 px-2.5 border-border/60 bg-background text-foreground hover:bg-muted/50 disabled:opacity-40 cursor-pointer shadow-none"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Anterior
@@ -540,10 +540,10 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                     variant={currentPage === page ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCurrentPage(page)}
-                    className={`h-8 w-8 p-0 cursor-pointer shadow-2xs ${
+                    className={`h-8 w-8 p-0 cursor-pointer shadow-none ${
                       currentPage === page 
-                        ? "bg-[#241C15] text-white hover:bg-[#3D332A] font-bold" 
-                        : "border-[#E2D9CC] bg-[#FFFFFF] text-[#75695D] hover:bg-[#EAE4DC] hover:text-[#241C15]"
+                        ? "bg-primary text-primary-foreground font-semibold" 
+                        : "border-border/60 bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     }`}
                   >
                     {page}
@@ -556,7 +556,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="h-8 px-2.5 border-[#E2D9CC] bg-[#FFFFFF] text-[#241C15] hover:bg-[#EAE4DC] disabled:opacity-40 cursor-pointer shadow-2xs"
+                className="h-8 px-2.5 border-border/60 bg-background text-foreground hover:bg-muted/50 disabled:opacity-40 cursor-pointer shadow-none"
               >
                 Siguiente
                 <ChevronRight className="h-4 w-4 ml-1" />
@@ -568,18 +568,18 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
       {/* Modal: Crear / Editar Tag */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-[#FAF8F5] border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-lg max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card border-border/80 text-foreground w-[95vw] sm:max-w-lg max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-xl rounded-2xl z-50">
           <form onSubmit={handleSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            <div className="p-5 sm:p-6 pb-4 border-b border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between flex-shrink-0">
+            <div className="px-6 py-4 border-b border-border/60 bg-card/95 backdrop-blur-xs flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-[#EFE5D8] border border-[#D4BEA7] text-[#A36F4C]">
-                  <Tag className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary">
+                  <Tag className="h-4 w-4" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base sm:text-lg font-extrabold text-[#241C15]">
+                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                     {editingTag ? 'Editar Tag de Insumo' : 'Crear Nuevo Tag de Insumo'}
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-[#75695D] mt-0.5">
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                     Asocia el tag a una categoría principal para filtrarlo al registrar compras.
                   </DialogDescription>
                 </div>
@@ -587,16 +587,16 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
               <button
                 type="button"
                 onClick={() => setOpenModal(false)}
-                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-lg hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 touch-pan-y">
               {/* Categoría Asociada */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
+                <Label className="text-xs font-medium text-foreground/90 mb-1.5 block">
                   Categoría Principal *
                 </Label>
                 <div className={`grid gap-2 ${CATEGORIAS_TAG.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
@@ -608,17 +608,17 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                         key={c.id}
                         type="button"
                         onClick={() => setFormCategoria(c.id)}
-                        className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                        className={`p-2.5 rounded-lg border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1 ${
                           isSelected
-                            ? 'bg-[#FFFFFF] border-[#A36F4C] ring-1 ring-[#A36F4C]/40 text-[#241C15] shadow-xs'
-                            : 'bg-[#F4EFEA] border-[#E2D9CC] text-[#75695D] hover:border-[#DCD3C6] hover:text-[#241C15]'
+                            ? 'bg-primary/10 border-primary text-foreground shadow-none ring-1 ring-primary/40'
+                            : 'bg-background border-border/80 text-muted-foreground hover:border-border hover:text-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <Icon className={`h-4 w-4 ${isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]'}`} />
-                          {isSelected && <Check className="h-3.5 w-3.5 text-[#A36F4C]" />}
+                          <Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                          {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
                         </div>
-                        <div className="font-bold text-[11px] leading-tight">{c.label}</div>
+                        <div className="font-semibold text-[11px] leading-tight">{c.label}</div>
                       </button>
                     )
                   })}
@@ -627,7 +627,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
               {/* Nombre */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
+                <Label className="text-xs font-medium text-foreground/90 mb-1.5 block">
                   Nombre del Tag *
                 </Label>
                 <Input 
@@ -635,13 +635,13 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                   onChange={(e) => setFormNombre(e.target.value)}
                   placeholder="Ej: Filamento PLA, Cajas 15x15, Tornillos M3..."
                   required
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  className="h-9 bg-background border-border/80 text-foreground placeholder:text-muted-foreground text-sm rounded-lg focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
 
               {/* Selector de Color */}
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
+                <Label className="text-xs font-medium text-foreground/90 mb-1.5 block">
                   Color de Identificación
                 </Label>
                 <div className="grid grid-cols-3 gap-2">
@@ -652,10 +652,10 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                         key={c.id}
                         type="button"
                         onClick={() => setFormColor(c.id)}
-                        className={`p-2 rounded-xl border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        className={`p-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           isSelected 
-                            ? `${c.bg} ${c.text} ${c.border} ring-2 ring-[#A36F4C]/50 shadow-xs font-bold`
-                            : 'bg-[#FFFFFF] border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:border-[#DCD3C6]'
+                            ? `${c.bg} ${c.text} ${c.border} ring-1 ring-ring font-semibold`
+                            : 'bg-background border-border/80 text-muted-foreground hover:text-foreground hover:border-border'
                         }`}
                       >
                         <span className={`w-2.5 h-2.5 rounded-full ${c.bg} border ${c.border}`}></span>
@@ -668,28 +668,28 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
 
               {/* Descripción */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
+                <Label className="text-xs font-medium text-foreground/90 mb-1.5 block">
                   Descripción / Notas (Opcional)
                 </Label>
                 <Input 
                   value={formDescripcion}
                   onChange={(e) => setFormDescripcion(e.target.value)}
                   placeholder="Ej: Bobinas de filamento PLA para producción de pedidos..."
-                  className="bg-[#F4EFEA] border-[#DCD3C6] text-[#241C15] placeholder:text-[#75695D] text-sm rounded-xl focus:border-[#A36F4C] focus:bg-[#FFFFFF]"
+                  className="h-9 bg-background border-border/80 text-foreground placeholder:text-muted-foreground text-sm rounded-lg focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
 
               {/* Preview */}
-              <div className="p-3 rounded-xl bg-[#FFFFFF] border border-[#E2D9CC] flex items-center justify-between text-xs">
-                <span className="text-[#75695D] font-medium">Vista previa del tag:</span>
-                <Badge variant="outline" className={`text-xs font-semibold py-0.5 px-2.5 gap-1.5 ${getTagColorClasses(formColor)}`}>
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/50 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Vista previa del tag:</span>
+                <Badge variant="outline" className={`text-xs font-medium py-0.5 px-2.5 gap-1.5 ${getTagColorClasses(formColor)}`}>
                   <Tag className="h-3 w-3" />
                   {formNombre.trim() || 'Nombre del Tag'}
                 </Badge>
               </div>
             </div>
 
-            <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FFFFFF] flex items-center justify-between gap-3 flex-shrink-0">
+            <div className="px-6 py-3.5 border-t border-border/60 bg-muted/20 flex items-center justify-between gap-2.5 flex-shrink-0">
               {editingTag ? (
                 <Button
                   type="button"
@@ -699,7 +699,7 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                     setOpenModal(false)
                     handleDelete(tagToDelete.id, tagToDelete.nombre)
                   }}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs px-3 py-2 rounded-xl cursor-pointer font-semibold active:scale-[0.98] flex items-center gap-1.5"
+                  className="text-destructive hover:bg-destructive/10 text-xs px-3 py-2 rounded-lg cursor-pointer font-medium active:scale-[0.98] flex items-center gap-1.5"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   <span>Eliminar</span>
@@ -712,15 +712,17 @@ export function TagsInsumosClient({ tags }: TagsInsumosClientProps) {
                 <Button 
                   type="button" 
                   variant="ghost" 
+                  size="sm"
                   onClick={() => setOpenModal(false)}
-                  className="text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC] text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                  className="text-muted-foreground hover:text-foreground text-xs rounded-lg cursor-pointer"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
+                  size="sm"
                   disabled={isSubmitting}
-                  className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-[#FFFFFF] font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs rounded-lg shadow-none cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
                 >
                   {isSubmitting ? (
                     <>

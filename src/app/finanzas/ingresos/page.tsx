@@ -1,4 +1,3 @@
-import { getVentas } from '@/actions/ventas'
 import { getPedidos } from '@/actions/pedidos'
 import { getIngresos } from '@/actions/ingresos'
 import { IngresosClient } from '@/components/finanzas/IngresosClient'
@@ -6,16 +5,15 @@ import { IngresosClient } from '@/components/finanzas/IngresosClient'
 export const dynamic = 'force-dynamic'
 
 export default async function IngresosPage() {
-  const [ventas, pedidos, ingresosDirectos] = await Promise.all([
-    getVentas(),
+  const [pedidos, ingresosDirectos] = await Promise.all([
     getPedidos(),
     getIngresos(),
   ])
 
   return (
     <IngresosClient 
-      ventas={ventas as any} 
-      pedidos={pedidos as any}
+      ventas={[]} 
+      pedidos={pedidos}
       ingresosDirectos={ingresosDirectos as any} 
     />
   )

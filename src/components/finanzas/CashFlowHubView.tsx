@@ -1486,15 +1486,18 @@ export function CashFlowHubView({
               Flujo de Caja & Salud Financiera
             </h1>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed pl-11">
+          <p className="text-xs text-muted-foreground leading-relaxed pl-11 hidden sm:block">
             Centro de control unificado: balance real de caja, compromisos blindados y capacidad de gasto libre en tiempo real.
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed pl-11 sm:hidden">
+            Balance real de caja, compromisos blindados y gasto libre en tiempo real.
           </p>
         </div>
 
-        {/* Lado Derecho: Controles en 1 Sola Línea */}
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-start lg:self-center">
+        {/* Lado Derecho: Controles Responsivos */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto shrink-0 self-start lg:self-center">
           {/* Selector de Presets Temporales */}
-          <div className="bg-secondary/80 border border-border/80 p-1 rounded-xl flex items-center gap-1 shadow-2xs">
+          <div className="bg-secondary/80 border border-border/80 p-1 rounded-xl flex items-center gap-1 shadow-2xs overflow-x-auto no-scrollbar max-w-full">
             <button
               type="button"
               onClick={() => handleCambiarPeriodo('mes')}
@@ -1551,23 +1554,23 @@ export function CashFlowHubView({
                 periodo === 'historico'
                   ? "bg-card text-foreground font-bold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Histórico
-          </button>
-        </div>
+              )}
+            >
+              Histórico
+            </button>
+          </div>
 
-        {/* Botón Plan de Gastos */}
-        <Button
-          variant="outline"
-          onClick={() => setIsPlanModalOpen(true)}
-          className="border-border text-foreground hover:bg-secondary text-xs font-semibold h-9 px-3.5 rounded-xl flex items-center gap-1.5 shadow-2xs whitespace-nowrap cursor-pointer"
-        >
-          <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-          <span>Plan de Gastos ({partidas.length})</span>
-        </Button>
+          {/* Botón Plan de Gastos */}
+          <Button
+            variant="outline"
+            onClick={() => setIsPlanModalOpen(true)}
+            className="border-border text-foreground hover:bg-secondary text-xs font-semibold h-9 px-3.5 rounded-xl flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap cursor-pointer shrink-0"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+            <span>Plan de Gastos ({partidas.length})</span>
+          </Button>
+        </div>
       </div>
-    </div>
 
       {/* ========================================================================= */}
       {/* NIVEL 1: TRÍPTICO DE LIQUIDEZ Y DIAGNÓSTICO FINANCIERO (KPIS FIJOS)       */}
@@ -1688,32 +1691,32 @@ export function CashFlowHubView({
               <ComposedChart data={chartTimelineData} margin={{ top: 8, right: 10, left: -15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="ingresosAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#047857" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#047857" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="egresosAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#A34335" stopOpacity={0.20} />
-                    <stop offset="95%" stopColor="#A34335" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.20} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="saldoAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#241C15" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#241C15" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="hsl(var(--foreground))" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="hsl(var(--foreground))" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2D9CC" vertical={false} opacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.5} />
                 <XAxis
                   dataKey="fechaLabel"
-                  stroke="#75695D"
+                  stroke="hsl(var(--muted-foreground))"
                   fontSize={10}
                   tickLine={false}
-                  axisLine={{ stroke: '#E2D9CC' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                   interval={xAxisInterval as any}
                 />
                 <YAxis
-                  stroke="#75695D"
+                  stroke="hsl(var(--muted-foreground))"
                   fontSize={10}
                   tickLine={false}
-                  axisLine={{ stroke: '#E2D9CC' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
                   tickFormatter={(value) => {
                     if (value === 0) return 'S/\u00A00';
                     if (Math.abs(value) >= 1000) return `S/\u00A0${(value / 1000).toFixed(0)}k`;
@@ -1725,7 +1728,7 @@ export function CashFlowHubView({
                   type="monotone"
                   dataKey="ingresos"
                   name="ingresos"
-                  stroke="#047857"
+                  stroke="#10b981"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#ingresosAreaGrad)"
@@ -1734,7 +1737,7 @@ export function CashFlowHubView({
                   type="monotone"
                   dataKey="egresos"
                   name="egresos"
-                  stroke="#A34335"
+                  stroke="#f43f5e"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#egresosAreaGrad)"
@@ -1743,12 +1746,12 @@ export function CashFlowHubView({
                   type="monotone"
                   dataKey="saldoAcumulado"
                   name="saldoAcumulado"
-                  stroke="#241C15"
+                  stroke="hsl(var(--foreground))"
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#saldoAreaGrad)"
-                  dot={{ fill: '#241C15', r: 2.5, strokeWidth: 1, stroke: '#FFFFFF' }}
-                  activeDot={{ r: 4, fill: '#A36F4C', stroke: '#FFFFFF', strokeWidth: 2 }}
+                  dot={{ fill: 'hsl(var(--foreground))', r: 2.5, strokeWidth: 1, stroke: 'hsl(var(--background))' }}
+                  activeDot={{ r: 4, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
