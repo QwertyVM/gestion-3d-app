@@ -5,19 +5,11 @@ import { revalidatePath } from 'next/cache'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
 
+import { revalidateDomain } from '@/core/cache/revalidation-bus'
+import { OrderMapper } from '@/contracts/mappers/order.mapper'
+
 function safeRevalidate() {
-  try {
-    revalidatePath('/pedidos')
-    revalidatePath('/packaging')
-    revalidatePath('/catalogo/packaging')
-    revalidatePath('/ventas')
-    revalidatePath('/finanzas')
-    revalidatePath('/catalogo/inventario')
-    revalidatePath('/finanzas/flujo-caja')
-    revalidatePath('/')
-  } catch (e) {
-    // Ignore outside request context
-  }
+  revalidateDomain('packaging', 'orders')
 }
 
 export interface LoteCajaItem {
@@ -259,7 +251,7 @@ export async function asignarCajasAPedido(input: AsignarCajasInput) {
     })
 
     safeRevalidate()
-    return { success: true, pedido: resultado }
+    return { success: true, pedido: resultado ? OrderMapper.toDTO(resultado) : null }
   } catch (error: any) {
     console.error('Error al asignar cajas al pedido:', error)
     return { success: false, error: error.message || 'Error al asignar cajas' }
@@ -332,7 +324,7 @@ export async function quitarCajasDePedido(pedidoId: string) {
     })
 
     safeRevalidate()
-    return { success: true, pedido: pedidoActualizado }
+    return { success: true, pedido: pedidoActualizado ? OrderMapper.toDTO(pedidoActualizado) : null }
   } catch (error: any) {
     console.error('Error al quitar cajas del pedido:', error)
     return { success: false, error: error.message || 'Error al quitar cajas' }

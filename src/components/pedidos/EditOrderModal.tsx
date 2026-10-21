@@ -60,6 +60,7 @@ export function EditOrderModal({
   const [formDiaEntrega, setFormDiaEntrega] = useState('')
   const [formNotas, setFormNotas] = useState('')
   const [formCostoEnvio, setFormCostoEnvio] = useState<string>('')
+  const [formMontoPagado, setFormMontoPagado] = useState<string>('')
   const [editEstado, setEditEstado] = useState<EstadoPedido>('PENDIENTE')
   const [editSeguimientoPostventa, setEditSeguimientoPostventa] = useState(false)
   const [editFechaPostventa, setEditFechaPostventa] = useState<string | null>(null)
@@ -107,6 +108,7 @@ export function EditOrderModal({
     setFormDiaEntrega(editingPedido.diaEntregaPrometida || '')
     setFormNotas(editingPedido.notas || '')
     setFormCostoEnvio(editingPedido.costoEnvio ? editingPedido.costoEnvio.toString() : '')
+    setFormMontoPagado(editingPedido.montoPagado != null ? editingPedido.montoPagado.toString() : '')
     setEditEstado(editingPedido.estado)
     setEditSeguimientoPostventa(editingPedido.seguimientoPostventa || false)
     setEditFechaPostventa(editingPedido.fechaPostventa || null)
@@ -169,7 +171,8 @@ export function EditOrderModal({
     if (c.telefono) setFormTelefono(c.telefono)
     if (c.handleSocial) setFormHandleSocial(c.handleSocial)
     if (c.canalOrigen || c.canalPreferido) setFormCanal(c.canalOrigen || c.canalPreferido || 'WhatsApp')
-    if (c.direccion || c.distrito) setFormDestino(c.direccion || c.distrito || '')
+    const dir = c.destinoEnvio || c.direccion || c.distrito || ''
+    if (dir) setFormDestino(dir)
   }
 
   const handleSwitchToNewClient = (presetName = '') => {
@@ -266,9 +269,9 @@ export function EditOrderModal({
   }, [subtotalItemsCalculado, formCostoEnvio])
 
   const saldoPendienteCalculado = useMemo(() => {
-    const pag = editingPedido?.montoPagado || 0
+    const pag = formMontoPagado !== '' ? Math.max(0, Number(formMontoPagado) || 0) : (editingPedido?.montoPagado || 0)
     return Math.max(0, Number((totalCalculado - pag).toFixed(2)))
-  }, [totalCalculado, editingPedido])
+  }, [totalCalculado, formMontoPagado, editingPedido])
 
   // Envío del formulario
   const handleSubmit = async (e: React.FormEvent) => {
@@ -306,6 +309,7 @@ export function EditOrderModal({
         fechaPostventa: editFechaPostventa,
         notasPostventa: editNotasPostventa.trim() || undefined,
         costoEnvio: Number(formCostoEnvio) || 0,
+        montoPagado: formMontoPagado !== '' ? Number(formMontoPagado) : undefined,
         items: formItems.map(it => ({
           id: it.id && !it.id.startsWith('item-') && !it.id.startsWith('edit-item-') ? it.id : undefined,
           productoId: it.productoId,
@@ -358,19 +362,40 @@ export function EditOrderModal({
     }
   }
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen || !editingPedido) return null
 
   return (
-    <div className="fixed inset-0 isolate z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-background border border-border rounded-2xl sm:rounded-3xl shadow-2xl max-w-4xl w-full max-h-[94vh] sm:max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div
+        className="bg-card border border-border/80 rounded-2xl shadow-xl max-w-4xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150 text-foreground"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* ENCABEZADO MINIMALISTA */}
-        <div className="bg-card border-b border-border p-4 sm:p-5 flex items-center justify-between gap-3 shrink-0">
+        <div className="bg-card/95 backdrop-blur-xs border-b border-border/60 px-6 py-4 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <Badge className="bg-secondary text-foreground text-xs font-semibold px-2.5 py-1 rounded-md border border-border">
+            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/50">
               #{editingPedido.codigo}
-            </Badge>
+            </span>
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">
+              <h2 className="text-base font-semibold text-foreground tracking-tight">
                 Editar Pedido
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -382,10 +407,10 @@ export function EditOrderModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="h-8 w-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer border border-border/60 flex items-center justify-center"
             title="Cerrar modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -506,6 +531,8 @@ export function EditOrderModal({
             <OrderFinancialSummary
               costoEnvio={formCostoEnvio}
               setCostoEnvio={setFormCostoEnvio}
+              formMontoPagado={formMontoPagado}
+              setFormMontoPagado={setFormMontoPagado}
               subtotalItems={subtotalItemsCalculado}
               nuevoTotal={totalCalculado}
               saldoPendiente={saldoPendienteCalculado}
@@ -516,11 +543,11 @@ export function EditOrderModal({
           </div>
 
           {/* FOOTER FLOTANTE Y FIJO CON FIX DE SCROLL */}
-          <div className="sticky bottom-0 left-0 right-0 z-20 bg-card/95 backdrop-blur-md border-t border-border px-5 sm:px-6 py-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div className="sticky bottom-0 left-0 right-0 z-20 bg-muted/20 backdrop-blur-md border-t border-border/60 px-6 py-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
             {/* Izquierda: Saldo por cobrar en text-sm font-semibold text-foreground */}
-            <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground font-mono self-start sm:self-auto">
+            <div className="flex items-center gap-1.5 text-xs text-foreground font-mono self-start sm:self-auto tabular-nums">
               <span className="text-muted-foreground font-normal">Saldo por cobrar:</span>
-              <span>{formatCurrency(saldoPendienteCalculado)}</span>
+              <span className="font-semibold text-sm tabular-nums tracking-tight">{formatCurrency(saldoPendienteCalculado)}</span>
             </div>
 
             {/* Derecha: Acciones Cancelar y Guardar Cambios */}
@@ -528,21 +555,23 @@ export function EditOrderModal({
               <Button
                 type="button"
                 variant="ghost"
+                size="sm"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="h-9 px-4 rounded-xl text-muted-foreground hover:bg-muted font-medium text-xs cursor-pointer flex-1 sm:flex-none"
+                className="h-8 px-3 text-muted-foreground hover:text-foreground font-medium text-xs cursor-pointer flex-1 sm:flex-none"
               >
                 Cancelar
               </Button>
 
               <Button
                 type="submit"
+                size="sm"
                 disabled={isSubmitting}
-                className="h-9 px-5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer flex-1 sm:flex-none"
+                className="h-8 px-4 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs shadow-none transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 sm:flex-none"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     <span>Guardando...</span>
                   </>
                 ) : (

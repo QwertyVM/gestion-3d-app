@@ -3,17 +3,11 @@
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
+import { revalidateDomain } from '@/core/cache/revalidation-bus'
+import { FilamentoOption } from '@/contracts/orders.dto'
+
 function safeRevalidate() {
-  try {
-    revalidatePath('/inventario')
-    revalidatePath('/catalogo/inventario')
-    revalidatePath('/catalogo')
-    revalidatePath('/ventas')
-    revalidatePath('/pedidos')
-    revalidatePath('/')
-  } catch (e) {
-    // Ignore outside request store
-  }
+  revalidateDomain('inventory')
 }
 
 export interface ProductoInvertidoEnBobina {
@@ -48,6 +42,9 @@ export interface ColorFilamentoItem {
   totalProductosImpresos: number // Cantidad de piezas/unidades impresas
   totalGramosConsumidos: number // Total de gramos invertidos en piezas
   productosInvertidos: ProductoInvertidoEnBobina[] // Desglose agrupado por producto
+  gramosComprometidos?: number // Gramos en pedidos activos esperando impresión
+  gramosLibres?: number // Stock neto disponible (stockGramos - gramosComprometidos)
+  quiebreInminente?: boolean // True si gramosLibres < 0
   createdAt: string
   updatedAt: string
 }
@@ -203,7 +200,37 @@ export async function getColoresInventario(forceReset = false): Promise<{
     orderBy: { nombreColor: 'asc' }
   })
 
+  // Obtener pedidos activos en cola de impresión para calcular stock comprometido
+  const activeItems = await prisma.itemPedido.findMany({
+    where: {
+      estado: {
+        in: ['PENDIENTE', 'PAGO_VALIDADO', 'EN_PRODUCCION', 'EN_TALLER']
+      }
+    },
+    select: {
+      colorFilamentoId: true,
+      coloresIds: true,
+      gramosConsumidos: true,
+    }
+  })
 
+  const committedMap: Record<string, number> = {}
+  for (const it of activeItems) {
+    const grams = Number(it.gramosConsumidos || 0)
+    if (grams <= 0) continue
+
+    const colorIds = it.coloresIds && it.coloresIds.length > 0
+      ? it.coloresIds
+      : it.colorFilamentoId
+      ? [it.colorFilamentoId]
+      : []
+
+    if (colorIds.length === 0) continue
+    const gramsPerColor = grams / colorIds.length
+    for (const cid of colorIds) {
+      committedMap[cid] = (committedMap[cid] || 0) + gramsPerColor
+    }
+  }
 
   const mapped: ColorFilamentoItem[] = filamentos.map(f => {
     const isArchivado = f.estadoStock === 'ARCHIVADO' || f.estado === 'ARCHIVADO'
@@ -273,17 +300,24 @@ export async function getColoresInventario(forceReset = false): Promise<{
       ? 'DESCATALOGADO' 
       : (isDisponible ? 'DISPONIBLE' : 'RESTOCK')
 
+    const gramosComprometidos = Math.round(committedMap[f.id] || 0)
+    const gramosLibres = stockGramos - gramosComprometidos
+    const quiebreInminente = isDisponible && gramosLibres < 0
+
     return {
       id: f.id,
       nombreColor: f.nombreColor,
       codigoHex: f.codigoHex || '#18181B',
       estado: estadoItem,
       activo: f.activo ?? !isInactive,
-      nota: f.notaProduccion || (alertaCritica ? '⚠️ Menos de 300g' : null),
+      nota: f.notaProduccion || (quiebreInminente ? `🚨 Quiebre: Faltan ${Math.abs(gramosLibres)}g` : alertaCritica ? '⚠️ Menos de 300g' : null),
       stockGramos,
       rollos,
       pesoInicialGramos,
-      alertaCritica,
+      alertaCritica: alertaCritica || quiebreInminente,
+      gramosComprometidos,
+      gramosLibres,
+      quiebreInminente,
       totalVentas: validVentas.length,
       totalProductosImpresos,
       totalGramosConsumidos,
@@ -600,7 +634,7 @@ export async function reactivarColor(id: string) {
 }
 
 // Para selector de ventas con información de gramos y stock crítico
-export async function getFilamentosActivos() {
+export async function getFilamentosActivos(): Promise<FilamentoOption[]> {
   const { disponibles } = await getColoresInventario()
   return disponibles.map(d => ({
     id: d.id,

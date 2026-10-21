@@ -228,7 +228,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       {/* ========================================================================= */}
       {/* 2. CICLO OPERATIVO DE TALLER: 4 KPIS EN CUADRÍCULA BALANCEADA              */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-6">
         {/* KPI 1 - POR FABRICAR */}
         <ProductionKpiCard
           label="POR FABRICAR"

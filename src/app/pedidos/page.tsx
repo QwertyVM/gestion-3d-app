@@ -4,6 +4,7 @@ import { getFilamentosActivos } from '@/actions/inventario'
 import { getClientes } from '@/actions/clientes'
 import { getStockCajas } from '@/actions/cajas'
 import { PedidosClient } from '@/components/pedidos/PedidosClient'
+import { PedidoView, ProductoOption, FilamentoOption, ClienteOption } from '@/components/pedidos/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,11 +19,11 @@ export default async function PedidosPage() {
 
   return (
     <PedidosClient
-      pedidosIniciales={pedidos as any}
-      productos={productos as any}
-      filamentos={filamentos as any}
-      clientesIniciales={clientes as any}
-      stockCajasInicial={stockCajas as any}
+      pedidosIniciales={pedidos}
+      productos={productos}
+      filamentos={filamentos}
+      clientesIniciales={clientes}
+      stockCajasInicial={stockCajas}
     />
   )
 }

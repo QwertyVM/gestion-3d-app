@@ -27,10 +27,6 @@ import {
   Building2, 
   FileText,
   MoreHorizontal,
-  Calendar,
-  Package,
-  Box,
-  ExternalLink,
   UserPlus,
   Loader2,
   ChevronDown
@@ -38,6 +34,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
@@ -47,6 +44,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
+import { StatCard } from '@/components/ui/StatCard'
 import { toast } from 'sonner'
 import { useBusiness } from '@/context/BusinessContext'
 import { 
@@ -54,9 +52,10 @@ import {
   ClienteDetalleView, 
   createCliente, 
   updateCliente, 
-  deleteCliente, 
-  getClienteDetalle 
+  deleteCliente
 } from '@/actions/clientes'
+import { ClienteDetalleDrawer } from './ClienteDetalleDrawer'
+import { formatCurrency, getInitials } from '@/lib/utils'
 
 function InstagramIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   return (
@@ -135,7 +134,7 @@ function renderUbicacionCell(distrito?: string | null, direccion?: string | null
     )
   }
 
-  return <span className="text-xs text-muted-foreground font-medium">—</span>
+  return <span className="text-[11px] text-muted-foreground/50 italic">Sin registrar</span>
 }
 
 interface ClientesClientProps {
@@ -158,10 +157,9 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
 
   // Modales y Drawer
   const [modalFormOpen, setModalFormOpen] = useState(false)
-  const [modalDetalleOpen, setModalDetalleOpen] = useState(false)
+  const [drawerDetalleOpen, setDrawerDetalleOpen] = useState(false)
+  const [selectedClienteNombre, setSelectedClienteNombre] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [selectedDetalle, setSelectedDetalle] = useState<ClienteDetalleView | null>(null)
-  const [isLoadingDetalle, setIsLoadingDetalle] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form State
@@ -177,8 +175,6 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
     notas: ''
   })
   const [formErrors, setFormErrors] = useState<{ nombre?: string }>({})
-
-  const formatCurrency = (val: number) => `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   // Format phone to clean WhatsApp number (Peru 51 default if 9 digits)
   const getWhatsAppUrl = (tel?: string | null, clientName?: string) => {
@@ -298,19 +294,33 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
     setModalFormOpen(true)
   }
 
-  // View Client Profile / History Modal (Drawer)
-  const handleVerDetalle = async (c: ClienteItem) => {
-    setIsLoadingDetalle(true)
-    setModalDetalleOpen(true)
-    setSelectedDetalle(null)
+  // View Client Profile / History (Slide-over Drawer)
+  const handleVerDetalle = (c: ClienteItem) => {
+    setSelectedClienteNombre(c.nombre)
+    setDrawerDetalleOpen(true)
+  }
 
-    try {
-      const detalle = await getClienteDetalle(c.id || c.nombre)
-      setSelectedDetalle(detalle)
-    } catch (err: any) {
-      toast.error('Error al cargar historial: ' + err.message)
-    } finally {
-      setIsLoadingDetalle(false)
+  // Edit Client directly from Drawer
+  const handleEditFromDrawer = (detalle: ClienteDetalleView) => {
+    setDrawerDetalleOpen(false)
+    const targetItem = clientes.find(c => c.id === detalle.id || c.nombre === detalle.nombre)
+    if (targetItem) {
+      handleOpenEdit(targetItem)
+    } else {
+      setEditingId(detalle.id || null)
+      setFormErrors({})
+      setFormData({
+        nombre: detalle.nombre,
+        dni: detalle.dni || '',
+        telefono: detalle.telefono || '',
+        email: detalle.email || '',
+        canalOrigen: detalle.canalPreferido || detalle.canalOrigen || 'Instagram',
+        handleSocial: detalle.handleSocial || '',
+        distrito: detalle.distrito || '',
+        direccion: detalle.direccion || '',
+        notas: detalle.notas || ''
+      })
+      setModalFormOpen(true)
     }
   }
 
@@ -431,7 +441,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
 
             <Button
               onClick={handleOpenCreate}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-10 px-4 rounded-xl shadow-md shadow-primary/20 flex items-center gap-2 cursor-pointer transition-colors"
+              className="lg:hidden bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors border-0"
             >
               <Plus className="h-4 w-4" />
               <span>Nuevo Cliente</span>
@@ -442,78 +452,39 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
         {/* ========================================================================= */}
         {/* 2. KPI SUMMARY CARDS (CUADRÍCULA SIMÉTRICA Y ESTÁNDAR)                     */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Total Clientes */}
-          <div className="p-4 rounded-2xl bg-card border border-border shadow-2xs space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Cartera Total</span>
-              <span className="h-7 w-7 rounded-xl bg-accent text-accent-foreground flex items-center justify-center text-xs">
-                <Users className="h-3.5 w-3.5" />
-              </span>
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
-              {totalClientes}
-            </div>
-            <div className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
-              <span className="text-emerald-700 font-bold">100%</span> activos
-            </div>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+          <StatCard
+            label="Cartera Total"
+            value={totalClientes}
+            sublabel="100% clientes activos"
+            icon={<Users className="h-3.5 w-3.5" />}
+            badge={{ text: 'Activo', variant: 'success' }}
+          />
 
-          {/* Card 2: Clientes Recurrentes */}
-          <div className="p-4 rounded-2xl bg-card border border-border shadow-2xs space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Recurrentes</span>
-              <span className="h-7 w-7 rounded-xl bg-emerald-500/10 text-emerald-800 flex items-center justify-center text-xs">
-                <UserCheck className="h-3.5 w-3.5" />
-              </span>
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-emerald-800 dark:text-emerald-300 tracking-tight">
-              {clientesRecurrentes}
-            </div>
-            <div className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
-              <span className="font-bold text-emerald-700">{tasaRecurrencia}%</span> fidelización (2+ pedidos)
-            </div>
-          </div>
+          <StatCard
+            label="Recurrentes"
+            value={clientesRecurrentes}
+            sublabel={`${tasaRecurrencia}% fidelización (2+ pedidos)`}
+            icon={<UserCheck className="h-3.5 w-3.5" />}
+            variant="success"
+          />
 
-          {/* Card 3: Cuentas por Cobrar */}
-          <div className="p-4 rounded-2xl bg-card border border-border shadow-2xs space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Por Cobrar</span>
-              <span className={`h-7 w-7 rounded-xl flex items-center justify-center text-xs ${
-                totalDeudaAcumulada > 0 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-800'
-              }`}>
-                <AlertCircle className="h-3.5 w-3.5" />
-              </span>
-            </div>
-            <div className={`text-xl sm:text-2xl font-black tracking-tight ${
-              totalDeudaAcumulada > 0 ? 'text-destructive' : 'text-emerald-800 dark:text-emerald-300'
-            }`}>
-              {formatCurrency(totalDeudaAcumulada)}
-            </div>
-            <div className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
-              {clientesConDeudaCount > 0 ? (
-                <span className="text-destructive font-bold">{clientesConDeudaCount} cliente(s) con saldo</span>
-              ) : (
-                <span className="text-emerald-700 font-bold">Todos al día ✅</span>
-              )}
-            </div>
-          </div>
+          <StatCard
+            label="Por Cobrar"
+            value={formatCurrency(totalDeudaAcumulada)}
+            sublabel={clientesConDeudaCount > 0 ? `${clientesConDeudaCount} con saldo pendiente` : 'Todos al día ✅'}
+            icon={<AlertCircle className="h-3.5 w-3.5" />}
+            variant={totalDeudaAcumulada > 0 ? 'destructive' : 'success'}
+            badge={totalDeudaAcumulada > 0 ? { text: 'Alerta', variant: 'destructive' } : { text: 'Al Día', variant: 'success' }}
+            onClick={() => setFiltroPago(totalDeudaAcumulada > 0 ? 'CON_DEUDA' : 'TODOS')}
+          />
 
-          {/* Card 4: Ticket Promedio */}
-          <div className="p-4 rounded-2xl bg-card border border-border shadow-2xs space-y-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Ticket Promedio</span>
-              <span className="h-7 w-7 rounded-xl bg-accent text-accent-foreground flex items-center justify-center text-xs">
-                <TrendingUp className="h-3.5 w-3.5" />
-              </span>
-            </div>
-            <div className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
-              {formatCurrency(ticketPromedio)}
-            </div>
-            <div className="text-[11px] text-muted-foreground flex items-center gap-1 font-medium">
-              LTV medio por cliente
-            </div>
-          </div>
+          <StatCard
+            label="Ticket Promedio"
+            value={formatCurrency(ticketPromedio)}
+            sublabel="LTV medio por cliente"
+            icon={<TrendingUp className="h-3.5 w-3.5" />}
+          />
         </div>
 
         {/* ========================================================================= */}
@@ -523,12 +494,12 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
           {/* Fila 1: Buscador a la izquierda + Selector de Ubicación a la derecha */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="relative flex-1 w-full max-w-lg">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
               <Input 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar por nombre, teléfono, @usuario de Instagram o distrito..."
-                className="h-10 rounded-xl border-input bg-card pl-9 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-2xs"
+                className="h-9 rounded-lg border-border/80 bg-background pl-9 text-xs text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring shadow-none"
               />
               {search && (
                 <button 
@@ -536,7 +507,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 cursor-pointer"
                   title="Limpiar búsqueda"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -545,7 +516,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
               <select
                 value={ubicacionFilter}
                 onChange={(e) => setUbicacionFilter(e.target.value)}
-                className="w-full h-10 rounded-xl border border-input bg-card px-3 text-xs font-medium text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-colors cursor-pointer shadow-2xs"
+                className="w-full h-9 rounded-lg border border-border/80 bg-background px-3 text-xs font-medium text-foreground focus-visible:ring-1 focus-visible:ring-ring outline-none transition-colors cursor-pointer shadow-none"
               >
                 <option value="TODAS">Ubicación: Todas</option>
                 {ubicacionesList.map(ub => (
@@ -557,16 +528,16 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
           </div>
 
           {/* Fila 2: Segmented Canales (Izq) + Segmented Estado de Pago (Der) */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pt-1">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 pt-0.5">
             {/* Segmented Control de Canales */}
             <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1 md:pb-0">
               <button
                 type="button"
                 onClick={() => setCanalFilter('TODOS')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   canalFilter === 'TODOS'
-                    ? 'bg-primary text-primary-foreground shadow-2xs font-bold'
-                    : 'bg-card border border-border/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    ? 'bg-secondary text-foreground border border-border/60 font-semibold'
+                    : 'bg-muted/40 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/70'
                 }`}
               >
                 Todos
@@ -578,10 +549,10 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                     key={canal}
                     type="button"
                     onClick={() => setCanalFilter(canal)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                       isActive
-                        ? 'bg-primary text-primary-foreground shadow-2xs font-bold'
-                        : 'bg-card border border-border/80 text-muted-foreground hover:text-foreground hover:bg-secondary'
+                        ? 'bg-secondary text-foreground border border-border/60 font-semibold'
+                        : 'bg-muted/40 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted/70'
                     }`}
                   >
                     {canal}
@@ -591,12 +562,12 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
             </div>
 
             {/* Segmented Control de Estado de Pago */}
-            <div className="flex items-center rounded-xl bg-card p-0.5 border border-border text-xs font-semibold shadow-2xs shrink-0 self-end md:self-auto">
+            <div className="flex items-center rounded-lg bg-muted/40 p-0.5 border border-border/60 text-xs font-medium shrink-0 self-end md:self-auto">
               <button
                 type="button"
                 onClick={() => setFiltroPago('TODOS')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  filtroPago === 'TODOS' ? 'bg-secondary text-foreground shadow-2xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                  filtroPago === 'TODOS' ? 'bg-card text-foreground shadow-none font-semibold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Todos ({clientes.length})
@@ -604,8 +575,8 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
               <button
                 type="button"
                 onClick={() => setFiltroPago('AL_DIA')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  filtroPago === 'AL_DIA' ? 'bg-secondary text-emerald-800 dark:text-emerald-300 shadow-2xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                  filtroPago === 'AL_DIA' ? 'bg-card text-emerald-600 dark:text-emerald-400 shadow-none font-semibold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Al Día
@@ -613,8 +584,8 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
               <button
                 type="button"
                 onClick={() => setFiltroPago('CON_DEUDA')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  filtroPago === 'CON_DEUDA' ? 'bg-secondary text-destructive shadow-2xs font-bold' : 'text-muted-foreground hover:text-foreground'
+                className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                  filtroPago === 'CON_DEUDA' ? 'bg-card text-rose-600 dark:text-rose-400 shadow-none font-semibold' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Con Deuda ({clientesConDeudaCount})
@@ -626,7 +597,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
         {/* ========================================================================= */}
         {/* 4. TABLA PRINCIPAL (PROPORCIONES CALIBRADAS: 36% - 18% - 18% - 14% - 14%)  */}
         {/* ========================================================================= */}
-        <div className="hidden lg:block w-full bg-card border border-border rounded-2xl shadow-xs overflow-hidden">
+        <div className="hidden lg:block w-full bg-card border border-border/60 rounded-xl shadow-none overflow-hidden">
           <table className="table-fixed w-full border-collapse text-xs">
             <colgroup>
               <col className="w-[36%]" />
@@ -636,24 +607,30 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
               <col className="w-[14%]" />
             </colgroup>
             <thead>
-              <tr className="bg-secondary/60 border-b border-border text-muted-foreground text-[11px] font-semibold">
-                <th className="py-3.5 px-4 font-bold text-left tracking-wider uppercase">CLIENTE & CONTACTO</th>
-                <th className="py-3.5 px-4 font-bold text-left tracking-wider uppercase">UBICACIÓN</th>
-                <th className="py-3.5 px-4 font-bold text-left tracking-wider uppercase">LTV & HISTORIAL</th>
-                <th className="py-3.5 px-4 font-bold text-center tracking-wider uppercase">ESTADO PAGO</th>
-                <th className="py-3.5 px-4 font-bold text-right pr-4 tracking-wider uppercase">ACCIONES</th>
+              <tr className="bg-muted/20 border-b border-border/60 text-muted-foreground text-[11px] font-medium select-none">
+                <th className="py-3 px-4 font-medium text-left tracking-wider uppercase">CLIENTE & CONTACTO</th>
+                <th className="py-3 px-4 font-medium text-left tracking-wider uppercase">UBICACIÓN</th>
+                <th className="py-3 px-4 font-medium text-left tracking-wider uppercase">LTV & HISTORIAL</th>
+                <th className="py-3 px-4 font-medium text-center tracking-wider uppercase">ESTADO PAGO</th>
+                <th className="py-3 px-4 font-medium text-right pr-4 tracking-wider uppercase">ACCIONES</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-border/40">
               {filteredClientes.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-muted-foreground italic bg-card">
-                    No se encontraron clientes con los filtros aplicados
+                  <td colSpan={5} className="py-8 bg-card">
+                    <EmptyState
+                      icon={Users}
+                      title="No se encontraron clientes"
+                      description="No hay clientes que coincidan con la búsqueda o filtro seleccionado."
+                      compact
+                      className="border-0 shadow-none bg-transparent"
+                    />
                   </td>
                 </tr>
               ) : (
                 filteredClientes.map((c) => {
-                  const initials = c.nombre.substring(0, 2).toUpperCase()
+                  const initials = getInitials(c.nombre)
                   const canalDisplay = c.canalOrigen || c.canalPreferido || 'Instagram'
                   const tieneDeuda = c.saldoPendiente > 0
 
@@ -661,27 +638,27 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                     <tr 
                       key={c.id} 
                       onClick={() => handleVerDetalle(c)}
-                      className="h-16 transition-colors hover:bg-secondary/35 cursor-pointer"
+                      className="h-16 transition-colors hover:bg-muted/30 border-b border-border/40 cursor-pointer"
                     >
                       {/* Col 1: CLIENTE & CONTACTO (w-[36%]) */}
                       <td className="py-3 px-4 min-w-0">
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-2.5 min-w-0">
                           {/* Avatar Circular */}
-                          <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground font-bold text-xs flex items-center justify-center border border-border/80 shrink-0 shadow-2xs">
+                          <div className="w-8 h-8 rounded-full bg-muted text-foreground font-medium text-xs flex items-center justify-center border border-border/60 shrink-0">
                             {initials}
                           </div>
 
                           {/* Bloque de Texto */}
                           <div className="flex flex-col min-w-0 justify-center">
                             <span 
-                              className="text-sm font-bold text-foreground truncate hover:text-primary transition-colors cursor-pointer text-left block"
+                              className="text-xs sm:text-sm font-medium text-foreground truncate hover:text-primary transition-colors cursor-pointer text-left block"
                               title={c.nombre}
                             >
                               {c.nombre}
                             </span>
                             
                             {/* Fila de Metadatos */}
-                            <div className="flex items-center gap-2 mt-0.5 flex-wrap min-w-0">
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap min-w-0">
                               {/* Chip de Canal */}
                               <CanalBadge canal={canalDisplay} />
 
@@ -692,10 +669,10 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
-                                  className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 shrink-0"
+                                  className="text-[11px] font-medium text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 px-1 py-0.5 rounded transition-colors flex items-center gap-1 shrink-0"
                                   title="Abrir chat de WhatsApp"
                                 >
-                                  <MessageCircle className="h-3 w-3 fill-emerald-600 text-emerald-600 shrink-0" />
+                                  <MessageCircle className="h-3 w-3 text-muted-foreground group-hover:text-emerald-500 shrink-0 transition-colors" />
                                   <span>{c.telefono}</span>
                                 </a>
                               ) : (
@@ -705,7 +682,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                                     e.stopPropagation()
                                     handleOpenEdit(c)
                                   }}
-                                  className="text-[10px] text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-0.5 cursor-pointer shrink-0"
+                                  className="text-[10px] text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-0.5 cursor-pointer shrink-0"
                                   title="Registrar teléfono"
                                 >
                                   + Teléfono
@@ -714,7 +691,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
 
                               {/* Handle Social si existe */}
                               {c.handleSocial && (
-                                <span className="text-[10px] text-muted-foreground font-semibold flex items-center gap-0.5 truncate shrink-0">
+                                <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5 truncate shrink-0">
                                   <AtSign className="h-2.5 w-2.5 inline shrink-0" />
                                   {c.handleSocial.replace(/^@/, '')}
                                 </span>
@@ -731,16 +708,16 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
 
                       {/* Col 3: LTV & HISTORIAL (w-[18%]) */}
                       <td className="py-3 px-4 min-w-0 tabular-nums">
-                        <span className="text-sm font-extrabold text-foreground block">
+                        <span className="text-sm font-semibold text-foreground font-mono block tabular-nums tracking-tight">
                           {formatCurrency(c.totalComprado)}
                         </span>
                         <div className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-                          <span>{c.pedidosCount} {c.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
+                          <span className="tabular-nums">{c.pedidosCount} {c.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
                           <span>•</span>
                           <Tooltip>
                             <TooltipTrigger 
                               onClick={(e) => e.stopPropagation()} 
-                              className="cursor-help inline-flex items-center hover:text-primary transition-colors underline decoration-dotted"
+                              className="cursor-help inline-flex items-center hover:text-foreground transition-colors underline decoration-dotted tabular-nums"
                             >
                               <span>{c.puntos} pts</span>
                             </TooltipTrigger>
@@ -755,15 +732,15 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                       <td className="py-3 px-4 text-center min-w-0">
                         {tieneDeuda ? (
                           <span 
-                            className="bg-destructive/10 text-destructive border border-destructive/20 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
+                            className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[11px] font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1.5 tabular-nums"
                             title={`Debe ${formatCurrency(c.saldoPendiente)}`}
                           >
-                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                            <AlertCircle className="h-3 w-3 shrink-0" />
                             <span className="truncate">Debe {formatCurrency(c.saldoPendiente)}</span>
                           </span>
                         ) : (
-                          <span className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-xs font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5">
-                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                          <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-500" />
                             <span>✓ Al día</span>
                           </span>
                         )}
@@ -778,28 +755,28 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                               e.stopPropagation()
                               handleVerDetalle(c)
                             }}
-                            className="h-8 px-2.5 rounded-lg text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer flex items-center gap-1"
+                            className="h-7 px-2 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer flex items-center gap-1"
                             title="Ver Ficha y Historial"
                           >
-                            <Eye className="h-3.5 w-3.5 text-primary" />
+                            <Eye className="h-3.5 w-3.5" />
                             <span>Ficha</span>
                           </button>
 
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               onClick={(e) => e.stopPropagation()}
-                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center transition-colors cursor-pointer"
+                              className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 flex items-center justify-center transition-colors cursor-pointer"
                               title="Más opciones"
                             >
                               <MoreHorizontal className="h-4 w-4" />
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44 bg-card border border-border shadow-lg rounded-xl p-1 z-50">
+                            <DropdownMenuContent align="end" className="w-44 bg-card border border-border shadow-md rounded-lg p-1 z-50">
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleOpenEdit(c)
                                 }}
-                                className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary rounded-lg cursor-pointer"
+                                className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted rounded-md cursor-pointer"
                               >
                                 <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                                 <span>Editar Cliente</span>
@@ -810,7 +787,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                                   e.stopPropagation()
                                   router.push(`/pedidos?cliente=${encodeURIComponent(c.nombre)}`)
                                 }}
-                                className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-secondary rounded-lg cursor-pointer"
+                                className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted rounded-md cursor-pointer"
                               >
                                 <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
                                 <span>Crear Pedido</span>
@@ -822,7 +799,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                                   e.stopPropagation()
                                   handleDelete(c)
                                 }}
-                                className="flex items-center gap-2 px-2.5 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer"
+                                className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-md cursor-pointer"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                                 <span>Eliminar</span>
@@ -844,12 +821,15 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
         {/* ========================================================================= */}
         <div className="lg:hidden space-y-3">
           {filteredClientes.length === 0 ? (
-            <div className="bg-card p-8 text-center text-xs text-muted-foreground italic rounded-2xl border border-border">
-              No se encontraron clientes con los filtros aplicados
-            </div>
+            <EmptyState
+              icon={Users}
+              title="No se encontraron clientes"
+              description="No hay clientes que coincidan con la búsqueda o filtro seleccionado."
+              compact
+            />
           ) : (
             filteredClientes.map((c) => {
-              const initials = c.nombre.substring(0, 2).toUpperCase()
+              const initials = getInitials(c.nombre)
               const canalDisplay = c.canalOrigen || c.canalPreferido || 'Instagram'
               const tieneDeuda = c.saldoPendiente > 0
 
@@ -857,16 +837,16 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                 <div 
                   key={c.id} 
                   onClick={() => handleVerDetalle(c)}
-                  className="bg-card p-4 rounded-2xl border border-border shadow-2xs space-y-3 cursor-pointer hover:bg-secondary/30 transition-colors"
+                  className="bg-card p-3.5 rounded-xl border border-border/60 shadow-none space-y-3 cursor-pointer hover:border-border transition-colors"
                 >
                   {/* Fila 1: Avatar, Nombre y Estado Pago */}
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground font-bold text-xs flex items-center justify-center border border-border/80 shrink-0 shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-muted text-foreground font-medium text-xs flex items-center justify-center border border-border/60 shrink-0">
                         {initials}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-bold text-sm text-foreground truncate">{c.nombre}</h3>
+                        <h3 className="font-medium text-sm text-foreground truncate">{c.nombre}</h3>
                         <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-muted-foreground flex-wrap">
                           <CanalBadge canal={canalDisplay} />
                           {c.distrito && <span>• {c.distrito}</span>}
@@ -876,13 +856,13 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
 
                     <div className="shrink-0">
                       {tieneDeuda ? (
-                        <span className="inline-flex items-center gap-1 bg-destructive/10 text-destructive border border-destructive/20 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[10px] font-medium px-2 py-0.5 rounded-md tabular-nums">
                           <AlertCircle className="h-3 w-3" />
                           <span>Debe {formatCurrency(c.saldoPendiente)}</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-medium px-2 py-0.5 rounded-md">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
                           <span>✓ Al día</span>
                         </span>
                       )}
@@ -890,28 +870,28 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                   </div>
 
                   {/* Fila 2: Estadísticas Rápidas */}
-                  <div className="grid grid-cols-2 gap-2 p-2.5 bg-secondary/50 rounded-xl border border-border text-xs font-mono">
+                  <div className="grid grid-cols-2 gap-2 p-2.5 bg-muted/20 rounded-lg border border-border/40 text-xs font-mono">
                     <div>
                       <span className="text-[10px] text-muted-foreground block font-sans">LTV Comprado</span>
-                      <span className="font-black text-foreground">{formatCurrency(c.totalComprado)}</span>
+                      <span className="font-semibold text-foreground tabular-nums tracking-tight">{formatCurrency(c.totalComprado)}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] text-muted-foreground block font-sans">NovaPoints / Pedidos</span>
-                      <span className="font-bold text-foreground">{c.puntos} pts • {c.pedidosCount} ped.</span>
+                      <span className="font-medium text-foreground tabular-nums">{c.puntos} pts • {c.pedidosCount} ped.</span>
                     </div>
                   </div>
 
                   {/* Fila 3: Acciones Móvil */}
-                  <div className="flex items-center gap-2 pt-1 border-t border-border flex-wrap">
+                  <div className="flex items-center gap-2 pt-1 border-t border-border/40 flex-wrap">
                     {c.telefono ? (
                       <a
                         href={getWhatsAppUrl(c.telefono, c.nombre)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex-1 min-w-[100px] h-8 px-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                        className="flex-1 min-w-[100px] h-8 px-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors hover:bg-emerald-500/20"
                       >
-                        <MessageCircle className="h-3.5 w-3.5 fill-emerald-600" />
+                        <MessageCircle className="h-3.5 w-3.5" />
                         <span>WhatsApp</span>
                       </a>
                     ) : null}
@@ -922,7 +902,7 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
-                        className="flex-1 min-w-[100px] h-8 px-2.5 rounded-xl bg-accent text-accent-foreground border border-border font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                        className="flex-1 min-w-[100px] h-8 px-2.5 rounded-lg bg-muted text-foreground border border-border/60 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors hover:bg-muted/80"
                         title="Abrir Instagram"
                       >
                         <InstagramIcon className="h-3.5 w-3.5 shrink-0" />
@@ -936,9 +916,9 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
                         e.stopPropagation()
                         handleVerDetalle(c)
                       }}
-                      className="flex-1 h-8 px-3 rounded-xl border border-border bg-card hover:bg-secondary text-foreground font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs"
+                      className="flex-1 h-8 px-3 rounded-lg border border-border/60 bg-card hover:bg-muted text-foreground font-medium text-xs flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <Eye className="h-3.5 w-3.5 text-primary" />
+                      <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>Ver Ficha</span>
                     </button>
 
@@ -1193,258 +1173,17 @@ export function ClientesClient({ initialClientes }: ClientesClientProps) {
         </Dialog>
 
         {/* ========================================================================= */}
-        {/* 7. FICHA DETALLADA DE CLIENTE (MODAL / DRAWER ELEVADO NOVA)               */}
+        {/* 7. FICHA DETALLADA DE CLIENTE (SLIDE-OVER DRAWER NOVA 360°)               */}
         {/* ========================================================================= */}
-        <Dialog open={modalDetalleOpen} onOpenChange={setModalDetalleOpen}>
-          <DialogContent 
-            showCloseButton={false} 
-            className="w-full max-w-lg sm:max-w-lg bg-background border border-border rounded-2xl shadow-2xl overflow-hidden p-0 max-h-[88vh] flex flex-col z-50 ring-0"
-          >
-            <div className="p-6 space-y-4.5 overflow-y-auto">
-              
-              {/* Encabezado y Acciones de Cabecera */}
-              <div className="flex items-center justify-between pb-4 border-b border-border/70">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  {/* Avatar */}
-                  <div className="w-11 h-11 rounded-full bg-accent text-accent-foreground font-bold text-xs flex items-center justify-center border border-border/80 shrink-0">
-                    {selectedDetalle?.nombre ? selectedDetalle.nombre.substring(0, 2).toUpperCase() : 'CL'}
-                  </div>
-
-                  {/* Centro: Nombre y chips interactivos */}
-                  <div className="min-w-0">
-                    <DialogTitle className="text-base font-bold text-foreground capitalize truncate">
-                      {selectedDetalle?.nombre || 'Cargando cliente...'}
-                    </DialogTitle>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      {/* Instagram */}
-                      {selectedDetalle?.handleSocial && (
-                        <a
-                          href={`https://instagram.com/${selectedDetalle.handleSocial.replace(/^@/, '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-medium text-primary hover:underline flex items-center gap-1 cursor-pointer shrink-0"
-                          title="Abrir perfil de Instagram"
-                        >
-                          <InstagramIcon className="h-3 w-3 shrink-0" />
-                          <span>@{selectedDetalle.handleSocial.replace(/^@/, '')}</span>
-                        </a>
-                      )}
-
-                      {/* WhatsApp */}
-                      {selectedDetalle?.telefono && (
-                        <a
-                          href={getWhatsAppUrl(selectedDetalle.telefono, selectedDetalle.nombre)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-medium text-emerald-700 hover:underline flex items-center gap-1 shrink-0"
-                          title="Abrir chat de WhatsApp"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5 fill-emerald-600 text-emerald-600 shrink-0" />
-                          <span>{selectedDetalle.telefono}</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Derecha: Botones de control con estilo uniforme */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedDetalle) {
-                        setModalDetalleOpen(false)
-                        handleOpenEdit(selectedDetalle)
-                      }
-                    }}
-                    className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60 flex items-center justify-center transition-colors cursor-pointer"
-                    title="Editar datos del cliente"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setModalDetalleOpen(false)}
-                    className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60 flex items-center justify-center transition-colors cursor-pointer"
-                    title="Cerrar"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {isLoadingDetalle ? (
-                <div className="py-12 text-center text-xs text-muted-foreground italic">
-                  Cargando información y pedidos del cliente...
-                </div>
-              ) : selectedDetalle ? (
-                <div className="space-y-4">
-                  
-                  {/* Métricas Financieras (Grid de 3 Bloques) */}
-                  <div className="grid grid-cols-3 gap-2.5 bg-card border border-border rounded-xl p-3 shadow-2xs">
-                    <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                        LTV Comprado
-                      </span>
-                      <span className="text-sm font-extrabold text-foreground mt-0.5 block tabular-nums">
-                        {formatCurrency(selectedDetalle.totalComprado)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                        Total Pagado
-                      </span>
-                      <span className="text-sm font-extrabold text-emerald-800 dark:text-emerald-300 mt-0.5 block tabular-nums">
-                        {formatCurrency(selectedDetalle.totalPagado)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
-                        Saldo Pendiente
-                      </span>
-                      <span className={`text-sm font-extrabold mt-0.5 block tabular-nums ${
-                        selectedDetalle.saldoPendiente > 0 ? 'text-destructive' : 'text-foreground'
-                      }`}>
-                        {formatCurrency(selectedDetalle.saldoPendiente)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Botón de Acción "+ Crear Pedido" */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModalDetalleOpen(false)
-                      router.push(`/pedidos?cliente=${encodeURIComponent(selectedDetalle.nombre)}`)
-                    }}
-                    className="w-full h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-md shadow-primary/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>+ Crear Pedido</span>
-                  </button>
-
-                  {/* Notas del cliente si existen */}
-                  {selectedDetalle.notas && (
-                    <div className="p-3 bg-secondary/60 border border-border rounded-xl text-xs space-y-1">
-                      <span className="font-bold text-foreground block uppercase text-[10px]">Notas / Preferencias:</span>
-                      <p className="text-foreground leading-relaxed">{selectedDetalle.notas}</p>
-                    </div>
-                  )}
-
-                  {/* Sección de Historial de Pedidos */}
-                  <div className="space-y-3 pt-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                        <ShoppingBag className="h-3.5 w-3.5 text-primary" />
-                        <span>Historial de Pedidos ({selectedDetalle.pedidos.length})</span>
-                      </h4>
-                    </div>
-
-                    {selectedDetalle.pedidos.length === 0 ? (
-                      <div className="p-8 text-center bg-card border border-border rounded-xl space-y-3">
-                        <div className="w-12 h-12 rounded-2xl bg-secondary mx-auto flex items-center justify-center text-muted-foreground">
-                          <Package className="h-6 w-6 stroke-1" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-foreground">Sin pedidos registrados aún</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">Este cliente no cuenta con compras previas en el historial</p>
-                        </div>
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            setModalDetalleOpen(false)
-                            router.push(`/pedidos?cliente=${encodeURIComponent(selectedDetalle.nombre)}`)
-                          }}
-                          className="h-8 px-3 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground text-xs font-semibold cursor-pointer"
-                        >
-                          Registrar primer pedido
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {selectedDetalle.pedidos.map(p => {
-                          const isPaid = (p.saldoPendiente || 0) <= 0
-                          const codigoDisplay = p.codigo.startsWith('#') ? p.codigo : `#${p.codigo}`
-
-                          return (
-                            <div
-                              key={p.id}
-                              onClick={() => {
-                                setModalDetalleOpen(false)
-                                router.push(`/pedidos?search=${encodeURIComponent(p.codigo)}`)
-                              }}
-                              className="bg-card border border-border rounded-xl p-4 shadow-2xs hover:border-primary/40 hover:shadow-xs transition-all duration-200 flex flex-col gap-2.5 cursor-pointer"
-                            >
-                              {/* Cabecera de la Tarjeta */}
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center">
-                                  <span className="font-mono text-xs font-bold text-foreground">
-                                    {codigoDisplay}
-                                  </span>
-                                  <span className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ml-2">
-                                    {p.estado}
-                                  </span>
-                                </div>
-                                <span className="text-sm font-extrabold text-foreground ml-auto tabular-nums">
-                                  {formatCurrency(p.total)}
-                                </span>
-                              </div>
-
-                              {/* Cuerpo de la Tarjeta (Ítems Fabricados) */}
-                              <div className="space-y-1.5 py-0.5">
-                                {p.items.map((it, idx) => (
-                                  <div key={idx} className="text-xs font-medium text-foreground/90 leading-relaxed flex items-center gap-1.5">
-                                    <Box className="w-3.5 h-3.5 text-primary/70 shrink-0" />
-                                    <span className="truncate">{it.cantidad}× {it.nombre}</span>
-                                  </div>
-                                ))}
-                              </div>
-
-                              {/* Pie de Tarjeta */}
-                              <div className="border-t border-border/50 pt-2 flex items-center justify-between gap-2">
-                                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                  <Calendar className="w-3.5 h-3.5 shrink-0" />
-                                  <span>{new Date(p.fecha).toLocaleDateString('es-PE')}</span>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  {isPaid ? (
-                                    <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                      ✓ Pagado 100%
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-md flex items-center gap-1">
-                                      Resta {formatCurrency(p.saldoPendiente)}
-                                    </span>
-                                  )}
-
-                                  <Link
-                                    href={`/pedidos?search=${encodeURIComponent(p.codigo)}`}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setModalDetalleOpen(false)
-                                    }}
-                                    className="h-6 w-6 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors flex items-center justify-center cursor-pointer"
-                                    title="Ver detalle del pedido"
-                                  >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                  </Link>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              ) : null}
-
-            </div>
-          </DialogContent>
-        </Dialog>
+        <ClienteDetalleDrawer
+          isOpen={drawerDetalleOpen}
+          onClose={() => {
+            setDrawerDetalleOpen(false)
+            setSelectedClienteNombre(null)
+          }}
+          clienteNombre={selectedClienteNombre}
+          onEdit={handleEditFromDrawer}
+        />
 
       </div>
     </TooltipProvider>

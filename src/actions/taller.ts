@@ -5,16 +5,10 @@ import { EstadoPedido, EstadoVenta } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { parseDiaPromesa, comparePiezasTaller } from '@/lib/date-utils'
 
+import { revalidateDomain } from '@/core/cache/revalidation-bus'
+
 function safeRevalidate() {
-  try {
-    revalidatePath('/taller')
-    revalidatePath('/pedidos')
-    revalidatePath('/ventas')
-    revalidatePath('/catalogo')
-    revalidatePath('/')
-  } catch (e) {
-    // Ignore outside request context
-  }
+  revalidateDomain('workshop', 'orders')
 }
 
 export interface PiezaTaller {
@@ -360,26 +354,17 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           { codigo: 'asc' }
         ]
       }),
-      prisma.venta.findMany({
-        where: {
-          negocio: '3D',
-          estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'EN_TALLER', 'EMPAQUETANDO'] }
-        },
-        include: {
-          producto: true,
-          colorFilamento: true
-        },
-        orderBy: { fecha: 'asc' }
-      }),
+      Promise.resolve([]),
       prisma.inventarioFilamento.findMany({
         where: { activo: true }
       }),
-      // Histórico completo de 3D para métricas acumuladas y ranking
+      // Histórico reciente de 3D para métricas acumuladas e insights (acotado para escalabilidad)
       prisma.pedido.findMany({
         where: {
           negocio: '3D',
           estado: { not: 'CANCELADO' }
         },
+        take: 200,
         include: {
           items: {
             include: {
@@ -393,17 +378,7 @@ export async function getTallerData(): Promise<TallerDataResponse> {
           { codigo: 'desc' }
         ]
       }),
-      prisma.venta.findMany({
-        where: {
-          negocio: '3D',
-          estado: { not: 'CANCELADO' }
-        },
-        include: {
-          producto: true,
-          colorFilamento: true
-        },
-        orderBy: { fecha: 'desc' }
-      }),
+      Promise.resolve([]),
       // Productos con enlace registrado para propagar a cualquier ítem del modelo
       prisma.producto.findMany({
         where: {
@@ -649,52 +624,112 @@ export async function updateEstadoPieza(
 ) {
   try {
     if (tipoRegistro === 'PEDIDO_ITEM') {
-      // 1. Actualizar el estado de la pieza individual (ItemPedido)
-      const targetId = registroId.includes('#unit-') ? registroId.split('#unit-')[0] : registroId
-      const itemActualizado = await prisma.itemPedido.update({
-        where: { id: targetId },
-        data: { estado: nuevoEstado as EstadoPedido },
-        include: {
-          pedido: {
-            include: {
-              items: true
-            }
-          }
+      const isUnitSpecific = registroId.includes('#unit-')
+      const targetId = isUnitSpecific ? registroId.split('#unit-')[0] : registroId
+
+      const pedidoId = await prisma.$transaction(async (tx) => {
+        const item = await tx.itemPedido.findUnique({
+          where: { id: targetId }
+        })
+
+        if (!item) {
+          throw new Error('Pieza no encontrada en el pedido')
         }
+
+        // Si la pieza representa una unidad desglosada y el registro original tiene cantidad > 1
+        if (isUnitSpecific && item.cantidad > 1 && item.estado !== nuevoEstado) {
+          const qty = Number(item.cantidad)
+          const unitPrice = Number(item.precioUnitario)
+          const packCost = Number(item.costoPackaging || 0)
+          const unitSubtotal = Number((unitPrice + packCost).toFixed(2))
+          const unitGramos = item.gramosConsumidos != null && Number(item.gramosConsumidos) > 0
+            ? Number((Number(item.gramosConsumidos) / qty).toFixed(1))
+            : 0
+
+          // Reducir 1 unidad del ítem original agrupado
+          await tx.itemPedido.update({
+            where: { id: targetId },
+            data: {
+              cantidad: qty - 1,
+              subtotal: { decrement: unitSubtotal },
+              ...(item.gramosConsumidos ? { gramosConsumidos: { decrement: unitGramos } } : {})
+            }
+          })
+
+          // Crear un ítem individual con la unidad en el nuevo estado
+          await tx.itemPedido.create({
+            data: {
+              pedidoId: item.pedidoId,
+              productoId: item.productoId,
+              nombreProductoSnapshot: item.nombreProductoSnapshot,
+              costoBaseSnapshot: item.costoBaseSnapshot,
+              colorFilamentoId: item.colorFilamentoId,
+              coloresIds: item.coloresIds,
+              personalizacion: item.personalizacion,
+              cantidad: 1,
+              tipoPrecio: item.tipoPrecio,
+              precioUnitario: item.precioUnitario,
+              costoPackaging: item.costoPackaging,
+              porcentajeAdicional: item.porcentajeAdicional,
+              gramosConsumidos: unitGramos,
+              subtotal: unitSubtotal,
+              estado: nuevoEstado as EstadoPedido
+            }
+          })
+        } else {
+          // Actualización directa normal del ítem
+          await tx.itemPedido.update({
+            where: { id: targetId },
+            data: { estado: nuevoEstado as EstadoPedido }
+          })
+        }
+
+        return item.pedidoId
       })
 
       // 2. Recalcular el estado consolidado del Pedido padre
-      if (itemActualizado.pedido) {
-        const todosItems = itemActualizado.pedido.items
-        const todosEntregados = todosItems.every(it => it.estado === 'ENTREGADO')
-        const todosEmpaquetandoOEntregados = todosItems.every(it => it.estado === 'EMPAQUETANDO' || it.estado === 'ENTREGADO')
-        const todosEnTallerOAdelante = todosItems.every(it => it.estado === 'EN_TALLER' || it.estado === 'EMPAQUETANDO' || it.estado === 'ENTREGADO')
-        const algunEnProduccion = todosItems.some(it => it.estado === 'EN_PRODUCCION')
-        const algunEnTaller = todosItems.some(it => it.estado === 'EN_TALLER')
-        const algunEmpaquetando = todosItems.some(it => it.estado === 'EMPAQUETANDO')
-        const todosPendientes = todosItems.every(it => it.estado === 'PENDIENTE')
-
-        let nuevoEstadoPedido: EstadoPedido = 'PENDIENTE'
-        if (todosEntregados) {
-          nuevoEstadoPedido = 'ENTREGADO'
-        } else if (todosEmpaquetandoOEntregados) {
-          nuevoEstadoPedido = 'EMPAQUETANDO'
-        } else if (todosEnTallerOAdelante) {
-          nuevoEstadoPedido = 'EN_TALLER'
-        } else if (algunEnProduccion) {
-          nuevoEstadoPedido = 'EN_PRODUCCION'
-        } else if (algunEnTaller) {
-          nuevoEstadoPedido = 'EN_TALLER'
-        } else if (algunEmpaquetando) {
-          nuevoEstadoPedido = 'EMPAQUETANDO'
-        } else if (todosPendientes) {
-          nuevoEstadoPedido = 'PENDIENTE'
-        }
-
-        await prisma.pedido.update({
-          where: { id: itemActualizado.pedidoId },
-          data: { estado: nuevoEstadoPedido }
+      if (pedidoId) {
+        const todosItems = await prisma.itemPedido.findMany({
+          where: { pedidoId }
         })
+
+        if (todosItems.length > 0) {
+          const todosEntregados = todosItems.every(it => it.estado === 'ENTREGADO')
+          const todosListosOEntregados = todosItems.every(it => it.estado === 'LISTO_ENTREGA' || it.estado === 'ENTREGADO')
+          const todosEmpaquetandoOAdelante = todosItems.every(it => it.estado === 'EMPAQUETANDO' || it.estado === 'LISTO_ENTREGA' || it.estado === 'ENTREGADO')
+          const todosEnTallerOAdelante = todosItems.every(it => it.estado === 'EN_TALLER' || it.estado === 'EMPAQUETANDO' || it.estado === 'LISTO_ENTREGA' || it.estado === 'ENTREGADO')
+          const algunEnProduccion = todosItems.some(it => it.estado === 'EN_PRODUCCION')
+          const algunEnTaller = todosItems.some(it => it.estado === 'EN_TALLER')
+          const algunEmpaquetando = todosItems.some(it => it.estado === 'EMPAQUETANDO')
+          const algunListo = todosItems.some(it => it.estado === 'LISTO_ENTREGA')
+          const todosPendientes = todosItems.every(it => it.estado === 'PENDIENTE')
+
+          let nuevoEstadoPedido: EstadoPedido = 'PENDIENTE'
+          if (todosEntregados) {
+            nuevoEstadoPedido = 'ENTREGADO'
+          } else if (todosListosOEntregados) {
+            nuevoEstadoPedido = 'LISTO_ENTREGA'
+          } else if (todosEmpaquetandoOAdelante) {
+            nuevoEstadoPedido = 'EMPAQUETANDO'
+          } else if (todosEnTallerOAdelante) {
+            nuevoEstadoPedido = 'EN_TALLER'
+          } else if (algunEnProduccion) {
+            nuevoEstadoPedido = 'EN_PRODUCCION'
+          } else if (algunEnTaller) {
+            nuevoEstadoPedido = 'EN_TALLER'
+          } else if (algunEmpaquetando) {
+            nuevoEstadoPedido = 'EMPAQUETANDO'
+          } else if (algunListo) {
+            nuevoEstadoPedido = 'LISTO_ENTREGA'
+          } else if (todosPendientes) {
+            nuevoEstadoPedido = 'PENDIENTE'
+          }
+
+          await prisma.pedido.update({
+            where: { id: pedidoId },
+            data: { estado: nuevoEstadoPedido }
+          })
+        }
       }
     } else {
       // Venta individual

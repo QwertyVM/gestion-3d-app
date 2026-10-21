@@ -176,19 +176,19 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
   return (
     <div className="space-y-6">
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-[#E2D9CC] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-4 sm:p-5 rounded-2xl border border-border/60 shadow-xs">
         <div>
-          <h3 className="text-sm font-bold text-[#241C15]">
+          <h3 className="text-sm font-semibold text-foreground">
             Banners del Hero Carousel ({negocio})
           </h3>
-          <p className="text-xs text-[#75695D]">
+          <p className="text-xs text-muted-foreground">
             Gestiona los slides visuales interactivos que ven tus clientes al entrar a la tienda web.
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#241C15] hover:bg-[#3D3025] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold transition-colors cursor-pointer shrink-0 shadow-xs"
         >
           <Plus className="w-4 h-4" />
           <span>Nuevo Banner Hero</span>
@@ -197,17 +197,17 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
 
       {/* Banners List / Grid */}
       {banners.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E2D9CC] p-10 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+        <div className="bg-card rounded-2xl border border-border/60 p-10 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
             <Sparkles className="w-6 h-6" />
           </div>
-          <h4 className="text-sm font-bold text-[#241C15]">No hay banners personalizados aún para {negocio}</h4>
-          <p className="text-xs text-[#75695D] max-w-md mx-auto">
+          <h4 className="text-sm font-semibold text-foreground">No hay banners personalizados aún para {negocio}</h4>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
             La tienda web usará las imágenes y textos estándar hasta que crees tus propios banners promocionales.
           </p>
           <button
             onClick={handleOpenCreate}
-            className="px-4 py-2 rounded-xl bg-[#241C15] text-white text-xs font-bold hover:bg-[#3D3025] transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
           >
             Crear Primer Banner
           </button>
@@ -219,8 +219,8 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
               key={b.id}
               className={`rounded-2xl border transition-all duration-200 overflow-hidden flex flex-col justify-between ${
                 b.activo
-                  ? 'bg-white border-[#E2D9CC] shadow-xs'
-                  : 'bg-gray-50/80 border-dashed border-gray-300 opacity-75'
+                  ? 'bg-card border-border/60 shadow-xs'
+                  : 'bg-muted/10 border-dashed border-border/60 opacity-75'
               }`}
             >
               {/* Card Banner Preview Simulation */}
@@ -272,13 +272,13 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
               </div>
 
               {/* Card Details & Actions */}
-              <div className="p-3.5 sm:p-4 bg-white flex items-center justify-between gap-2 border-t border-[#E2D9CC]">
-                <div className="flex items-center gap-2 text-xs text-[#75695D]">
-                  <span className="font-mono text-[11px] bg-[#F8F6F2] px-2 py-0.5 rounded border border-[#E2D9CC]">
+              <div className="p-3.5 sm:p-4 bg-card flex items-center justify-between gap-2 border-t border-border/40">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className="font-mono text-[11px] bg-muted/40 px-2 py-0.5 rounded border border-border/60 text-foreground">
                     Link: {b.ctaLink}
                   </span>
                   <span
-                    className="w-3.5 h-3.5 rounded-full border border-gray-300 shrink-0 shadow-2xs"
+                    className="w-3.5 h-3.5 rounded-full border border-border/60 shrink-0 shadow-2xs"
                     style={{ backgroundColor: b.colorAcento }}
                     title={`Color: ${b.colorAcento}`}
                   />
@@ -290,8 +290,8 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
                     onClick={() => handleToggleActive(b.id)}
                     className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                       b.activo
-                        ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
-                        : 'text-gray-500 bg-gray-100 border-gray-300 hover:bg-gray-200'
+                        ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20'
+                        : 'text-muted-foreground bg-muted/40 border-border/60 hover:bg-muted/70'
                     }`}
                     title={b.activo ? 'Desactivar Banner' : 'Activar Banner'}
                   >
@@ -301,7 +301,7 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(b)}
-                    className="p-1.5 rounded-lg text-[#241C15] bg-[#F8F6F2] hover:bg-[#EFE5D8] border border-[#E2D9CC] transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-foreground bg-muted/30 hover:bg-muted border border-border/60 transition-colors cursor-pointer"
                     title="Editar Banner"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -310,7 +310,7 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
                   <button
                     type="button"
                     onClick={() => handleDelete(b.id)}
-                    className="p-1.5 rounded-lg text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors cursor-pointer"
                     title="Eliminar Banner"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -324,20 +324,20 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
 
       {/* CREATE / EDIT MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-[#E2D9CC] w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-4 sm:p-5 border-b border-[#E2D9CC] flex items-center justify-between bg-[#F8F6F2]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card rounded-2xl border border-border/80 w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 sm:p-5 border-b border-border/40 flex items-center justify-between bg-muted/20">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-bold text-[#241C15]">
+                <h3 className="text-sm font-semibold text-foreground">
                   {editingBanner ? 'Editar Banner Hero' : 'Nuevo Banner Hero'} ({negocio})
                 </h3>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1.5 rounded-lg text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8] cursor-pointer"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -346,98 +346,98 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
             <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#241C15]">Tag / Etiqueta Superior</label>
+                  <label className="block font-semibold text-foreground">Tag / Etiqueta Superior</label>
                   <input
                     type="text"
                     value={tag}
                     onChange={(e) => setTag(e.target.value)}
                     placeholder="Ej: COLECCIÓN OFICIAL 2026"
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#241C15]">Orden de Aparición</label>
+                  <label className="block font-semibold text-foreground">Orden de Aparición</label>
                   <input
                     type="number"
                     min="0"
                     value={orden}
                     onChange={(e) => setOrden(parseInt(e.target.value, 10) || 0)}
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground tabular-nums"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-[#241C15]">Título Principal</label>
+                <label className="block font-semibold text-foreground">Título Principal</label>
                 <input
                   type="text"
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   placeholder="Ej: Tu Pasión por los Juegos de Mesa,"
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground"
                   required
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-[#241C15]">Texto Resaltado (Color)</label>
+                <label className="block font-semibold text-foreground">Texto Resaltado (Color)</label>
                 <input
                   type="text"
                   value={resaltado}
                   onChange={(e) => setResaltado(e.target.value)}
                   placeholder="Ej: Elevada al Máximo."
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-[#241C15]">Subtítulo Descriptivo</label>
+                <label className="block font-semibold text-foreground">Subtítulo Descriptivo</label>
                 <textarea
                   rows={2}
                   value={subtitulo}
                   onChange={(e) => setSubtitulo(e.target.value)}
                   placeholder="Describe los productos o beneficios destacados..."
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15] resize-none"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#241C15]">Texto del Botón (CTA)</label>
+                  <label className="block font-semibold text-foreground">Texto del Botón (CTA)</label>
                   <input
                     type="text"
                     value={ctaTexto}
                     onChange={(e) => setCtaTexto(e.target.value)}
                     placeholder="Explorar Catálogo"
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#241C15]">Enlace del Botón (CTA Link)</label>
+                  <label className="block font-semibold text-foreground">Enlace del Botón (CTA Link)</label>
                   <input
                     type="text"
                     value={ctaLink}
                     onChange={(e) => setCtaLink(e.target.value)}
                     placeholder="/categoria/todos"
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-[#241C15]">Color de Acento del Banner</label>
+                <label className="block font-semibold text-foreground">Color de Acento del Banner</label>
                 <div className="flex items-center gap-2 flex-wrap pt-1">
                   {COLOR_OPTIONS.map((c) => (
                     <button
                       key={c.hex}
                       type="button"
                       onClick={() => setColorAcento(c.hex)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer ${
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-all cursor-pointer ${
                         colorAcento === c.hex
-                          ? 'border-[#241C15] bg-[#F8F6F2] ring-1 ring-[#241C15]'
-                          : 'border-[#E2D9CC] bg-white hover:bg-gray-50'
+                          ? 'border-primary bg-primary/10 ring-1 ring-primary text-foreground'
+                          : 'border-border/60 bg-card hover:bg-muted/40 text-muted-foreground'
                       }`}
                     >
                       <span
@@ -451,35 +451,35 @@ export function TabBannersHero({ negocio, banners, onRefresh }: TabBannersHeroPr
                     type="color"
                     value={colorAcento}
                     onChange={(e) => setColorAcento(e.target.value)}
-                    className="w-8 h-8 rounded-lg border border-[#E2D9CC] cursor-pointer p-0.5"
+                    className="w-8 h-8 rounded-lg border border-border/80 bg-background cursor-pointer p-0.5"
                     title="Color personalizado"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-[#241C15]">URL de Imagen de Fondo / Lateral (Opcional)</label>
+                <label className="block font-semibold text-foreground">URL de Imagen de Fondo / Lateral (Opcional)</label>
                 <input
                   type="url"
                   value={imagenUrl}
                   onChange={(e) => setImagenUrl(e.target.value)}
                   placeholder="https://images.unsplash.com/..."
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground"
                 />
               </div>
 
-              <div className="pt-3 border-t border-[#E2D9CC] flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-border/40 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#E2D9CC] text-[#75695D] hover:bg-[#F8F6F2] font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-border/60 text-muted-foreground hover:bg-muted/40 font-semibold cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-[#241C15] hover:bg-[#3D3025] text-white font-bold cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold cursor-pointer disabled:opacity-50 shadow-xs"
                 >
                   {isSubmitting
                     ? 'Guardando...'

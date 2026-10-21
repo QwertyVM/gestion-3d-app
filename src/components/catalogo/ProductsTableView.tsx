@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/EmptyState'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -334,9 +335,11 @@ export function ProductsTableView({
   return (
     <div className="w-full space-y-4">
       {displayRows.length === 0 ? (
-        <div className="w-full bg-card border border-border rounded-2xl p-12 text-center text-muted-foreground italic text-xs shadow-xs">
-          No se encontraron productos con ese criterio de búsqueda
-        </div>
+        <EmptyState
+          icon={Package}
+          title="No se encontraron productos"
+          description="No hay modelos o productos que coincidan con el criterio de búsqueda o filtros seleccionados."
+        />
       ) : (
         <>
           {/* ========================================================================= */}

@@ -542,48 +542,36 @@ export function CatalogoClient({
       {/* ========================================================================= */}
       {/* 1. CABECERA Y BARRA DE ACCIONES                                           */}
       {/* ========================================================================= */}
-      <div className="space-y-4">
-        {/* Breadcrumb Contextual */}
-        <div className="flex items-center gap-1.5 text-xs text-[#75695D] font-medium">
-          <Link href="/catalogo" className="hover:text-[#A36F4C] transition-colors flex items-center gap-1">
-            <Package className="h-3.5 w-3.5 text-[#A36F4C]" />
-            <span>Catálogo</span>
-          </Link>
-          <span className="text-[#D4BEA7]">/</span>
-          <span className="text-[#241C15] font-bold">Catálogo de Productos</span>
-        </div>
-
+      <div className="space-y-4 pt-1">
         {/* Título & Botones de Acción */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#241C15] tracking-tight flex items-center gap-2.5">
-              <Boxes className="h-6 w-6 sm:h-7 sm:w-7 text-[#A36F4C] flex-shrink-0" />
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2.5">
+              <Boxes className="h-6 w-6 text-primary flex-shrink-0" />
               <span>Catálogo de Productos</span>
             </h1>
-            <p className="text-xs sm:text-sm text-[#75695D] mt-1">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {is3D ? 'Modelos 3D disponibles con costos base y precios al por mayor y menor.' : 'Juegos de mesa disponibles para venta online y presencial.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-
-
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Botón Gestionar Categorías */}
             <Link
               href="/catalogo/categorias"
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FAF8F5] hover:bg-[#F4EFEA] text-[#241C15] border border-[#E2D9CC] shadow-2xs transition-all cursor-pointer flex-1 sm:flex-initial justify-center h-10"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-card hover:bg-secondary text-foreground border border-border shadow-2xs transition-all cursor-pointer flex-1 sm:flex-initial justify-center h-9"
             >
-              <Layers className="h-4 w-4 text-[#A36F4C]" />
+              <Layers className="h-3.5 w-3.5 text-primary" />
               <span>Categorías</span>
             </Link>
 
-            {/* Botón Primario + Nuevo Producto */}
+            {/* Botón Primario + Nuevo Producto (solo móvil, en desktop ya está en Topbar) */}
             <Button
               type="button"
               onClick={handleOpenCreate}
-              className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs h-10 px-4 rounded-xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex-1 sm:flex-initial flex items-center gap-2 justify-center"
+              className="lg:hidden bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-3.5 rounded-xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex-1 sm:flex-initial flex items-center gap-1.5 justify-center"
             >
-              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <Plus className="h-4 w-4 stroke-[2.2]" />
               <span>Nuevo Producto</span>
             </Button>
           </div>
@@ -592,27 +580,27 @@ export function CatalogoClient({
         {/* ========================================================================= */}
         {/* 2. FILA SUPERIOR DE KPIS (GRID 4 COLUMNAS MINIMALISTA)                    */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
           {/* KPI 1: Total Modelos */}
           <div 
             onClick={() => setEstadoFilter('TODOS')}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs cursor-pointer transition-all ${
+            className={`p-3.5 rounded-xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
               estadoFilter === 'TODOS'
-                ? 'bg-white border-[#A36F4C] ring-1 ring-[#A36F4C]'
-                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                ? 'bg-card border-primary ring-1 ring-primary/40'
+                : 'bg-card border-border hover:border-primary/40'
             }`}
           >
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Total Modelos</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Total Modelos</span>
+              <div className="p-1 rounded-md bg-primary/10 text-primary">
                 <Boxes className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums">
-                {totalModelos} <span className="text-xs font-normal font-sans text-[#75695D]">diseños</span>
+              <div className="text-xl sm:text-2xl font-bold text-foreground font-mono tabular-nums">
+                {totalModelos} <span className="text-xs font-normal font-sans text-muted-foreground">diseños</span>
               </div>
-              <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              <span className="text-xs text-muted-foreground mt-0.5 block truncate">
                 En catálogo general
               </span>
             </div>
@@ -621,23 +609,23 @@ export function CatalogoClient({
           {/* KPI 2: Activos en Venta */}
           <div 
             onClick={() => setEstadoFilter('ACTIVOS')}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs cursor-pointer transition-all ${
+            className={`p-3.5 rounded-xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
               estadoFilter === 'ACTIVOS'
-                ? 'bg-white border-[#1E5E3A] ring-1 ring-[#1E5E3A]'
-                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                ? 'bg-card border-emerald-600 ring-1 ring-emerald-600/40'
+                : 'bg-card border-border hover:border-emerald-600/40'
             }`}
           >
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Activos en Venta</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Activos en Venta</span>
+              <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                 <PackageCheck className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums">
-                {activosCount} <span className="text-xs font-normal font-sans text-[#75695D]">modelos</span>
+              <div className="text-xl sm:text-2xl font-bold text-emerald-700 dark:text-emerald-300 font-mono tabular-nums">
+                {activosCount} <span className="text-xs font-normal font-sans text-muted-foreground">modelos</span>
               </div>
-              <span className="text-xs text-[#1E5E3A] font-medium mt-0.5 block truncate">
+              <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-0.5 block truncate">
                 Disponibles para pedidos
               </span>
             </div>
@@ -646,23 +634,23 @@ export function CatalogoClient({
           {/* KPI 3: Descontinuados */}
           <div 
             onClick={() => setEstadoFilter('DESCONTINUADOS')}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs cursor-pointer transition-all ${
+            className={`p-3.5 rounded-xl border flex flex-col justify-between shadow-2xs cursor-pointer transition-all ${
               estadoFilter === 'DESCONTINUADOS'
-                ? 'bg-white border-[#75695D] ring-1 ring-[#75695D]'
-                : 'bg-white border-[#E2D9CC] hover:bg-[#FAF8F5]'
+                ? 'bg-card border-muted-foreground ring-1 ring-muted-foreground/40'
+                : 'bg-card border-border hover:border-muted-foreground/40'
             }`}
           >
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Descontinuados</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#75695D]">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Descontinuados</span>
+              <div className="p-1 rounded-md bg-secondary text-muted-foreground">
                 <Archive className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#75695D] font-mono tabular-nums">
-                {descontinuadosCount} <span className="text-xs font-normal font-sans text-[#75695D]">archivados</span>
+              <div className="text-xl sm:text-2xl font-bold text-muted-foreground font-mono tabular-nums">
+                {descontinuadosCount} <span className="text-xs font-normal font-sans text-muted-foreground">archivados</span>
               </div>
-              <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              <span className="text-xs text-muted-foreground mt-0.5 block truncate">
                 Fuera de venta
               </span>
             </div>
@@ -671,19 +659,19 @@ export function CatalogoClient({
           {/* KPI 4: Categorías Activas */}
           <Link
             href="/catalogo/categorias"
-            className="p-3.5 rounded-2xl bg-white border border-[#E2D9CC] hover:bg-[#FAF8F5] flex flex-col justify-between shadow-xs transition-colors"
+            className="p-3.5 rounded-xl bg-card border border-border hover:border-primary/40 flex flex-col justify-between shadow-2xs transition-colors"
           >
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Categorías</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Categorías</span>
+              <div className="p-1 rounded-md bg-primary/10 text-primary">
                 <Layers className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-xl sm:text-2xl font-black text-[#A36F4C] font-mono tabular-nums">
-                {categoriasActivasCount} <span className="text-xs font-normal font-sans text-[#75695D]">familias</span>
+              <div className="text-xl sm:text-2xl font-bold text-primary font-mono tabular-nums">
+                {categoriasActivasCount} <span className="text-xs font-normal font-sans text-muted-foreground">familias</span>
               </div>
-              <span className="text-xs text-[#A36F4C] font-medium mt-0.5 block truncate">
+              <span className="text-xs text-primary font-medium mt-0.5 block truncate">
                 Gestionar categorías →
               </span>
             </div>
@@ -963,11 +951,11 @@ export function CatalogoClient({
 
       {/* Controles de Paginación de Productos y Modelos */}
       {sortedGroupedRows.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-2xs">
-          <div className="text-xs text-[#75695D] font-medium text-center sm:text-left">
-            Mostrando <span className="font-bold text-[#241C15]">{(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> -{' '}
-            <span className="font-bold text-[#241C15]">{Math.min(safeCurrentPage * ITEMS_PER_PAGE, sortedGroupedRows.length)}</span> de{' '}
-            <span className="font-bold text-[#241C15]">{sortedGroupedRows.length}</span> modelos en catálogo ({filteredProductos.length} versiones)
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-card border border-border/60 rounded-xl">
+          <div className="text-xs text-muted-foreground font-medium text-center sm:text-left">
+            Mostrando <span className="font-semibold text-foreground tabular-nums">{(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> -{' '}
+            <span className="font-semibold text-foreground tabular-nums">{Math.min(safeCurrentPage * ITEMS_PER_PAGE, sortedGroupedRows.length)}</span> de{' '}
+            <span className="font-semibold text-foreground tabular-nums">{sortedGroupedRows.length}</span> modelos en catálogo ({filteredProductos.length} versiones)
           </div>
 
           {totalPages > 1 && (
@@ -978,7 +966,7 @@ export function CatalogoClient({
                 size="sm"
                 disabled={safeCurrentPage <= 1}
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                className="h-8 px-2.5 text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-[#FAF8F5] disabled:opacity-40 cursor-pointer shadow-2xs"
+                className="h-8 px-2.5 text-xs font-medium rounded-lg border-border/60 text-foreground hover:bg-muted/40 disabled:opacity-40 cursor-pointer"
               >
                 <ChevronLeft className="h-3.5 w-3.5 mr-1" />
                 Anterior
@@ -990,10 +978,10 @@ export function CatalogoClient({
                     key={pageNum}
                     type="button"
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`h-8 min-w-[32px] px-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    className={`h-8 min-w-[32px] px-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer tabular-nums ${
                       pageNum === safeCurrentPage
-                        ? 'bg-[#A36F4C] text-white shadow-2xs'
-                        : 'bg-[#FAF8F5] text-[#75695D] hover:bg-[#F4EFEA] border border-[#E2D9CC]'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50'
                     }`}
                   >
                     {pageNum}
@@ -1007,7 +995,7 @@ export function CatalogoClient({
                 size="sm"
                 disabled={safeCurrentPage >= totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                className="h-8 px-2.5 text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-[#FAF8F5] disabled:opacity-40 cursor-pointer shadow-2xs"
+                className="h-8 px-2.5 text-xs font-medium rounded-lg border-border/60 text-foreground hover:bg-muted/40 disabled:opacity-40 cursor-pointer"
               >
                 Siguiente
                 <ChevronRight className="h-3.5 w-3.5 ml-1" />

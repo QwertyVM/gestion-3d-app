@@ -60,6 +60,8 @@ import {
   descatalogarColor,
   reactivarColor
 } from '@/actions/inventario'
+import { EditFilamentModal } from './EditFilamentModal'
+import { FilamentFlyerModal } from './FilamentFlyerModal'
 
 export interface InventarioFilamentosClientProps {
   disponibles: ColorFilamentoItem[]
@@ -707,31 +709,26 @@ export function InventarioFilamentosClient({
       {/* ========================================================================= */}
       <div className="space-y-4">
         {/* Fila Título + Sync Badge */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 pb-1">
           <div>
-            <div className="flex items-center gap-2 text-xs text-[#75695D] font-medium mb-1">
-              <Link href="/catalogo" className="hover:text-[#A36F4C] transition-colors flex items-center gap-1">
-                <Package className="h-3.5 w-3.5 text-[#A36F4C]" />
-                <span>Catálogo</span>
-              </Link>
-              <span className="text-[#D4BEA7]">/</span>
-              <span className="text-[#241C15] font-bold">Inventario de Filamentos</span>
-            </div>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-[#241C15] tracking-tight flex items-center gap-2">
-                <Palette className="h-6 w-6 sm:h-7 sm:w-7 text-[#A36F4C] flex-shrink-0" />
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+                <Palette className="h-6 w-6 text-primary flex-shrink-0" />
                 <span>Inventario de Filamentos</span>
               </h1>
-              <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] text-[11px] font-bold">
-                <span className="h-2 w-2 rounded-full bg-[#1E5E3A] animate-pulse" />
+              <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold">
+                <span className="h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
                 <span>Sincronizado en vivo</span>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Control de bobinas, gramajes activos y alertas de reposición en tiempo real.
+            </p>
           </div>
         </div>
 
         {/* Fila de 4 KPIs Interactivos (Click para filtrar) Minimalistas */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
           {/* KPI 1: Kilos en Taller -> Activa 'todos' */}
           <button
             type="button"
@@ -739,24 +736,24 @@ export function InventarioFilamentosClient({
               setActiveTab('disponibles')
               setCurrentPage(1)
             }}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
+            className={`p-3.5 rounded-xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer min-h-[96px] ${
               activeTab === 'disponibles'
-                ? 'bg-white border-[#1E5E3A] ring-1 ring-[#1E5E3A]'
-                : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
+                ? 'bg-card border-emerald-600 ring-1 ring-emerald-600/40'
+                : 'bg-card border-border hover:border-emerald-600/40'
             }`}
           >
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Total en Taller</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#1E5E3A]">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Total en Taller</span>
+              <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                 <Weight className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-black text-[#1E5E3A] font-mono tabular-nums whitespace-nowrap">
+              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-bold text-foreground font-mono tabular-nums whitespace-nowrap">
                 <span>{(totalGramosActivos / 1000).toFixed(2)}</span>
-                <span className="text-xs font-normal font-sans text-[#75695D]">kg</span>
+                <span className="text-xs font-normal font-sans text-muted-foreground">kg</span>
               </div>
-              <span className="text-xs text-[#75695D] mt-0.5 block truncate">
+              <span className="text-xs text-muted-foreground mt-0.5 block truncate">
                 {totalGramosActivos.toLocaleString()} g activos
               </span>
             </div>
@@ -769,24 +766,24 @@ export function InventarioFilamentosClient({
               setActiveTab('disponibles')
               setCurrentPage(1)
             }}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
+            className={`p-3.5 rounded-xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer min-h-[96px] ${
               activeTab === 'disponibles'
-                ? 'bg-white border-[#1E5E3A] ring-1 ring-[#1E5E3A]'
-                : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
+                ? 'bg-card border-primary ring-1 ring-primary/40'
+                : 'bg-card border-border hover:border-primary/40'
             }`}
           >
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Colores Disponibles</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#A36F4C]">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Colores Disponibles</span>
+              <div className="p-1 rounded-md bg-primary/10 text-primary">
                 <Palette className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums whitespace-nowrap">
+              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-bold text-foreground font-mono tabular-nums whitespace-nowrap">
                 <span>{disponibles.length}</span>
-                <span className="text-xs font-normal font-sans text-[#75695D]">colores</span>
+                <span className="text-xs font-normal font-sans text-muted-foreground">colores</span>
               </div>
-              <span className="text-xs text-[#1E5E3A] font-medium mt-0.5 block truncate">
+              <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-0.5 block truncate">
                 Stock activo para producción
               </span>
             </div>
@@ -799,26 +796,26 @@ export function InventarioFilamentosClient({
               setActiveTab('criticos')
               setCurrentPage(1)
             }}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
+            className={`p-3.5 rounded-xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer min-h-[96px] ${
               activeTab === 'criticos'
-                ? 'bg-white border-[#854D0E] ring-1 ring-[#854D0E]'
-                : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
+                ? 'bg-card border-amber-600 ring-1 ring-amber-600/40'
+                : 'bg-card border-border hover:border-amber-600/40'
             }`}
           >
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Stock Crítico (&lt;300g)</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#854D0E]">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Stock Crítico (&lt;300g)</span>
+              <div className="p-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-black text-[#854D0E] font-mono tabular-nums whitespace-nowrap">
+              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-bold text-amber-700 dark:text-amber-400 font-mono tabular-nums whitespace-nowrap">
                 <span>{totalCriticos.length}</span>
-                <span className="text-xs font-normal font-sans text-[#75695D]">
+                <span className="text-xs font-normal font-sans text-muted-foreground">
                   {totalCriticos.length === 1 ? 'color' : 'colores'}
                 </span>
               </div>
-              <span className="text-xs text-[#854D0E] font-medium mt-0.5 block truncate">
+              <span className="text-xs text-amber-700 dark:text-amber-400 font-medium mt-0.5 block truncate">
                 {totalCriticos.length > 0 ? 'Reponer pronto' : 'Nivel óptimo'}
               </span>
             </div>
@@ -831,26 +828,26 @@ export function InventarioFilamentosClient({
               setActiveTab('restock')
               setCurrentPage(1)
             }}
-            className={`p-3.5 rounded-2xl border flex flex-col justify-between shadow-xs transition-all text-left cursor-pointer min-h-[96px] ${
+            className={`p-3.5 rounded-xl border flex flex-col justify-between shadow-2xs transition-all text-left cursor-pointer min-h-[96px] ${
               activeTab === 'restock'
-                ? 'bg-white border-[#A36F4C] ring-1 ring-[#A36F4C]'
-                : 'bg-white border-slate-200 hover:bg-[#FAF8F5]'
+                ? 'bg-card border-primary ring-1 ring-primary/40'
+                : 'bg-card border-border hover:border-primary/40'
             }`}
           >
-            <div className="flex items-center justify-between text-[#6B7280]">
-              <span className="text-xs font-semibold">Para Restock</span>
-              <div className="p-1 rounded-md bg-[#FAF7F4] text-[#7C5835]">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Para Restock</span>
+              <div className="p-1 rounded-md bg-primary/10 text-primary">
                 <ShoppingCart className="h-3.5 w-3.5" />
               </div>
             </div>
             <div className="mt-2">
-              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-black text-[#241C15] font-mono tabular-nums whitespace-nowrap">
+              <div className="flex items-baseline gap-1.5 text-xl sm:text-2xl font-bold text-foreground font-mono tabular-nums whitespace-nowrap">
                 <span>{restock.length}</span>
-                <span className="text-xs font-normal font-sans text-[#75695D]">
+                <span className="text-xs font-normal font-sans text-muted-foreground">
                   {restock.length === 1 ? 'color' : 'colores'}
                 </span>
               </div>
-              <span className="text-xs text-[#75695D] font-medium mt-0.5 block truncate">
+              <span className="text-xs text-muted-foreground font-medium mt-0.5 block truncate">
                 Marcados para compra
               </span>
             </div>
@@ -861,24 +858,24 @@ export function InventarioFilamentosClient({
       {/* ========================================================================= */}
       {/* 2. BARRA DE HERRAMIENTAS Y FILTROS DISTRIBUIDA                            */}
       {/* ========================================================================= */}
-      <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
+      <div className="bg-card border border-border/60 rounded-xl p-4 sm:p-5 shadow-none space-y-3.5">
         
         {/* Fila 1: Buscador + Grupo de Acciones Principales */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           
           {/* Buscador de Filamentos */}
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#75695D]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Buscar color, acabado, código HEX o nota..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-8 bg-[#F8F6F2] border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] text-xs sm:text-sm rounded-2xl h-10 focus:border-[#A36F4C] focus:bg-[#FFFFFF] transition-all w-full"
+              className="pl-9 pr-8 bg-background border-border/80 text-foreground placeholder:text-muted-foreground text-xs sm:text-sm rounded-lg h-9 focus-visible:ring-1 focus-visible:ring-ring transition-colors w-full"
             />
             {search && (
               <button 
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#75695D] hover:text-[#241C15] p-1 rounded-md cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer transition-colors"
                 title="Borrar búsqueda"
               >
                 <X className="h-3.5 w-3.5" />
@@ -891,21 +888,21 @@ export function InventarioFilamentosClient({
 
             {/* Botón Copiar Catálogo para Clientes */}
             <div className="relative flex-1 sm:flex-initial" ref={dropdownRef}>
-              <div className="flex rounded-2xl shadow-xs border border-[#E2D9CC] overflow-hidden bg-[#FFFFFF] hover:bg-[#FAF8F5] transition-colors">
+              <div className="flex rounded-lg border border-border/80 overflow-hidden bg-background hover:bg-muted/40 transition-colors">
                 <button
                   type="button"
                   onClick={() => handleCopiarColoresClientes('todos_disponibles')}
-                  className="flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#241C15] cursor-pointer active:scale-[0.98] transition-all flex-1"
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-foreground cursor-pointer active:scale-[0.98] transition-all flex-1"
                   title="Copiar lista de colores disponibles para WhatsApp o Instagram"
                 >
                   {isCopied ? (
                     <>
-                      <Check className="h-4 w-4 text-[#1E5E3A] stroke-[2.5] animate-in zoom-in-50 duration-150" />
-                      <span className="text-[#1E5E3A] font-extrabold truncate">¡Copiado!</span>
+                      <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5] animate-in zoom-in-50 duration-150" />
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold truncate">¡Copiado!</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="h-4 w-4 text-[#A36F4C] flex-shrink-0" />
+                      <Copy className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                       <span className="truncate">Copiar Catálogo</span>
                     </>
                   )}
@@ -913,7 +910,7 @@ export function InventarioFilamentosClient({
                 <button
                   type="button"
                   onClick={() => setShowCopyDropdown(prev => !prev)}
-                  className="px-2 py-2 border-l border-[#E2D9CC] text-[#75695D] hover:text-[#241C15] hover:bg-[#EAE4DC]/50 cursor-pointer flex items-center justify-center transition-colors"
+                  className="px-2 py-1.5 border-l border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/60 cursor-pointer flex items-center justify-center transition-colors"
                   title="Opciones de catálogo"
                 >
                   <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showCopyDropdown ? 'rotate-180' : ''}`} />
@@ -922,30 +919,30 @@ export function InventarioFilamentosClient({
 
               {/* Dropdown de opciones */}
               {showCopyDropdown && (
-                <div className="absolute right-0 mt-1.5 w-64 bg-[#FFFFFF] border border-[#E2D9CC] rounded-2xl shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
-                  <div className="px-3 py-1.5 text-[10px] font-bold text-[#75695D] uppercase tracking-wider border-b border-[#E2D9CC]/60">
+                <div className="absolute right-0 mt-1.5 w-64 bg-card border border-border/80 rounded-xl shadow-xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/50">
                     Opciones de Copiado
                   </div>
                   <button
                     type="button"
                     onClick={() => handleCopiarColoresClientes('todos_disponibles')}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-xl hover:bg-[#F4EFEA] text-xs font-bold text-[#241C15] transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-lg hover:bg-muted/60 text-xs font-medium text-foreground transition-colors cursor-pointer"
                   >
-                    <Palette className="h-4 w-4 text-[#A36F4C] flex-shrink-0" />
+                    <Palette className="h-4 w-4 text-primary flex-shrink-0" />
                     <div>
                       <div>Todos los disponibles ({disponibles.length})</div>
-                      <div className="text-[10px] font-normal text-[#75695D]">Catálogo completo activo</div>
+                      <div className="text-[10px] font-normal text-muted-foreground">Catálogo completo activo</div>
                     </div>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleCopiarColoresClientes('solo_neutros')}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-xl hover:bg-[#F4EFEA] text-xs font-bold text-[#241C15] transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-lg hover:bg-muted/60 text-xs font-medium text-foreground transition-colors cursor-pointer"
                   >
-                    <span className="h-3 w-3 rounded-full bg-gradient-to-tr from-[#18181B] via-[#94A3B8] to-[#F5F5F0] border border-[#D4BEA7]" />
+                    <span className="h-3 w-3 rounded-full bg-gradient-to-tr from-zinc-800 via-zinc-400 to-zinc-100 ring-1 ring-inset ring-black/10 dark:ring-white/10" />
                     <div>
                       <div>Solo tonos neutros</div>
-                      <div className="text-[10px] font-normal text-[#75695D]">Blanco, Negro, Gris, Arena...</div>
+                      <div className="text-[10px] font-normal text-muted-foreground">Blanco, Negro, Gris, Arena...</div>
                     </div>
                   </button>
 
@@ -956,12 +953,12 @@ export function InventarioFilamentosClient({
                       setImageTimestamp(Date.now())
                       setOpenImageModal(true)
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-xl hover:bg-[#F4EFEA] text-xs font-bold text-[#A36F4C] transition-colors cursor-pointer border-t border-[#E2D9CC]/60 mt-1 pt-2"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-left rounded-lg hover:bg-muted/60 text-xs font-medium text-primary transition-colors cursor-pointer border-t border-border/50 mt-1 pt-2"
                   >
-                    <Download className="h-4 w-4 text-[#A36F4C] flex-shrink-0" />
+                    <Download className="h-4 w-4 text-primary flex-shrink-0" />
                     <div>
                       <div>Descargar Catálogo en Imagen (HD)</div>
-                      <div className="text-[10px] font-normal text-[#75695D]">Con muestras visuales y códigos HEX</div>
+                      <div className="text-[10px] font-normal text-muted-foreground">Con muestras visuales y códigos HEX</div>
                     </div>
                   </button>
                 </div>
@@ -976,10 +973,10 @@ export function InventarioFilamentosClient({
                 setOpenImageModal(true)
               }}
               variant="outline"
-              className="border-[#E2D9CC] bg-[#FFFFFF] hover:bg-[#FAF8F5] text-[#241C15] font-bold text-xs h-10 px-3.5 rounded-2xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex items-center gap-2"
+              className="border-border/80 bg-background hover:bg-muted/60 text-foreground font-medium text-xs h-9 px-3 rounded-lg shadow-none cursor-pointer transition-all flex items-center gap-1.5"
               title="Descargar imagen publicitaria con todos los colores disponibles y sus códigos HEX"
             >
-              <Download className="h-4 w-4 text-[#A36F4C]" />
+              <Download className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="hidden sm:inline">Descargar Imagen</span>
               <span className="sm:hidden">Imagen</span>
             </Button>
@@ -988,30 +985,30 @@ export function InventarioFilamentosClient({
             <Button
               type="button"
               onClick={() => setOpenAddModal(true)}
-              className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs h-10 px-4 rounded-2xl shadow-xs cursor-pointer transition-all active:scale-[0.98] flex items-center gap-1.5"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-9 px-3.5 rounded-lg shadow-none cursor-pointer transition-all flex items-center gap-1.5"
             >
-              <Plus className="h-4 w-4 stroke-[2.5]" />
+              <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
               <span>Nuevo Color</span>
             </Button>
           </div>
         </div>
 
         {/* Fila 2: Pestañas de Filtro por Estado (Pills con Conteo) + Resumen */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2.5 border-t border-[#E2D9CC]/70">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2.5 border-t border-border/60">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <button
               type="button"
               onClick={() => setActiveTab('disponibles')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
                 activeTab === 'disponibles'
-                  ? 'bg-[#1E5E3A] text-white border-[#1E5E3A] shadow-xs'
-                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#1E5E3A] hover:bg-[#EBF7EE]/50'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-none'
+                  : 'bg-muted/40 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted/60'
               }`}
             >
-              <span className={`h-2 w-2 rounded-full ${activeTab === 'disponibles' ? 'bg-white' : 'bg-[#1E5E3A]'}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${activeTab === 'disponibles' ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
               <span>Disponibles</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                activeTab === 'disponibles' ? 'bg-white/20 text-white' : 'bg-[#EBF7EE] text-[#1E5E3A]'
+              <span className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded ${
+                activeTab === 'disponibles' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-muted text-muted-foreground'
               }`}>
                 {disponibles.length}
               </span>
@@ -1020,16 +1017,16 @@ export function InventarioFilamentosClient({
             <button
               type="button"
               onClick={() => setActiveTab('criticos')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
                 activeTab === 'criticos'
-                  ? 'bg-[#854D0E] text-white border-[#854D0E] shadow-xs'
-                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#854D0E] hover:bg-[#FEF9C3]/50'
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 shadow-none'
+                  : 'bg-muted/40 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted/60'
               }`}
             >
               <AlertTriangle className="h-3 w-3" />
               <span>Críticos &lt;300g</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md font-bold ${
-                activeTab === 'criticos' ? 'bg-white/20 text-white' : 'bg-[#FEF08A] text-[#854D0E]'
+              <span className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded font-medium ${
+                activeTab === 'criticos' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400' : 'bg-muted text-muted-foreground'
               }`}>
                 {totalCriticos.length}
               </span>
@@ -1038,16 +1035,16 @@ export function InventarioFilamentosClient({
             <button
               type="button"
               onClick={() => setActiveTab('restock')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
                 activeTab === 'restock'
-                  ? 'bg-[#A36F4C] text-white border-[#A36F4C] shadow-xs'
-                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#A36F4C] hover:bg-[#F5EBE1]/50'
+                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 shadow-none'
+                  : 'bg-muted/40 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted/60'
               }`}
             >
               <ShoppingCart className="h-3 w-3" />
               <span>Para Restock</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                activeTab === 'restock' ? 'bg-white/20 text-white' : 'bg-[#F5EBE1] text-[#A36F4C]'
+              <span className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded ${
+                activeTab === 'restock' ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400' : 'bg-muted text-muted-foreground'
               }`}>
                 {restock.length}
               </span>
@@ -1056,16 +1053,16 @@ export function InventarioFilamentosClient({
             <button
               type="button"
               onClick={() => setActiveTab('descatalogados')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
                 activeTab === 'descatalogados'
-                  ? 'bg-[#52463C] text-white border-[#52463C] shadow-xs'
-                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#241C15] hover:bg-[#FAF8F5]'
+                  ? 'bg-muted text-foreground border-border/80 shadow-none'
+                  : 'bg-muted/40 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted/60'
               }`}
             >
               <Archive className="h-3 w-3" />
-              <span>Descatalogados / Archivados</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                activeTab === 'descatalogados' ? 'bg-white/20 text-white' : 'bg-[#EAE4DC] text-[#75695D]'
+              <span>Descatalogados</span>
+              <span className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded ${
+                activeTab === 'descatalogados' ? 'bg-background text-foreground' : 'bg-muted text-muted-foreground'
               }`}>
                 {descatalogados.length}
               </span>
@@ -1074,15 +1071,15 @@ export function InventarioFilamentosClient({
             <button
               type="button"
               onClick={() => setActiveTab('todos')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
                 activeTab === 'todos'
-                  ? 'bg-[#241C15] text-white border-[#241C15] shadow-xs'
-                  : 'bg-[#FAF8F5] text-[#75695D] border-[#E2D9CC] hover:text-[#241C15] hover:bg-[#FFFFFF]'
+                  ? 'bg-foreground text-background border-foreground shadow-none'
+                  : 'bg-muted/40 text-muted-foreground border-border/50 hover:text-foreground hover:bg-muted/60'
               }`}
             >
               <span>Todos</span>
-              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-md ${
-                activeTab === 'todos' ? 'bg-white/20 text-white' : 'bg-[#EAE4DC] text-[#75695D]'
+              <span className={`text-[10px] font-mono tabular-nums px-1.5 py-0.2 rounded ${
+                activeTab === 'todos' ? 'bg-background/20 text-background' : 'bg-muted text-muted-foreground'
               }`}>
                 {disponibles.length + restock.length}
               </span>
@@ -1102,9 +1099,9 @@ export function InventarioFilamentosClient({
                   setCurrentPage(1)
                 }}
                 title="Restablecer filtros a Disponibles"
-                className="h-8 px-2.5 text-xs font-bold text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] border border-slate-200 rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 bg-[#FAF8F5]"
+                className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5"
               >
-                <RefreshCw className="h-3 w-3 text-[#A36F4C]" />
+                <RefreshCw className="h-3 w-3 text-muted-foreground" />
                 <span>Restablecer</span>
               </Button>
             </div>
@@ -1117,17 +1114,17 @@ export function InventarioFilamentosClient({
       {/* ========================================================================= */}
       <div className="space-y-3">
         {filteredGridItems.length === 0 ? (
-          <div className="p-10 text-center rounded-3xl border border-dashed border-[#E2D9CC] bg-[#FFFFFF] shadow-xs space-y-3">
-            <div className="h-10 w-10 rounded-full bg-[#FAF8F5] border border-[#E2D9CC] flex items-center justify-center mx-auto text-[#75695D]">
+          <div className="p-10 text-center rounded-xl border border-dashed border-border/60 bg-card shadow-none space-y-3">
+            <div className="h-10 w-10 rounded-full bg-muted/40 border border-border/60 flex items-center justify-center mx-auto text-muted-foreground">
               <Search className="h-5 w-5 opacity-70" />
             </div>
             <div>
-              <p className="text-sm font-bold text-[#241C15]">
+              <p className="text-sm font-semibold text-foreground">
                 {search 
                   ? `No se encontraron filamentos que coincidan con "${search}"` 
                   : 'No hay colores registrados en esta categoría.'}
               </p>
-              <p className="text-xs text-[#75695D] mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {activeTab !== 'todos' ? `Filtro activo: ${activeTab.toUpperCase()}` : 'Prueba ingresando otro término de búsqueda'}
               </p>
             </div>
@@ -1140,9 +1137,9 @@ export function InventarioFilamentosClient({
                   setSearch('')
                   setActiveTab('todos')
                 }}
-                className="text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-[#FAF8F5] cursor-pointer"
+                className="text-xs font-medium rounded-lg border-border/80 text-foreground hover:bg-muted cursor-pointer shadow-none"
               >
-                <RefreshCw className="h-3 w-3 mr-1.5 text-[#A36F4C]" />
+                <RefreshCw className="h-3 w-3 mr-1.5 text-muted-foreground" />
                 Mostrar todos los filamentos
               </Button>
             )}
@@ -1151,9 +1148,9 @@ export function InventarioFilamentosClient({
           /* ========================================================================= */
           /* TABLA DE INVENTARIO                                                      */
           /* ========================================================================= */
-          <div className="bg-[#FFFFFF] border border-[#E2D9CC] rounded-3xl overflow-hidden shadow-xs">
+          <div className="bg-card border border-border/60 rounded-xl overflow-hidden shadow-none">
             {/* Mobile / Tablet View (< lg): Filament Cards */}
-            <div className="block lg:hidden divide-y divide-[#E2D9CC]/70">
+            <div className="block lg:hidden divide-y divide-border/60">
               {paginatedItems.map((item, idx) => {
                 const isDescatalogado = item.estado === 'DESCATALOGADO' || item.estado === 'ARCHIVADO' || item.activo === false
                 const isDisp = item.estado === 'DISPONIBLE'
@@ -1161,36 +1158,36 @@ export function InventarioFilamentosClient({
                 const pesoInicial = item.pesoInicialGramos || (rollos * 1000)
                 const gramos = isDisp ? (item.stockGramos ?? pesoInicial) : (item.stockGramos || 0)
                 const pct = isDisp ? Math.min(100, Math.round((gramos / pesoInicial) * 100)) : 0
-                const esCritico = isDisp && (gramos < 300 || Boolean(item.alertaCritica))
+                const esCritico = isDisp && (item.quiebreInminente || gramos < 300 || Boolean(item.alertaCritica))
 
                 return (
                   <div 
                     key={item.id}
                     onClick={() => handleOpenColorDetails(item)}
-                    className={`p-4 space-y-3 transition-colors cursor-pointer group ${
+                    className={`p-3.5 space-y-3 transition-colors cursor-pointer group ${
                       isDescatalogado 
-                        ? 'bg-[#F8F6F2]/60 opacity-80' 
+                        ? 'bg-muted/20 opacity-80' 
+                        : item.quiebreInminente
+                        ? 'bg-rose-500/5 hover:bg-rose-500/10'
                         : esCritico
-                        ? 'bg-[#FEF9C3]/20 hover:bg-[#FEF9C3]/30'
-                        : 'hover:bg-[#FAF8F5]'
+                        ? 'bg-amber-500/5 hover:bg-amber-500/10'
+                        : 'hover:bg-muted/30'
                     }`}
                   >
                     {/* Top: Swatch, Name, Notes & Status */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div
-                          className="relative h-8 w-8 rounded-full border border-black/15 shadow-2xs shrink-0 flex items-center justify-center transition-transform group-hover:scale-105"
+                          className="relative h-7 w-7 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/10 shrink-0 flex items-center justify-center transition-transform group-hover:scale-105 shadow-none"
                           style={{ backgroundColor: item.codigoHex }}
-                        >
-                          <span className="h-2 w-2 rounded-full bg-white/40 border border-black/10" />
-                        </div>
+                        />
 
                         <div className="min-w-0">
-                          <span className="font-black text-sm text-[#241C15] truncate block group-hover:text-[#A36F4C] transition-colors">
+                          <span className="font-semibold text-sm text-foreground truncate block group-hover:text-primary transition-colors">
                             {item.nombreColor}
                           </span>
                           {item.nota && item.estado !== 'RESTOCK' && item.nota !== 'Por terminar / En reposición' && (
-                            <span className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-1.5 py-0.2 rounded border border-[#FDE047]/60 inline-block truncate max-w-[220px] mt-0.5">
+                            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20 inline-block truncate max-w-[220px] mt-0.5">
                               {item.nota}
                             </span>
                           )}
@@ -1199,22 +1196,27 @@ export function InventarioFilamentosClient({
 
                       <div className="shrink-0">
                         {isDescatalogado ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC] uppercase tracking-wider inline-flex items-center gap-1">
-                            <Archive className="h-2.5 w-2.5 text-[#75695D]" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-muted/60 text-muted-foreground border-border/50 uppercase tracking-wider">
+                            <Archive className="h-2.5 w-2.5 text-muted-foreground" />
                             {item.estado === 'ARCHIVADO' ? 'Archivado' : 'Descatalogado'}
                           </span>
+                        ) : item.quiebreInminente ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 uppercase tracking-wider">
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            Quiebre
+                          </span>
                         ) : esCritico ? (
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 uppercase tracking-wider">
                             <AlertTriangle className="h-2.5 w-2.5" />
                             Crítico
                           </span>
                         ) : isDisp ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0] uppercase tracking-wider inline-flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 uppercase tracking-wider">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                             Disponible
                           </span>
                         ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 uppercase tracking-wider">
                             <ShoppingCart className="h-2.5 w-2.5" />
                             Restock
                           </span>
@@ -1224,39 +1226,55 @@ export function InventarioFilamentosClient({
 
                     {/* Stock Grams & Progress */}
                     {isDisp ? (
-                      <div className="p-3 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC]/70 space-y-2">
+                      <div className="p-3 rounded-lg bg-muted/20 border border-border/50 space-y-2">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-[#241C15] font-mono">
-                            {gramos.toLocaleString()}g <span className="text-[11px] font-normal text-[#75695D]">({pct}% de {pesoInicial}g)</span>
+                          <span className="font-semibold text-foreground font-mono tabular-nums tracking-tight">
+                            {gramos.toLocaleString()}g <span className="text-[11px] font-normal text-muted-foreground font-sans">({pct}% de {pesoInicial}g)</span>
                           </span>
-                          <span className="text-[10px] text-[#75695D] font-mono">
+                          <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
                             {rollos > 1 ? `${rollos} bobinas` : '1 bobina'}
                           </span>
                         </div>
 
-                        <div className="h-2 w-full rounded-full bg-[#E2D9CC]/60 overflow-hidden">
+                        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                           <div 
                             className={`h-full rounded-full transition-all duration-300 ${
-                              esCritico ? 'bg-[#DC2626]' : pct < 50 ? 'bg-[#D97706]' : 'bg-[#1E5E3A]'
+                              item.quiebreInminente ? 'bg-rose-500' : esCritico ? 'bg-rose-500' : pct < 50 ? 'bg-amber-500' : 'bg-emerald-500'
                             }`}
                             style={{ width: `${Math.min(100, Math.max(gramos > 0 ? 5 : 0, pct))}%` }}
                           />
                         </div>
+
+                        {/* Semáforo Predictivo de Quiebre Comprometido */}
+                        {(item.gramosComprometidos || 0) > 0 && (
+                          <div className="flex items-center justify-between pt-1 text-[11px]">
+                            {item.quiebreInminente ? (
+                              <span className="text-rose-600 dark:text-rose-400 font-medium inline-flex items-center gap-1 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
+                                <AlertTriangle className="h-3 w-3" />
+                                Quiebre inminente: faltan {Math.abs(item.gramosLibres || 0)}g en cola
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-[10px] font-mono tabular-nums">
+                                Comprometido: <strong className="text-foreground">{item.gramosComprometidos}g</strong> • Libres: <strong className="text-emerald-600 dark:text-emerald-400">{item.gramosLibres}g</strong>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <div className="p-2.5 rounded-2xl bg-[#FAF8F5] border border-[#E2D9CC]/70 text-xs text-[#854D0E] font-medium flex items-center justify-between">
+                      <div className="p-2.5 rounded-lg bg-muted/20 border border-border/50 text-xs text-muted-foreground font-medium flex items-center justify-between">
                         <span>{isDescatalogado ? 'Color fuera de taller o catálogo' : '0 g en taller (En reposición)'}</span>
-                        <span className="text-[10px] text-[#75695D]">Toca para ajustar stock</span>
+                        <span className="text-[10px] text-muted-foreground">Toca para ajustar stock</span>
                       </div>
                     )}
 
                     {/* Production info + Tap Hint */}
                     <div className="flex items-center justify-between pt-1 text-xs">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-[#241C15]">
+                        <span className="font-semibold text-foreground font-mono tabular-nums">
                           {item.totalProductosImpresos || 0} piezas
                         </span>
-                        <span className="text-[10px] text-[#75695D]">
+                        <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
                           ({(item.totalGramosConsumidos || 0).toLocaleString()}g)
                         </span>
                       </div>
@@ -1266,27 +1284,27 @@ export function InventarioFilamentosClient({
                           <button
                             type="button"
                             onClick={() => handleReactivarColor(item)}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2 py-1 rounded-lg cursor-pointer"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-2 py-1 rounded-md cursor-pointer transition-colors"
                             title="Reactivar filamento"
                           >
-                            <RotateCcw className="h-3 w-3 text-emerald-600" />
+                            <RotateCcw className="h-3 w-3" />
                             <span>Reactivar</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={() => setColorToArchiveOrDescatalog(item)}
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-600 bg-stone-100 hover:bg-stone-200 border border-stone-200 px-2 py-1 rounded-lg cursor-pointer"
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted border border-border/60 px-2 py-1 rounded-md cursor-pointer transition-colors"
                             title="Archivar o descatalogar filamento"
                           >
-                            <Archive className="h-3 w-3 text-stone-500" />
+                            <Archive className="h-3 w-3" />
                             <span>Archivar</span>
                           </button>
                         )}
 
                         <span 
                           onClick={() => handleOpenColorDetails(item)}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] group-hover:underline cursor-pointer"
+                          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline cursor-pointer"
                         >
                           Ficha
                           <ArrowRight className="h-3 w-3" />
@@ -1301,14 +1319,14 @@ export function InventarioFilamentosClient({
             {/* Desktop View (>= lg): Full Table table-fixed */}
             <div className="hidden lg:block w-full">
               <Table className="w-full table-fixed">
-                <TableHeader className="bg-[#FAF8F5] border-b border-[#E2D9CC]">
-                  <TableRow className="hover:bg-transparent border-b border-[#E2D9CC] text-xs font-bold text-[#75695D]">
-                    <TableHead className="w-10 px-2 py-3 text-center text-[#75695D]">#</TableHead>
-                    <TableHead className="px-4 py-3 text-left text-[#75695D]">Color / Filamento</TableHead>
-                    <TableHead className="w-28 px-3 py-3 text-center text-[#75695D]">Estado</TableHead>
-                    <TableHead className="w-48 px-4 py-3 text-left text-[#75695D]">Stock en Taller</TableHead>
-                    <TableHead className="w-32 px-4 py-3 text-left text-[#75695D]">Producción</TableHead>
-                    <TableHead className="w-48 px-3 py-3 text-right pr-4 text-[#75695D]">Gestionar</TableHead>
+                <TableHeader className="bg-muted/20 border-b border-border/60">
+                  <TableRow className="hover:bg-transparent border-b border-border/60 text-[11px] font-medium text-muted-foreground tracking-wider uppercase select-none">
+                    <TableHead className="w-10 px-2 py-3 text-center text-muted-foreground">#</TableHead>
+                    <TableHead className="px-4 py-3 text-left text-muted-foreground">Color / Filamento</TableHead>
+                    <TableHead className="w-28 px-3 py-3 text-center text-muted-foreground">Estado</TableHead>
+                    <TableHead className="w-48 px-4 py-3 text-left text-muted-foreground">Stock en Taller</TableHead>
+                    <TableHead className="w-32 px-4 py-3 text-left text-muted-foreground">Producción</TableHead>
+                    <TableHead className="w-48 px-3 py-3 text-right pr-4 text-muted-foreground">Gestionar</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1326,16 +1344,16 @@ export function InventarioFilamentosClient({
                       <TableRow 
                         key={item.id}
                         onClick={() => handleOpenColorDetails(item)}
-                        className={`border-b border-[#E2D9CC]/70 transition-colors text-xs cursor-pointer group ${
+                        className={`border-b border-border/40 hover:bg-muted/30 transition-colors text-xs cursor-pointer group ${
                           isDescatalogado 
-                            ? 'bg-[#F8F6F2]/60 hover:bg-[#F8F6F2] opacity-80' 
+                            ? 'bg-muted/15 opacity-80' 
                             : esCritico
-                            ? 'bg-[#FEF9C3]/20 hover:bg-[#FEF9C3]/40'
-                            : 'hover:bg-[#FAF8F5]'
+                            ? 'bg-amber-500/5 hover:bg-amber-500/10'
+                            : ''
                         }`}
                       >
                         {/* 1. Rank # */}
-                        <TableCell className="px-2 py-3 text-center font-mono font-bold text-[#75695D]">
+                        <TableCell className="px-2 py-3 text-center font-mono text-xs text-muted-foreground tabular-nums">
                           {globalIdx}
                         </TableCell>
 
@@ -1343,17 +1361,15 @@ export function InventarioFilamentosClient({
                         <TableCell className="px-4 py-3 min-w-0">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div
-                              className="relative h-7 w-7 rounded-full border border-black/15 shadow-2xs flex-shrink-0 flex items-center justify-center transition-transform group-hover:scale-110"
+                              className="relative h-6 w-6 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/10 shrink-0 flex items-center justify-center transition-transform group-hover:scale-110 shadow-none"
                               style={{ backgroundColor: item.codigoHex }}
-                            >
-                              <span className="h-1.5 w-1.5 rounded-full bg-white/40 border border-black/10" />
-                            </div>
+                            />
                             <div className="min-w-0 flex-1">
-                              <span className="font-bold text-xs text-[#241C15] truncate block group-hover:text-[#A36F4C] transition-colors">
+                              <span className="font-medium text-xs text-foreground truncate block group-hover:text-primary transition-colors">
                                 {item.nombreColor}
                               </span>
                               {item.nota && item.estado !== 'RESTOCK' && item.nota !== 'Por terminar / En reposición' && (
-                                <span className="text-[10px] text-[#854D0E] bg-[#FEF9C3] px-1.5 py-0.2 rounded border border-[#FDE047]/60 inline-block truncate max-w-full mt-0.5">
+                                <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20 inline-block truncate max-w-full mt-0.5">
                                   {item.nota}
                                 </span>
                               )}
@@ -1364,66 +1380,86 @@ export function InventarioFilamentosClient({
                         {/* 3. Estado */}
                         <TableCell className="px-3 py-3 text-center">
                           {isDescatalogado ? (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FAF8F5] text-[#75695D] border border-[#E2D9CC] uppercase tracking-wider inline-flex items-center gap-1">
-                              <Archive className="h-2.5 w-2.5 text-[#75695D]" />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-muted/60 text-muted-foreground border-border/50 uppercase tracking-wider">
+                              <Archive className="h-2.5 w-2.5 text-muted-foreground" />
                               {item.estado === 'ARCHIVADO' ? 'Archivado' : 'Descatalogado'}
                             </span>
+                          ) : item.quiebreInminente ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 uppercase tracking-wider">
+                              <AlertTriangle className="h-2.5 w-2.5" />
+                              Quiebre
+                            </span>
                           ) : esCritico ? (
-                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 uppercase tracking-wider">
                               <AlertTriangle className="h-2.5 w-2.5" />
                               Crítico
                             </span>
                           ) : isDisp ? (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EBF7EE] text-[#1E5E3A] border border-[#B4E3C0] uppercase tracking-wider inline-flex items-center gap-1">
-                              <span className="h-1.5 w-1.5 rounded-full bg-[#1E5E3A]" />
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 uppercase tracking-wider">
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                               Disponible
                             </span>
                           ) : (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FEF9C3] text-[#854D0E] border border-[#FDE047] uppercase tracking-wider inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 uppercase tracking-wider">
                               <ShoppingCart className="h-2.5 w-2.5" />
                               Restock
                             </span>
                           )}
                         </TableCell>
 
-                        {/* 4. Stock en Taller (Estandarizado [gramos] g ([kilos] kg) y barra proporcional a 1,000 g) */}
+                        {/* 4. Stock en Taller */}
                         <TableCell className="px-4 py-3 min-w-0">
                           <div className="space-y-1">
                             <div className="flex items-baseline justify-between gap-2">
-                              <span className={`font-mono font-black text-xs tracking-tight ${
-                                isDescatalogado ? 'text-[#75695D]' : !isDisp || gramos === 0 ? 'text-[#854D0E]' : 'text-[#241C15]'
+                              <span className={`font-mono font-semibold text-xs tracking-tight tabular-nums ${
+                                isDescatalogado ? 'text-muted-foreground' : !isDisp || gramos === 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground'
                               }`}>
                                 {gramos.toLocaleString()} g
                               </span>
-                              <span className="text-[#75695D] text-[10px] font-mono">
+                              <span className="text-muted-foreground text-[10px] font-mono tabular-nums">
                                 ({(gramos / 1000).toFixed(2)} kg)
                               </span>
                             </div>
-                            <div className="w-full bg-[#EAE4DC] h-1.5 rounded-full overflow-hidden">
+                            <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
                               <div 
                                 className={`h-full rounded-full transition-all duration-300 ${
                                   isDescatalogado
-                                    ? 'bg-slate-300'
+                                    ? 'bg-muted-foreground/30'
                                     : !isDisp || gramos === 0
-                                    ? 'bg-[#854D0E]'
+                                    ? 'bg-amber-500'
+                                    : item.quiebreInminente
+                                    ? 'bg-rose-500'
                                     : esCritico 
-                                    ? 'bg-[#DC2626]' 
+                                    ? 'bg-rose-500' 
                                     : gramos < 300 
-                                    ? 'bg-[#A36F4C]' 
-                                    : 'bg-[#1E5E3A]'
+                                    ? 'bg-amber-500' 
+                                    : 'bg-emerald-500'
                                 }`}
                                 style={{ width: `${Math.min(100, Math.max(gramos > 0 ? 4 : 0, (gramos / 1000) * 100))}%` }}
                               />
                             </div>
+                            {(item.gramosComprometidos || 0) > 0 && (
+                              <div className="pt-0.5">
+                                {item.quiebreInminente ? (
+                                  <span className="text-[10px] font-medium text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.2 rounded inline-flex items-center gap-1">
+                                    Faltan {Math.abs(item.gramosLibres || 0)}g
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
+                                    {item.gramosComprometidos}g comp. • <strong className="text-emerald-600 dark:text-emerald-400">{item.gramosLibres}g disp.</strong>
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </TableCell>
 
                         {/* 5. Producción */}
                         <TableCell className="px-4 py-3 min-w-0">
-                          <span className="font-bold text-xs text-[#241C15] block truncate">
+                          <span className="font-semibold text-xs text-foreground font-mono tabular-nums block truncate">
                             {item.totalProductosImpresos || 0} pzas
                           </span>
-                          <span className="text-[10px] text-[#75695D] block truncate">
+                          <span className="text-[10px] text-muted-foreground font-mono tabular-nums block truncate">
                             {(item.totalGramosConsumidos || 0).toLocaleString()}g consumidos
                           </span>
                         </TableCell>
@@ -1434,7 +1470,7 @@ export function InventarioFilamentosClient({
                             <button
                               type="button"
                               onClick={() => handleOpenColorDetails(item)}
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] hover:text-stone-900 hover:underline transition-colors py-1 px-1.5 rounded-lg cursor-pointer"
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary/80 hover:underline transition-colors py-1 px-1.5 rounded-md cursor-pointer"
                               title="Ver ficha completa"
                             >
                               <span>Ver ficha</span>
@@ -1447,10 +1483,10 @@ export function InventarioFilamentosClient({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleReactivarColor(item)}
-                                className="h-7 px-2 text-[11px] font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border-emerald-200 rounded-lg cursor-pointer flex items-center gap-1 shadow-2xs"
+                                className="h-7 px-2 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 rounded-md cursor-pointer flex items-center gap-1 shadow-none"
                                 title="Reactivar filamento en taller"
                               >
-                                <RotateCcw className="h-3 w-3 text-emerald-600" />
+                                <RotateCcw className="h-3 w-3" />
                                 <span className="hidden xl:inline">Reactivar</span>
                               </Button>
                             ) : (
@@ -1459,10 +1495,10 @@ export function InventarioFilamentosClient({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setColorToArchiveOrDescatalog(item)}
-                                className="h-7 px-2 text-[11px] font-semibold text-stone-600 bg-stone-100/80 hover:bg-stone-200/80 hover:text-stone-900 border-stone-200 rounded-lg cursor-pointer flex items-center gap-1 shadow-2xs"
+                                className="h-7 px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted border-border/60 rounded-md cursor-pointer flex items-center gap-1 shadow-none"
                                 title="Archivar o descatalogar filamento"
                               >
-                                <Archive className="h-3 w-3 text-stone-500" />
+                                <Archive className="h-3 w-3" />
                                 <span className="hidden xl:inline">Archivar</span>
                               </Button>
                             )}
@@ -1476,12 +1512,12 @@ export function InventarioFilamentosClient({
             </div>
 
             {/* Paginación de Filamentos (8 por página) */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-[#FAF8F5] border-t border-[#E2D9CC]">
-              <div className="text-xs text-[#75695D] font-medium text-center sm:text-left">
-                Mostrando <span className="font-bold text-[#241C15]">{(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> -{' '}
-                <span className="font-bold text-[#241C15]">{Math.min(safeCurrentPage * ITEMS_PER_PAGE, filteredGridItems.length)}</span> de{' '}
-                <span className="font-bold text-[#241C15]">{filteredGridItems.length}</span> filamentos{' '}
-                <span className="text-[11px] text-[#A36F4C] font-semibold">(A-Z)</span>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-muted/20 border-t border-border/60">
+              <div className="text-xs text-muted-foreground font-medium text-center sm:text-left">
+                Mostrando <span className="font-semibold text-foreground font-mono tabular-nums">{(safeCurrentPage - 1) * ITEMS_PER_PAGE + 1}</span> -{' '}
+                <span className="font-semibold text-foreground font-mono tabular-nums">{Math.min(safeCurrentPage * ITEMS_PER_PAGE, filteredGridItems.length)}</span> de{' '}
+                <span className="font-semibold text-foreground font-mono tabular-nums">{filteredGridItems.length}</span> filamentos{' '}
+                <span className="text-[11px] text-muted-foreground font-mono">(A-Z)</span>
               </div>
 
               {totalPages > 1 && (
@@ -1492,7 +1528,7 @@ export function InventarioFilamentosClient({
                     size="sm"
                     disabled={safeCurrentPage <= 1}
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    className="h-8 px-2.5 text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-white disabled:opacity-40 cursor-pointer shadow-2xs"
+                    className="h-7 px-2.5 text-xs font-medium rounded-lg border-border/80 text-foreground hover:bg-muted disabled:opacity-40 cursor-pointer shadow-none"
                   >
                     <ChevronLeft className="h-3.5 w-3.5 mr-1" />
                     Anterior
@@ -1504,10 +1540,10 @@ export function InventarioFilamentosClient({
                         key={pageNum}
                         type="button"
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`h-8 min-w-[32px] px-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                        className={`h-7 min-w-[28px] px-2 text-xs font-mono font-medium rounded-lg transition-all cursor-pointer ${
                           pageNum === safeCurrentPage
-                            ? 'bg-[#A36F4C] text-white shadow-2xs'
-                            : 'bg-white text-[#75695D] hover:bg-[#FAF8F5] border border-[#E2D9CC]'
+                            ? 'bg-foreground text-background shadow-none'
+                            : 'bg-background text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60'
                         }`}
                       >
                         {pageNum}
@@ -1521,7 +1557,7 @@ export function InventarioFilamentosClient({
                     size="sm"
                     disabled={safeCurrentPage >= totalPages}
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    className="h-8 px-2.5 text-xs font-bold rounded-xl border-[#E2D9CC] text-[#241C15] hover:bg-white disabled:opacity-40 cursor-pointer shadow-2xs"
+                    className="h-7 px-2.5 text-xs font-medium rounded-lg border-border/80 text-foreground hover:bg-muted disabled:opacity-40 cursor-pointer shadow-none"
                   >
                     Siguiente
                     <ChevronRight className="h-3.5 w-3.5 ml-1" />
@@ -1537,38 +1573,38 @@ export function InventarioFilamentosClient({
       {/* 4. MODAL: REGISTRAR NUEVO FILAMENTO                                       */}
       {/* ========================================================================= */}
       <Dialog open={openAddModal} onOpenChange={setOpenAddModal}>
-        <DialogContent showCloseButton={false} className="bg-white border border-stone-200 text-stone-900 w-[95vw] sm:max-w-[540px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
-          <form onSubmit={handleAddColorSubmit} className="p-5 sm:p-6 space-y-4 sm:space-y-4.5">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-stone-200/80 pb-3">
+        <DialogContent showCloseButton={false} className="bg-card text-foreground border border-border/80 w-[95vw] sm:max-w-[540px] max-h-[90dvh] overflow-hidden p-0 rounded-2xl shadow-xl z-50 flex flex-col">
+          <form onSubmit={handleAddColorSubmit} className="flex flex-col flex-1 overflow-hidden">
+            {/* Sticky Header */}
+            <div className="px-6 py-4 border-b border-border/60 bg-card/95 backdrop-blur-xs flex items-center justify-between shrink-0">
               <div>
-                <DialogTitle className="text-lg font-bold text-stone-900">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                   Registrar Nuevo Filamento
                 </DialogTitle>
-                <DialogDescription className="text-xs text-stone-500 mt-0.5">
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   Agrega un nuevo filamento al inventario del taller
                 </DialogDescription>
               </div>
               <button
                 type="button"
                 onClick={() => setOpenAddModal(false)}
-                className="text-stone-400 hover:text-stone-700 hover:bg-stone-100 p-1.5 rounded-xl transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted p-1.5 rounded-lg transition-colors cursor-pointer"
                 title="Cerrar"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
               {/* 1 & 2. HEADER Y PREVIEW EN VIVO + INPUT DE NOMBRE */}
               <div className="flex items-center gap-3.5">
                 <div 
-                  className="w-12 h-12 rounded-full border border-black/10 shadow-inner shrink-0 transition-colors duration-200"
+                  className="w-10 h-10 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/10 shrink-0 shadow-none transition-colors duration-200"
                   style={{ backgroundColor: nuevoHex }}
                   title={`Color seleccionado: ${nuevoHex}`}
                 />
-                <div className="flex-1 space-y-1">
-                  <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                <div className="flex-1 space-y-1.5">
+                  <Label className="text-xs font-medium text-foreground/90 uppercase tracking-wider block">
                     Nombre del Filamento / Color *
                   </Label>
                   <Input 
@@ -1577,16 +1613,16 @@ export function InventarioFilamentosClient({
                     placeholder="Ej: Negro Carbón, Terracota Seda..."
                     required
                     autoFocus
-                    className="bg-stone-50/70 border-stone-200 rounded-xl text-sm font-semibold text-stone-900 h-10 focus:ring-2 focus:ring-[#96634d]"
+                    className="bg-background border-border/80 rounded-lg text-sm font-medium text-foreground h-9 focus-visible:ring-1 focus-visible:ring-ring"
                   />
                 </div>
               </div>
 
               {/* 3. SELECTOR DE COLOR COMPACTO */}
-              <div className="space-y-2.5 p-3.5 rounded-2xl bg-stone-50/70 border border-stone-200/80">
+              <div className="space-y-3 p-3.5 rounded-xl bg-muted/25 border border-border/50">
                 {/* Fila superior: Input HEX editable + Input tipo color con icono de paleta */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-foreground">
                     Tono / Color (HEX)
                   </span>
                   <div className="flex items-center gap-2">
@@ -1600,17 +1636,17 @@ export function InventarioFilamentosClient({
                       />
                       <label 
                         htmlFor="nuevo-color-picker"
-                        className="h-8 px-2.5 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 hover:text-stone-900 flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-2xs transition-colors"
+                        className="h-8 px-2.5 rounded-lg border border-border/60 bg-background hover:bg-muted text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs font-medium cursor-pointer transition-colors shadow-none"
                         title="Abrir selector de color libre"
                       >
-                        <Palette className="h-3.5 w-3.5 text-stone-500" />
+                        <Palette className="h-3.5 w-3.5 text-muted-foreground" />
                         <span>Paleta</span>
                       </label>
                     </div>
                     <Input 
                       value={nuevoHex}
                       onChange={(e) => setNuevoHex(e.target.value)}
-                      className="w-24 h-8 text-xs font-mono font-bold bg-white border-stone-200 p-1 text-center rounded-lg uppercase focus:ring-2 focus:ring-[#96634d]"
+                      className="w-24 h-8 text-xs font-mono font-medium bg-background border-border/60 p-1 text-center rounded-lg uppercase focus-visible:ring-1 focus-visible:ring-ring text-foreground"
                       placeholder="#18181B"
                     />
                   </div>
@@ -1628,16 +1664,16 @@ export function InventarioFilamentosClient({
                           setNuevoHex(sw.hex)
                           if (!nuevoNombre) setNuevoNombre(sw.name)
                         }}
-                        className={`h-7 w-7 rounded-full border shadow-2xs hover:scale-110 active:scale-95 transition-all cursor-pointer mx-auto flex items-center justify-center ${
+                        className={`h-7 w-7 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/10 hover:scale-110 active:scale-95 transition-all cursor-pointer mx-auto flex items-center justify-center ${
                           isSelected 
-                            ? 'ring-2 ring-[#96634d] ring-offset-2 border-black/40 scale-105' 
-                            : 'border-black/10'
+                            ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' 
+                            : ''
                         }`}
                         style={{ backgroundColor: sw.hex }}
                         title={sw.name}
                       >
                         {isSelected && (
-                          <Check className="h-3 w-3 text-white drop-shadow stroke-[3]" />
+                          <Check className="h-3 w-3 text-white drop-shadow-sm stroke-[3]" />
                         )}
                       </button>
                     )
@@ -1648,17 +1684,17 @@ export function InventarioFilamentosClient({
               {/* 4. SECCIÓN DE STOCK Y ESTADO (Grid de 2 columnas) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {/* Columna Izquierda: Stock */}
-                <div className="space-y-2 p-3.5 rounded-2xl bg-stone-50/70 border border-stone-200/80">
+                <div className="space-y-2 p-3.5 rounded-xl bg-muted/25 border border-border/50">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                    <Label className="text-xs font-medium text-foreground/90 uppercase tracking-wider">
                       Stock Inicial
                     </Label>
-                    <span className="text-[11px] font-mono text-stone-500">
-                      Equivale a ~{(Math.max(0, parseInt(nuevoGramos || '0', 10)) / 1000).toFixed(1)} bobina{parseInt(nuevoGramos || '0', 10) === 1000 ? '' : 's'}
+                    <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
+                      ~{(Math.max(0, parseInt(nuevoGramos || '0', 10)) / 1000).toFixed(1)} bobina{parseInt(nuevoGramos || '0', 10) === 1000 ? '' : 's'}
                     </span>
                   </div>
 
-                  {/* Input numérico acompañado del sufijo "g" fijo ([ 1000 | g ]) */}
+                  {/* Input numérico */}
                   <div className="relative">
                     <Input 
                       type="number"
@@ -1677,14 +1713,14 @@ export function InventarioFilamentosClient({
                       }}
                       placeholder="1000"
                       required
-                      className="bg-white border-stone-200 rounded-xl text-sm font-mono font-bold h-9 pr-7 focus:ring-2 focus:ring-[#96634d]"
+                      className="bg-background border-border/80 rounded-lg text-sm font-mono font-medium h-9 pr-7 text-foreground tabular-nums"
                     />
-                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-stone-400 pointer-events-none">
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground pointer-events-none">
                       g
                     </span>
                   </div>
 
-                  {/* Pills de atajos rápidos debajo: [ 1 Bobina (1kg) ], [ 500g ], [ 250g ], [ 0g (Sin stock) ] */}
+                  {/* Pills de atajos rápidos debajo */}
                   <div className="grid grid-cols-2 gap-1.5 pt-0.5">
                     <button
                       type="button"
@@ -1692,10 +1728,10 @@ export function InventarioFilamentosClient({
                         setNuevoGramos('1000')
                         setNuevoEstado('DISPONIBLE')
                       }}
-                      className={`py-1 px-2 text-[11px] font-mono font-semibold rounded-lg border transition-all cursor-pointer text-center ${
+                      className={`py-1 px-2 text-[11px] font-mono tabular-nums font-medium rounded-md border transition-all cursor-pointer text-center ${
                         nuevoGramos === '1000'
-                          ? 'bg-stone-900 text-white border-stone-900'
-                          : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                          ? 'bg-foreground text-background border-foreground shadow-none'
+                          : 'bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted'
                       }`}
                     >
                       1 Bobina (1kg)
@@ -1706,10 +1742,10 @@ export function InventarioFilamentosClient({
                         setNuevoGramos('500')
                         setNuevoEstado('DISPONIBLE')
                       }}
-                      className={`py-1 px-2 text-[11px] font-mono font-semibold rounded-lg border transition-all cursor-pointer text-center ${
+                      className={`py-1 px-2 text-[11px] font-mono tabular-nums font-medium rounded-md border transition-all cursor-pointer text-center ${
                         nuevoGramos === '500'
-                          ? 'bg-stone-900 text-white border-stone-900'
-                          : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                          ? 'bg-foreground text-background border-foreground shadow-none'
+                          : 'bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted'
                       }`}
                     >
                       500g
@@ -1720,10 +1756,10 @@ export function InventarioFilamentosClient({
                         setNuevoGramos('250')
                         setNuevoEstado('DISPONIBLE')
                       }}
-                      className={`py-1 px-2 text-[11px] font-mono font-semibold rounded-lg border transition-all cursor-pointer text-center ${
+                      className={`py-1 px-2 text-[11px] font-mono tabular-nums font-medium rounded-md border transition-all cursor-pointer text-center ${
                         nuevoGramos === '250'
-                          ? 'bg-stone-900 text-white border-stone-900'
-                          : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                          ? 'bg-foreground text-background border-foreground shadow-none'
+                          : 'bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted'
                       }`}
                     >
                       250g
@@ -1734,10 +1770,10 @@ export function InventarioFilamentosClient({
                         setNuevoGramos('0')
                         setNuevoEstado('RESTOCK')
                       }}
-                      className={`py-1 px-2 text-[11px] font-mono font-semibold rounded-lg border transition-all cursor-pointer text-center ${
+                      className={`py-1 px-2 text-[11px] font-mono tabular-nums font-medium rounded-md border transition-all cursor-pointer text-center ${
                         nuevoGramos === '0'
-                          ? 'bg-amber-600 text-white border-amber-600'
-                          : 'bg-white text-stone-600 border-stone-200 hover:text-red-600 hover:bg-red-50/40'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                          : 'bg-background text-muted-foreground border-border/60 hover:text-rose-600 hover:bg-rose-500/10'
                       }`}
                     >
                       0g (Sin stock)
@@ -1746,9 +1782,9 @@ export function InventarioFilamentosClient({
                 </div>
 
                 {/* Columna Derecha: Estado */}
-                <div className="space-y-2 p-3.5 rounded-2xl bg-stone-50/70 border border-stone-200/80 flex flex-col justify-between">
+                <div className="space-y-2 p-3.5 rounded-xl bg-muted/25 border border-border/50 flex flex-col justify-between">
                   <div>
-                    <Label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-2">
+                    <Label className="text-xs font-medium text-foreground/90 uppercase tracking-wider block mb-2">
                       Estado Inicial
                     </Label>
                     
@@ -1760,33 +1796,33 @@ export function InventarioFilamentosClient({
                           setNuevoEstado('DISPONIBLE')
                           if (nuevoGramos === '0') setNuevoGramos('1000')
                         }}
-                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center justify-between ${
+                        className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer flex items-center justify-between ${
                           nuevoEstado === 'DISPONIBLE'
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 shadow-2xs font-bold'
-                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-none'
+                            : 'bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted'
                         }`}
                       >
-                        <span className="flex items-center gap-1.5">
-                          <span>🟢</span>
+                        <span className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
                           <span>En Taller (Disponible)</span>
                         </span>
-                        {nuevoEstado === 'DISPONIBLE' && <Check className="h-3.5 w-3.5 text-emerald-600 stroke-[3]" />}
+                        {nuevoEstado === 'DISPONIBLE' && <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />}
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setNuevoEstado('RESTOCK')}
-                        className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center justify-between ${
+                        className={`py-2 px-3 rounded-lg text-xs font-medium border transition-all cursor-pointer flex items-center justify-between ${
                           nuevoEstado === 'RESTOCK'
-                            ? 'bg-amber-50 text-amber-800 border-amber-200 shadow-2xs font-bold'
-                            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 shadow-none'
+                            : 'bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted'
                         }`}
                       >
-                        <span className="flex items-center gap-1.5">
-                          <span>🟡</span>
+                        <span className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-amber-500" />
                           <span>Para Compra (Restock)</span>
                         </span>
-                        {nuevoEstado === 'RESTOCK' && <Check className="h-3.5 w-3.5 text-amber-600 stroke-[3]" />}
+                        {nuevoEstado === 'RESTOCK' && <Check className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />}
                       </button>
                     </div>
                   </div>
@@ -1798,7 +1834,7 @@ export function InventarioFilamentosClient({
                         value={nuevaNota}
                         onChange={(e) => setNuevaNota(e.target.value)}
                         placeholder="Nota de reposición (opcional)..."
-                        className="bg-white border-stone-200 rounded-xl text-xs h-8 text-stone-700 placeholder:text-stone-400"
+                        className="bg-background border-border/80 rounded-lg text-xs h-8 text-foreground placeholder:text-muted-foreground"
                       />
                     </div>
                   )}
@@ -1806,14 +1842,14 @@ export function InventarioFilamentosClient({
               </div>
             </div>
 
-            {/* 5. FOOTER LIMPIO */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-200/80">
+            {/* Sticky Footer */}
+            <div className="px-6 py-3.5 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5 shrink-0">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => setOpenAddModal(false)}
-                className="text-xs text-stone-600 hover:text-stone-900 rounded-xl cursor-pointer"
+                className="text-xs text-muted-foreground hover:text-foreground h-8 px-3 cursor-pointer"
               >
                 Cancelar
               </Button>
@@ -1821,7 +1857,7 @@ export function InventarioFilamentosClient({
                 type="submit"
                 size="sm"
                 disabled={!nuevoNombre.trim()}
-                className="bg-[#96634d] hover:bg-[#83543f] active:bg-[#724533] disabled:opacity-50 disabled:pointer-events-none text-white font-semibold text-xs px-4 h-9 rounded-xl cursor-pointer shadow-2xs transition-all"
+                className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-medium text-xs px-4 h-8 rounded-lg cursor-pointer shadow-none transition-all"
               >
                 Registrar Filamento
               </Button>
@@ -1831,180 +1867,65 @@ export function InventarioFilamentosClient({
       </Dialog>
 
       {/* ========================================================================= */}
-      {/* 5. MODAL: EDITAR COLOR                                                    */}
       {/* ========================================================================= */}
-      <Dialog 
-        open={openEditModal} 
-        onOpenChange={(open) => {
-          setOpenEditModal(open)
-          if (!open && returnToDetailsAfterEdit) {
+      {/* 5. MODAL: EDITAR COLOR (Extraído como subcomponente)                       */}
+      {/* ========================================================================= */}
+      <EditFilamentModal
+        open={openEditModal}
+        onClose={() => {
+          setOpenEditModal(false)
+          if (returnToDetailsAfterEdit) {
             setOpenColorDetailsModal(true)
             setReturnToDetailsAfterEdit(false)
           }
         }}
-      >
-        <DialogContent showCloseButton={false} className="bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[440px] max-h-[92dvh] overflow-y-auto p-0 rounded-3xl shadow-2xl z-50">
-          <form onSubmit={handleEditColorSubmit} className="p-5 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E2D9CC] pb-3">
-              <div className="flex items-center gap-3">
-                <div 
-                  className="h-8 w-8 rounded-full border border-black/15 shadow-2xs flex-shrink-0"
-                  style={{ backgroundColor: editHex }}
-                />
-                <div>
-                  <DialogTitle className="text-base sm:text-lg font-black text-[#241C15]">
-                    Editar Bobina / Color
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-[#75695D]">
-                    Modifica el nombre y acabado visual
-                  </DialogDescription>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpenEditModal(false)
-                  if (returnToDetailsAfterEdit) {
-                    setOpenColorDetailsModal(true)
-                    setReturnToDetailsAfterEdit(false)
-                  }
-                }}
-                className="text-[#75695D] hover:text-[#241C15] p-1.5 rounded-xl hover:bg-[#F4EFEA] transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {/* Nombre */}
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                  Nombre del Filamento *
-                </Label>
-                <Input 
-                  value={editNombre}
-                  onChange={(e) => setEditNombre(e.target.value)}
-                  placeholder="Ej: Negro Carbón..."
-                  required
-                  autoFocus
-                  className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-sm font-bold text-[#241C15] h-10"
-                />
-              </div>
-
-              {/* Selector Visual de Color */}
-              <div className="space-y-2.5 p-3.5 rounded-2xl bg-[#F8F6F2] border border-[#E2D9CC]">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#241C15]">Muestra Visual (HEX)</span>
-                  <div className="flex items-center gap-2">
-                    <input 
-                      type="color"
-                      value={editHex}
-                      onChange={(e) => setEditHex(e.target.value)}
-                      className="h-6 w-8 rounded-lg border border-[#E2D9CC] cursor-pointer"
-                    />
-                    <Input 
-                      value={editHex}
-                      onChange={(e) => setEditHex(e.target.value)}
-                      className="w-20 h-6 text-xs font-mono font-bold bg-white border-[#E2D9CC] p-1 rounded-md text-center"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-6 gap-1.5 pt-1">
-                  {ALL_SWATCHES.slice(0, 18).map(sw => (
-                    <button
-                      key={sw.name}
-                      type="button"
-                      onClick={() => setEditHex(sw.hex)}
-                      className={`h-7 w-7 rounded-full border shadow-2xs hover:scale-110 active:scale-95 transition-transform cursor-pointer mx-auto flex items-center justify-center ${
-                        editHex === sw.hex ? 'ring-2 ring-[#A36F4C] ring-offset-1 border-black' : 'border-black/15'
-                      }`}
-                      style={{ backgroundColor: sw.hex }}
-                      title={sw.name}
-                    >
-                      {editHex === sw.hex && <Check className="h-3 w-3 text-white drop-shadow" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Nota opcional */}
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-[#241C15] uppercase tracking-wider">
-                  Nota de Producción (Opcional)
-                </Label>
-                <Input 
-                  value={editNota}
-                  onChange={(e) => setEditNota(e.target.value)}
-                  placeholder="Ej: Lote #2, Bobina especial..."
-                  className="bg-[#F8F6F2] border-[#E2D9CC] rounded-xl text-xs h-9 text-[#241C15]"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#E2D9CC]">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setOpenEditModal(false)
-                  if (returnToDetailsAfterEdit) {
-                    setOpenColorDetailsModal(true)
-                    setReturnToDetailsAfterEdit(false)
-                  }
-                }}
-                className="text-xs rounded-xl cursor-pointer"
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                size="sm"
-                className="bg-[#A36F4C] hover:bg-[#8E5E3E] text-white font-bold text-xs px-4 rounded-xl cursor-pointer"
-              >
-                Guardar Cambios
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+        onSubmit={handleEditColorSubmit}
+        nombre={editNombre}
+        setNombre={setEditNombre}
+        hex={editHex}
+        setHex={setEditHex}
+        nota={editNota}
+        setNota={setEditNota}
+        swatches={ALL_SWATCHES.slice(0, 18)}
+      />
 
       {/* ========================================================================= */}
       {/* 5.1 MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE FILAMENTO                     */}
       {/* ========================================================================= */}
       <Dialog open={!!colorToDelete} onOpenChange={(open) => !open && setColorToDelete(null)}>
-        <DialogContent className="bg-white border border-stone-200 text-stone-900 w-[92vw] sm:max-w-md p-6 rounded-3xl shadow-2xl z-50">
+        <DialogContent className="bg-card text-foreground border border-border/80 w-[92vw] sm:max-w-md p-6 rounded-2xl shadow-xl z-50">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                <Trash2 className="h-5 w-5" />
+              <div className="h-9 w-9 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
+                <Trash2 className="h-4.5 w-4.5" />
               </div>
               <div>
-                <DialogTitle className="text-base font-bold text-stone-900">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                   ¿Eliminar filamento?
                 </DialogTitle>
-                <DialogDescription className="text-xs text-stone-500 mt-0.5">
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   Esta acción no se puede deshacer.
                 </DialogDescription>
               </div>
             </div>
-            <p className="text-sm text-stone-600">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               ¿Estás seguro de que deseas eliminar permanentemente el filamento{' '}
-              <strong className="text-stone-900 font-semibold">{colorToDelete?.nombreColor}</strong>?
+              <strong className="text-foreground font-semibold">{colorToDelete?.nombreColor}</strong>?
             </p>
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/50">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                size="sm"
                 disabled={isDeletingColor}
                 onClick={() => setColorToDelete(null)}
-                className="rounded-xl text-xs font-semibold h-9 px-4 border-stone-200 cursor-pointer"
+                className="rounded-lg text-xs font-medium h-8 px-3 text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 Cancelar
               </Button>
               <Button
                 type="button"
+                size="sm"
                 disabled={isDeletingColor}
                 onClick={async () => {
                   if (!colorToDelete) return
@@ -2017,7 +1938,7 @@ export function InventarioFilamentosClient({
                     setIsDeletingColor(false)
                   }
                 }}
-                className="rounded-xl text-xs font-semibold h-9 px-4 bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-2xs"
+                className="rounded-lg text-xs font-medium h-8 px-3.5 bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-none"
               >
                 {isDeletingColor ? 'Eliminando...' : 'Eliminar Filamento'}
               </Button>
@@ -2030,32 +1951,30 @@ export function InventarioFilamentosClient({
       {/* 5.2 MODAL DE CONFIRMACIÓN PARA ARCHIVAR O DESCATALOGAR                    */}
       {/* ========================================================================= */}
       <Dialog open={!!colorToArchiveOrDescatalog} onOpenChange={(open) => !open && setColorToArchiveOrDescatalog(null)}>
-        <DialogContent className="bg-white border border-stone-200 text-stone-900 w-[92vw] sm:max-w-md p-6 rounded-3xl shadow-2xl z-50">
+        <DialogContent className="bg-card text-foreground border border-border/80 w-[92vw] sm:max-w-md p-6 rounded-2xl shadow-xl z-50">
           {colorToArchiveOrDescatalog && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <div 
-                  className="w-10 h-10 rounded-full border border-black/10 shadow-xs shrink-0 flex items-center justify-center"
+                  className="w-9 h-9 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/10 shrink-0 shadow-none flex items-center justify-center"
                   style={{ backgroundColor: colorToArchiveOrDescatalog.codigoHex }}
-                >
-                  <span className="h-2 w-2 rounded-full bg-white/40 border border-black/10" />
-                </div>
+                />
                 <div className="min-w-0 flex-1">
-                  <DialogTitle className="text-base font-bold text-stone-900 truncate">
+                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground truncate">
                     {colorToArchiveOrDescatalog.nombreColor}
                   </DialogTitle>
-                  <DialogDescription className="text-xs text-stone-500 mt-0.5">
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                     Gestionar disponibilidad en taller y catálogo
                   </DialogDescription>
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 text-amber-900 text-xs space-y-1">
-                <p className="font-bold flex items-center gap-1.5">
-                  <Info className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
                   El filamento dejará de verse en los disponibles
                 </p>
-                <p className="text-[11px] text-amber-800 leading-relaxed">
+                <p className="text-[11px] opacity-90 leading-relaxed text-muted-foreground">
                   Todo el historial de pedidos y modelos fabricados se mantendrá seguro. Podrás reactivarlo en cualquier momento.
                 </p>
               </div>
@@ -2074,14 +1993,14 @@ export function InventarioFilamentosClient({
                       setIsProcessingArchive(false)
                     }
                   }}
-                  className="p-3.5 rounded-2xl border border-stone-200 bg-white hover:bg-stone-50 hover:border-stone-300 text-left transition-all cursor-pointer group flex items-start gap-3"
+                  className="p-3.5 rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/40 text-left transition-all cursor-pointer group flex items-start gap-3"
                 >
-                  <div className="p-2 rounded-xl bg-stone-100 text-stone-700 group-hover:bg-stone-200 shrink-0">
+                  <div className="p-2 rounded-lg bg-muted text-muted-foreground group-hover:text-foreground shrink-0 transition-colors">
                     <Archive className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-xs text-stone-900">📦 Archivar filamento</div>
-                    <div className="text-[11px] text-stone-500 mt-0.5">
+                    <div className="font-semibold text-xs text-foreground">📦 Archivar filamento</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
                       Oculta la bobina del taller activo. Ideal si se agotó temporalmente o no se está usando.
                     </div>
                   </div>
@@ -2100,27 +2019,27 @@ export function InventarioFilamentosClient({
                       setIsProcessingArchive(false)
                     }
                   }}
-                  className="p-3.5 rounded-2xl border border-rose-200/80 bg-rose-50/30 hover:bg-rose-50 hover:border-rose-300 text-left transition-all cursor-pointer group flex items-start gap-3"
+                  className="p-3.5 rounded-xl border border-rose-500/20 bg-rose-500/5 hover:bg-rose-500/10 text-left transition-all cursor-pointer group flex items-start gap-3"
                 >
-                  <div className="p-2 rounded-xl bg-rose-100 text-rose-700 group-hover:bg-rose-200 shrink-0">
+                  <div className="p-2 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
                     <Archive className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-bold text-xs text-rose-900">🚫 Descatalogar color</div>
-                    <div className="text-[11px] text-rose-700/80 mt-0.5">
+                    <div className="font-semibold text-xs text-rose-600 dark:text-rose-400">🚫 Descatalogar color</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
                       Baja comercial del catálogo. Ya no se ofrecerá a clientes ni aparecerá para reposición.
                     </div>
                   </div>
                 </button>
               </div>
 
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-end pt-2 border-t border-border/50">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => setColorToArchiveOrDescatalog(null)}
-                  className="h-8 px-3 text-xs font-semibold rounded-xl text-stone-600 hover:bg-stone-100 cursor-pointer"
+                  className="h-8 px-3 text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -2131,158 +2050,27 @@ export function InventarioFilamentosClient({
       </Dialog>
 
       {/* ========================================================================= */}
-      {/* 5.3 MODAL DE DESCARGA Y PREVIEW DE CATÁLOGO EN IMAGEN (PUBLICIDAD)        */}
+      {/* 5.3 MODAL DE DESCARGA Y PREVIEW DE CATÁLOGO EN IMAGEN (Extraído)           */}
       {/* ========================================================================= */}
-      <Dialog open={openImageModal} onOpenChange={setOpenImageModal}>
-        <DialogContent showCloseButton={false} className="bg-white border border-[#E2D9CC] text-[#241C15] w-[95vw] sm:max-w-[700px] max-h-[92dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
-          {/* Header */}
-          <div className="px-5 sm:px-6 py-4 border-b border-[#E2D9CC] bg-[#FAF8F5] flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-[#F5EBE1] text-[#A36F4C]">
-                <Palette className="h-5 w-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-base sm:text-lg font-black text-[#241C15]">
-                  Catálogo Visual de Colores Disponibles
-                </DialogTitle>
-                <DialogDescription className="text-xs text-[#75695D] mt-0.5">
-                  Imagen publicitaria de alta definición con muestras y códigos HEX para clientes
-                </DialogDescription>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setOpenImageModal(false)}
-              className="text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] p-2 rounded-xl transition-colors cursor-pointer"
-              title="Cerrar"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Controls Bar: Theme Selector & Resolution Info */}
-          <div className="px-5 sm:px-6 py-3 border-b border-[#E2D9CC]/70 bg-white flex flex-wrap items-center justify-between gap-3 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#75695D]">Estilo:</span>
-              <div className="inline-flex rounded-xl p-1 bg-[#FAF8F5] border border-[#E2D9CC]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImageTheme('dark')
-                    setImageTimestamp(Date.now())
-                  }}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                    imageTheme === 'dark'
-                      ? 'bg-[#18181B] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:text-[#241C15]'
-                  }`}
-                >
-                  <span>🌙 Obsidian Dark</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImageTheme('light')
-                    setImageTimestamp(Date.now())
-                  }}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-                    imageTheme === 'light'
-                      ? 'bg-[#A36F4C] text-white shadow-2xs'
-                      : 'text-[#75695D] hover:text-[#241C15]'
-                  }`}
-                >
-                  <span>☀️ Studio Warm</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-[11px] font-mono text-[#75695D]">
-              <span className="px-2 py-0.5 rounded-md bg-[#FAF8F5] border border-[#E2D9CC]">
-                1080 × 1350 px (4:5)
-              </span>
-              <span className="px-2 py-0.5 rounded-md bg-[#EBF7EE] border border-[#B4E3C0] text-[#1E5E3A] font-bold">
-                {disponibles.length} colores
-              </span>
-            </div>
-          </div>
-
-          {/* Preview Area (Scrollable with frame) */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#F4EFEA]/50 flex flex-col items-center justify-center min-h-[320px]">
-            <div className="w-full max-w-[420px] rounded-2xl overflow-hidden shadow-xl border border-black/10 bg-black/5 relative group">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={`/api/inventario/filamentos/imagen?theme=${imageTheme}&t=${imageTimestamp}`}
-                alt="Catálogo de Colores Disponibles NOVA 3D"
-                className="w-full h-auto block object-cover"
-                loading="eager"
-              />
-            </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="px-5 sm:px-6 py-4 border-t border-[#E2D9CC] bg-[#FAF8F5] flex flex-wrap items-center justify-between gap-3 shrink-0">
-            <a
-              href={`/api/inventario/filamentos/imagen?theme=${imageTheme}&t=${imageTimestamp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-bold text-[#A36F4C] hover:underline flex items-center gap-1.5 cursor-pointer"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              <span>Ver en tamaño completo</span>
-            </a>
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleCopyFlyerImage}
-                disabled={isCopyingImage}
-                className="h-9 px-3.5 text-xs font-bold rounded-xl border-[#E2D9CC] bg-white hover:bg-[#FAF8F5] text-[#241C15] cursor-pointer flex items-center gap-1.5 shadow-2xs"
-              >
-                {isCopyingImage ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Copiando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5 text-[#A36F4C]" />
-                    <span>Copiar Imagen</span>
-                  </>
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleDownloadFlyer}
-                disabled={isDownloadingImage}
-                className="h-9 px-4 text-xs font-bold rounded-xl bg-[#A36F4C] hover:bg-[#8E5E3E] text-white cursor-pointer flex items-center gap-2 shadow-xs transition-all active:scale-[0.98]"
-              >
-                {isDownloadingImage ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Generando...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 stroke-[2.5]" />
-                    <span>Descargar Imagen HD</span>
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <FilamentFlyerModal
+        open={openImageModal}
+        onClose={() => setOpenImageModal(false)}
+        imageTheme={imageTheme}
+        setImageTheme={setImageTheme}
+        imageTimestamp={imageTimestamp}
+        setImageTimestamp={setImageTimestamp}
+        disponiblesCount={disponibles.length}
+        isCopyingImage={isCopyingImage}
+        isDownloadingImage={isDownloadingImage}
+        onCopyImage={handleCopyFlyerImage}
+        onDownloadFlyer={handleDownloadFlyer}
+      />
 
       {/* ========================================================================= */}
       {/* 6. MODAL: FICHA DE FILAMENTO                                              */}
       {/* ========================================================================= */}
       <Dialog open={openColorDetailsModal} onOpenChange={setOpenColorDetailsModal}>
-        <DialogContent showCloseButton={false} className="bg-white border border-stone-200 text-stone-900 w-[95vw] sm:max-w-[620px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-3xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card text-foreground border border-border/80 w-[95vw] sm:max-w-[620px] max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-xl rounded-2xl z-50">
           {selectedColorForDetails && (() => {
             const isDescatalogado = selectedColorForDetails.estado === 'DESCATALOGADO'
             const isDisp = selectedColorForDetails.estado === 'DISPONIBLE'
@@ -2305,29 +2093,29 @@ export function InventarioFilamentosClient({
             return (
               <div className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
                 {/* 1. HEADER UNIFICADO (Con Swatch y Acciones Rápidas) */}
-                <div className="px-5 sm:px-6 py-4 border-b border-stone-200 bg-stone-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 shrink-0">
+                <div className="px-6 py-4 border-b border-border/60 bg-card/95 backdrop-blur-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
                   {/* Lado izquierdo */}
-                  <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div 
-                      className="w-12 h-12 rounded-full shadow-inner border border-black/5 shrink-0"
+                      className="w-10 h-10 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/10 shrink-0 shadow-none"
                       style={{ backgroundColor: selectedColorForDetails.codigoHex }}
                     />
                     <div className="min-w-0 flex-1">
-                      <DialogTitle className="text-2xl font-bold text-stone-900 tracking-tight truncate leading-tight">
+                      <DialogTitle className="text-lg font-semibold tracking-tight text-foreground truncate leading-tight">
                         {selectedColorForDetails.nombreColor}
                       </DialogTitle>
                       
-                      {/* Fila de badges: Estado ("En Taller"), Stock ("1 bobina") y Código HEX con botón de copiar */}
+                      {/* Fila de badges: Estado, Stock y Código HEX con botón de copiar */}
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {/* Estado */}
                         <Badge 
                           variant="outline" 
                           className={
                             isDescatalogado
-                              ? 'bg-stone-100 text-stone-600 border-stone-200 text-xs font-semibold px-2 py-0.5 rounded-md'
+                              ? 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-muted/60 text-muted-foreground border-border/50'
                               : isDisp
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold px-2 py-0.5 rounded-md'
-                              : 'bg-amber-50 text-amber-700 border-amber-200 text-xs font-semibold px-2 py-0.5 rounded-md'
+                              ? 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                              : 'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                           }
                         >
                           {isDescatalogado 
@@ -2338,7 +2126,7 @@ export function InventarioFilamentosClient({
                         </Badge>
 
                         {/* Stock */}
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md border border-stone-200 bg-white text-stone-600 font-mono">
+                        <span className="text-[11px] font-mono tabular-nums px-2 py-0.5 rounded-md border border-border/60 bg-muted/40 text-foreground">
                           {rollos} {rollos === 1 ? 'bobina' : 'bobinas'}
                         </span>
 
@@ -2351,18 +2139,18 @@ export function InventarioFilamentosClient({
                             toast.success(`HEX ${selectedColorForDetails.codigoHex} copiado`)
                             setTimeout(() => setCopiedHex(false), 2000)
                           }}
-                          className="group inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-stone-200 bg-white hover:bg-stone-100 active:scale-95 text-stone-600 text-xs font-mono font-medium transition-all cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border border-border/60 bg-muted/40 hover:bg-muted active:scale-95 text-foreground text-[11px] font-mono transition-all cursor-pointer"
                           title="Copiar código HEX"
                         >
                           <span 
-                            className="w-2.5 h-2.5 rounded-full border border-black/15 shrink-0" 
+                            className="w-2.5 h-2.5 rounded-full ring-1 ring-inset ring-black/10 dark:ring-white/10 shrink-0" 
                             style={{ backgroundColor: selectedColorForDetails.codigoHex }} 
                           />
                           <span>{selectedColorForDetails.codigoHex}</span>
                           {copiedHex ? (
-                            <Check className="h-3 w-3 text-emerald-600" />
+                            <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                           ) : (
-                            <Copy className="h-3 w-3 text-stone-400 group-hover:text-stone-700 transition-colors" />
+                            <Copy className="h-3 w-3 text-muted-foreground" />
                           )}
                         </button>
                       </div>
@@ -2381,9 +2169,9 @@ export function InventarioFilamentosClient({
                         setOpenColorDetailsModal(false)
                         handleOpenEditColor(selectedColorForDetails)
                       }}
-                      className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-stone-200 bg-white hover:bg-stone-50 text-stone-700 cursor-pointer shadow-2xs gap-1.5"
+                      className="h-8 px-2.5 text-xs font-medium rounded-lg border-border/80 bg-background hover:bg-muted text-foreground cursor-pointer shadow-none gap-1.5"
                     >
-                      <Pencil className="h-3.5 w-3.5 text-stone-500" />
+                      <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>Editar</span>
                     </Button>
 
@@ -2394,9 +2182,9 @@ export function InventarioFilamentosClient({
                         variant="outline"
                         size="sm"
                         onClick={() => handleReactivarColor(selectedColorForDetails)}
-                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer shadow-2xs gap-1.5"
+                        className="h-8 px-2.5 text-xs font-medium rounded-lg border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 cursor-pointer shadow-none gap-1.5"
                       >
-                        <RotateCcw className="h-3.5 w-3.5 text-emerald-600" />
+                        <RotateCcw className="h-3.5 w-3.5" />
                         <span>Reactivar</span>
                       </Button>
                     ) : (
@@ -2405,12 +2193,11 @@ export function InventarioFilamentosClient({
                         variant="outline"
                         size="sm"
                         onClick={() => setColorToArchiveOrDescatalog(selectedColorForDetails)}
-                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-stone-200 bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 cursor-pointer shadow-2xs gap-1.5"
+                        className="h-8 px-2.5 text-xs font-medium rounded-lg border-border/80 bg-background hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer shadow-none gap-1.5"
                         title="Archivar o descatalogar este filamento"
                       >
-                        <Archive className="h-3.5 w-3.5 text-stone-500" />
-                        <span className="hidden sm:inline">Archivar / Descatalogar</span>
-                        <span className="sm:hidden">Archivar</span>
+                        <Archive className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Archivar</span>
                       </Button>
                     )}
 
@@ -2422,9 +2209,9 @@ export function InventarioFilamentosClient({
                           variant="outline"
                           size="sm"
                           onClick={() => handleMoverARestock(selectedColorForDetails)}
-                          className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-amber-200 bg-amber-50/60 hover:bg-amber-100 text-amber-800 cursor-pointer shadow-2xs gap-1.5"
+                          className="h-8 px-2.5 text-xs font-medium rounded-lg border-blue-500/20 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 cursor-pointer shadow-none gap-1.5"
                         >
-                          <ShoppingCart className="h-3.5 w-3.5 text-amber-600" />
+                          <ShoppingCart className="h-3.5 w-3.5" />
                           <span>Restock</span>
                         </Button>
                       ) : (
@@ -2433,9 +2220,9 @@ export function InventarioFilamentosClient({
                           variant="outline"
                           size="sm"
                           onClick={() => handleMoverADisponible(selectedColorForDetails)}
-                          className="h-8 px-2.5 sm:px-3 text-xs font-semibold rounded-xl border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 cursor-pointer shadow-2xs gap-1.5"
+                          className="h-8 px-2.5 text-xs font-medium rounded-lg border-emerald-500/20 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 cursor-pointer shadow-none gap-1.5"
                         >
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                          <CheckCircle2 className="h-3.5 w-3.5" />
                           <span>Disponible</span>
                         </Button>
                       )
@@ -2445,7 +2232,7 @@ export function InventarioFilamentosClient({
                     <button
                       type="button"
                       onClick={() => setColorToDelete(selectedColorForDetails)}
-                      className="p-1.5 rounded-xl text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 transition-colors cursor-pointer"
                       title="Eliminar filamento"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -2455,7 +2242,7 @@ export function InventarioFilamentosClient({
                     <button
                       type="button"
                       onClick={() => setOpenColorDetailsModal(false)}
-                      className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                       title="Cerrar ficha"
                     >
                       <X className="h-4 w-4" />
@@ -2463,31 +2250,31 @@ export function InventarioFilamentosClient({
                   </div>
                 </div>
 
-                {/* Body con scroll natural sin footer flotante */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+                {/* Body con scroll natural */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
                   {/* 2. SECCIÓN DE AJUSTE DE STOCK */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-stone-50/70 border border-stone-200/80 space-y-3.5">
+                  <div className="p-4 sm:p-5 rounded-xl bg-muted/25 border border-border/50 space-y-3.5">
                     {/* Visualización */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-3xl font-extrabold text-stone-900 font-mono tracking-tight">
+                        <span className="text-3xl font-semibold text-foreground font-mono tabular-nums tracking-tight">
                           {inputNum.toLocaleString()}
                         </span>
-                        <span className="text-sm font-semibold text-stone-500 font-mono">g</span>
+                        <span className="text-sm font-medium text-muted-foreground font-mono">g</span>
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-stone-500 font-mono">
+                        <span className="text-xs font-medium text-muted-foreground font-mono tabular-nums">
                           {pct}% ({dynamicCapacidad.toLocaleString()}g)
                         </span>
                         <Badge 
                           variant="outline"
                           className={
                             inputNum <= 0
-                              ? 'bg-stone-200/70 text-stone-600 border-stone-300 text-[10px] font-bold px-2 py-0.5 rounded-md'
+                              ? 'bg-muted/60 text-muted-foreground border-border/50 text-[10px] font-medium px-2 py-0.5 rounded-md'
                               : esCritico
-                              ? 'bg-red-50 text-red-700 border-red-200 text-[10px] font-bold px-2 py-0.5 rounded-md'
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md'
+                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 text-[10px] font-medium px-2 py-0.5 rounded-md'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-medium px-2 py-0.5 rounded-md'
                           }
                         >
                           {inputNum <= 0 ? 'Agotado' : esCritico ? 'Crítico' : 'Normal'}
@@ -2495,17 +2282,17 @@ export function InventarioFilamentosClient({
                       </div>
                     </div>
 
-                    {/* Barra de progreso delgada (h-2) */}
-                    <div className="h-2 w-full rounded-full bg-stone-200/80 overflow-hidden">
+                    {/* Barra de progreso ultrafina (h-1.5) */}
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                       <div 
                         className={`h-full rounded-full transition-all duration-300 ${
                           inputNum <= 0 
-                            ? 'bg-stone-400'
+                            ? 'bg-muted-foreground/30'
                             : esCritico 
-                            ? 'bg-red-500' 
+                            ? 'bg-rose-500' 
                             : pct < 50 
                             ? 'bg-amber-500' 
-                            : 'bg-emerald-600'
+                            : 'bg-emerald-500'
                         }`}
                         style={{ 
                           width: `${Math.min(100, Math.max(inputNum > 0 ? 3 : 0, pct))}%` 
@@ -2516,30 +2303,30 @@ export function InventarioFilamentosClient({
                     {/* Fila de ajuste rápido: Stepper + Pills + Botón Actualizar */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {/* Stepper central: [-] [ Input editable en gramos ] [+] */}
-                        <div className="inline-flex items-center shadow-2xs rounded-xl overflow-hidden border border-stone-200 bg-white">
+                        {/* Stepper central */}
+                        <div className="inline-flex items-center rounded-lg overflow-hidden border border-border/80 bg-background">
                           <button
                             type="button"
                             onClick={() => {
                               const curr = parseInt(modalGramosInput || '0', 10)
                               setModalGramosInput(Math.max(0, curr - 100).toString())
                             }}
-                            className="h-8.5 w-8 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-50 active:scale-95 transition-all cursor-pointer font-bold text-sm"
+                            className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all cursor-pointer font-medium text-sm"
                             title="Restar 100g"
                           >
                             -
                           </button>
-                          <div className="relative w-24 border-x border-stone-200">
+                          <div className="relative w-24 border-x border-border/60">
                             <Input 
                               type="number"
                               min="0"
                               step="50"
                               value={modalGramosInput}
                               onChange={(e) => setModalGramosInput(e.target.value)}
-                              className="bg-transparent border-0 text-center font-mono font-bold text-xs h-8.5 pr-4 rounded-none focus-visible:ring-0 shadow-none"
+                              className="bg-transparent border-0 text-center font-mono font-medium text-xs h-8 pr-4 rounded-none focus-visible:ring-0 shadow-none text-foreground tabular-nums"
                               placeholder="0"
                             />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-stone-400 pointer-events-none">
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-mono text-muted-foreground pointer-events-none">
                               g
                             </span>
                           </div>
@@ -2549,14 +2336,14 @@ export function InventarioFilamentosClient({
                               const curr = parseInt(modalGramosInput || '0', 10)
                               setModalGramosInput((curr + 100).toString())
                             }}
-                            className="h-8.5 w-8 flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-50 active:scale-95 transition-all cursor-pointer font-bold text-sm"
+                            className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all cursor-pointer font-medium text-sm"
                             title="Sumar 100g"
                           >
                             +
                           </button>
                         </div>
 
-                        {/* 3 atajos más usados como pills sutiles */}
+                        {/* Atajos más usados como pills sutiles */}
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <button
                             type="button"
@@ -2564,7 +2351,7 @@ export function InventarioFilamentosClient({
                               const curr = parseInt(modalGramosInput || '0', 10)
                               setModalGramosInput((curr + 100).toString())
                             }}
-                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-background border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all cursor-pointer shadow-none tabular-nums"
                           >
                             +100g
                           </button>
@@ -2574,26 +2361,26 @@ export function InventarioFilamentosClient({
                               const curr = parseInt(modalGramosInput || '0', 10)
                               setModalGramosInput((curr + 1000).toString())
                             }}
-                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-white border border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-background border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all cursor-pointer shadow-none tabular-nums"
                           >
-                            +1 Bobina / 1,000g
+                            +1 Bobina (1kg)
                           </button>
                           <button
                             type="button"
                             onClick={() => setModalGramosInput('0')}
-                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-white border border-stone-200 text-stone-600 hover:text-red-700 hover:bg-red-50/50 active:scale-95 transition-all cursor-pointer shadow-2xs"
+                            className="h-8 px-2.5 text-xs font-mono font-medium rounded-lg bg-background border border-border/60 text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 active:scale-95 transition-all cursor-pointer shadow-none tabular-nums"
                           >
-                            Marcar Agotado / 0g
+                            0g (Agotado)
                           </button>
                         </div>
                       </div>
 
-                      {/* Botón de confirmación compacto: [ Actualizar Stock ] */}
+                      {/* Botón de confirmación compacto */}
                       <Button
                         type="button"
                         onClick={handleGuardarGramosModal}
                         disabled={isSavingGramos}
-                        className="h-8.5 px-3.5 bg-[#96634d] hover:bg-[#83543f] active:bg-[#724533] text-white font-semibold text-xs rounded-xl cursor-pointer shadow-2xs inline-flex items-center gap-1.5 transition-all shrink-0 self-end sm:self-auto"
+                        className="h-8 px-3.5 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs rounded-lg cursor-pointer shadow-none inline-flex items-center gap-1.5 transition-all shrink-0 self-end sm:self-auto"
                       >
                         {isSavingGramos ? (
                           <>
@@ -2602,7 +2389,7 @@ export function InventarioFilamentosClient({
                           </>
                         ) : savedGramosSuccess ? (
                           <>
-                            <Check className="h-3.5 w-3.5 text-emerald-300 stroke-[3]" />
+                            <Check className="h-3.5 w-3.5 stroke-[2.5]" />
                             <span>¡Actualizado!</span>
                           </>
                         ) : (
@@ -2617,31 +2404,31 @@ export function InventarioFilamentosClient({
 
                   {/* 3. MÉTRICAS DE PRODUCCIÓN Y MODELOS */}
                   <div className="space-y-4">
-                    {/* Fila de 3 KPIs minimalistas con fondo bg-stone-50 y bordes sutiles */}
+                    {/* Fila de 3 KPIs minimalistas */}
                     <div className="grid grid-cols-3 gap-2.5">
-                      <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 text-center">
-                        <span className="text-xl sm:text-2xl font-extrabold text-stone-900 font-mono block">
+                      <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 text-center">
+                        <span className="text-xl sm:text-2xl font-semibold text-foreground font-mono tabular-nums block tracking-tight">
                           {selectedColorForDetails.totalProductosImpresos || 0}
                         </span>
-                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
+                        <span className="text-[11px] font-medium text-muted-foreground block mt-0.5">
                           Piezas Fabricadas
                         </span>
                       </div>
 
-                      <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 text-center">
-                        <span className="text-xl sm:text-2xl font-extrabold text-[#96634d] font-mono block">
+                      <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 text-center">
+                        <span className="text-xl sm:text-2xl font-semibold text-primary font-mono tabular-nums block tracking-tight">
                           {(selectedColorForDetails.totalGramosConsumidos || 0).toLocaleString()}g
                         </span>
-                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
+                        <span className="text-[11px] font-medium text-muted-foreground block mt-0.5">
                           Filamento Consumido
                         </span>
                       </div>
 
-                      <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 text-center">
-                        <span className="text-xl sm:text-2xl font-extrabold text-stone-900 font-mono block">
+                      <div className="p-3.5 rounded-xl bg-muted/20 border border-border/50 text-center">
+                        <span className="text-xl sm:text-2xl font-semibold text-foreground font-mono tabular-nums block tracking-tight">
                           {pedidosActivos}
                         </span>
-                        <span className="text-[11px] font-medium text-stone-500 block mt-0.5">
+                        <span className="text-[11px] font-medium text-muted-foreground block mt-0.5">
                           Pedidos Activos
                         </span>
                       </div>
@@ -2650,23 +2437,23 @@ export function InventarioFilamentosClient({
                     {/* Sección "Modelos con este color" */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-stone-700">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Modelos con este color
                         </span>
                         {selectedColorForDetails.productosInvertidos && selectedColorForDetails.productosInvertidos.length > 0 && (
-                          <span className="text-[11px] font-medium text-stone-500">
+                          <span className="text-[11px] font-medium text-muted-foreground font-mono tabular-nums">
                             {selectedColorForDetails.productosInvertidos.length} {selectedColorForDetails.productosInvertidos.length === 1 ? 'modelo' : 'modelos'}
                           </span>
                         )}
                       </div>
 
                       {(!selectedColorForDetails.productosInvertidos || selectedColorForDetails.productosInvertidos.length === 0) ? (
-                        <div className="flex items-center gap-2 py-2.5 px-3 rounded-xl bg-stone-50 border border-stone-200/70 text-stone-500 text-xs">
-                          <Package className="h-3.5 w-3.5 text-stone-400 shrink-0" />
-                          <span className="text-stone-500 text-xs">Aún no se han producido modelos con este color</span>
+                        <div className="flex items-center gap-2 py-3 px-3 rounded-xl bg-muted/20 border border-border/50 text-muted-foreground text-xs">
+                          <Package className="h-3.5 w-3.5 shrink-0" />
+                          <span>Aún no se han producido modelos con este color</span>
                         </div>
                       ) : (
-                        <div className="divide-y divide-stone-200/60 rounded-xl border border-stone-200/70 bg-stone-50/40 overflow-hidden">
+                        <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-muted/20 overflow-hidden">
                           {selectedColorForDetails.productosInvertidos.map((prod) => {
                             const ultPedido = prod.ultimosPedidos?.[0]
                             const fechaFormateada = ultPedido?.fecha 
@@ -2676,23 +2463,23 @@ export function InventarioFilamentosClient({
                             return (
                               <div 
                                 key={prod.productoId}
-                                className="flex items-center justify-between px-3.5 py-2.5 hover:bg-stone-50/70 transition-colors text-xs"
+                                className="flex items-center justify-between px-3.5 py-2.5 hover:bg-muted/30 transition-colors text-xs"
                               >
                                 <div className="min-w-0 flex items-center gap-2">
-                                  <span className="font-semibold text-stone-900 truncate">
+                                  <span className="font-medium text-foreground truncate">
                                     {prod.nombreModelo}
                                   </span>
                                   {fechaFormateada && (
-                                    <span className="text-[11px] text-stone-400 font-mono shrink-0">
+                                    <span className="text-[11px] text-muted-foreground font-mono shrink-0">
                                       • {fechaFormateada}
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2.5 shrink-0 font-mono">
-                                  <span className="text-stone-500 text-[11px]">
+                                <div className="flex items-center gap-2.5 shrink-0 font-mono tabular-nums">
+                                  <span className="text-muted-foreground text-[11px]">
                                     {prod.totalUnidades} {prod.totalUnidades === 1 ? 'ud' : 'uds'}
                                   </span>
-                                  <span className="font-bold text-[#96634d]">
+                                  <span className="font-semibold text-primary">
                                     {prod.totalGramos.toLocaleString()}g
                                   </span>
                                 </div>

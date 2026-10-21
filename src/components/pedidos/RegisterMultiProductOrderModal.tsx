@@ -14,14 +14,12 @@ import { Badge } from '@/components/ui/badge'
 import { ComboboxItem } from '@/components/ui/SearchableCombobox'
 import { TipoPrecio } from '@prisma/client'
 import { createPedido } from '@/actions/pedidos'
-import { createCliente } from '@/actions/clientes'
 import {
   ProductoOption,
   FilamentoOption,
-  ClienteOption,
-  FormItemState
-} from './types'
-import { groupCatalogProducts, findVariantInGroups } from './productHierarchy'
+  ClienteOption
+} from '@/contracts/orders.dto'
+import { useOrderForm } from './hooks/useOrderForm'
 import { OrderCustomerSection } from './OrderCustomerSection'
 import { OrderItemCard } from './OrderItemCard'
 import { OrderSummarySection } from './OrderSummarySection'
@@ -39,13 +37,6 @@ interface RegisterMultiProductOrderModalProps {
   onClientAdded?: (cliente: ClienteOption) => void
 }
 
-function getDefaultFilamentoId(fils: FilamentoOption[]): string {
-  if (!fils || fils.length === 0) return ''
-  const negro = fils.find(f => f.nombreColor.toLowerCase().includes('negro'))
-  if (negro) return negro.id
-  return fils[0]?.id || ''
-}
-
 export function RegisterMultiProductOrderModal({
   isOpen,
   onClose,
@@ -60,120 +51,53 @@ export function RegisterMultiProductOrderModal({
   const formatCurrency = (val: number) =>
     `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  // =========================================================================
-  // ESTADO DEL FORMULARIO MULTIPRODUCTO
-  // =========================================================================
-  const [formFecha, setFormFecha] = useState(() => new Date().toISOString().split('T')[0])
-  const [formCliente, setFormCliente] = useState('')
-  const [formTelefono, setFormTelefono] = useState('')
-  const [formCanal, setFormCanal] = useState('WhatsApp')
-  const [formHandleSocial, setFormHandleSocial] = useState('')
-  const [formDestino, setFormDestino] = useState('')
-  const [formDiaEntrega, setFormDiaEntrega] = useState('')
-  const [formNotas, setFormNotas] = useState('')
-  const [formCostoEnvio, setFormCostoEnvio] = useState<string>('')
-  const [formHasCaja, setFormHasCaja] = useState<boolean>(true)
-  const [formCajasLotId, setFormCajasLotId] = useState<string>('')
-  const [formCajasCantidad, setFormCajasCantidad] = useState<number>(1)
-  const [formMontoPagado, setFormMontoPagado] = useState<string>('')
-  const [formMetodoPago, setFormMetodoPago] = useState('YAPE')
-  const [formNotasPago, setFormNotasPago] = useState('')
-
-  // Selector de clientes
-  const [clientSelectMode, setClientSelectMode] = useState<'EXISTING' | 'NEW'>(
-    clientesList && clientesList.length > 0 ? 'EXISTING' : 'NEW'
-  )
-  const [selectedClientOption, setSelectedClientOption] = useState<ClienteOption | null>(null)
-  const [clientSearchTerm, setClientSearchTerm] = useState('')
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false)
-  const [isRegisteringClientInline, setIsRegisteringClientInline] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const getDefaultItemState = (suffix: string = '1', presetProductId?: string): FormItemState => {
-    const defaultFilId = getDefaultFilamentoId(filamentos)
-    const targetPresetId = presetProductId || initialProductoId
-
-    if (targetPresetId) {
-      const catalogGroups = groupCatalogProducts(productos)
-      const match = findVariantInGroups(catalogGroups, targetPresetId)
-      if (match) {
-        return {
-          id: `item-${Date.now()}-${suffix}`,
-          productoId: match.group.productoId,
-          varianteId: match.variant.id,
-          nombreDisplay: match.group.hasVariants
-            ? `${match.group.baseName} - ${match.variant.nombreVariante}`
-            : match.group.baseName,
-          costoBase: match.variant.costoBase,
-          colorFilamentoId: defaultFilId,
-          coloresIds: defaultFilId ? [defaultFilId] : [],
-          personalizacion: '',
-          cantidad: 1,
-          tipoPrecio: 'MENOR',
-          precioUnitario: match.variant.precioMenor,
-          costoPackaging: '',
-          porcentajeAdicional: 0,
-          gramosConsumidos: 0,
-          imageUrl: match.variant.imagenUrl || match.group.imagenUrl || null
-        }
-      }
-    }
-
-    return {
-      id: `item-${Date.now()}-${suffix}`,
-      productoId: '',
-      varianteId: '',
-      nombreDisplay: '',
-      costoBase: 0,
-      colorFilamentoId: defaultFilId,
-      coloresIds: defaultFilId ? [defaultFilId] : [],
-      personalizacion: '',
-      cantidad: 1,
-      tipoPrecio: 'MENOR',
-      precioUnitario: '',
-      costoPackaging: '',
-      porcentajeAdicional: 0,
-      gramosConsumidos: 0,
-      imageUrl: null
-    }
-  }
-
-  // Lista dinámica de ítems
-  const [formItems, setFormItems] = useState<FormItemState[]>(() => {
-    return [getDefaultItemState('1')]
+  const {
+    formFecha, setFormFecha,
+    formCliente, setFormCliente,
+    formTelefono, setFormTelefono,
+    formCanal, setFormCanal,
+    formHandleSocial, setFormHandleSocial,
+    formDestino, setFormDestino,
+    formDiaEntrega, setFormDiaEntrega,
+    formNotas, setFormNotas,
+    formCostoEnvio, setFormCostoEnvio,
+    formHasCaja, setFormHasCaja,
+    formCajasLotId, setFormCajasLotId,
+    formCajasCantidad, setFormCajasCantidad,
+    formMontoPagado, setFormMontoPagado,
+    formMetodoPago, setFormMetodoPago,
+    formNotasPago, setFormNotasPago,
+    clientSelectMode, setClientSelectMode,
+    selectedClientOption,
+    clientSearchTerm, setClientSearchTerm,
+    isClientDropdownOpen, setIsClientDropdownOpen,
+    isRegisteringClientInline,
+    filteredClientOptions,
+    similarExistingClient,
+    formItems,
+    addItem,
+    removeItem,
+    updateItem,
+    handleSelectClient,
+    handleClearSelectedClient,
+    handleSwitchToNewClient,
+    handleRegisterClientInline,
+    resetForm,
+    totalItemsCount,
+    subtotalCalculado: formSubtotalCalculado,
+    totalCalculado: formTotalCalculado,
+    saldoPendienteNum: formSaldoPendienteCalculado
+  } = useOrderForm({
+    isOpen,
+    productos,
+    filamentos,
+    clientesList,
+    stockCajas,
+    initialProductoId,
+    onClientAdded
   })
 
-  // Reset del formulario
-  const resetForm = () => {
-    const presetId = initialProductoId || (typeof window !== 'undefined' ? sessionStorage.getItem('nova_preselected_product_id') || undefined : undefined)
-    setFormFecha(new Date().toISOString().split('T')[0])
-    setFormCliente('')
-    setFormTelefono('')
-    setFormCanal('WhatsApp')
-    setFormHandleSocial('')
-    setSelectedClientOption(null)
-    setClientSelectMode((clientesList || []).length > 0 ? 'EXISTING' : 'NEW')
-    setClientSearchTerm('')
-    setIsClientDropdownOpen(false)
-    setFormDestino('')
-    setFormDiaEntrega('')
-    setFormNotas('')
-    setFormCostoEnvio('')
-    setFormHasCaja(true)
-    setFormCajasLotId(stockCajas?.loteReciente50?.id || stockCajas?.lotes?.[0]?.id || '')
-    setFormCajasCantidad(1)
-    setFormMontoPagado('')
-    setFormMetodoPago('YAPE')
-    setFormNotasPago('')
-    setFormItems([getDefaultItemState('1', presetId)])
-  }
-
-  // Reset al abrir el modal si estaba cerrado
-  useEffect(() => {
-    if (isOpen) {
-      resetForm()
-    }
-  }, [isOpen, initialProductoId])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Opciones de productos 3D para el SearchableCombobox
   const productosComboboxItems: ComboboxItem[] = useMemo(() => {
@@ -191,178 +115,6 @@ export function RegisterMultiProductOrderModal({
       }
     })
   }, [productos])
-
-  // Filtrado de clientes para el autocompletado
-  const filteredClientOptions = useMemo(() => {
-    if (!clientSearchTerm.trim()) {
-      return (clientesList || []).slice(0, 30)
-    }
-    const q = clientSearchTerm.trim().toLowerCase()
-    const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    return (clientesList || []).filter(c => {
-      const n = (c.nombre || '').toLowerCase()
-      const nNorm = n.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      const t = c.telefono || ''
-      const h = (c.handleSocial || '').toLowerCase()
-      return n.includes(q) || nNorm.includes(qNorm) || t.includes(q) || h.includes(q)
-    }).slice(0, 20)
-  }, [clientesList, clientSearchTerm])
-
-  // Detección preventiva de duplicados en modo nuevo
-  const similarExistingClient = useMemo(() => {
-    if (clientSelectMode !== 'NEW' || !formCliente.trim()) return null
-    const cleanInput = formCliente.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    return (clientesList || []).find(c => {
-      const cleanC = (c.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-      return cleanC === cleanInput || (cleanInput.length >= 4 && cleanC.includes(cleanInput))
-    }) || null
-  }, [clientSelectMode, formCliente, clientesList])
-
-  // Manejadores de selección de cliente
-  const handleSelectClient = (c: ClienteOption) => {
-    setSelectedClientOption(c)
-    setClientSelectMode('EXISTING')
-    setFormCliente(c.nombre)
-    if (c.telefono) setFormTelefono(c.telefono)
-    if (c.handleSocial) setFormHandleSocial(c.handleSocial)
-    if (c.canalOrigen || c.canalPreferido) setFormCanal(c.canalOrigen || c.canalPreferido || 'WhatsApp')
-    if (c.direccion || c.distrito) setFormDestino(c.direccion || c.distrito || '')
-    setIsClientDropdownOpen(false)
-    setClientSearchTerm('')
-  }
-
-  const handleClearSelectedClient = () => {
-    setSelectedClientOption(null)
-    setIsClientDropdownOpen(true)
-  }
-
-  const handleSwitchToNewClient = (presetName = '') => {
-    setSelectedClientOption(null)
-    setClientSelectMode('NEW')
-    setFormCliente(presetName || clientSearchTerm.trim() || formCliente || '')
-    setIsClientDropdownOpen(false)
-  }
-
-  const handleRegisterClientInline = async () => {
-    if (!formCliente.trim()) {
-      toast.error('Ingresa al menos el nombre del cliente')
-      return
-    }
-    setIsRegisteringClientInline(true)
-    try {
-      const created = await createCliente({
-        nombre: formCliente.trim(),
-        telefono: formTelefono.trim() || undefined,
-        handleSocial: formHandleSocial.trim() || undefined,
-        canalOrigen: formCanal,
-        direccion: formDestino.trim() || undefined
-      })
-      const newOption: ClienteOption = {
-        id: created.id,
-        nombre: created.nombre,
-        telefono: created.telefono,
-        handleSocial: created.handleSocial,
-        canalOrigen: created.canalOrigen,
-        canalPreferido: created.canalOrigen,
-        direccion: created.direccion
-      }
-      if (onClientAdded) {
-        onClientAdded(newOption)
-      }
-      setSelectedClientOption(newOption)
-      setClientSelectMode('EXISTING')
-      toast.success(`Cliente "${created.nombre}" guardado y vinculado`)
-    } catch (err: any) {
-      toast.error(err.message || 'Error al registrar cliente')
-    } finally {
-      setIsRegisteringClientInline(false)
-    }
-  }
-
-  // Manejadores de Ítems
-  const addItem = () => {
-    setFormItems(prev => [
-      ...prev,
-      getDefaultItemState(Math.random().toString(36).substring(2, 6))
-    ])
-  }
-
-  const removeItem = (id: string) => {
-    if (formItems.length <= 1) return
-    setFormItems(prev => prev.filter(i => i.id !== id))
-  }
-
-  const updateItem = (id: string, updates: Partial<FormItemState>) => {
-    setFormItems(prev => prev.map(item => {
-      if (item.id !== id) return item
-      const merged = { ...item, ...updates }
-      const catalogGroups = groupCatalogProducts(productos)
-      const targetId = updates.varianteId || updates.productoId || merged.varianteId || merged.productoId
-
-      if (updates.productoId || updates.varianteId) {
-        const match = findVariantInGroups(catalogGroups, targetId)
-        if (match) {
-          merged.varianteId = match.variant.id
-          merged.productoId = match.group.productoId
-          if (!updates.nombreDisplay) {
-            merged.nombreDisplay = match.group.hasVariants
-              ? `${match.group.baseName} - ${match.variant.nombreVariante}`
-              : match.group.baseName
-          }
-          if (updates.costoBase === undefined) {
-            merged.costoBase = match.variant.costoBase
-          }
-          if (updates.imageUrl !== undefined) {
-            merged.imageUrl = updates.imageUrl
-          } else {
-            merged.imageUrl = match.variant.imagenUrl || match.group.imagenUrl || null
-          }
-          let pUnit = match.variant.precioMenor
-          if (merged.tipoPrecio === 'MAYOR' || (merged.tipoPrecio as string) === 'AMIGOS') {
-            pUnit = match.variant.precioMayor
-          } else if (merged.tipoPrecio === 'MENOR' || (merged.tipoPrecio as string) === 'MERCADO') {
-            pUnit = match.variant.precioMenor
-          }
-          if (updates.precioUnitario === undefined) {
-            merged.precioUnitario = pUnit
-          }
-        }
-      }
-
-      if (updates.tipoPrecio && updates.tipoPrecio !== item.tipoPrecio) {
-        const match = findVariantInGroups(catalogGroups, targetId)
-        if (match) {
-          if (updates.tipoPrecio === 'MAYOR' || (updates.tipoPrecio as string) === 'AMIGOS') {
-            merged.precioUnitario = match.variant.precioMayor
-          } else if (updates.tipoPrecio === 'MENOR' || (updates.tipoPrecio as string) === 'MERCADO') {
-            merged.precioUnitario = match.variant.precioMenor
-          }
-        }
-      }
-
-      return merged
-    }))
-  }
-
-  // Cálculos dinámicos
-  const formSubtotalCalculado = useMemo(() => {
-    return formItems.reduce((sum, it) => {
-      const u = Number(it.precioUnitario) || 0
-      const pack = Number(it.costoPackaging) || 0
-      const q = Math.max(1, Number(it.cantidad) || 1)
-      return sum + ((u + pack) * q)
-    }, 0)
-  }, [formItems])
-
-  const formTotalCalculado = useMemo(() => {
-    const env = Number(formCostoEnvio) || 0
-    return Number((formSubtotalCalculado + env).toFixed(2))
-  }, [formSubtotalCalculado, formCostoEnvio])
-
-  const formSaldoPendienteCalculado = useMemo(() => {
-    const pag = Number(formMontoPagado) || 0
-    return Math.max(0, Number((formTotalCalculado - pag).toFixed(2)))
-  }, [formTotalCalculado, formMontoPagado])
 
   // Submit Handler
   const handleSubmitNuevoPedido = async (e: React.FormEvent) => {
@@ -448,23 +200,44 @@ export function RegisterMultiProductOrderModal({
     }
   }
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="max-w-4xl w-full bg-background border border-border rounded-2xl shadow-2xl overflow-hidden max-h-[95dvh] sm:max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200 relative">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div
+        className="max-w-4xl w-full bg-card border border-border/80 rounded-2xl shadow-xl overflow-hidden max-h-[92dvh] sm:max-h-[88vh] flex flex-col animate-in zoom-in-95 duration-150 relative text-foreground"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-5 border-b border-border bg-card/50 flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 border-b border-border/60 bg-card/95 backdrop-blur-xs flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 text-primary p-2 rounded-xl">
-              <Boxes className="h-5 w-5" />
+              <Boxes className="h-4 w-4" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-foreground">
+              <h3 className="text-base font-semibold tracking-tight text-foreground">
                 Registrar Pedido Multiproducto
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Agrega 1 o más modelos a este pedido, asigna filamentos y calcula el balance automáticamente.
+                Agrega modelos a este pedido, asigna filamentos y calcula el balance automáticamente.
               </p>
             </div>
           </div>
@@ -472,10 +245,10 @@ export function RegisterMultiProductOrderModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="h-8 w-8 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer border border-border/60 flex items-center justify-center"
             title="Cerrar modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -517,14 +290,14 @@ export function RegisterMultiProductOrderModal({
             />
 
             {/* SECCIÓN 2: PRODUCTOS DEL PEDIDO */}
-            <div className="bg-card/70 border border-border rounded-xl p-5 mb-5 space-y-4 shadow-sm">
-              <div className="flex items-center justify-between pb-3 border-b border-border">
+            <div className="bg-card border border-border/60 rounded-xl p-4 sm:p-5 mb-4 space-y-3.5 shadow-none">
+              <div className="flex items-center justify-between pb-3 border-b border-border/60">
                 <div className="flex items-center">
-                  <span className="bg-primary/10 text-primary font-bold text-xs w-6 h-6 rounded-full inline-flex items-center justify-center mr-2 shrink-0">
+                  <span className="bg-primary/10 text-primary font-medium text-xs w-5 h-5 rounded-md inline-flex items-center justify-center mr-2 shrink-0">
                     2
                   </span>
-                  <span className="text-xs font-extrabold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
                     Productos del Pedido ({formItems.length})
                   </span>
                 </div>
@@ -533,15 +306,15 @@ export function RegisterMultiProductOrderModal({
                 <button
                   type="button"
                   onClick={addItem}
-                  className="border border-primary/30 text-primary hover:bg-primary/10 font-medium text-xs px-3.5 py-2 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="h-8 px-3 rounded-lg border border-border/60 bg-background hover:bg-muted text-xs font-medium text-foreground transition-colors cursor-pointer flex items-center gap-1.5"
                 >
                   <Plus className="h-3.5 w-3.5" />
-                  <span>+ Agregar Otro Producto</span>
+                  <span>+ Agregar Producto</span>
                 </button>
               </div>
 
               {/* Lista de Tarjetas de Producto Modulares */}
-              <div className="space-y-3.5">
+              <div className="space-y-3">
                 {formItems.map((item, index) => (
                   <OrderItemCard
                     key={item.id}
@@ -560,35 +333,35 @@ export function RegisterMultiProductOrderModal({
             </div>
 
             {/* SECCIÓN 2.5: CAJA DE PACKAGING & DESCUENTO DE STOCK */}
-            <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+            <div className="bg-card border border-border/60 rounded-xl p-4 space-y-3 shadow-none">
               <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-foreground">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
                   <input
                     type="checkbox"
                     checked={formHasCaja}
                     onChange={(e) => setFormHasCaja(e.target.checked)}
-                    className="w-4 h-4 rounded text-primary focus:ring-primary border-border cursor-pointer"
+                    className="w-4 h-4 rounded text-primary focus:ring-ring border-border/80 cursor-pointer"
                   />
-                  <span>📦 Incluir Caja de Packaging (Descuenta del Stock de Cajas)</span>
+                  <span>Incluir Caja de Packaging (descuenta stock)</span>
                 </label>
 
                 {formHasCaja && (
-                  <Badge variant="outline" className="text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 tabular-nums">
                     Costo: S/ {(formCajasCantidad * (stockCajas?.lotes.find(l => l.id === formCajasLotId)?.costoUnitario || 2.40)).toFixed(2)}
-                  </Badge>
+                  </span>
                 )}
               </div>
 
               {formHasCaja && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   <div className="sm:col-span-2 space-y-1">
-                    <label className="text-[11px] font-semibold text-muted-foreground block">
+                    <label className="text-[11px] font-medium text-muted-foreground block">
                       Lote de Cajas Registrado
                     </label>
                     <select
                       value={formCajasLotId}
                       onChange={(e) => setFormCajasLotId(e.target.value)}
-                      className="w-full h-9 rounded-lg border border-border bg-background px-2.5 text-xs text-foreground focus:outline-hidden"
+                      className="w-full h-9 rounded-lg border border-border/80 bg-background px-2.5 text-xs text-foreground focus:outline-hidden"
                     >
                       {(stockCajas?.lotes || []).map((lote) => {
                         const code = lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
@@ -602,7 +375,7 @@ export function RegisterMultiProductOrderModal({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-muted-foreground block">
+                    <label className="text-[11px] font-medium text-muted-foreground block">
                       Cantidad Cajas
                     </label>
                     <input
@@ -611,7 +384,7 @@ export function RegisterMultiProductOrderModal({
                       max="50"
                       value={formCajasCantidad}
                       onChange={(e) => setFormCajasCantidad(Math.max(1, Number(e.target.value) || 1))}
-                      className="w-full h-9 rounded-lg border border-border bg-background text-center text-xs font-mono font-bold text-foreground focus:outline-hidden"
+                      className="w-full h-9 rounded-lg border border-border/80 bg-background text-center text-xs font-mono font-semibold text-foreground focus:outline-hidden tabular-nums"
                     />
                   </div>
                 </div>
@@ -633,61 +406,63 @@ export function RegisterMultiProductOrderModal({
             />
           </div>
 
-          {/* Sticky Bottom Footer Flotante con Backdrop Blur y Sombra Hacia Arriba */}
-          <div className="sticky bottom-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-md border-t border-slate-200/80 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-4 sm:px-6 py-3 sm:py-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+          {/* Sticky Bottom Footer Flotante con Backdrop Blur */}
+          <div className="sticky bottom-0 left-0 right-0 z-20 bg-muted/20 backdrop-blur-md border-t border-border/60 px-4 sm:px-6 py-3 sm:py-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
             {/* Izquierda: Balance Estructurado */}
             <div className="flex items-center gap-3 flex-wrap">
               {/* Indicador Secundario de Total */}
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
                 <span>Total:</span>
-                <span className="font-mono font-bold text-foreground text-sm">
+                <span className="font-mono font-semibold text-foreground text-sm tabular-nums tracking-tight">
                   {formatCurrency(formTotalCalculado)}
                 </span>
               </div>
 
               {/* Separador Visual */}
-              <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+              <div className="h-4 w-px bg-border/60 hidden sm:block" />
 
               {/* Badge Destacado de Saldo por Cobrar */}
               {formSaldoPendienteCalculado > 0 ? (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 shadow-2xs">
-                  <span className="text-xs font-semibold">Saldo por Cobrar:</span>
-                  <span className="font-mono font-black text-sm text-amber-800">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+                  <span className="text-xs font-medium">Saldo por Cobrar:</span>
+                  <span className="font-mono font-semibold text-sm tabular-nums tracking-tight">
                     {formatCurrency(formSaldoPendienteCalculado)}
                   </span>
                 </div>
               ) : (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 shadow-2xs">
-                  <Check className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="text-xs font-bold">Pagado</span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                  <Check className="h-3.5 w-3.5" />
+                  <span className="text-xs font-medium">Pagado</span>
                 </div>
               )}
             </div>
 
             {/* Derecha: Botón Cancelar y Botón Principal Guardar Pedido */}
-            <div className="flex items-center gap-2.5 justify-end">
+            <div className="flex items-center gap-2 justify-end">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                size="sm"
                 onClick={onClose}
-                className="border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl px-4 py-2 text-xs font-semibold cursor-pointer transition-colors"
+                className="text-muted-foreground hover:text-foreground h-8 px-3 text-xs font-medium cursor-pointer"
               >
                 Cancelar
               </Button>
 
               <Button
                 type="submit"
+                size="sm"
                 disabled={isSubmitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-5 py-2.5 rounded-xl shadow-md shadow-primary/20 transition-all active:scale-[0.98] text-xs cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                className="h-8 px-4 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs shadow-none cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <>
-                    <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full mr-2" />
+                    <span className="animate-spin inline-block w-3 h-3 border-2 border-primary-foreground border-t-transparent rounded-full mr-1.5" />
                     <span>Guardando...</span>
                   </>
                 ) : (
                   <>
-                    <Check className="h-4 w-4 mr-2 shrink-0 stroke-[2.5]" />
+                    <Check className="h-3.5 w-3.5" />
                     <span>Guardar Pedido</span>
                   </>
                 )}

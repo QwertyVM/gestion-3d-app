@@ -69,7 +69,7 @@ export function PackagingClient({ initialStockCajas }: PackagingClientProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
           <Link href="/pedidos">
             <Button
               variant="outline"
@@ -86,7 +86,7 @@ export function PackagingClient({ initialStockCajas }: PackagingClientProps) {
             className="h-9 px-4 text-xs font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-[0.98] border-0"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>+ Registrar Compra de Cajas</span>
+            <span>Registrar Compra de Cajas</span>
           </Button>
         </div>
       </div>
@@ -103,14 +103,15 @@ export function PackagingClient({ initialStockCajas }: PackagingClientProps) {
               setActiveTab('LOTES')
               setSelectedLotFilter(null)
             }}
-            className={`flex items-center gap-2 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeTab === 'LOTES'
                 ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
           >
             <Package className="w-4 h-4" />
-            <span>Catálogo de Lotes & Tipos de Caja</span>
+            <span className="hidden sm:inline">Catálogo de Lotes & Tipos de Caja</span>
+            <span className="sm:hidden">Lotes & Cajas</span>
             <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
               activeTab === 'LOTES' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
             }`}>
@@ -121,14 +122,15 @@ export function PackagingClient({ initialStockCajas }: PackagingClientProps) {
           <button
             type="button"
             onClick={() => setActiveTab('PEDIDOS')}
-            className={`flex items-center gap-2 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 sm:gap-2 py-2 px-3 text-xs font-bold rounded-xl transition-all cursor-pointer ${
               activeTab === 'PEDIDOS'
                 ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
           >
             <History className="w-4 h-4" />
-            <span>Trazabilidad de Asignaciones</span>
+            <span className="hidden sm:inline">Trazabilidad de Asignaciones</span>
+            <span className="sm:hidden">Asignaciones</span>
             <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
               activeTab === 'PEDIDOS' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
             }`}>

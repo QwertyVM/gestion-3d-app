@@ -23,7 +23,7 @@ export function CategorySearchBar({
   vaciasCount
 }: CategorySearchBarProps) {
   return (
-    <div className="w-full bg-card border border-border rounded-2xl p-3 shadow-2xs mb-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+    <div className="w-full bg-card border border-border/60 rounded-xl p-3 shadow-none mb-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
       {/* Izquierda: Buscador elástico */}
       <div className="relative flex-1 max-w-md w-full">
         <Search className="left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none absolute" />
@@ -32,13 +32,13 @@ export function CategorySearchBar({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Buscar por nombre, descripción o modelo..."
-          className="h-10 w-full rounded-xl border border-input bg-background pl-10 pr-9 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-2xs outline-none transition-all"
+          className="h-9 w-full rounded-lg border border-border/80 bg-background pl-9 pr-8 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring outline-none transition-colors"
         />
         {search && (
           <button
             type="button"
             onClick={() => onSearchChange('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-lg transition-colors cursor-pointer"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-md transition-colors cursor-pointer"
             title="Limpiar búsqueda"
             aria-label="Limpiar búsqueda"
           >
@@ -48,19 +48,19 @@ export function CategorySearchBar({
       </div>
 
       {/* Derecha: Segmented control de estados */}
-      <div className="bg-secondary/80 border border-border/70 p-1 rounded-xl flex items-center gap-1 shrink-0 overflow-x-auto">
+      <div className="bg-muted/40 border border-border/60 p-0.5 rounded-lg flex items-center gap-0.5 shrink-0 overflow-x-auto">
         {/* Todas */}
         <button
           type="button"
           onClick={() => onTabChange('todas')}
-          className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
+          className={`text-xs px-2.5 py-1 rounded-md flex items-center justify-center cursor-pointer transition-colors ${
             activeTab === 'todas'
-              ? 'bg-card text-foreground font-bold shadow-xs'
+              ? 'bg-background text-foreground font-medium shadow-none'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <span>Todas</span>
-          <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-foreground">
+          <span className="ml-1.5 px-1.5 py-0.2 rounded text-[10px] font-mono tabular-nums bg-muted text-muted-foreground">
             {totalCount}
           </span>
         </button>
@@ -69,14 +69,14 @@ export function CategorySearchBar({
         <button
           type="button"
           onClick={() => onTabChange('con_modelos')}
-          className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
+          className={`text-xs px-2.5 py-1 rounded-md flex items-center justify-center cursor-pointer transition-colors ${
             activeTab === 'con_modelos'
-              ? 'bg-card text-foreground font-bold shadow-xs'
+              ? 'bg-background text-foreground font-medium shadow-none'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <span>Con Modelos</span>
-          <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-foreground">
+          <span className="ml-1.5 px-1.5 py-0.2 rounded text-[10px] font-mono tabular-nums bg-muted text-muted-foreground">
             {conModelosCount}
           </span>
         </button>
@@ -85,14 +85,14 @@ export function CategorySearchBar({
         <button
           type="button"
           onClick={() => onTabChange('vacias')}
-          className={`text-xs px-3 py-1.5 rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
+          className={`text-xs px-2.5 py-1 rounded-md flex items-center justify-center cursor-pointer transition-colors ${
             activeTab === 'vacias'
-              ? 'bg-card text-foreground font-bold shadow-xs'
+              ? 'bg-background text-foreground font-medium shadow-none'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
           <span>Vacías</span>
-          <span className="ml-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-foreground">
+          <span className="ml-1.5 px-1.5 py-0.2 rounded text-[10px] font-mono tabular-nums bg-muted text-muted-foreground">
             {vaciasCount}
           </span>
         </button>

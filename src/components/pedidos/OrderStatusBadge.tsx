@@ -21,61 +21,62 @@ export const ESTADO_PEDIDO_CONFIG: Record<EstadoPedido, EstadoConfig> = {
   EN_PRODUCCION: {
     label: 'Imprimiendo',
     badgeClass:
-      'bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-500/20',
-    dotClass: 'bg-blue-600'
+      'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+    dotClass: 'bg-blue-500'
   },
   EN_TALLER: {
     label: 'En taller',
     badgeClass:
-      'bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border-indigo-500/20',
-    dotClass: 'bg-indigo-600'
+      'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    dotClass: 'bg-amber-500'
   },
   EMPAQUETANDO: {
     label: 'Empaquetando',
     badgeClass:
-      'bg-orange-500/10 text-orange-800 dark:text-orange-200 border-orange-500/25',
-    dotClass: 'bg-orange-500'
+      'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    dotClass: 'bg-amber-500'
   },
   ENTREGADO: {
     label: 'Entregado',
     badgeClass:
-      'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border-emerald-500/25',
-    dotClass: 'bg-emerald-600'
+      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    dotClass: 'bg-emerald-500'
   },
   LISTO_ENTREGA: {
     label: 'Por Entregar',
     badgeClass:
-      'bg-purple-500/10 text-purple-800 dark:text-purple-200 border-purple-500/25',
-    dotClass: 'bg-purple-500'
+      'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+    dotClass: 'bg-blue-500'
   },
   CANCELADO: {
     label: 'Cancelado',
     badgeClass:
-      'bg-destructive/10 text-destructive border-destructive/25',
-    dotClass: 'bg-destructive'
+      'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+    dotClass: 'bg-rose-500'
   },
   PENDIENTE: {
     label: 'Pendiente',
     badgeClass:
-      'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/25',
+      'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
     dotClass: 'bg-amber-500'
   },
   PAGO_VALIDADO: {
     label: 'Pago Validado',
     badgeClass:
-      'bg-teal-500/10 text-teal-800 dark:text-teal-300 border-teal-500/20',
-    dotClass: 'bg-teal-500'
+      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    dotClass: 'bg-emerald-500'
   }
 }
 
 // Estados operativos ordenados para el dropdown
 export const ESTADOS_ORDENADOS: EstadoPedido[] = [
+  'PENDIENTE',
+  'PAGO_VALIDADO',
   'EN_PRODUCCION',
   'EN_TALLER',
   'EMPAQUETANDO',
+  'LISTO_ENTREGA',
   'ENTREGADO',
-  'PENDIENTE',
-  'PAGO_VALIDADO',
   'CANCELADO'
 ]
 
@@ -127,13 +128,13 @@ export function OrderStatusBadge({
     return (
       <div
         className={cn(
-          'rounded-lg px-2.5 py-1 text-xs font-semibold border inline-flex items-center gap-1.5 select-none shadow-2xs',
+          'rounded-md px-2 py-0.5 text-[11px] font-medium border inline-flex items-center gap-1.5 select-none',
           currentConfig.badgeClass,
           className
         )}
       >
         {showSpinner ? (
-          <Loader2 className="w-3 h-3 animate-spin shrink-0 text-current" />
+          <Loader2 className="w-2.5 h-2.5 animate-spin shrink-0 text-current" />
         ) : (
           <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', currentConfig.dotClass)} />
         )}
@@ -152,7 +153,7 @@ export function OrderStatusBadge({
           disabled={disabled || showSpinner}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            'rounded-lg px-2.5 py-1 text-xs font-semibold border inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-all select-none shadow-2xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+            'rounded-md px-2 py-0.5 text-[11px] font-medium border inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-all select-none outline-none focus-visible:ring-1 focus-visible:ring-ring',
             currentConfig.badgeClass,
             showSpinner && 'opacity-85 pointer-events-none'
           )}

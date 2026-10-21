@@ -154,7 +154,7 @@ export function PackagingKpis({ stockCajas }: PackagingKpisProps) {
             </div>
 
             <div className="mt-2.5 flex items-center gap-2">
-              <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+              <div className="w-full bg-muted/80 border border-border/50 h-2 rounded-full overflow-hidden">
                 <div
                   className="bg-primary h-full transition-all duration-500 rounded-full"
                   style={{

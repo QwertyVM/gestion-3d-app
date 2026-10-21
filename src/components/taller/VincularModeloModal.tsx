@@ -91,39 +91,39 @@ export function VincularModeloModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border border-border rounded-2xl p-6 sm:max-w-md w-full shadow-lg gap-5">
-        <DialogHeader className="gap-1.5 text-left">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border bg-primary/10 border-primary/20 text-primary">
+      <DialogContent className="bg-card text-foreground border border-border/80 rounded-2xl p-6 sm:max-w-md w-full shadow-xl gap-4">
+        <DialogHeader className="gap-1 text-left">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border bg-primary/10 border-primary/20 text-primary">
               <Link2 className="w-3.5 h-3.5" />
             </div>
-            <DialogTitle className="text-base font-bold text-foreground">
+            <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
               {pieza.enlaceMakerworld ? 'Editar Enlace del Modelo 3D' : 'Vincular Enlace al Modelo 3D'}
             </DialogTitle>
           </div>
-          <DialogDescription className="text-xs text-muted-foreground">
+          <DialogDescription className="text-xs text-muted-foreground mt-0.5">
             Asocia la URL directa (MakerWorld, Printables, Drive, etc.) para abrir los archivos de impresión con un solo clic desde el taller.
           </DialogDescription>
         </DialogHeader>
 
         {/* Ficha Resumen del Modelo */}
-        <div className="bg-card border border-border rounded-xl p-3.5 space-y-2.5 shadow-2xs">
+        <div className="bg-muted/20 border border-border/50 rounded-xl p-3.5 space-y-2.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
                 {pieza.lineaCategoria || 'Modelo 3D'}
               </span>
-              <p className="text-sm font-bold text-foreground truncate mt-0.5" title={pieza.nombreModelo}>
+              <p className="text-sm font-semibold text-foreground truncate mt-0.5" title={pieza.nombreModelo}>
                 {pieza.nombreModelo}
               </p>
             </div>
-            <span className="bg-accent/60 text-accent-foreground font-mono text-[11px] font-bold px-2 py-0.5 rounded-md border border-border/60 shrink-0">
+            <span className="bg-muted/60 text-muted-foreground font-mono tabular-nums text-[11px] font-medium px-2 py-0.5 rounded-md border border-border/50 shrink-0">
               #{pieza.codigoRef.replace(/^#/, '')}
             </span>
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-xs font-semibold text-muted-foreground">
+            <span className="font-mono tabular-nums text-xs font-semibold text-muted-foreground">
               x{pieza.cantidad}
             </span>
             <FilamentDotsGroup
@@ -133,7 +133,7 @@ export function VincularModeloModal({
               tipoMaterial={pieza.tipoMaterial}
             />
             {pieza.personalizacion && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-500 font-medium italic truncate max-w-[150px]">
+              <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 font-medium italic truncate max-w-[150px]">
                 <Sparkles className="w-2.5 h-2.5 shrink-0" />
                 {pieza.personalizacion}
               </span>
@@ -142,13 +142,13 @@ export function VincularModeloModal({
 
           {/* Enlace actual activo */}
           {pieza.enlaceMakerworld && (
-            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs">
+            <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs">
               <span className="text-muted-foreground truncate">Enlace actual:</span>
               <a
                 href={pieza.enlaceMakerworld}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:underline max-w-[200px] truncate"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline max-w-[200px] truncate"
               >
                 <ExternalLink className="w-3 h-3 shrink-0" />
                 <span className="truncate">{pieza.enlaceMakerworld}</span>
@@ -160,7 +160,7 @@ export function VincularModeloModal({
         {/* Input de URL */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold text-foreground">
+            <Label className="text-xs font-medium text-foreground">
               URL del Repositorio o Archivo 3D
             </Label>
             <Button
@@ -181,7 +181,7 @@ export function VincularModeloModal({
               placeholder="https://makerworld.com/..., https://cults3d.com/..."
               value={enlace}
               onChange={(e) => setEnlace(e.target.value)}
-              className="h-10 text-xs bg-card border-border rounded-xl pr-8"
+              className="h-9 text-xs bg-background border-border/80 rounded-lg pr-8"
             />
             {enlace && (
               <button
@@ -195,14 +195,14 @@ export function VincularModeloModal({
             )}
           </div>
 
-          {/* Botones de Ayuda de Búsqueda Rápida (para no buscar manual) */}
+          {/* Botones de Ayuda de Búsqueda Rápida */}
           <div className="pt-1 flex items-center gap-2 flex-wrap text-xs">
             <span className="text-[11px] text-muted-foreground">Buscar rápido:</span>
             <a
               href={makerworldSearchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/20 transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/20 transition-colors"
               title={`Buscar "${baseName}" directamente en MakerWorld`}
             >
               <Search className="w-3 h-3" />
@@ -212,7 +212,7 @@ export function VincularModeloModal({
               href={cults3dSearchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-700 dark:text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/20 transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-purple-600 dark:text-purple-400 bg-purple-500/10 hover:bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/20 transition-colors"
               title={`Buscar "${baseName}" directamente en Cults3D`}
             >
               <Search className="w-3 h-3" />
@@ -222,7 +222,7 @@ export function VincularModeloModal({
               href={catalogoSearchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 px-2 py-0.5 rounded-md border border-border transition-colors"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground bg-muted/60 hover:bg-muted px-2 py-0.5 rounded-md border border-border/50 transition-colors"
               title="Buscar en Catálogo de productos"
             >
               <Boxes className="w-3 h-3" />
@@ -236,7 +236,7 @@ export function VincularModeloModal({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="mt-2 pt-3 border-t border-border/80 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
+        <DialogFooter className="mt-2 pt-3 border-t border-border/60 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             {pieza.enlaceMakerworld && (
               <Button
@@ -245,7 +245,7 @@ export function VincularModeloModal({
                 size="sm"
                 disabled={isLoading}
                 onClick={handleClear}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs h-9 px-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs h-8 px-2.5 rounded-lg flex items-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Desvincular</span>
@@ -256,18 +256,20 @@ export function VincularModeloModal({
           <div className="flex items-center justify-end gap-2">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              size="sm"
               disabled={isLoading}
               onClick={() => onOpenChange(false)}
-              className="rounded-xl border-border text-muted-foreground hover:text-foreground hover:bg-secondary text-xs h-9 px-4 cursor-pointer"
+              className="rounded-lg text-muted-foreground hover:text-foreground text-xs h-8 px-3 cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               type="button"
+              size="sm"
               disabled={isLoading || (!enlace.trim() && !pieza.enlaceMakerworld)}
               onClick={handleSave}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-9 px-4 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 cursor-pointer"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-8 px-4 rounded-lg cursor-pointer flex items-center gap-1.5"
             >
               {isLoading ? (
                 <>

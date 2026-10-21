@@ -1,12 +1,15 @@
 'use client'
 
 import React from 'react'
+import { DollarSign, Sparkles } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 
 interface OrderFinancialSummaryProps {
   costoEnvio: string
   setCostoEnvio: (val: string) => void
+  formMontoPagado: string
+  setFormMontoPagado: (val: string) => void
   subtotalItems: number
   nuevoTotal: number
   saldoPendiente: number
@@ -18,6 +21,8 @@ interface OrderFinancialSummaryProps {
 export function OrderFinancialSummary({
   costoEnvio,
   setCostoEnvio,
+  formMontoPagado,
+  setFormMontoPagado,
   subtotalItems,
   nuevoTotal,
   saldoPendiente,
@@ -26,14 +31,14 @@ export function OrderFinancialSummary({
   formatCurrency
 }: OrderFinancialSummaryProps) {
   return (
-    <div className="bg-card border border-border rounded-xl p-3 space-y-1.5 shadow-2xs">
-      <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-3 text-xs">
-        {/* Izquierda: Costo de Envío / Flete */}
-        <div className="flex items-center gap-2">
-          <Label className="text-xs font-medium text-foreground shrink-0">
-            Envío / Flete:
+    <div className="bg-card border border-border rounded-xl p-3.5 space-y-3 shadow-2xs">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+        {/* Costo de Envío (3 cols) */}
+        <div className="lg:col-span-3 flex items-center gap-2">
+          <Label className="text-xs font-semibold text-muted-foreground shrink-0 uppercase tracking-wider">
+            Envío:
           </Label>
-          <div className="flex items-center gap-1 font-mono">
+          <div className="flex items-center gap-1 font-mono flex-1">
             <span className="text-muted-foreground text-xs">S/</span>
             <Input
               type="number"
@@ -42,20 +47,33 @@ export function OrderFinancialSummary({
               value={costoEnvio}
               onFocus={(e) => e.target.select()}
               onChange={(e) => setCostoEnvio(e.target.value)}
-              className="w-20 h-7 text-xs font-mono font-bold bg-background border-input rounded-md px-2 text-right focus-visible:ring-1 focus-visible:ring-primary"
+              className="h-8 text-xs font-mono font-bold bg-background border-input rounded-lg px-2 text-right focus-visible:ring-1 focus-visible:ring-primary w-full"
             />
           </div>
         </div>
 
-        {/* Centro: Abonos registrados */}
-        <div className="flex items-center gap-1.5">
-          <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded border border-border text-[11px] font-mono">
-            Abonos registrados ({totalPagosCount}): {formatCurrency(montoPagado)}
-          </span>
+        {/* Abono / Monto Pagado (4 cols) */}
+        <div className="lg:col-span-4 flex items-center gap-2">
+          <Label className="text-xs font-semibold text-muted-foreground shrink-0 uppercase tracking-wider flex items-center gap-1">
+            <DollarSign className="h-3 w-3 text-primary" />
+            Pagado:
+          </Label>
+          <div className="flex items-center gap-1 font-mono flex-1">
+            <span className="text-muted-foreground text-xs">S/</span>
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formMontoPagado}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setFormMontoPagado(e.target.value)}
+              className="h-8 text-xs font-mono font-bold text-primary bg-background border-input rounded-lg px-2 text-right focus-visible:ring-1 focus-visible:ring-primary w-full"
+            />
+          </div>
         </div>
 
-        {/* Derecha: Balance contable en 1 sola línea compacta */}
-        <div className="flex items-center gap-2 font-mono text-xs flex-wrap md:flex-nowrap">
+        {/* Balance contable (5 cols) */}
+        <div className="lg:col-span-5 flex items-center justify-start lg:justify-end gap-2 font-mono text-xs flex-wrap">
           <span className="text-muted-foreground">
             Subtotal: <strong className="text-foreground font-semibold">{formatCurrency(subtotalItems)}</strong>
           </span>
@@ -70,10 +88,45 @@ export function OrderFinancialSummary({
         </div>
       </div>
 
-      {/* Leyenda micro-copy tenue de 1 sola línea */}
-      <p className="text-[10px] text-muted-foreground text-center md:text-right">
-        Los abonos previos se conservan; el saldo se recalcula automáticamente si cambia el total.
-      </p>
+      {/* Chips de Acción Rápida: [ 50% Anticipo ], [ Pago 100% Total ], [ S/ 0 Contraentrega ] */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/50">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1 mr-1">
+            <Sparkles className="h-3 w-3 text-primary" />
+            Atajos de Pago:
+          </span>
+          <button
+            type="button"
+            title={`50% Anticipo (S/ ${(nuevoTotal * 0.5).toFixed(2)})`}
+            onClick={() => setFormMontoPagado((nuevoTotal * 0.5).toFixed(2))}
+            className="text-xs py-1 px-2.5 rounded-lg font-medium bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer"
+          >
+            50% Anticipo
+          </button>
+          <button
+            type="button"
+            title={`Pago 100% Total (S/ ${nuevoTotal.toFixed(2)})`}
+            onClick={() => setFormMontoPagado(nuevoTotal.toFixed(2))}
+            className="text-xs py-1 px-2.5 rounded-lg font-semibold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors cursor-pointer"
+          >
+            Pago 100% Total
+          </button>
+          <button
+            type="button"
+            title="S/ 0 Contraentrega"
+            onClick={() => setFormMontoPagado('0')}
+            className="text-xs py-1 px-2.5 rounded-lg font-medium bg-muted hover:bg-muted/80 text-muted-foreground border border-border transition-colors cursor-pointer"
+          >
+            S/ 0 Contraentrega
+          </button>
+        </div>
+
+        {totalPagosCount > 0 && (
+          <span className="text-[10px] font-mono text-muted-foreground">
+            {totalPagosCount} {totalPagosCount === 1 ? 'abono registrado' : 'abonos registrados'} en historial ({formatCurrency(montoPagado)})
+          </span>
+        )}
+      </div>
     </div>
   )
 }

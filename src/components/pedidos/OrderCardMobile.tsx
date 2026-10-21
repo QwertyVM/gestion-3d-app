@@ -84,17 +84,25 @@ export function OrderCardMobile({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelectPedido(pedido)}
-      className="p-3.5 sm:p-4 bg-card rounded-2xl border border-border/80 shadow-2xs hover:border-primary/50 transition-all cursor-pointer space-y-3"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelectPedido(pedido)
+        }
+      }}
+      className="p-3.5 bg-card rounded-xl border border-border/60 shadow-none hover:border-border transition-colors cursor-pointer space-y-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       {/* 1. Header: Código, Canal, Fecha y Estado interactivo */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-xs font-black text-foreground tracking-tight">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-mono text-xs font-semibold text-foreground tracking-tight">
               {codigoLabel}
             </span>
-            <span className="text-[10px] font-semibold bg-secondary border border-border/70 text-foreground px-2 py-0.5 rounded-md">
+            <span className="text-[10px] font-medium bg-muted/60 border border-border/50 text-muted-foreground px-1.5 py-0.5 rounded-md">
               {pedido.canalVenta || 'Directo'}
             </span>
           </div>
@@ -114,7 +122,7 @@ export function OrderCardMobile({
 
       {/* 2. Cliente y Canales de Contacto Directo */}
       <div className="pt-0.5 flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-sm font-bold text-foreground leading-snug truncate max-w-[220px]">
+        <span className="text-sm font-medium text-foreground leading-snug truncate max-w-[220px]">
           {pedido.cliente}
         </span>
 
@@ -124,10 +132,10 @@ export function OrderCardMobile({
               href={getInstagramUrl(pedido.handleSocial)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1 bg-secondary/80 px-2 py-0.5 rounded-lg border border-border/60 transition-colors"
+              className="text-[11px] font-medium text-muted-foreground hover:text-foreground flex items-center gap-1 bg-muted/40 hover:bg-muted/70 px-2 py-0.5 rounded-md border border-border/50 transition-colors"
               title={`Abrir perfil @${pedido.handleSocial.replace(/^@/, '')}`}
             >
-              <InstagramIcon className="h-3 w-3 text-primary shrink-0" />
+              <InstagramIcon className="h-3 w-3 shrink-0" />
               <span>@{pedido.handleSocial.replace(/^@/, '')}</span>
             </a>
           )}
@@ -137,10 +145,10 @@ export function OrderCardMobile({
               href={getWhatsAppUrl(pedido.telefono, pedido.cliente, codigoLabel)}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300 hover:underline flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/20 transition-colors"
+              className="text-[11px] font-medium text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 px-2 py-0.5 rounded-md border border-border/50 transition-colors flex items-center gap-1"
               title="Abrir chat de WhatsApp"
             >
-              <MessageCircle className="h-3 w-3 fill-emerald-600 text-emerald-600 shrink-0" />
+              <MessageCircle className="h-3 w-3 text-muted-foreground shrink-0" />
               <span>{pedido.telefono}</span>
             </a>
           )}
@@ -148,20 +156,20 @@ export function OrderCardMobile({
       </div>
 
       {/* 3. Productos del Pedido y Filamentos */}
-      <div className="p-2.5 rounded-xl bg-secondary/40 border border-border/60 space-y-1.5">
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-semibold">
+      <div className="p-2.5 rounded-lg bg-muted/20 border border-border/40 space-y-1.5">
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground font-medium">
           <span className="flex items-center gap-1">
-            <ShoppingBag className="w-3 h-3 text-primary" />
+            <ShoppingBag className="w-3 h-3 text-muted-foreground" />
             <span>Productos ({totalPiezas} {totalPiezas === 1 ? 'pieza' : 'piezas'})</span>
           </span>
-          <span className="text-[10px] font-mono">{consolidatedItems.length} {consolidatedItems.length === 1 ? 'modelo' : 'modelos'}</span>
+          <span className="text-[10px] font-mono tabular-nums">{consolidatedItems.length} {consolidatedItems.length === 1 ? 'modelo' : 'modelos'}</span>
         </div>
 
         <div className="space-y-1">
           {consolidatedItems.slice(0, 3).map((item, idx) => (
             <div key={idx} className="flex items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-mono text-[11px] font-bold text-foreground shrink-0">
+                <span className="font-mono text-[11px] font-medium text-muted-foreground shrink-0 tabular-nums">
                   {item.cantidadTotal}×
                 </span>
                 <span className="text-foreground truncate" title={item.nombre}>
@@ -190,14 +198,14 @@ export function OrderCardMobile({
       {/* 4. Entrega, Destino y Packaging */}
       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         {pedido.diaEntregaPrometida && (
-          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/25 px-2 py-0.5 rounded-md font-medium text-[11px]">
-            <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md font-medium text-[11px]">
+            <Clock className="w-3 h-3 text-amber-500 shrink-0" />
             <span>{formatDiaPromesaDisplay(pedido.diaEntregaPrometida)}</span>
           </span>
         )}
 
         {pedido.destinoEnvio && (
-          <span className="inline-flex items-center gap-1 bg-secondary text-foreground border border-border/70 px-2 py-0.5 rounded-md text-[11px] truncate max-w-[200px]">
+          <span className="inline-flex items-center gap-1 bg-muted/50 text-foreground border border-border/50 px-2 py-0.5 rounded-md text-[11px] truncate max-w-[200px]">
             <MapPin className="w-3 h-3 text-muted-foreground shrink-0" />
             <span className="truncate">{pedido.destinoEnvio}</span>
           </span>
@@ -206,7 +214,7 @@ export function OrderCardMobile({
         {/* Caja de Empaque */}
         <div onClick={(e) => e.stopPropagation()} className="ml-auto">
           {cajasCount > 0 ? (
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-accent text-accent-foreground border border-border/70 px-2 py-0.5 rounded-md">
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-muted/60 text-muted-foreground border border-border/50 px-2 py-0.5 rounded-md font-mono tabular-nums">
               <Package className="w-3 h-3" />
               <span>{cajasCount} {cajasCount === 1 ? 'caja' : 'cajas'}</span>
             </span>
@@ -215,7 +223,7 @@ export function OrderCardMobile({
               <button
                 type="button"
                 onClick={(e) => onQuickAssignBox(pedido.id, e)}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/70 border border-border/50 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
                 title="Asignar caja rápida a este pedido"
               >
                 <Plus className="w-3 h-3" />
@@ -227,20 +235,20 @@ export function OrderCardMobile({
       </div>
 
       {/* 5. Footer: Totales, Pagos y Postventa */}
-      <div className="pt-2 border-t border-border/70 flex items-center justify-between gap-2">
+      <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-2">
         <div className="flex items-baseline gap-2">
-          <span className="font-mono text-sm font-black text-foreground">
+          <span className="font-mono text-sm font-semibold text-foreground tabular-nums tracking-tight">
             {formatCurrency(pedido.total)}
           </span>
 
           {pedido.saldoPendiente > 0 ? (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20 text-[10px] font-bold">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 tabular-nums">
               Resta {formatCurrency(pedido.saldoPendiente)}
-            </Badge>
+            </span>
           ) : (
-            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20 text-[10px] font-bold">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               100% Pagado
-            </Badge>
+            </span>
           )}
         </div>
 
@@ -249,10 +257,10 @@ export function OrderCardMobile({
           <button
             type="button"
             onClick={(e) => onTogglePostventa(pedido.id, !pedido.seguimientoPostventa, e)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
               hasPendingPostventa
-                ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30 shadow-2xs hover:bg-amber-500/20'
-                : 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/15'
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 hover:bg-amber-500/15'
+                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/15'
             }`}
             title={hasPendingPostventa ? 'Marcar seguimiento postventa completado' : 'Seguimiento postventa completado'}
           >

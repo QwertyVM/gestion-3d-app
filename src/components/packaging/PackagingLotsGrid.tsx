@@ -75,14 +75,14 @@ export function PackagingLotsGrid({
   return (
     <div className="space-y-4">
       {/* BARRA DE FILTROS Y BÚSQUEDA */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border/80 p-3 rounded-2xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card border border-border/60 p-3 rounded-xl">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar por ID (ej. LOT-...), tipo de caja o comprador..."
-            className="pl-9 h-9 text-xs bg-background border-border rounded-xl"
+            className="pl-9 h-9 text-xs bg-background border-border/80 rounded-lg"
           />
         </div>
 
@@ -90,10 +90,10 @@ export function PackagingLotsGrid({
           <button
             type="button"
             onClick={() => setStockFilter('CON_STOCK')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer tabular-nums ${
               stockFilter === 'CON_STOCK'
-                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-                : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/40'
             }`}
           >
             Disponibles ({conStockCount})
@@ -101,10 +101,10 @@ export function PackagingLotsGrid({
           <button
             type="button"
             onClick={() => setStockFilter('AGOTADOS')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer tabular-nums ${
               stockFilter === 'AGOTADOS'
-                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-                : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/40'
             }`}
           >
             Agotados ({agotadosCount})
@@ -112,10 +112,10 @@ export function PackagingLotsGrid({
           <button
             type="button"
             onClick={() => setStockFilter('TODOS')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer tabular-nums ${
               stockFilter === 'TODOS'
-                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-                : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/40'
             }`}
           >
             Todos ({lotes.length})
@@ -125,13 +125,13 @@ export function PackagingLotsGrid({
 
       {/* GRID DE LOTES */}
       {filteredLotes.length === 0 ? (
-        <div className="py-12 px-4 text-center bg-card border border-border/80 rounded-2xl">
-          <Package className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+        <div className="py-12 px-4 text-center bg-card border border-border/60 rounded-xl">
+          <Package className="w-8 h-8 text-muted-foreground/60 mx-auto mb-2" />
           <p className="text-sm font-semibold text-foreground">No se encontraron lotes de cajas</p>
           <p className="text-xs text-muted-foreground mt-0.5">Prueba cambiando los términos de búsqueda o filtros.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {filteredLotes.map((lote) => {
             const isLote50 = lote.id === loteReciente50Id || lote.cantidadComprada === 50
             const isExhausted = lote.stockDisponible <= 0
@@ -142,13 +142,13 @@ export function PackagingLotsGrid({
             return (
               <Card
                 key={lote.id}
-                className={`rounded-2xl transition-all duration-200 border overflow-hidden relative ${
+                className={`rounded-xl transition-colors border overflow-hidden relative shadow-none ${
                   isLote50
-                    ? 'border-primary/50 bg-gradient-to-br from-card via-card to-primary/5 shadow-md ring-1 ring-primary/30'
-                    : 'border-border/80 bg-card hover:border-border shadow-xs'
+                    ? 'border-primary/40 bg-card ring-1 ring-primary/20'
+                    : 'border-border/60 bg-card'
                 }`}
               >
-                <CardContent className="p-4 sm:p-5 flex flex-col justify-between h-full space-y-4">
+                <CardContent className="p-4 sm:p-4.5 flex flex-col justify-between h-full space-y-3.5">
                   {/* Encabezado del Lote */}
                   <div>
                     <div className="flex items-start justify-between gap-2">
@@ -163,17 +163,17 @@ export function PackagingLotsGrid({
                               toast.success(`ID ${code} copiado`)
                             }}
                             title="Haz clic para copiar el ID del lote"
-                            className="font-mono text-[10px] font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/25 px-1.5 py-0.5 rounded-md tracking-wider shrink-0 transition-colors cursor-pointer flex items-center gap-1 group/btn"
+                            className="font-mono text-[10px] text-muted-foreground bg-muted/60 hover:bg-muted border border-border/50 px-1.5 py-0.5 rounded tracking-wider shrink-0 transition-colors cursor-pointer flex items-center gap-1 group/btn"
                           >
                             <span>{lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`}</span>
                             <Copy className="w-2.5 h-2.5 opacity-60 group-hover/btn:opacity-100 transition-opacity" />
                           </button>
-                          <span className="text-sm font-bold text-foreground">
+                          <span className="text-xs font-semibold text-foreground truncate">
                             {lote.concepto}
                           </span>
                           {isLote50 && (
-                            <Badge className="bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">
-                              <Sparkles className="w-3 h-3 mr-1" /> Lote Activo (50)
+                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] font-medium px-1.5 py-0">
+                              <Sparkles className="w-2.5 h-2.5 mr-0.5" /> Lote Activo (50)
                             </Badge>
                           )}
                         </div>
@@ -181,10 +181,10 @@ export function PackagingLotsGrid({
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         <Badge
-                          className={`text-[10px] font-bold shrink-0 ${
+                          className={`text-[10px] font-medium shrink-0 tabular-nums px-2 py-0.5 rounded-md border ${
                             isExhausted
-                              ? 'bg-muted text-muted-foreground border-border'
-                              : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                              ? 'bg-muted/60 text-muted-foreground border-border/50'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                           }`}
                         >
                           {isExhausted ? 'Agotado' : `${lote.stockDisponible} disp.`}
@@ -204,51 +204,51 @@ export function PackagingLotsGrid({
                     </div>
 
                     <div className="flex items-center gap-3 text-[11px] text-muted-foreground mt-1.5 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
+                      <span className="flex items-center gap-1 font-mono tabular-nums">
+                        <Calendar className="w-3 h-3 text-muted-foreground" />
                         {formatDate(lote.fecha)}
                       </span>
                       <span className="flex items-center gap-1">
-                        <User className="w-3 h-3" />
+                        <User className="w-3 h-3 text-muted-foreground" />
                         {lote.persona}
                       </span>
                     </div>
                   </div>
 
                   {/* Cifras Financieras y Costos */}
-                  <div className="grid grid-cols-2 gap-2 bg-muted/40 p-2.5 rounded-xl border border-border/60 text-xs">
+                  <div className="grid grid-cols-2 gap-2 bg-muted/25 p-2.5 rounded-lg border border-border/40 text-xs">
                     <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground block uppercase">
+                      <span className="text-[10px] font-medium text-muted-foreground block uppercase tracking-wider">
                         Costo Unitario
                       </span>
-                      <span className="font-bold text-foreground font-mono text-sm">
+                      <span className="font-semibold text-foreground font-mono tabular-nums text-xs">
                         S/ {lote.costoUnitario.toFixed(2)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-muted-foreground block uppercase">
+                      <span className="text-[10px] font-medium text-muted-foreground block uppercase tracking-wider">
                         Inversión Total
                       </span>
-                      <span className="font-bold text-foreground font-mono text-sm">
+                      <span className="font-semibold text-foreground font-mono tabular-nums text-xs">
                         S/ {lote.costoTotal.toFixed(2)}
                       </span>
                     </div>
                   </div>
 
                   {/* Barra de Progreso y Consumo */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted-foreground font-medium">
-                        Consumo: <strong className="text-foreground">{lote.cajasAsignadasCount}</strong> / {lote.cantidadComprada}
+                      <span className="text-muted-foreground font-normal">
+                        Consumo: <strong className="text-foreground font-mono tabular-nums">{lote.cajasAsignadasCount}</strong> / {lote.cantidadComprada}
                       </span>
-                      <span className="font-mono font-bold text-muted-foreground">
+                      <span className="font-mono tabular-nums font-medium text-muted-foreground">
                         {pctUsado}%
                       </span>
                     </div>
-                    <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-300 ${
-                          isLote50 ? 'bg-primary' : 'bg-foreground/60'
+                          isLote50 ? 'bg-primary' : 'bg-foreground/50'
                         }`}
                         style={{ width: `${pctUsado}%` }}
                       />
@@ -256,14 +256,14 @@ export function PackagingLotsGrid({
                   </div>
 
                   {/* Botón de Asignaciones y Pedidos Vinculados */}
-                  <div className="pt-1">
+                  <div className="pt-0.5">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onSelectLot(lote)}
-                      className="w-full h-8 text-xs font-semibold rounded-xl border-border bg-background hover:bg-muted text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="w-full h-8 text-xs font-medium rounded-lg border-border/60 bg-background hover:bg-muted text-foreground flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <ShoppingBag className="w-3.5 h-3.5 text-primary" />
+                      <ShoppingBag className="w-3.5 h-3.5 text-muted-foreground" />
                       <span>
                         Ver Pedidos Asignados ({lote.asignaciones.length})
                       </span>
@@ -278,11 +278,11 @@ export function PackagingLotsGrid({
 
       {/* MODAL PARA AJUSTAR STOCK DE LOTE */}
       {adjustingLot && (
-        <div className="fixed inset-0 isolate z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-card border border-border rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
+        <div className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card text-foreground border border-border/80 rounded-2xl shadow-xl max-w-sm w-full p-5 space-y-4">
             <div className="flex items-start justify-between">
               <div>
-                <h4 className="text-sm font-bold text-foreground">
+                <h4 className="text-sm font-semibold tracking-tight text-foreground">
                   Ajustar Stock Disponible
                 </h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -292,25 +292,25 @@ export function PackagingLotsGrid({
               <button
                 type="button"
                 onClick={() => setAdjustingLot(null)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-md cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/50 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-border/60">
+              <div className="flex justify-between py-1 border-b border-border/50">
                 <span className="text-muted-foreground">Compradas originalmente:</span>
-                <span className="font-mono font-bold text-foreground">{adjustingLot.cantidadComprada} uds</span>
+                <span className="font-mono tabular-nums font-semibold text-foreground">{adjustingLot.cantidadComprada} uds</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-border/60">
+              <div className="flex justify-between py-1 border-b border-border/50">
                 <span className="text-muted-foreground">Asignadas a pedidos:</span>
-                <span className="font-mono font-bold text-foreground">
+                <span className="font-mono tabular-nums font-semibold text-foreground">
                   {adjustingLot.asignaciones.reduce((acc, a) => acc + a.cantidad, 0)} uds
                 </span>
               </div>
               <div className="pt-2 space-y-1.5">
-                <label className="text-[11px] font-semibold text-foreground block">
+                <label className="text-xs font-medium text-foreground block">
                   Nuevo Stock Disponible Real:
                 </label>
                 <Input
@@ -319,7 +319,7 @@ export function PackagingLotsGrid({
                   max={adjustingLot.cantidadComprada}
                   value={newStockInput}
                   onChange={(e) => setNewStockInput(e.target.value)}
-                  className="font-mono font-bold text-sm h-9 bg-background"
+                  className="font-mono tabular-nums font-semibold text-sm h-9 bg-background border-border/80 rounded-lg"
                 />
                 <p className="text-[10px] text-muted-foreground">
                   Ajustará el consumo no asociado a pedidos directos.
@@ -329,10 +329,10 @@ export function PackagingLotsGrid({
 
             <div className="flex items-center gap-2 pt-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setAdjustingLot(null)}
-                className="flex-1 h-9 rounded-xl text-xs"
+                className="flex-1 h-8 rounded-lg text-xs font-medium"
               >
                 Cancelar
               </Button>
@@ -361,7 +361,7 @@ export function PackagingLotsGrid({
                     setIsSavingAdjust(false)
                   }
                 }}
-                className="flex-1 h-9 rounded-xl text-xs font-bold"
+                className="flex-1 h-8 rounded-lg text-xs font-medium bg-primary text-primary-foreground"
               >
                 {isSavingAdjust ? 'Guardando...' : 'Guardar Ajuste'}
               </Button>

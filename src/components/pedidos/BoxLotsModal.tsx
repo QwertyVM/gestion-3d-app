@@ -39,6 +39,17 @@ export function BoxLotsModal({
 }: BoxLotsModalProps) {
   const [showOnlyDisponibles, setShowOnlyDisponibles] = React.useState(true)
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen || !stockCajas) return null
 
   const conStockCount = stockCajas.lotes.filter((l) => l.stockDisponible > 0).length
@@ -48,24 +59,26 @@ export function BoxLotsModal({
 
   return (
     <div
-      className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="bg-background border border-border rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-card text-foreground border border-border/80 rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER DEL MODAL */}
-        <div className="bg-card border-b border-border p-4 sm:p-5 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 text-primary">
-              <Package className="w-5 h-5" />
+        <div className="bg-card/95 backdrop-blur-xs border-b border-border/60 px-6 py-4 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 rounded-lg bg-muted/60 border border-border/60 text-primary shrink-0">
+              <Package className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-foreground tracking-tight">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-semibold text-foreground tracking-tight truncate">
                   Lotes de Cajas Registrados
                 </h2>
                 <button
@@ -73,10 +86,10 @@ export function BoxLotsModal({
                   onClick={() => setShowOnlyDisponibles(!showOnlyDisponibles)}
                   className="cursor-pointer"
                 >
-                  <Badge className={`text-xs font-semibold px-2 py-0.5 rounded-md border transition-colors ${
+                  <Badge className={`text-[11px] font-medium px-2 py-0.5 rounded-md border transition-colors ${
                     showOnlyDisponibles
-                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                      : 'bg-secondary text-foreground border-border'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-muted/60 text-muted-foreground border-border/50'
                   }`}>
                     {showOnlyDisponibles ? `${conStockCount} disponibles (ver todos)` : `${stockCajas.lotes.length} compras (ver solo disp.)`}
                   </Badge>
@@ -91,126 +104,126 @@ export function BoxLotsModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
             title="Cerrar ventana"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* METRICAS PRINCIPALES (BARRA DE RESUMEN) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-4 bg-muted/20 border-b border-border text-xs shrink-0">
-          <div className="bg-card border border-border rounded-xl p-3 shadow-2xs">
-            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 px-6 py-3.5 bg-muted/20 border-b border-border/60 text-xs shrink-0">
+          <div className="bg-card border border-border/60 rounded-xl p-3 shadow-none">
+            <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider block">
               Total Compradas
             </span>
-            <span className="text-lg font-black font-mono text-foreground block mt-0.5">
-              {stockCajas.totalCajasCompradas} uds
+            <span className="text-lg font-semibold font-mono tabular-nums text-foreground block mt-0.5">
+              {stockCajas.totalCajasCompradas} <span className="text-xs font-sans text-muted-foreground font-normal">uds</span>
             </span>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-3 shadow-2xs">
-            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
+          <div className="bg-card border border-border/60 rounded-xl p-3 shadow-none">
+            <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider block">
               Asignadas a Pedidos
             </span>
-            <span className="text-lg font-black font-mono text-foreground block mt-0.5">
-              {stockCajas.totalCajasAsignadas} uds
+            <span className="text-lg font-semibold font-mono tabular-nums text-foreground block mt-0.5">
+              {stockCajas.totalCajasAsignadas} <span className="text-xs font-sans text-muted-foreground font-normal">uds</span>
             </span>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-3 shadow-2xs">
-            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 uppercase font-bold tracking-wider block">
+          <div className="bg-card border border-border/60 rounded-xl p-3 shadow-none">
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-medium tracking-wider block">
               Stock Disponible
             </span>
-            <span className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400 block mt-0.5">
-              {stockCajas.totalStockDisponible} uds
+            <span className="text-lg font-semibold font-mono tabular-nums text-emerald-600 dark:text-emerald-400 block mt-0.5">
+              {stockCajas.totalStockDisponible} <span className="text-xs font-sans font-normal">uds</span>
             </span>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-3 shadow-2xs">
-            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
+          <div className="bg-card border border-border/60 rounded-xl p-3 shadow-none">
+            <span className="text-[10px] text-muted-foreground uppercase font-medium tracking-wider block">
               Valorización Stock
             </span>
-            <span className="text-lg font-black font-mono text-foreground block mt-0.5">
+            <span className="text-lg font-semibold font-mono tabular-nums text-foreground block mt-0.5">
               {formatCurrency(stockCajas.valorTotalStockDisponible)}
             </span>
           </div>
         </div>
 
         {/* TABLA DE LOTES CON CERO SCROLL HORIZONTAL */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
-          <div className="border border-border rounded-2xl overflow-hidden shadow-2xs bg-card">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          <div className="border border-border/60 rounded-xl overflow-hidden bg-card shadow-none">
             {/* Vista Desktop (>= sm): Tabla table-fixed */}
             <div className="hidden sm:block w-full overflow-hidden">
               <Table className="w-full">
-                <TableHeader className="bg-muted/40">
-                  <TableRow className="border-border">
-                    <TableHead className="text-[11px] font-semibold uppercase text-muted-foreground py-3 pl-4">
+                <TableHeader className="bg-muted/20 border-b border-border/60">
+                  <TableRow className="border-border/60 hover:bg-transparent">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground py-2.5 pl-4 select-none">
                       CONCEPTO / FECHA
                     </TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase text-muted-foreground py-3 text-center w-24">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground py-2.5 text-center w-24 select-none">
                       COSTO UNIT.
                     </TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase text-muted-foreground py-3 text-center w-28">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground py-2.5 text-center w-28 select-none">
                       COMPRADAS
                     </TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase text-muted-foreground py-3 text-center w-28">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground py-2.5 text-center w-28 select-none">
                       USADAS
                     </TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase text-muted-foreground py-3 text-right pr-4 w-28">
+                    <TableHead className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground py-2.5 text-right pr-4 w-28 select-none">
                       DISPONIBLE
                     </TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody className="text-xs divide-y divide-border">
+                <TableBody className="text-xs divide-y divide-border/40">
                   {displayedLotes.map((lote) => {
                     const is50Lot = lote.cantidadComprada === 50
                     const isDispo = lote.stockDisponible > 0
 
                     return (
                       <React.Fragment key={lote.id}>
-                        <TableRow className="hover:bg-muted/30 border-border">
-                          <TableCell className="py-3 pl-4 align-middle">
+                        <TableRow className="hover:bg-muted/30 border-border/40 transition-colors">
+                          <TableCell className="py-2.5 pl-4 align-middle">
                             <div className="space-y-0.5">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-mono text-[10px] font-bold text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.2 rounded-md">
+                                <span className="font-mono text-[10px] text-muted-foreground bg-muted/60 border border-border/50 px-1.5 py-0.2 rounded">
                                   {lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`}
                                 </span>
-                                <span className="font-bold text-foreground text-xs sm:text-sm">
+                                <span className="font-medium text-foreground text-xs sm:text-sm">
                                   {lote.concepto}
                                 </span>
                                 {is50Lot && (
-                                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] px-1.5 py-0 font-semibold">
+                                  <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] px-1.5 py-0 font-medium">
                                     <Sparkles className="w-2.5 h-2.5 mr-0.5" />
                                     Lote 50 uds
                                   </Badge>
                                 )}
                               </div>
                               <div className="text-[11px] text-muted-foreground flex items-center gap-2">
-                                <span>📅 {lote.fecha.slice(0, 10)}</span>
+                                <span className="font-mono tabular-nums">📅 {lote.fecha.slice(0, 10)}</span>
                                 <span>• Por: {lote.persona}</span>
                               </div>
                             </div>
                           </TableCell>
 
-                          <TableCell className="py-3 text-center align-middle font-mono font-semibold text-foreground">
+                          <TableCell className="py-2.5 text-center align-middle font-mono tabular-nums font-medium text-foreground">
                             {formatCurrency(lote.costoUnitario)}
                           </TableCell>
 
-                          <TableCell className="py-3 text-center align-middle font-mono font-bold text-foreground">
+                          <TableCell className="py-2.5 text-center align-middle font-mono tabular-nums font-semibold text-foreground">
                             {lote.cantidadComprada} uds
                           </TableCell>
 
-                          <TableCell className="py-3 text-center align-middle font-mono text-muted-foreground">
+                          <TableCell className="py-2.5 text-center align-middle font-mono tabular-nums text-muted-foreground">
                             {lote.cajasAsignadasCount} uds
                           </TableCell>
 
-                          <TableCell className="py-3 pr-4 text-right align-middle">
+                          <TableCell className="py-2.5 pr-4 text-right align-middle">
                             <Badge
-                              className={`font-mono text-xs font-bold ${
+                              className={`font-mono tabular-nums text-xs font-semibold px-2 py-0.5 rounded-md border ${
                                 isDispo
-                                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                                  : 'bg-muted text-muted-foreground border-border'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                  : 'bg-muted/60 text-muted-foreground border-border/50'
                               }`}
                             >
                               {lote.stockDisponible} uds
@@ -220,20 +233,20 @@ export function BoxLotsModal({
 
                         {/* Desglose de pedidos asignados si existen */}
                         {lote.asignaciones.length > 0 && (
-                          <TableRow className="bg-muted/10 border-border">
-                            <TableCell colSpan={5} className="py-2.5 px-4 text-[11px] text-muted-foreground">
+                          <TableRow className="bg-muted/10 border-border/40">
+                            <TableCell colSpan={5} className="py-2 px-4 text-[11px] text-muted-foreground">
                               <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-semibold text-foreground">Pedidos que usaron este lote:</span>
+                                <span className="font-medium text-foreground">Pedidos que usaron este lote:</span>
                                 {lote.asignaciones.map((asig) => (
                                   <button
                                     key={asig.asignacionId}
                                     type="button"
                                     onClick={() => onSelectOrder && onSelectOrder(asig.pedidoId)}
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-secondary/80 border border-border text-foreground hover:bg-muted transition-colors cursor-pointer"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-card border border-border/50 text-foreground hover:bg-muted transition-colors cursor-pointer"
                                   >
-                                    <span className="font-mono font-bold">{asig.codigoPedido}</span>
+                                    <span className="font-mono tabular-nums font-semibold">{asig.codigoPedido}</span>
                                     <span>({asig.cliente})</span>
-                                    <span className="font-bold text-primary">×{asig.cantidad}</span>
+                                    <span className="font-semibold text-primary font-mono tabular-nums">×{asig.cantidad}</span>
                                   </button>
                                 ))}
                               </div>
@@ -248,7 +261,7 @@ export function BoxLotsModal({
             </div>
 
             {/* Vista Móvil (< sm): Tarjetas Fluidas con CERO scroll horizontal */}
-            <div className="block sm:hidden divide-y divide-border/60">
+            <div className="block sm:hidden divide-y divide-border/40">
               {displayedLotes.map((lote) => {
                 const is50Lot = lote.cantidadComprada === 50
                 const isDispo = lote.stockDisponible > 0
@@ -258,50 +271,50 @@ export function BoxLotsModal({
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-0.5 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-mono text-[10px] font-bold text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.2 rounded-md">
+                          <span className="font-mono text-[10px] text-muted-foreground bg-muted/60 border border-border/50 px-1.5 py-0.2 rounded">
                             {lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`}
                           </span>
-                          <span className="font-bold text-foreground text-xs truncate">
+                          <span className="font-medium text-foreground text-xs truncate">
                             {lote.concepto}
                           </span>
                           {is50Lot && (
-                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] px-1.5 py-0 font-semibold">
+                            <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px] px-1.5 py-0 font-medium">
                               Lote 50 uds
                             </Badge>
                           )}
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-[11px] text-muted-foreground font-mono tabular-nums">
                           📅 {lote.fecha.slice(0, 10)} • {lote.persona}
                         </div>
                       </div>
 
                       <Badge
-                        className={`font-mono text-xs font-bold shrink-0 ${
+                        className={`font-mono tabular-nums text-xs font-semibold shrink-0 px-2 py-0.5 rounded-md border ${
                           isDispo
-                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                            : 'bg-muted text-muted-foreground border-border'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                            : 'bg-muted/60 text-muted-foreground border-border/50'
                         }`}
                       >
                         {lote.stockDisponible} disp.
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-border/50">
+                    <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-border/40">
                       <div>
                         <span className="text-[10px] text-muted-foreground block">Costo unit:</span>
-                        <span className="font-mono font-semibold text-foreground">
+                        <span className="font-mono tabular-nums font-medium text-foreground">
                           {formatCurrency(lote.costoUnitario)}
                         </span>
                       </div>
                       <div>
                         <span className="text-[10px] text-muted-foreground block">Compradas:</span>
-                        <span className="font-mono font-bold text-foreground">
+                        <span className="font-mono tabular-nums font-semibold text-foreground">
                           {lote.cantidadComprada} uds
                         </span>
                       </div>
                       <div>
                         <span className="text-[10px] text-muted-foreground block">Usadas:</span>
-                        <span className="font-mono text-muted-foreground">
+                        <span className="font-mono tabular-nums text-muted-foreground">
                           {lote.cajasAsignadasCount} uds
                         </span>
                       </div>
@@ -316,10 +329,10 @@ export function BoxLotsModal({
                               key={asig.asignacionId}
                               type="button"
                               onClick={() => onSelectOrder && onSelectOrder(asig.pedidoId)}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary text-[10px] text-foreground hover:bg-muted"
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/60 text-[10px] text-foreground hover:bg-muted border border-border/50"
                             >
-                              <span className="font-mono font-bold">{asig.codigoPedido}</span>
-                              <span className="text-primary font-bold">×{asig.cantidad}</span>
+                              <span className="font-mono tabular-nums font-semibold">{asig.codigoPedido}</span>
+                              <span className="text-primary font-semibold font-mono tabular-nums">×{asig.cantidad}</span>
                             </button>
                           ))}
                         </div>
@@ -333,12 +346,12 @@ export function BoxLotsModal({
         </div>
 
         {/* FOOTER */}
-        <div className="bg-card border-t border-border p-3 sm:p-4 flex items-center justify-end shrink-0">
+        <div className="bg-muted/20 border-t border-border/60 px-6 py-3.5 flex items-center justify-end shrink-0">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-xs h-9 px-4 rounded-xl border-border cursor-pointer font-medium"
+            className="text-xs h-8 px-3 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer font-medium"
           >
             Cerrar
           </Button>

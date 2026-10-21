@@ -154,30 +154,30 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
     <div className="space-y-6">
       {/* Header Stats & Action */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E2D9CC] shadow-xs flex items-center justify-between">
+        <div className="bg-card p-4 sm:p-5 rounded-2xl border border-border/60 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs text-[#75695D] font-medium">Cupones Registrados</p>
-            <p className="text-xl sm:text-2xl font-black text-[#241C15] mt-1">{cupones.length}</p>
+            <p className="text-xs text-muted-foreground font-medium">Cupones Registrados</p>
+            <p className="text-xl sm:text-2xl font-bold text-foreground mt-1 tabular-nums">{cupones.length}</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
             <Ticket className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E2D9CC] shadow-xs flex items-center justify-between">
+        <div className="bg-card p-4 sm:p-5 rounded-2xl border border-border/60 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-xs text-[#75695D] font-medium">Cupones Activos en Tienda</p>
-            <p className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">{cuponesActivos}</p>
+            <p className="text-xs text-muted-foreground font-medium">Cupones Activos en Tienda</p>
+            <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">{cuponesActivos}</p>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
             <Flame className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#E2D9CC] shadow-xs flex items-center justify-center">
+        <div className="bg-card p-4 sm:p-5 rounded-2xl border border-border/60 shadow-xs flex items-center justify-center">
           <button
             onClick={handleOpenCreate}
-            className="w-full h-full py-3 px-4 rounded-xl bg-[#241C15] hover:bg-[#3D3025] text-white text-xs font-bold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+            className="w-full h-full py-3 px-4 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
           >
             <Plus className="w-4 h-4" />
             <span>Crear Cupón de Descuento</span>
@@ -186,13 +186,13 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
       </div>
 
       {/* Coupons List */}
-      <div className="bg-white rounded-2xl border border-[#E2D9CC] shadow-xs overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-[#E2D9CC] flex items-center justify-between">
+      <div className="bg-card rounded-2xl border border-border/60 shadow-xs overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-border/40 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-[#241C15]">
+            <h3 className="text-sm font-semibold text-foreground">
               Cupones de Descuento Activos & Campañas ({negocio})
             </h3>
-            <p className="text-xs text-[#75695D]">
+            <p className="text-xs text-muted-foreground">
               Los clientes podrán ingresar estos códigos en el carrito y checkout de la tienda web.
             </p>
           </div>
@@ -200,36 +200,36 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
 
         {cupones.length === 0 ? (
           <div className="p-10 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center mx-auto border border-amber-200">
+            <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
               <Ticket className="w-6 h-6" />
             </div>
-            <h4 className="text-sm font-bold text-[#241C15]">No hay cupones creados para {negocio}</h4>
-            <p className="text-xs text-[#75695D] max-w-sm mx-auto">
+            <h4 className="text-sm font-semibold text-foreground">No hay cupones creados para {negocio}</h4>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
               Crea cupones como NOVABG10 o ENVIOGRATIS para incentivar las compras en tu tienda web.
             </p>
             <button
               onClick={handleOpenCreate}
-              className="px-4 py-2 rounded-xl bg-[#241C15] text-white text-xs font-bold hover:bg-[#3D3025] cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 cursor-pointer shadow-xs"
             >
               Crear Primer Cupón
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-[#E2D9CC]">
+          <div className="divide-y divide-border/40">
             {cupones.map((c) => (
               <div
                 key={c.id}
                 className={`p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
-                  c.activo ? 'hover:bg-[#FAF7F4]' : 'bg-gray-50/70 opacity-75'
+                  c.activo ? 'hover:bg-muted/30' : 'bg-muted/10 opacity-75'
                 }`}
               >
                 {/* Left info */}
                 <div className="flex items-start gap-3.5 min-w-0">
                   <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shrink-0 border ${
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 border tabular-nums ${
                       c.tipo === 'PORCENTAJE'
-                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                     }`}
                   >
                     {c.tipo === 'PORCENTAJE' ? `${c.valor}%` : `S/${c.valor}`}
@@ -237,27 +237,27 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
 
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono font-black text-sm text-[#241C15] tracking-wider bg-[#F8F6F2] px-2.5 py-0.5 rounded-lg border border-[#E2D9CC]">
+                      <span className="font-mono font-bold text-sm text-foreground tracking-wider bg-muted/40 px-2.5 py-0.5 rounded-lg border border-border/60">
                         {c.codigo}
                       </span>
 
                       <button
                         onClick={() => handleCopyCode(c.codigo, c.id)}
-                        className="text-[11px] text-[#75695D] hover:text-[#241C15] p-1 rounded hover:bg-[#EFE5D8] transition-colors cursor-pointer"
+                        className="text-[11px] text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors cursor-pointer"
                         title="Copiar código"
                       >
                         {copiedId === c.id ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
                       </button>
 
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                           c.activo
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : 'bg-gray-100 text-gray-500 border-gray-200'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                            : 'bg-muted/40 text-muted-foreground border-border/50'
                         }`}
                       >
                         {c.activo ? 'ACTIVO EN WEB' : 'INACTIVO'}
@@ -265,25 +265,25 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
                     </div>
 
                     {c.descripcion && (
-                      <p className="text-xs text-[#75695D] leading-snug">{c.descripcion}</p>
+                      <p className="text-xs text-muted-foreground leading-snug">{c.descripcion}</p>
                     )}
 
-                    <div className="flex items-center gap-3 text-[11px] text-[#75695D] pt-0.5 flex-wrap">
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-0.5 flex-wrap">
                       <span>
                         Mínimo:{' '}
-                        <strong>{c.montoMinimo > 0 ? `S/ ${c.montoMinimo}` : 'Sin mínimo'}</strong>
+                        <strong className="text-foreground tabular-nums">{c.montoMinimo > 0 ? `S/ ${c.montoMinimo}` : 'Sin mínimo'}</strong>
                       </span>
                       <span>•</span>
                       <span>
-                        Usos: <strong>{c.usosActuales}</strong>
+                        Usos: <strong className="text-foreground tabular-nums">{c.usosActuales}</strong>
                         {c.usosMaximos ? ` / ${c.usosMaximos} máx` : ' (ilimitado)'}
                       </span>
                       {c.fechaFin && (
                         <>
                           <span>•</span>
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3 text-[#75695D]" />
-                            <span>Vence: {c.fechaFin.split('T')[0]}</span>
+                            <Calendar className="w-3 h-3 text-muted-foreground" />
+                            <span className="tabular-nums">Vence: {c.fechaFin.split('T')[0]}</span>
                           </span>
                         </>
                       )}
@@ -296,10 +296,10 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
                   <button
                     type="button"
                     onClick={() => handleToggleActive(c.id)}
-                    className={`p-2 rounded-xl border transition-colors cursor-pointer text-xs flex items-center gap-1.5 font-bold ${
+                    className={`p-2 rounded-xl border transition-colors cursor-pointer text-xs flex items-center gap-1.5 font-semibold ${
                       c.activo
-                        ? 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100'
-                        : 'text-gray-600 bg-gray-100 border-gray-300 hover:bg-gray-200'
+                        ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/20'
+                        : 'text-muted-foreground bg-muted/40 border-border/60 hover:bg-muted/70'
                     }`}
                   >
                     {c.activo ? (
@@ -318,7 +318,7 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
                   <button
                     type="button"
                     onClick={() => handleOpenEdit(c)}
-                    className="p-2 rounded-xl text-[#241C15] bg-[#F8F6F2] hover:bg-[#EFE5D8] border border-[#E2D9CC] transition-colors cursor-pointer"
+                    className="p-2 rounded-xl text-foreground bg-muted/30 hover:bg-muted border border-border/60 transition-colors cursor-pointer"
                     title="Editar Cupón"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -327,7 +327,7 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
                   <button
                     type="button"
                     onClick={() => handleDelete(c.id)}
-                    className="p-2 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors cursor-pointer"
+                    className="p-2 rounded-xl text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-colors cursor-pointer"
                     title="Eliminar Cupón"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -341,20 +341,20 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
 
       {/* CREATE / EDIT MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-[#E2D9CC] w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="p-4 sm:p-5 border-b border-[#E2D9CC] flex items-center justify-between bg-[#F8F6F2]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-card rounded-2xl border border-border/80 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 sm:p-5 border-b border-border/40 flex items-center justify-between bg-muted/20">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-200">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
                   <Ticket className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-bold text-[#241C15]">
+                <h3 className="text-sm font-semibold text-foreground">
                   {editingCupon ? 'Editar Cupón de Descuento' : 'Crear Cupón de Descuento'} ({negocio})
                 </h3>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1.5 rounded-lg text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8] cursor-pointer"
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -362,35 +362,35 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="block font-bold text-[#241C15]">Código del Cupón (Ej: NOVABG15)</label>
+                <label className="block font-semibold text-foreground">Código del Cupón (Ej: NOVABG15)</label>
                 <input
                   type="text"
                   value={codigo}
                   onChange={(e) => setCodigo(e.target.value.toUpperCase())}
                   placeholder="Ej: NOVABG10"
-                  className="w-full text-xs font-mono font-bold tracking-wider px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15] uppercase"
+                  className="w-full text-xs font-mono font-bold tracking-wider px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground uppercase"
                   required
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-[#241C15]">Descripción o Motivo</label>
+                <label className="block font-semibold text-foreground">Descripción o Motivo</label>
                 <input
                   type="text"
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
                   placeholder="Ej: Descuento exclusivo para nuevos clientes en la tienda web"
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3.5">
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#241C15]">Tipo de Descuento</label>
+                  <label className="block font-semibold text-foreground">Tipo de Descuento</label>
                   <select
                     value={tipo}
                     onChange={(e) => setTipo(e.target.value as any)}
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15] cursor-pointer"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground cursor-pointer"
                   >
                     <option value="PORCENTAJE">Porcentaje (%)</option>
                     <option value="MONTO_FIJO">Monto Fijo (S/)</option>
@@ -398,7 +398,7 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#241C15]">
+                  <label className="block font-semibold text-foreground">
                     {tipo === 'PORCENTAJE' ? 'Valor (%)' : 'Monto (S/)'}
                   </label>
                   <input
@@ -407,7 +407,7 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
                     step={tipo === 'PORCENTAJE' ? '1' : '0.50'}
                     value={valor}
                     onChange={(e) => setValor(parseFloat(e.target.value) || 0)}
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15] font-bold"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground font-semibold tabular-nums"
                     required
                   />
                 </div>
@@ -415,7 +415,7 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
 
               <div className="grid grid-cols-2 gap-3.5">
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#241C15]">Monto Mínimo de Compra (S/)</label>
+                  <label className="block font-semibold text-foreground">Monto Mínimo de Compra (S/)</label>
                   <input
                     type="number"
                     min="0"
@@ -423,12 +423,12 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
                     value={montoMinimo}
                     onChange={(e) => setMontoMinimo(parseFloat(e.target.value) || 0)}
                     placeholder="0 = Sin mínimo"
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground tabular-nums"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block font-bold text-[#241C15]">Límite de Usos Máximos</label>
+                  <label className="block font-semibold text-foreground">Límite de Usos Máximos</label>
                   <input
                     type="number"
                     min="1"
@@ -437,33 +437,33 @@ export function TabOfertasCupones({ negocio, cupones, onRefresh }: TabOfertasCup
                       setUsosMaximos(e.target.value === '' ? '' : parseInt(e.target.value, 10))
                     }
                     placeholder="En blanco = Ilimitado"
-                    className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                    className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground tabular-nums"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-[#241C15]">Fecha Límite de Expiración (Opcional)</label>
+                <label className="block font-semibold text-foreground">Fecha Límite de Expiración (Opcional)</label>
                 <input
                   type="date"
                   value={fechaFin}
                   onChange={(e) => setFechaFin(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-xl border border-[#E2D9CC] bg-[#F8F6F2] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#A36F4C]/40 text-[#241C15]"
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-ring/40 text-foreground tabular-nums"
                 />
               </div>
 
-              <div className="pt-3 border-t border-[#E2D9CC] flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-border/40 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#E2D9CC] text-[#75695D] hover:bg-[#F8F6F2] font-semibold cursor-pointer"
+                  className="px-4 py-2 rounded-xl border border-border/60 text-muted-foreground hover:bg-muted/40 font-semibold cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-[#241C15] hover:bg-[#3D3025] text-white font-bold cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold cursor-pointer disabled:opacity-50 shadow-xs"
                 >
                   {isSubmitting
                     ? 'Guardando...'

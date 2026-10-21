@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   Sheet, 
@@ -17,12 +17,18 @@ import {
   Plus, 
   ExternalLink, 
   X,
+  Pencil,
   CreditCard,
   AlertTriangle,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Crown,
+  Sparkles,
+  Clock,
+  Send
 } from 'lucide-react'
 import { getClienteDetalle, ClienteDetalleView } from '@/actions/clientes'
+import { formatCurrency, getInitials, formatClienteNombre } from '@/lib/utils'
 
 function InstagramIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   return (
@@ -42,22 +48,6 @@ function InstagramIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
   )
 }
 
-function getInitials(name: string) {
-  if (!name) return 'CL'
-  const parts = name.trim().split(/\s+/)
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
-  return (parts[0][0] + parts[1][0]).toUpperCase()
-}
-
-function formatClienteNombre(name: string) {
-  if (!name) return 'Cliente'
-  return name
-    .trim()
-    .split(/\s+/)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ')
-}
-
 function getWhatsAppUrl(phone: string, nombre: string) {
   const cleanPhone = phone.replace(/\D/g, '')
   const fullPhone = cleanPhone.startsWith('51') ? cleanPhone : `51${cleanPhone}`
@@ -69,20 +59,19 @@ interface ClienteDetalleDrawerProps {
   isOpen: boolean
   onClose: () => void
   clienteNombre: string | null
+  onEdit?: (detalle: ClienteDetalleView) => void
 }
 
 export function ClienteDetalleDrawer({
   isOpen,
   onClose,
-  clienteNombre
+  clienteNombre,
+  onEdit
 }: ClienteDetalleDrawerProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [detalle, setDetalle] = useState<ClienteDetalleView | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const formatCurrency = (val: number) =>
-    `S/ ${val.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   useEffect(() => {
     if (!isOpen || !clienteNombre) {
@@ -119,26 +108,140 @@ export function ClienteDetalleDrawer({
     }
   }, [isOpen, clienteNombre])
 
+  // Análisis RFM y Disparador de Reactivación
+  const rfm = useMemo(() => {
+    if (!detalle) return null
+
+    const ordersCount = detalle.pedidos ? detalle.pedidos.length : (detalle.pedidosCount || 0)
+    const lastOrderDate = (detalle.pedidos && detalle.pedidos.length > 0)
+      ? detalle.pedidos[0].fecha
+      : detalle.ultimoPedidoFecha
+
+    const daysSinceLastOrder = lastOrderDate
+      ? Math.floor((Date.now() - new Date(lastOrderDate).getTime()) / (1000 * 60 * 60 * 24))
+      : null
+
+    const ltv = detalle.totalComprado || 0
+
+    let segmento: 'VIP' | 'CHURN_RISK' | 'NUEVO' | 'REGULAR' | 'INACTIVO' = 'REGULAR'
+    let label = 'Cliente Regular'
+    let badgeClass = 'bg-secondary text-foreground border-border'
+    let Icon = ShoppingBag
+    let mensajeReactivacion = ''
+
+    if (ordersCount >= 3 && daysSinceLastOrder !== null && daysSinceLastOrder < 30) {
+      segmento = 'VIP'
+      label = '⭐ Cliente VIP Frecuente'
+      badgeClass = 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-500/30 font-bold'
+      Icon = Crown
+      mensajeReactivacion = `¡Hola ${formatClienteNombre(detalle.nombre)}! Te escribimos de NOVA Studio. Por ser cliente VIP frecuente ⭐, te avisamos que tenemos nuevos colores y prioridad en taller. ¿Tienes algún modelo en mente para estos días?`
+    } else if (ordersCount >= 2 && daysSinceLastOrder !== null && daysSinceLastOrder > 60) {
+      segmento = 'CHURN_RISK'
+      label = '⚠️ En Riesgo de Churn'
+      badgeClass = 'bg-rose-500/15 text-rose-900 dark:text-rose-200 border-rose-500/30 font-bold'
+      Icon = AlertTriangle
+      mensajeReactivacion = `¡Hola ${formatClienteNombre(detalle.nombre)}! Te escribimos de NOVA Studio. Ya pasó un tiempo desde tus pedidos anteriores. Acabamos de incorporar nuevos filamentos y modelos en catálogo. ¿Te gustaría ver las novedades?`
+    } else if (ordersCount === 1 && daysSinceLastOrder !== null && daysSinceLastOrder <= 30) {
+      segmento = 'NUEVO'
+      label = 'Nuevo / Prometedor'
+      badgeClass = 'bg-sky-500/10 text-sky-800 dark:text-sky-300 border-sky-500/30'
+      Icon = Sparkles
+      mensajeReactivacion = `¡Hola ${formatClienteNombre(detalle.nombre)}! Gracias por confiar en NOVA Studio para tu pedido. ¿Cómo quedó tu pieza 3D? Recuerda que podemos cotizar cualquier nuevo proyecto cuando gustes.`
+    } else if (daysSinceLastOrder !== null && daysSinceLastOrder > 90) {
+      segmento = 'INACTIVO'
+      label = 'Inactivo (>90 días)'
+      badgeClass = 'bg-muted text-muted-foreground border-border'
+      Icon = Clock
+      mensajeReactivacion = `¡Hola ${formatClienteNombre(detalle.nombre)}! Te saludamos de NOVA Studio. Esperamos que todo vaya excelente. Estamos agendando impresiones para este mes, ¿tienes algún proyecto que te gustaría cotizar?`
+    }
+
+    const smartBadge = (segmento === 'VIP' || segmento === 'CHURN_RISK') ? {
+      type: segmento,
+      label,
+      badgeClass,
+      mensaje: mensajeReactivacion
+    } : null
+
+    return {
+      daysSinceLastOrder,
+      ordersCount,
+      ltv,
+      segmento,
+      label,
+      badgeClass,
+      Icon,
+      mensajeReactivacion,
+      smartBadge
+    }
+  }, [detalle])
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent 
         side="right" 
-        className="w-full sm:max-w-md md:max-w-lg bg-background p-0 border-l border-border flex flex-col z-50 overflow-hidden"
+        className="w-full sm:max-w-md md:max-w-lg bg-background p-0 border-l border-border/60 flex flex-col z-50 overflow-hidden"
       >
         {/* Cabecera del Drawer */}
-        <div className="p-5 border-b border-border/70 flex items-center justify-between gap-3 bg-card">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 font-bold text-xs flex items-center justify-center shrink-0">
+        <div className="p-5 border-b border-border/60 flex items-center justify-between gap-3 bg-card/95 backdrop-blur-xs">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-9 h-9 rounded-full bg-muted text-foreground border border-border/60 font-medium text-xs flex items-center justify-center shrink-0">
               {getInitials(clienteNombre || 'Cliente')}
             </div>
-            <div className="min-w-0">
-              <SheetTitle className="text-base font-extrabold text-foreground truncate">
-                {clienteNombre ? formatClienteNombre(clienteNombre) : 'Detalle del Cliente'}
-              </SheetTitle>
-              <p className="text-xs text-muted-foreground truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <SheetTitle className="text-base font-semibold text-foreground tracking-tight truncate">
+                  {clienteNombre ? formatClienteNombre(clienteNombre) : 'Detalle del Cliente'}
+                </SheetTitle>
+
+                {rfm?.smartBadge && (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border shrink-0 ${rfm.smartBadge.badgeClass}`}>
+                    {rfm.smartBadge.label}
+                  </span>
+                )}
+
+                {rfm?.smartBadge && detalle?.telefono && (
+                  <a
+                    href={`https://wa.me/${detalle.telefono.replace(/\D/g, '').startsWith('51') ? detalle.telefono.replace(/\D/g, '') : `51${detalle.telefono.replace(/\D/g, '')}`}?text=${encodeURIComponent(rfm.smartBadge.mensaje)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 transition-colors cursor-pointer shrink-0"
+                    title="Reactivar cliente por WhatsApp"
+                  >
+                    <MessageCircle className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span>Reactivar</span>
+                  </a>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">
                 Estado de cuenta e historial comercial
+                {rfm?.daysSinceLastOrder !== null && rfm?.daysSinceLastOrder !== undefined && (
+                  <span className="font-mono ml-1.5 text-[11px] tabular-nums">
+                    • Último pedido hace {rfm.daysSinceLastOrder} {rfm.daysSinceLastOrder === 1 ? 'día' : 'días'} ({rfm.ordersCount} {rfm.ordersCount === 1 ? 'pedido' : 'pedidos'})
+                  </span>
+                )}
               </p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onEdit && detalle && (
+              <button
+                type="button"
+                onClick={() => onEdit(detalle)}
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 flex items-center justify-center transition-colors cursor-pointer"
+                title="Editar datos del cliente"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 flex items-center justify-center transition-colors cursor-pointer"
+              title="Cerrar panel"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 
@@ -188,30 +291,62 @@ export function ClienteDetalleDrawer({
                 )}
               </div>
 
+              {/* Tarjeta de Segmentación RFM & Reactivación WhatsApp */}
+              {rfm && (
+                <div className="p-3.5 rounded-xl bg-card border border-border space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs border ${rfm.badgeClass}`}>
+                      <rfm.Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span>{rfm.label}</span>
+                    </span>
+
+                    <span className="text-[11px] font-mono text-muted-foreground shrink-0">
+                      {rfm.daysSinceLastOrder !== null
+                        ? `Último pedido: hace ${rfm.daysSinceLastOrder} ${rfm.daysSinceLastOrder === 1 ? 'día' : 'días'}`
+                        : 'Sin pedidos previos'}
+                    </span>
+                  </div>
+
+                  {detalle.telefono && rfm.mensajeReactivacion && (
+                    <div className="pt-1">
+                      <a
+                        href={`https://wa.me/${detalle.telefono.replace(/\D/g, '').startsWith('51') ? detalle.telefono.replace(/\D/g, '') : `51${detalle.telefono.replace(/\D/g, '')}`}?text=${encodeURIComponent(rfm.mensajeReactivacion)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-1.5 h-8.5 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Send className="w-3 h-3 text-emerald-600" />
+                        <span>Reactivar Cliente por WhatsApp</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Métricas Financieras (Grid de 3 Bloques) */}
-              <div className="grid grid-cols-3 gap-2.5 bg-card border border-border/70 rounded-xl p-3.5 shadow-2xs">
+              <div className="grid grid-cols-3 gap-2.5 bg-muted/20 border border-border/50 rounded-xl p-3.5 shadow-none">
                 <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
                     LTV Total
                   </span>
-                  <span className="text-sm font-black font-mono text-foreground mt-0.5 block tabular-nums">
+                  <span className="text-sm font-semibold font-mono text-foreground mt-0.5 block tabular-nums tracking-tight">
                     {formatCurrency(detalle.totalComprado)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
                     Cobrado
                   </span>
-                  <span className="text-sm font-black font-mono text-emerald-800 dark:text-emerald-300 mt-0.5 block tabular-nums">
+                  <span className="text-sm font-semibold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block tabular-nums tracking-tight">
                     {formatCurrency(detalle.totalPagado)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
                     Saldo
                   </span>
-                  <span className={`text-sm font-black font-mono mt-0.5 block tabular-nums ${
-                    detalle.saldoPendiente > 0 ? 'text-destructive' : 'text-emerald-800 dark:text-emerald-300'
+                  <span className={`text-sm font-semibold font-mono mt-0.5 block tabular-nums tracking-tight ${
+                    detalle.saldoPendiente > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
                   }`}>
                     {detalle.saldoPendiente > 0 ? formatCurrency(detalle.saldoPendiente) : 'S/ 0.00'}
                   </span>
@@ -220,19 +355,19 @@ export function ClienteDetalleDrawer({
 
               {/* Alerta de Deuda si existe saldo pendiente */}
               {detalle.saldoPendiente > 0 ? (
-                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-2.5">
-                  <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-start gap-2.5">
+                  <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                   <div className="text-xs">
-                    <span className="font-bold text-destructive block">Cuenta con saldo pendiente</span>
-                    <p className="text-destructive/90 mt-0.5">
+                    <span className="font-medium text-rose-600 dark:text-rose-400 block">Cuenta con saldo pendiente</span>
+                    <p className="text-rose-600/90 dark:text-rose-400/90 mt-0.5">
                       Este cliente debe {formatCurrency(detalle.saldoPendiente)}. Verifica sus comprobantes antes de iniciar nueva producción.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700" />
-                  <span className="font-semibold">Cliente 100% al día en sus pagos</span>
+                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span className="font-medium">Cliente 100% al día en sus pagos</span>
                 </div>
               )}
 
@@ -243,7 +378,7 @@ export function ClienteDetalleDrawer({
                   onClose()
                   router.push(`/pedidos?cliente=${encodeURIComponent(detalle.nombre)}`)
                 }}
-                className="w-full h-10 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs shadow-md shadow-primary/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+                className="w-full h-9 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs shadow-none flex items-center justify-center gap-2 transition-colors cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
                 <span>+ Crear Pedido para {formatClienteNombre(detalle.nombre)}</span>
@@ -251,8 +386,8 @@ export function ClienteDetalleDrawer({
 
               {/* Notas del cliente si existen */}
               {detalle.notas && (
-                <div className="p-3 bg-secondary border border-border/70 rounded-xl text-xs space-y-1">
-                  <span className="font-bold text-foreground block uppercase text-[10px] tracking-wider">
+                <div className="p-3 bg-muted/20 border border-border/40 rounded-lg text-xs space-y-1">
+                  <span className="font-medium text-foreground block uppercase text-[10px] tracking-wider">
                     Notas / Preferencias:
                   </span>
                   <p className="text-muted-foreground leading-relaxed">{detalle.notas}</p>
@@ -262,17 +397,17 @@ export function ClienteDetalleDrawer({
               {/* Historial de Pedidos */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-                    <ShoppingBag className="h-3.5 w-3.5 text-primary" />
+                  <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
+                    <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
                     <span>Historial de Pedidos ({detalle.pedidos.length})</span>
                   </h4>
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-[11px] text-muted-foreground tabular-nums">
                     {detalle.piezasCount} piezas en total
                   </span>
                 </div>
 
                 {detalle.pedidos.length === 0 ? (
-                  <div className="p-6 text-center bg-card border border-border/70 rounded-xl text-xs text-muted-foreground italic">
+                  <div className="p-6 text-center bg-card border border-border/60 rounded-xl text-xs text-muted-foreground italic">
                     Sin pedidos registrados para este cliente.
                   </div>
                 ) : (
@@ -282,14 +417,14 @@ export function ClienteDetalleDrawer({
                       return (
                         <div
                           key={p.id}
-                          className="p-3.5 bg-card border border-border/70 rounded-xl space-y-2 hover:border-primary/40 transition-colors shadow-2xs"
+                          className="p-3.5 bg-card border border-border/60 rounded-xl space-y-2 hover:border-border transition-colors shadow-none"
                         >
                           <div className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono font-bold text-primary">{p.codigo}</span>
+                              <span className="font-mono font-medium text-foreground">{p.codigo}</span>
                               <span className="text-[11px] text-muted-foreground">{fechaStr}</span>
                             </div>
-                            <span className="font-mono font-extrabold text-foreground">
+                            <span className="font-mono font-semibold text-foreground tabular-nums tracking-tight">
                               {formatCurrency(p.total)}
                             </span>
                           </div>

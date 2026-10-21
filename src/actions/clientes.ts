@@ -27,6 +27,7 @@ export interface ClienteItem {
   handleSocial?: string | null
   direccion?: string | null
   distrito?: string | null
+  destinoEnvio?: string | null
   notas?: string | null
   activo: boolean
   // Métricas dinámicas calculadas
@@ -137,6 +138,9 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
     if (p.handleSocial && !metricsMap[key].handleSocialSugerido) {
       metricsMap[key].handleSocialSugerido = p.handleSocial
     }
+    if (p.destinoEnvio && !metricsMap[key].destinoSugerido) {
+      metricsMap[key].destinoSugerido = p.destinoEnvio
+    }
 
     const m = metricsMap[key]
     m.totalComprado += Number(p.total || 0)
@@ -204,6 +208,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
       handleSocial: c.handleSocial || m.handleSocialSugerido || null,
       direccion: c.direccion || m.destinoSugerido || null,
       distrito: c.distrito || null,
+      destinoEnvio: m.destinoSugerido || c.direccion || null,
       notas: c.notas || null,
       activo: c.activo,
       totalComprado: Number(m.totalComprado.toFixed(2)),
@@ -251,6 +256,7 @@ export async function getClientes(negocio?: TipoNegocio): Promise<ClienteItem[]>
         handleSocial: m.handleSocialSugerido || null,
         direccion: m.destinoSugerido || null,
         distrito: null,
+        destinoEnvio: m.destinoSugerido || null,
         notas: null,
         activo: true,
         totalComprado: Number(m.totalComprado.toFixed(2)),

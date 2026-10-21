@@ -570,17 +570,17 @@ export function ProductFormModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         showCloseButton={false}
-        className="bg-card border border-border text-foreground w-[96vw] sm:max-w-[700px] max-h-[94dvh] overflow-y-auto p-0 rounded-2xl shadow-2xl z-50"
+        className="bg-card text-foreground border border-border/80 rounded-2xl shadow-xl overflow-hidden p-0 w-[96vw] sm:max-w-[700px] max-h-[90vh] flex flex-col z-50"
       >
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-border pb-3.5">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-accent text-accent-foreground border border-border/80 flex items-center justify-center shrink-0 shadow-2xs">
-                {isEditing ? <Pencil className="h-5 w-5" /> : <Boxes className="h-5 w-5 text-primary" />}
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+          {/* Sticky Header */}
+          <div className="px-6 py-4 border-b border-border/60 flex items-center justify-between bg-card/95 backdrop-blur-xs shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-lg bg-muted/60 border border-border/60 flex items-center justify-center shrink-0 text-foreground">
+                {isEditing ? <Pencil className="h-4 w-4" /> : <Boxes className="h-4 w-4 text-primary" />}
               </div>
-              <div>
-                <DialogTitle className="text-base sm:text-lg font-black text-foreground">
+              <div className="min-w-0">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground truncate">
                   {isEditing
                     ? is3D ? 'Editar Modelo 3D' : 'Editar Juego de Mesa'
                     : is3D ? 'Registrar Nuevo Producto 3D' : 'Registrar Juego de Mesa'}
@@ -593,18 +593,19 @@ export function ProductFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="text-muted-foreground hover:text-foreground p-1.5 rounded-xl hover:bg-secondary transition-colors cursor-pointer"
+              className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer shrink-0"
+              title="Cerrar modal"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Formulario */}
-          <div className="space-y-4">
+          {/* Formulario Body con Scroll Limpio */}
+          <div className="p-6 space-y-5 overflow-y-auto flex-1">
             {/* Fila 1: Nombre, Categoría & Fecha de Registro */}
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-foreground uppercase tracking-wider">
+                <Label className="text-xs font-medium text-foreground/90 block">
                   {hasVariants ? 'Nombre Base del Modelo *' : (is3D ? 'Nombre del Modelo *' : 'Nombre del Juego *')}
                 </Label>
                 <Input
@@ -613,14 +614,14 @@ export function ProductFormModal({
                   placeholder={hasVariants ? "Ej: Mansiones de la Locura, SETI Organizador" : (is3D ? "Ej: Maceta Hexagonal XL" : "Ej: Catan")}
                   required
                   autoFocus
-                  className="bg-background border-input rounded-xl text-sm font-bold text-foreground h-10"
+                  className="bg-background border-border/80 rounded-lg text-sm text-foreground h-9"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1">
-                    <Layers className="h-3 w-3 text-primary" />
+                  <Label className="text-xs font-medium text-foreground/90 flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-muted-foreground" />
                     Categoría / Familia *
                   </Label>
                   <Input
@@ -629,7 +630,7 @@ export function ProductFormModal({
                     placeholder="Ej: Organizadores, Decoración, Figuras"
                     required
                     list="categorias-modal-list"
-                    className="bg-background border-input rounded-xl text-sm font-bold text-foreground h-10"
+                    className="bg-background border-border/80 rounded-lg text-sm text-foreground h-9"
                   />
                   <datalist id="categorias-modal-list">
                     {categoryNamesList.map((cat) => (
@@ -639,15 +640,15 @@ export function ProductFormModal({
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1">
-                    <Calendar className="h-3 w-3 text-primary" />
+                  <Label className="text-xs font-medium text-foreground/90 flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                     Fecha de Registro
                   </Label>
                   <Input
                     type="date"
                     value={fechaRegistro}
                     onChange={(e) => setFechaRegistro(e.target.value)}
-                    className="bg-background border-input rounded-xl text-sm font-bold text-foreground h-10 cursor-pointer"
+                    className="bg-background border-border/80 rounded-lg text-sm text-foreground h-9 cursor-pointer"
                   />
                 </div>
               </div>
@@ -655,9 +656,9 @@ export function ProductFormModal({
               {/* ========================================================================= */}
               {/* SECCIÓN MAKERWORLD & PORTADA / MINIATURA                                  */}
               {/* ========================================================================= */}
-              <div className="p-3.5 bg-secondary/35 border border-border/80 rounded-xl space-y-3 shadow-2xs">
+              <div className="p-3.5 bg-muted/20 border border-border/50 rounded-xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <Globe className="h-3.5 w-3.5 text-primary" />
                     MakerWorld & Imagen de Portada
                   </span>
@@ -666,7 +667,7 @@ export function ProductFormModal({
                       href={enlaceMakerworld}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      className="text-[11px] font-medium text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                       Abrir enlace <ExternalLink className="h-3 w-3" />
                     </a>
@@ -675,14 +676,14 @@ export function ProductFormModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
                   {/* Vista previa miniatura */}
-                  <div className="sm:col-span-1 flex flex-col items-center justify-center p-2 rounded-xl border border-dashed border-border bg-background/60 text-center min-h-[96px]">
+                  <div className="sm:col-span-1 flex flex-col items-center justify-center p-2 rounded-lg border border-dashed border-border/70 bg-card/50 text-center min-h-[96px]">
                     {isFetchingMakerworld ? (
                       <div className="flex flex-col items-center justify-center text-primary py-2 px-1 text-center animate-pulse">
-                        <Loader2 className="h-6 w-6 mb-1.5 animate-spin text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-[10px] font-bold text-foreground">Obteniendo portada...</span>
+                        <Loader2 className="h-5 w-5 mb-1.5 animate-spin text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-[10px] font-medium text-foreground">Obteniendo portada...</span>
                       </div>
                     ) : imagenUrl ? (
-                      <div className="relative group w-18 h-18 rounded-lg overflow-hidden border border-border shadow-xs">
+                      <div className="relative group w-18 h-18 rounded-lg overflow-hidden border border-border/60">
                         <img
                           src={imagenUrl}
                           alt="Portada del modelo"
@@ -691,7 +692,7 @@ export function ProductFormModal({
                         <button
                           type="button"
                           onClick={() => setImagenUrl('')}
-                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity cursor-pointer"
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-medium transition-opacity cursor-pointer"
                           title="Quitar miniatura"
                         >
                           <X className="h-4 w-4" />
@@ -699,7 +700,7 @@ export function ProductFormModal({
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center text-muted-foreground py-1">
-                        <ImageIcon className="h-6 w-6 mb-1 text-muted-foreground/60 stroke-[1.8]" />
+                        <ImageIcon className="h-5 w-5 mb-1 text-muted-foreground/60 stroke-[1.8]" />
                         <span className="text-[10px] font-medium">Sin miniatura</span>
                       </div>
                     )}
@@ -709,11 +710,11 @@ export function ProductFormModal({
                   <div className="sm:col-span-3 space-y-2.5">
                     <div className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                        <Label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                           Enlace del Modelo 3D (MakerWorld, Cults3D, etc.)
                         </Label>
                         {isFetchingMakerworld && (
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 animate-pulse">
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 animate-pulse">
                             <Loader2 className="h-3 w-3 animate-spin" /> Auto-cargando portada...
                           </span>
                         )}
@@ -729,7 +730,7 @@ export function ProductFormModal({
                             }
                           }}
                           placeholder="https://cults3d.com/... o https://makerworld.com/..."
-                          className="bg-background text-xs font-medium h-9 flex-1"
+                          className="bg-background text-xs font-normal h-9 flex-1 rounded-lg border-border/80"
                         />
                         <Button
                           type="button"
@@ -737,7 +738,7 @@ export function ProductFormModal({
                           size="sm"
                           onClick={handleAutoObtenerPortada}
                           disabled={!enlaceMakerworld.trim() || isFetchingMakerworld}
-                          className="h-9 text-xs font-bold shrink-0 cursor-pointer"
+                          className="h-9 text-xs font-medium shrink-0 cursor-pointer rounded-lg border-border/70"
                         >
                           {isFetchingMakerworld ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -749,14 +750,14 @@ export function ProductFormModal({
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">
+                      <Label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                         URL Directa de la Imagen
                       </Label>
                       <Input
                         value={imagenUrl}
                         onChange={(e) => setImagenUrl(e.target.value)}
                         placeholder="https://images.cults3d.com/... o https://makerworld.bblmw.com/..."
-                        className="bg-background text-xs font-mono h-9"
+                        className="bg-background text-xs font-mono h-9 rounded-lg border-border/80"
                       />
                       <p className="text-[10px] text-muted-foreground leading-tight">
                         Tip: Haz clic derecho en la foto del modelo en Cults3D o MakerWorld → <em>Copiar dirección de la imagen</em> y pégala aquí.
@@ -770,7 +771,7 @@ export function ProductFormModal({
             {/* ========================================================================= */}
             {/* TOGGLE TIPO DE PRODUCTO: SWITCH NOVA                                     */}
             {/* ========================================================================= */}
-            <div className="p-3.5 bg-secondary/50 border border-border/90 rounded-xl flex items-center justify-between gap-4">
+            <div className="p-3.5 bg-muted/25 border border-border/50 rounded-xl flex items-center justify-between gap-4">
               <div className="space-y-0.5 min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary shrink-0" />
@@ -797,21 +798,21 @@ export function ProductFormModal({
             {/* CASO A: SWITCH DESACTIVADO -> CAMPOS ESTÁNDAR DE PRODUCTO SIMPLE          */}
             {/* ========================================================================= */}
             {!hasVariants && (
-              <div className="p-4 bg-secondary/30 border border-border rounded-xl space-y-3.5 shadow-2xs">
+              <div className="p-4 bg-muted/20 border border-border/50 rounded-xl space-y-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <Calculator className="h-3.5 w-3.5 text-primary" />
                     Estructura Financiera & Precios
                   </span>
-                  <span className="text-[10px] font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-full border border-border">
+                  <span className="text-[10px] font-medium text-muted-foreground bg-card px-2 py-0.5 rounded-md border border-border/50">
                     Márgenes en tiempo real
                   </span>
                 </div>
 
                 {/* Costo Base */}
-                <div className="space-y-1.5 p-3 bg-card rounded-xl border border-emerald-500/30 shadow-2xs">
+                <div className="space-y-1.5 p-3 bg-card rounded-lg border border-border/60">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+                    <Label className="text-xs font-medium text-foreground">
                       Costo Base (S/) *
                     </Label>
                     <span className="text-[10px] text-muted-foreground">
@@ -819,7 +820,7 @@ export function ProductFormModal({
                     </span>
                   </div>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
                       S/
                     </span>
                     <Input
@@ -830,7 +831,7 @@ export function ProductFormModal({
                       onChange={(e) => setSimpleCostoBase(e.target.value)}
                       placeholder="0.00"
                       required={!hasVariants}
-                      className="pl-8 bg-background border-emerald-500/40 text-emerald-800 dark:text-emerald-300 rounded-xl text-sm font-mono font-black h-10"
+                      className="pl-8 bg-background border-border/80 text-foreground rounded-lg text-sm font-mono tabular-nums h-9"
                     />
                   </div>
                 </div>
@@ -838,15 +839,15 @@ export function ProductFormModal({
                 {/* Precios: Menor & Mayor */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Menor */}
-                  <div className="space-y-2 p-3 bg-card rounded-xl border border-primary/40 ring-1 ring-primary/10 shadow-2xs">
+                  <div className="space-y-2 p-3 bg-card rounded-lg border border-border/60">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-primary uppercase tracking-wider">Precio por Menor (S/)</span>
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-accent text-accent-foreground border-border">
+                      <span className="text-xs font-medium text-foreground">Precio por Menor (S/)</span>
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-border/50">
                         Detal / PVP
                       </Badge>
                     </div>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-primary">S/</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">S/</span>
                       <Input
                         type="number"
                         step="0.5"
@@ -855,13 +856,13 @@ export function ProductFormModal({
                         onChange={(e) => setSimplePrecioMenor(e.target.value)}
                         placeholder="0.00"
                         required={!hasVariants}
-                        className="pl-8 bg-background border-primary/50 rounded-xl text-sm font-mono font-black h-10 text-primary"
+                        className="pl-8 bg-background border-border/80 rounded-lg text-sm font-mono tabular-nums h-9 text-foreground"
                       />
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-border/60">
+                    <div className="flex items-center justify-between text-[11px] font-mono tabular-nums pt-1 border-t border-border/40">
                       <span className="text-muted-foreground">Margen:</span>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-emerald-800 dark:text-emerald-300">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                           {calcMargen(parseFloat(simplePrecioMenor) || 0, parseFloat(simpleCostoBase) || 0)}
                         </span>
                         <span className="text-muted-foreground">
@@ -872,15 +873,15 @@ export function ProductFormModal({
                   </div>
 
                   {/* Mayor */}
-                  <div className="space-y-2 p-3 bg-card rounded-xl border border-border ring-1 ring-border/50 shadow-2xs">
+                  <div className="space-y-2 p-3 bg-card rounded-lg border border-border/60">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider">Precio por Mayor (S/)</span>
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-secondary text-muted-foreground border-border">
+                      <span className="text-xs font-medium text-foreground">Precio por Mayor (S/)</span>
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-muted/60 text-muted-foreground border-border/50">
                         Volumen / B2B
                       </Badge>
                     </div>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-foreground">S/</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">S/</span>
                       <Input
                         type="number"
                         step="0.5"
@@ -889,13 +890,13 @@ export function ProductFormModal({
                         onChange={(e) => setSimplePrecioMayor(e.target.value)}
                         placeholder="0.00"
                         required={!hasVariants}
-                        className="pl-8 bg-background border-input rounded-xl text-sm font-mono font-black h-10 text-foreground"
+                        className="pl-8 bg-background border-border/80 rounded-lg text-sm font-mono tabular-nums h-9 text-foreground"
                       />
                     </div>
-                    <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-border/60">
+                    <div className="flex items-center justify-between text-[11px] font-mono tabular-nums pt-1 border-t border-border/40">
                       <span className="text-muted-foreground">Margen:</span>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-emerald-800 dark:text-emerald-300">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                           {calcMargen(parseFloat(simplePrecioMayor) || 0, parseFloat(simpleCostoBase) || 0)}
                         </span>
                         <span className="text-muted-foreground">
@@ -912,17 +913,17 @@ export function ProductFormModal({
             {/* CASO B: SWITCH ACTIVADO -> CONSTRUCTOR DINÁMICO DE VARIANTES             */}
             {/* ========================================================================= */}
             {hasVariants && (
-              <div className="bg-secondary/40 border border-border/80 rounded-xl p-4 space-y-3">
+              <div className="bg-muted/20 border border-border/50 rounded-xl p-4 space-y-3">
                 {/* Cabecera del constructor */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Boxes className="h-4 w-4 text-primary" />
-                    <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                    <span className="text-xs font-semibold text-foreground">
                       Versiones del Modelo
                     </span>
                   </div>
-                  <Badge variant="secondary" className="text-[10px] font-bold px-2 py-0.5 bg-card border border-border text-foreground">
-                    {variants.length} {variants.length === 1 ? 'versión registrada' : 'versiones registradas'}
+                  <Badge variant="secondary" className="text-[11px] font-medium px-2 py-0.5 bg-card border border-border/50 text-muted-foreground">
+                    {variants.length} {variants.length === 1 ? 'versión' : 'versiones'}
                   </Badge>
                 </div>
 
@@ -936,11 +937,11 @@ export function ProductFormModal({
                     return (
                       <div
                         key={v.id || `variant_${index}`}
-                        className="bg-card border border-border/70 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center shadow-2xs"
+                        className="bg-card border border-border/60 rounded-xl p-3 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center"
                       >
                         {/* Nombre de Versión (sm:col-span-4) */}
                         <div className="sm:col-span-4 space-y-1">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase block sm:hidden">
+                          <span className="text-[10px] font-medium text-muted-foreground uppercase block sm:hidden">
                             Versión #{index + 1}
                           </span>
                           <Input
@@ -948,13 +949,13 @@ export function ProductFormModal({
                             onChange={(e) => updateVariantField(index, 'nombreVersion', e.target.value)}
                             placeholder="Ej: 1 Color, Set 3 Jugadores"
                             required={hasVariants}
-                            className="h-9 text-xs rounded-lg border-input bg-background font-medium"
+                            className="h-9 text-xs rounded-lg border-border/80 bg-background font-medium"
                           />
                         </div>
 
                         {/* Costo Base (sm:col-span-2) */}
                         <div className="sm:col-span-2 space-y-1">
-                          <span className="text-[9px] font-semibold text-muted-foreground uppercase block">
+                          <span className="text-[10px] font-medium text-muted-foreground uppercase block">
                             Costo (S/)
                           </span>
                           <Input
@@ -965,17 +966,17 @@ export function ProductFormModal({
                             onChange={(e) => updateVariantField(index, 'costoBase', e.target.value)}
                             placeholder="0.00"
                             required={hasVariants}
-                            className="h-9 text-xs rounded-lg border-input bg-background font-mono font-bold"
+                            className="h-9 text-xs rounded-lg border-border/80 bg-background font-mono tabular-nums"
                           />
                         </div>
 
                         {/* Precio Menor (sm:col-span-2) con badge reactivo */}
                         <div className="sm:col-span-2 space-y-1">
                           <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-semibold text-muted-foreground uppercase">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase">
                               Menor (S/)
                             </span>
-                            <span className="text-[9px] font-mono font-bold text-emerald-800 dark:text-emerald-300">
+                            <span className="text-[10px] font-mono tabular-nums font-semibold text-emerald-600 dark:text-emerald-400">
                               {calcMargen(precioMenorNum, costoNum)}
                             </span>
                           </div>
@@ -987,17 +988,17 @@ export function ProductFormModal({
                             onChange={(e) => updateVariantField(index, 'precioMenor', e.target.value)}
                             placeholder="0.00"
                             required={hasVariants}
-                            className="h-9 text-xs rounded-lg border-input bg-background font-mono font-bold text-primary"
+                            className="h-9 text-xs rounded-lg border-border/80 bg-background font-mono tabular-nums text-foreground"
                           />
                         </div>
 
                         {/* Precio Mayor (sm:col-span-2) con badge reactivo */}
                         <div className="sm:col-span-2 space-y-1">
                           <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-semibold text-muted-foreground uppercase">
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase">
                               Mayor (S/)
                             </span>
-                            <span className="text-[9px] font-mono font-bold text-primary">
+                            <span className="text-[10px] font-mono tabular-nums font-semibold text-primary">
                               {calcMargen(precioMayorNum, costoNum)}
                             </span>
                           </div>
@@ -1009,7 +1010,7 @@ export function ProductFormModal({
                             onChange={(e) => updateVariantField(index, 'precioMayor', e.target.value)}
                             placeholder="0.00"
                             required={hasVariants}
-                            className="h-9 text-xs rounded-lg border-input bg-background font-mono font-bold text-foreground"
+                            className="h-9 text-xs rounded-lg border-border/80 bg-background font-mono tabular-nums text-foreground"
                           />
                         </div>
 
@@ -1036,39 +1037,39 @@ export function ProductFormModal({
                 <button
                   type="button"
                   onClick={handleAddVariantRow}
-                  className="variant-dashed-add border border-dashed border-primary/40 text-primary hover:bg-primary/10 text-xs font-semibold h-9 px-4 rounded-xl flex items-center justify-center gap-1.5 w-full transition-colors cursor-pointer"
+                  className="variant-dashed-add border border-dashed border-border/80 hover:border-primary/60 text-muted-foreground hover:text-primary hover:bg-primary/5 text-xs font-medium h-9 px-4 rounded-xl flex items-center justify-center gap-1.5 w-full transition-colors cursor-pointer"
                 >
-                  <Plus className="h-4 w-4 stroke-[2.5]" />
-                  <span>+ Agregar Otra Versión</span>
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Agregar Otra Versión</span>
                 </button>
               </div>
             )}
 
             {/* Fila: Estado del Producto */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-foreground uppercase tracking-wider">
+              <Label className="text-xs font-medium text-foreground/90 block">
                 Estado de Disponibilidad
               </Label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setActivo(true)}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors cursor-pointer flex items-center justify-center gap-2 ${
                     activo
-                      ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/30 shadow-2xs ring-1 ring-emerald-500/20'
-                      : 'bg-background text-muted-foreground border-border hover:bg-secondary'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-background text-muted-foreground border-border/70 hover:bg-muted/40'
                   }`}
                 >
-                  <span className="h-2 w-2 rounded-full bg-emerald-700" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   <span>Activo en Catálogo</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setActivo(false)}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  className={`py-2 px-3 rounded-lg text-xs font-medium border transition-colors cursor-pointer flex items-center justify-center gap-2 ${
                     !activo
-                      ? 'bg-secondary text-muted-foreground border-border shadow-2xs ring-1 ring-border'
-                      : 'bg-background text-muted-foreground border-border hover:bg-secondary'
+                      ? 'bg-muted/60 text-muted-foreground border-border/60'
+                      : 'bg-background text-muted-foreground border-border/70 hover:bg-muted/40'
                   }`}
                 >
                   <Archive className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1078,14 +1079,15 @@ export function ProductFormModal({
             </div>
           </div>
 
-          {/* Footer de Acciones */}
-          <div className="flex justify-end gap-2 pt-4 mt-2 border-t border-border">
+          {/* Sticky Footer */}
+          <div className="px-6 py-3.5 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5 shrink-0 mt-auto">
             {editingProduct && onDeleteProduct && !editingGroup && (
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                size="sm"
                 onClick={() => onDeleteProduct(editingProduct)}
-                className="bg-card border-destructive text-destructive hover:bg-destructive/10 text-xs rounded-xl cursor-pointer mr-auto"
+                className="text-destructive hover:bg-destructive/10 text-xs rounded-lg cursor-pointer mr-auto h-8 px-3"
               >
                 <Trash2 className="h-3.5 w-3.5 mr-1" />
                 Eliminar
@@ -1093,9 +1095,10 @@ export function ProductFormModal({
             )}
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={onClose}
-              className="text-xs rounded-xl cursor-pointer text-muted-foreground border-border"
+              className="text-xs rounded-lg cursor-pointer text-muted-foreground hover:text-foreground h-8 px-3"
             >
               Cancelar
             </Button>
@@ -1103,7 +1106,7 @@ export function ProductFormModal({
               type="submit"
               disabled={isSubmitting}
               size="sm"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs px-5 rounded-xl cursor-pointer shadow-xs"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs px-4 rounded-lg cursor-pointer h-8"
             >
               {isSubmitting
                 ? 'Guardando...'

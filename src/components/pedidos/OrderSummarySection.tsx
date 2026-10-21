@@ -116,27 +116,27 @@ export function OrderSummarySection({
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  title={`50% (S/ ${(total * 0.5).toFixed(2)})`}
+                  title={`50% Anticipo (S/ ${(total * 0.5).toFixed(2)})`}
                   onClick={() => setFormMontoPagado((total * 0.5).toFixed(2))}
                   className="text-xs py-1.5 px-2 text-center truncate rounded-lg font-medium bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer"
                 >
-                  50% (S/ {(total * 0.5).toFixed(2)})
+                  50% Anticipo
                 </button>
                 <button
                   type="button"
-                  title="100% Total"
+                  title={`Pago 100% Total (S/ ${total.toFixed(2)})`}
                   onClick={() => setFormMontoPagado(total.toFixed(2))}
                   className="text-xs py-1.5 px-2 text-center truncate rounded-lg font-semibold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors cursor-pointer"
                 >
-                  100% Total
+                  Pago 100% Total
                 </button>
                 <button
                   type="button"
-                  title="Contra entrega (S/ 0)"
+                  title="S/ 0 Contraentrega"
                   onClick={() => setFormMontoPagado('0')}
                   className="text-xs py-1.5 px-2 text-center truncate rounded-lg font-medium bg-muted hover:bg-muted/80 text-muted-foreground border border-border transition-colors cursor-pointer"
                 >
-                  Contra entrega (S/ 0)
+                  S/ 0 Contraentrega
                 </button>
               </div>
             </div>

@@ -22,7 +22,7 @@ export function CategoryStatsCards({
   onSelectTab
 }: CategoryStatsCardsProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
       {/* 1. Categorías Registradas */}
       <div
         role="button"
@@ -34,26 +34,26 @@ export function CategoryStatsCards({
             onSelectTab('todas')
           }
         }}
-        className={`p-5 rounded-2xl border bg-card shadow-2xs transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
+        className={`p-4 sm:p-5 rounded-xl border bg-card shadow-none transition-all duration-150 cursor-pointer flex flex-col justify-between select-none ${
           activeTab === 'todas'
-            ? 'border-primary/50 ring-1 ring-primary/30 shadow-xs'
-            : 'border-border hover:border-primary/40 hover:shadow-xs hover:bg-secondary/15'
+            ? 'border-primary ring-1 ring-primary/30'
+            : 'border-border/60 hover:border-border hover:bg-muted/20'
         }`}
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             Familias Registradas
           </span>
-          <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
             <Folder className="w-4 h-4" />
           </div>
         </div>
-        <div className="mt-3">
-          <div className="text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums flex items-baseline gap-1.5">
+        <div className="mt-2.5">
+          <div className="text-2xl font-semibold tracking-tight text-foreground font-mono tabular-nums flex items-baseline gap-1.5">
             <span>{totalCategorias}</span>
             <span className="text-xs font-normal font-sans text-muted-foreground">familias</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[11px] text-muted-foreground mt-0.5 font-mono tabular-nums">
             {totalModelos} {totalModelos === 1 ? 'modelo 3D distribuido' : 'modelos 3D distribuidos'}
           </p>
         </div>
@@ -70,26 +70,26 @@ export function CategoryStatsCards({
             onSelectTab('con_modelos')
           }
         }}
-        className={`p-5 rounded-2xl border bg-card shadow-2xs transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
+        className={`p-4 sm:p-5 rounded-xl border bg-card shadow-none transition-all duration-150 cursor-pointer flex flex-col justify-between select-none ${
           activeTab === 'con_modelos'
-            ? 'border-primary/50 ring-1 ring-primary/30 shadow-xs'
-            : 'border-border hover:border-primary/40 hover:shadow-xs hover:bg-secondary/15'
+            ? 'border-primary ring-1 ring-primary/30'
+            : 'border-border/60 hover:border-border hover:bg-muted/20'
         }`}
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             Con Modelos Asignados
           </span>
-          <div className="w-9 h-9 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0">
             <PackageCheck className="w-4 h-4" />
           </div>
         </div>
-        <div className="mt-3">
-          <div className="text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums flex items-baseline gap-1.5">
+        <div className="mt-2.5">
+          <div className="text-2xl font-semibold tracking-tight text-foreground font-mono tabular-nums flex items-baseline gap-1.5">
             <span>{conModelosCount}</span>
             <span className="text-xs font-normal font-sans text-muted-foreground">categorías</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[11px] text-muted-foreground mt-0.5">
             Catálogo activo con modelos vinculados
           </p>
         </div>
@@ -106,32 +106,32 @@ export function CategoryStatsCards({
             onSelectTab('vacias')
           }
         }}
-        className={`p-5 rounded-2xl border bg-card shadow-2xs transition-all duration-200 cursor-pointer flex flex-col justify-between select-none ${
+        className={`p-4 sm:p-5 rounded-xl border bg-card shadow-none transition-all duration-150 cursor-pointer flex flex-col justify-between select-none ${
           activeTab === 'vacias'
-            ? 'border-primary/50 ring-1 ring-primary/30 shadow-xs'
-            : 'border-border hover:border-primary/40 hover:shadow-xs hover:bg-secondary/15'
+            ? 'border-primary ring-1 ring-primary/30'
+            : 'border-border/60 hover:border-border hover:bg-muted/20'
         }`}
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             Categorías Vacías
           </span>
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
               vaciasCount > 0
-                ? 'bg-destructive/10 text-destructive'
-                : 'bg-muted text-muted-foreground'
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                : 'bg-muted/60 text-muted-foreground border border-border/50'
             }`}
           >
             <AlertTriangle className="w-4 h-4" />
           </div>
         </div>
-        <div className="mt-3">
-          <div className="text-2xl font-bold tracking-tight text-foreground font-mono tabular-nums flex items-baseline gap-1.5">
+        <div className="mt-2.5">
+          <div className="text-2xl font-semibold tracking-tight text-foreground font-mono tabular-nums flex items-baseline gap-1.5">
             <span>{vaciasCount}</span>
             <span className="text-xs font-normal font-sans text-muted-foreground">sin modelos</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[11px] text-muted-foreground mt-0.5">
             {vaciasCount > 0 ? 'Sin productos asignados en catálogo' : 'Todas tienen productos asignados'}
           </p>
         </div>

@@ -52,27 +52,27 @@ export function CategoryFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="max-w-md w-[calc(100%-2rem)] bg-background border border-border rounded-2xl p-6 shadow-2xl space-y-4 gap-0"
+        className="max-w-md w-[calc(100%-2rem)] bg-card text-foreground border border-border/80 rounded-2xl p-0 shadow-xl overflow-hidden gap-0 flex flex-col"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-3 border-b border-border/80 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          {/* Sticky Header */}
+          <div className="px-6 py-4 border-b border-border/60 bg-card/95 backdrop-blur-xs flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
                 {categoryToEdit ? (
-                  <Pencil className="w-5 h-5" />
+                  <Pencil className="w-4.5 h-4.5" />
                 ) : (
-                  <FolderPlus className="w-5 h-5" />
+                  <FolderPlus className="w-4.5 h-4.5" />
                 )}
               </div>
-              <div>
-                <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-foreground">
+              <div className="min-w-0">
+                <DialogTitle className="text-base font-semibold tracking-tight text-foreground truncate">
                   {categoryToEdit ? 'Editar Categoría' : 'Nueva Categoría'}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
                   {categoryToEdit
                     ? 'Modifica los datos y nombre de la familia de productos'
-                    : 'Crea una nueva familia para organizar modelos 3D del taller'}
+                    : 'Crea una nueva familia para organizar modelos 3D'}
                 </DialogDescription>
               </div>
             </div>
@@ -80,7 +80,7 @@ export function CategoryFormDialog({
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer shrink-0"
+              className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition-colors cursor-pointer shrink-0"
               aria-label="Cerrar modal"
             >
               <X className="w-4 h-4" />
@@ -88,12 +88,12 @@ export function CategoryFormDialog({
           </div>
 
           {/* Form Fields */}
-          <div className="space-y-3.5">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
             {/* Nombre */}
             <div className="space-y-1.5">
               <label
                 htmlFor="category-nombre"
-                className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block"
+                className="text-xs font-medium text-foreground/90 uppercase tracking-wider block"
               >
                 Nombre de Categoría *
               </label>
@@ -105,7 +105,7 @@ export function CategoryFormDialog({
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Ej: Macetas & Jardín, Figuras de Colección..."
-                className="w-full h-10 rounded-xl border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                className="w-full h-9 rounded-lg border border-border/80 bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring outline-none transition-colors"
               />
             </div>
 
@@ -113,9 +113,9 @@ export function CategoryFormDialog({
             <div className="space-y-1.5">
               <label
                 htmlFor="category-descripcion"
-                className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block"
+                className="text-xs font-medium text-foreground/90 uppercase tracking-wider block"
               >
-                Descripción
+                Descripción (Opcional)
               </label>
               <textarea
                 id="category-descripcion"
@@ -123,26 +123,28 @@ export function CategoryFormDialog({
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
                 placeholder="Breve detalle sobre los modelos comprendidos en esta categoría..."
-                className="w-full rounded-xl border border-input bg-card p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none min-h-[80px] resize-none"
+                className="w-full rounded-lg border border-border/80 bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring outline-none transition-colors min-h-[80px] resize-none"
               />
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border/80">
+          {/* Sticky Footer */}
+          <div className="px-6 py-3.5 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5 shrink-0">
             <Button
               type="button"
               variant="ghost"
+              size="sm"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
-              className="rounded-xl text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer"
+              className="rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground h-8 px-3 cursor-pointer"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
+              size="sm"
               disabled={isSubmitting || !nombre.trim()}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl text-xs px-4 py-2 transition-all active:scale-[0.98] shadow-md shadow-primary/20 flex items-center gap-2 cursor-pointer"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg text-xs px-4 h-8 transition-all shadow-none flex items-center gap-2 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

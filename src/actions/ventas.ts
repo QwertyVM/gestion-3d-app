@@ -8,21 +8,10 @@ import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
 import { updatePagoPedido, deletePagoPedido } from '@/actions/pedidos'
 
+import { revalidateDomain } from '@/core/cache/revalidation-bus'
+
 function safeRevalidate() {
-  try {
-    revalidatePath('/pedidos')
-    revalidatePath('/ventas')
-    revalidatePath('/finanzas')
-    revalidatePath('/finanzas/flujo-caja')
-    revalidatePath('/finanzas/cierres')
-    revalidatePath('/historico-mensual')
-    revalidatePath('/flujo-mensual')
-    revalidatePath('/inventario')
-    revalidatePath('/catalogo/inventario')
-    revalidatePath('/')
-  } catch (e) {
-    // Ignore outside request store
-  }
+  revalidateDomain('orders', 'finance')
 }
 
 function serializeVenta(v: any) {

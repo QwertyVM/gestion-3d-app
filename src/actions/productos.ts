@@ -5,19 +5,14 @@ import { revalidatePath } from 'next/cache'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
 
+import { revalidateDomain } from '@/core/cache/revalidation-bus'
+import { ProductoOption } from '@/contracts/orders.dto'
+
 function safeRevalidate() {
-  try {
-    revalidatePath('/catalogo')
-    revalidatePath('/catalogo/productos')
-    revalidatePath('/catalogo/inventario')
-    revalidatePath('/inventario')
-    revalidatePath('/ventas')
-    revalidatePath('/pedidos')
-    revalidatePath('/')
-  } catch (e) {}
+  revalidateDomain('catalog')
 }
 
-export async function getProductos(negocio?: TipoNegocio) {
+export async function getProductos(negocio?: TipoNegocio): Promise<ProductoOption[]> {
   const targetNegocio = negocio || await getActiveNegocioServer()
 
   const [productos, itemPedidos] = await Promise.all([

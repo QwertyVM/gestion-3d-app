@@ -36,6 +36,17 @@ export function NewBoxPurchaseModal({
   const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const cantNum = Math.max(1, parseInt(cantidad, 10) || 0)
@@ -85,26 +96,28 @@ export function NewBoxPurchaseModal({
 
   return (
     <div
-      className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 isolate z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="bg-card border border-border rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-card text-foreground border border-border/80 rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
-        <div className="bg-muted/40 border-b border-border p-4 sm:p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary">
-              <Package className="w-5 h-5" />
+        <div className="bg-card/95 backdrop-blur-xs border-b border-border/60 px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 rounded-lg bg-muted/60 border border-border/60 text-primary shrink-0">
+              <Package className="w-4 h-4" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-foreground">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold tracking-tight text-foreground truncate">
                 Registrar Compra de Cajas
               </h3>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Ingresa un nuevo lote a inventario y regístralo en Egresos.
               </p>
             </div>
@@ -112,146 +125,151 @@ export function NewBoxPurchaseModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer shrink-0"
+            title="Cerrar modal"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* FORMULARIO */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
-          {/* Concepto / Nombre de la caja */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-foreground">
-              Tipo / Concepto de Caja *
-            </Label>
-            <Input
-              value={concepto}
-              onChange={(e) => setConcepto(e.target.value)}
-              placeholder="Ej: Cajas de Envío 50 uds, Caja Grande 25x20x15..."
-              required
-              className="bg-background border-border text-foreground text-xs rounded-xl"
-            />
-          </div>
-
-          {/* Cantidad y Costo Unitario */}
-          <div className="grid grid-cols-2 gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full min-h-0">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            {/* Concepto / Nombre de la caja */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Cantidad Comprada *
+              <Label className="text-xs font-medium text-foreground/90 block">
+                Tipo / Concepto de Caja *
               </Label>
               <Input
-                type="number"
-                min="1"
-                step="1"
-                value={cantidad}
-                onChange={(e) => setCantidad(e.target.value)}
+                value={concepto}
+                onChange={(e) => setConcepto(e.target.value)}
+                placeholder="Ej: Cajas de Envío 50 uds, Caja Grande 25x20x15..."
                 required
-                className="bg-background border-border text-foreground font-mono font-bold text-sm rounded-xl"
+                className="bg-background border-border/80 text-foreground text-sm rounded-lg h-9"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Costo Unitario (S/) *
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
-                  S/
-                </span>
+            {/* Cantidad y Costo Unitario */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground/90 block">
+                  Cantidad Comprada *
+                </Label>
                 <Input
                   type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={costoUnitario}
-                  onChange={(e) => setCostoUnitario(e.target.value)}
+                  min="1"
+                  step="1"
+                  value={cantidad}
+                  onChange={(e) => setCantidad(e.target.value)}
                   required
-                  className="pl-8 bg-background border-border text-foreground font-mono font-bold text-sm rounded-xl"
+                  className="bg-background border-border/80 text-foreground font-mono tabular-nums font-semibold text-sm rounded-lg h-9"
                 />
               </div>
-            </div>
-          </div>
 
-          {/* Costo de Envío y Persona */}
-          <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground/90 block">
+                  Costo Unitario (S/) *
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                    S/
+                  </span>
+                  <Input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={costoUnitario}
+                    onChange={(e) => setCostoUnitario(e.target.value)}
+                    required
+                    className="pl-8 bg-background border-border/80 text-foreground font-mono tabular-nums font-semibold text-sm rounded-lg h-9"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Costo de Envío y Persona */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground/90 block">
+                  Costo de Envío / Flete (S/)
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+                    S/
+                  </span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={costoEnvio}
+                    onChange={(e) => setCostoEnvio(e.target.value)}
+                    className="pl-8 bg-background border-border/80 text-foreground font-mono tabular-nums text-sm rounded-lg h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-foreground/90 block">
+                  Comprado por *
+                </Label>
+                <select
+                  value={persona}
+                  onChange={(e) => setPersona(e.target.value)}
+                  className="w-full h-9 rounded-lg border border-border/80 bg-background px-3 text-sm text-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="Víctor">Víctor</option>
+                  <option value="Jamile">Jamile</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Fecha */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Costo de Envío / Flete (S/)
+              <Label className="text-xs font-medium text-foreground/90 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground" /> Fecha de Compra *
               </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
-                  S/
+              <Input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                required
+                className="bg-background border-border/80 text-foreground text-sm rounded-lg h-9 cursor-pointer"
+              />
+            </div>
+
+            {/* Resumen Total Estimado */}
+            <div className="bg-muted/30 border border-border/50 rounded-xl p-3.5 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-medium text-muted-foreground block">
+                  Total a Registrar en Egresos:
                 </span>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={costoEnvio}
-                  onChange={(e) => setCostoEnvio(e.target.value)}
-                  className="pl-8 bg-background border-border text-foreground font-mono text-sm rounded-xl"
-                />
+                <span className="text-xs text-muted-foreground font-mono tabular-nums">
+                  {cantNum} cajas × S/ {unitNum.toFixed(2)}{envioNum > 0 ? ` + S/ ${envioNum.toFixed(2)} envío` : ''}
+                </span>
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                Comprado por *
-              </Label>
-              <select
-                value={persona}
-                onChange={(e) => setPersona(e.target.value)}
-                className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground"
-              >
-                <option value="Víctor">Víctor</option>
-                <option value="Jamile">Jamile</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Fecha */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-primary" /> Fecha de Compra *
-            </Label>
-            <Input
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              required
-              className="bg-background border-border text-foreground text-xs font-semibold rounded-xl"
-            />
-          </div>
-
-          {/* Resumen Total Estimado */}
-          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3.5 flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-semibold text-muted-foreground block">
-                Total a Registrar en Egresos:
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {cantNum} cajas × S/ {unitNum.toFixed(2)}{envioNum > 0 ? ` + S/ ${envioNum.toFixed(2)} envío` : ''}
+              <span className="text-xl font-mono tabular-nums font-semibold text-foreground">
+                S/ {totalCalculado.toFixed(2)}
               </span>
             </div>
-            <span className="text-xl font-mono font-extrabold text-primary">
-              S/ {totalCalculado.toFixed(2)}
-            </span>
           </div>
 
-          {/* BOTONES */}
-          <div className="pt-2 flex items-center justify-end gap-2.5">
+          {/* Sticky Footer */}
+          <div className="px-6 py-3.5 border-t border-border/60 bg-muted/20 flex items-center justify-end gap-2.5 shrink-0 mt-auto">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 h-9 text-xs font-medium rounded-xl cursor-pointer"
+              className="text-xs rounded-lg cursor-pointer text-muted-foreground hover:text-foreground h-8 px-3"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl cursor-pointer"
+              size="sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs px-4 rounded-lg cursor-pointer h-8"
             >
               {isSubmitting ? 'Guardando...' : 'Registrar Compra'}
             </Button>

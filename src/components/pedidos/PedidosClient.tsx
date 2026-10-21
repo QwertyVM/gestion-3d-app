@@ -1,70 +1,36 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { EmptyState } from '@/components/ui/EmptyState'
 import {
-  Search,
   Plus,
-  Trash2,
   Package,
-  ShoppingBag,
-  DollarSign,
-  Clock,
-  CheckCircle2,
+  Boxes,
   Truck,
-  ArrowRight,
-  User,
-  Phone,
-  Calendar,
-  AlertTriangle,
-  Receipt,
-  FileText,
-  Share2,
-  Copy,
-  Printer,
+  DollarSign,
+  CheckCircle2,
   ChevronRight,
   ChevronLeft,
-  SlidersHorizontal,
-  X,
-  Palette,
-  Layers,
-  Sparkles,
-  Percent,
-  CreditCard,
-  Send,
-  Boxes,
-  ExternalLink,
-  Pencil,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown,
-  MessageCircle,
-  AtSign,
-  MapPin,
-  UserCheck,
-  UserPlus,
-  Lock,
-  Check
+  ArrowDown
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { DateFilterControl } from '@/components/ui/DateFilterControl'
 import { DateRange, getPresetDateRange, isDateInRange, formatToYMD } from '@/lib/date-utils'
-import { EstadoPedido, TipoPrecio } from '@prisma/client'
-import { createPedido, updateEstadoPedido, updatePedido, addPagoPedido, updatePagoPedido, deletePagoPedido, deletePedido, toggleSeguimientoPostventa } from '@/actions/pedidos'
-import { createCliente } from '@/actions/clientes'
-import { formatDate } from '@/lib/utils'
-import { MultiColorPicker } from '@/components/ui/MultiColorPicker'
-import { SearchableCombobox, ComboboxItem } from '@/components/ui/SearchableCombobox'
+import { EstadoPedido } from '@prisma/client'
+import {
+  updateEstadoPedido,
+  updatePagoPedido,
+  deletePagoPedido,
+  addPagoPedido,
+  toggleSeguimientoPostventa
+} from '@/actions/pedidos'
 import { RegisterMultiProductOrderModal } from './RegisterMultiProductOrderModal'
 import { EditOrderModal } from './EditOrderModal'
 import { OrdersFilterBar } from './OrdersFilterBar'
-import { OrderDetailModal } from './OrderDetailModal'
+import { OrderDetailDrawer as OrderDetailModal } from './OrderDetailDrawer'
 import { BoxLotsModal } from './BoxLotsModal'
 import {
   StockCajasResumen,
@@ -75,250 +41,24 @@ import {
 } from '@/actions/cajas'
 import { KpiCard } from './KpiCard'
 import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
-import { OrderRow } from './OrderRow'
+import { OrderTableRow as OrderRow } from './OrderTableRow'
 import { OrderCardMobile } from './OrderCardMobile'
-import { ColorDot } from './ColorDot'
-import { getItemColors, consolidateOrderItems, formatCurrency } from './orderUtils'
+import { getItemColors, formatCurrency } from './orderUtils'
+import {
+  PedidoView,
+  PagoPedidoView,
+  ProductoOption,
+  FilamentoOption,
+  ClienteOption
+} from './types'
+import { EditPagoModal, EditingPagoState } from './EditPagoModal'
 
-function InstagramIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-    </svg>
-  )
-}
-
-function getInstagramUrl(handle: string) {
-  const clean = handle.replace(/^@/, '').trim()
-  return `https://instagram.com/${clean}`
-}
-
-function getInstagramDirectUrl(handle: string) {
-  const clean = handle.replace(/^@/, '').trim()
-  return `https://ig.me/m/${clean}`
-}
-
-function getWhatsAppPostventaUrl(phone: string, clientName: string, codigo: string) {
-  const cleanPhone = phone.replace(/\D/g, '')
-  const fullPhone = cleanPhone.length === 9 ? `51${cleanPhone}` : cleanPhone
-  const msg = encodeURIComponent(`¡Hola ${clientName}! 👋 Te escribimos de NOVA para saber cómo te fue con tu pedido ${codigo}. ¡Esperamos que todo haya quedado genial! Cuéntanos si todo llegó bien o si tienes alguna consulta.`)
-  return `https://wa.me/${fullPhone}?text=${msg}`
-}
-
-export interface ItemPedidoView {
-  id: string
-  pedidoId: string
-  productoId: string
-  nombreProductoSnapshot: string
-  costoBaseSnapshot: number
-  colorFilamentoId: string | null
-  coloresIds?: string[]
-  colores?: FilamentoOption[]
-  personalizacion: string | null
-  cantidad: number
-  tipoPrecio: TipoPrecio
-  precioUnitario: number
-  costoPackaging: number
-  porcentajeAdicional: number
-  gramosConsumidos: number
-  subtotal: number
-  producto?: {
-    id: string
-    lineaCategoria: string
-    nombreModelo: string
-    costoBase: number
-    precioMayor: number
-    precioMenor: number
-    activo: boolean
-  } | null
-  colorFilamento?: {
-    id: string
-    nombreColor: string
-    numeroBobina?: number | null
-    codigoHex?: string | null
-    tipoMaterial: string
-    marca?: string | null
-    stockGramos?: number | null
-    stockBobinas: number
-  } | null
-}
-
-export interface PagoPedidoView {
-  id: string
-  pedidoId: string
-  fecha: string
-  monto: number
-  metodoPago: string
-  tipo: string
-  notas: string | null
-}
-
-export interface PedidoView {
-  id: string
-  codigo: string
-  fecha: string
-  cliente: string
-  dni?: string | null
-  telefono: string | null
-  canalVenta: string | null
-  handleSocial?: string | null
-  destinoEnvio: string | null
-  diaEntregaPrometida: string | null
-  notas: string | null
-  metodoPago?: string | null
-  estado: EstadoPedido
-  costoEnvio: number
-  subtotal: number
-  total: number
-  montoPagado: number
-  saldoPendiente: number
-  seguimientoPostventa: boolean
-  fechaPostventa?: string | null
-  notasPostventa?: string | null
-  items: ItemPedidoView[]
-  pagos: PagoPedidoView[]
-  cajas?: any[]
-  totalCajas?: number
-  costoTotalCajas?: number
-  costoFabricacion?: number
-  utilidadNetaReal?: number
-  margenNetoPct?: number
-  totalItemsCount: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface ProductoOption {
-  id: string
-  lineaCategoria: string
-  nombreModelo: string
-  costoBase: number
-  precioMayor: number
-  precioMenor: number
-  activo: boolean
-}
-
-export interface FilamentoOption {
-  id: string
-  nombreColor: string
-  codigoHex?: string | null
-  tipoMaterial: string
-  marca?: string | null
-  stockGramos?: number | null
-  stockBobinas: number
-  numeroBobina?: number | null
-  estado?: string
-}
-
-export interface ClienteOption {
-  id: string
-  nombre: string
-  telefono?: string | null
-  canalOrigen?: string | null
-  canalPreferido?: string | null
-  handleSocial?: string | null
-  direccion?: string | null
-  distrito?: string | null
-  dni?: string | null
-}
-
-interface PedidosClientProps {
+export interface PedidosClientProps {
   pedidosIniciales: PedidoView[]
   productos: ProductoOption[]
   filamentos: FilamentoOption[]
   clientesIniciales?: ClienteOption[]
   stockCajasInicial?: StockCajasResumen | null
-}
-
-export interface FormItemState {
-  id: string
-  productoId: string
-  colorFilamentoId: string
-  coloresIds: string[]
-  personalizacion: string
-  cantidad: number | string
-  tipoPrecio: TipoPrecio
-  precioUnitario: number | string
-  costoPackaging: number | string
-  porcentajeAdicional: number
-  gramosConsumidos: number
-}
-
-function getDefaultFilamentoId(fils: FilamentoOption[]): string {
-  if (!fils || fils.length === 0) return ''
-  const negro = fils.find(f => f.nombreColor.toLowerCase().includes('negro'))
-  if (negro) return negro.id
-  return fils[0]?.id || ''
-}
-
-
-const ESTADOS_CONFIG: Record<EstadoPedido, { label: string; colorBg: string; colorText: string; colorBorder: string; icon: any }> = {
-  PENDIENTE: {
-    label: 'Pendiente',
-    colorBg: 'bg-[#FDF6E2]',
-    colorText: 'text-[#8C6D1F]',
-    colorBorder: 'border-[#E8D49B]',
-    icon: Clock
-  },
-  PAGO_VALIDADO: {
-    label: 'Pago Validado',
-    colorBg: 'bg-[#ECFDF5]',
-    colorText: 'text-[#065F46]',
-    colorBorder: 'border-[#A7F3D0]',
-    icon: CheckCircle2
-  },
-  EN_PRODUCCION: {
-    label: 'Imprimiendo',
-    colorBg: 'bg-[#EBF3FB]',
-    colorText: 'text-[#2B6CB0]',
-    colorBorder: 'border-[#BEE3F8]',
-    icon: Printer
-  },
-  EN_TALLER: {
-    label: 'En taller',
-    colorBg: 'bg-indigo-50 dark:bg-indigo-950/40',
-    colorText: 'text-indigo-700 dark:text-indigo-300',
-    colorBorder: 'border-indigo-200 dark:border-indigo-800',
-    icon: Boxes
-  },
-  EMPAQUETANDO: {
-    label: 'Empaquetando',
-    colorBg: 'bg-orange-50 dark:bg-orange-950/40',
-    colorText: 'text-orange-700 dark:text-orange-300',
-    colorBorder: 'border-orange-200 dark:border-orange-800',
-    icon: Package
-  },
-  LISTO_ENTREGA: {
-    label: 'Por Entregar',
-    colorBg: 'bg-[#FAF0F8]',
-    colorText: 'text-[#805AD5]',
-    colorBorder: 'border-[#E9D8FD]',
-    icon: Package
-  },
-  ENTREGADO: {
-    label: 'Entregado',
-    colorBg: 'bg-[#EBF7EE]',
-    colorText: 'text-[#1E5E3A]',
-    colorBorder: 'border-[#B4E3C0]',
-    icon: CheckCircle2
-  },
-  CANCELADO: {
-    label: 'Cancelado',
-    colorBg: 'bg-red-50',
-    colorText: 'text-[#A34335]',
-    colorBorder: 'border-red-200',
-    icon: X
-  }
 }
 
 export function PedidosClient({
@@ -330,6 +70,7 @@ export function PedidosClient({
 }: PedidosClientProps) {
   const [pedidos, setPedidos] = useState<PedidoView[]>(pedidosIniciales)
   const [stockCajas, setStockCajas] = useState<StockCajasResumen | null>(stockCajasInicial)
+  const [clientesList, setClientesList] = useState<ClienteOption[]>(clientesIniciales || [])
   const [isBoxLotsModalOpen, setIsBoxLotsModalOpen] = useState(false)
   const [selectedCajasFilter, setSelectedCajasFilter] = useState<'TODOS' | 'CON_CAJA' | 'SIN_CAJA'>('TODOS')
   const [search, setSearch] = useState('')
@@ -341,6 +82,7 @@ export function PedidosClient({
     }, 200)
     return () => clearTimeout(handler)
   }, [search])
+
   const [selectedEstadoFilter, setSelectedEstadoFilter] = useState<string>('ACTIVOS')
   const [selectedPagoFilter, setSelectedPagoFilter] = useState<string>('TODOS')
   const [selectedPostventaFilter, setSelectedPostventaFilter] = useState<'TODOS' | 'PENDIENTE' | 'REALIZADO'>('TODOS')
@@ -358,6 +100,10 @@ export function PedidosClient({
         setIsNewOrderModalOpen(true)
         if (stored) sessionStorage.removeItem('nova_preselected_product_id')
       }
+      const paramNew = params.get('new')
+      if (paramNew === 'true') {
+        setIsNewOrderModalOpen(true)
+      }
       const paramSearch = params.get('search') || params.get('cliente')
       if (paramSearch) {
         setSearch(paramSearch)
@@ -366,19 +112,18 @@ export function PedidosClient({
     }
   }, [])
 
+  // Sincronizar clientes si cambian las props iniciales
+  useEffect(() => {
+    if (clientesIniciales && clientesIniciales.length > 0) {
+      setClientesList(clientesIniciales)
+    }
+  }, [clientesIniciales])
+
   const [selectedPedidoDetail, setSelectedPedidoDetail] = useState<PedidoView | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+
   // Estado para Edición de Abono
   const [isEditPagoModalOpen, setIsEditPagoModalOpen] = useState(false)
-  const [editingPago, setEditingPago] = useState<{
-    id: string
-    fecha: string
-    monto: string
-    metodoPago: string
-    tipo: string
-    notas: string
-    pedidoId: string
-  } | null>(null)
+  const [editingPago, setEditingPago] = useState<EditingPagoState | null>(null)
   const [isSubmittingEditPago, setIsSubmittingEditPago] = useState(false)
 
   // Estado para Edición / Mantenimiento de Pedido
@@ -394,140 +139,11 @@ export function PedidosClient({
   const [selectedKpiExplainer, setSelectedKpiExplainer] = useState<string | null>(null)
 
   // =========================================================================
-  // ESTADO DEL FORMULARIO MULTIPRODUCTO
+  // POSTVENTA HANDLERS
   // =========================================================================
-  const [formFecha, setFormFecha] = useState(() => new Date().toISOString().split('T')[0])
-  const [formCliente, setFormCliente] = useState('')
-  const [formTelefono, setFormTelefono] = useState('')
-  const [formCanal, setFormCanal] = useState('WhatsApp')
-  const [formHandleSocial, setFormHandleSocial] = useState('')
-  const [formDestino, setFormDestino] = useState('')
-  const [formDiaEntrega, setFormDiaEntrega] = useState('')
-  const [formNotas, setFormNotas] = useState('')
-  const [formCostoEnvio, setFormCostoEnvio] = useState<string>('')
-  const [formMontoPagado, setFormMontoPagado] = useState<string>('')
-  const [formMetodoPago, setFormMetodoPago] = useState('YAPE')
-  const [formNotasPago, setFormNotasPago] = useState('')
-  const [formDescontarStock, setFormDescontarStock] = useState(true)
-
-  // Selector avanzado de clientes (Existente vs Nuevo)
-  const [clientesList, setClientesList] = useState<ClienteOption[]>(clientesIniciales || [])
-  const [clientSelectMode, setClientSelectMode] = useState<'EXISTING' | 'NEW'>(
-    clientesIniciales && clientesIniciales.length > 0 ? 'EXISTING' : 'NEW'
-  )
-  const [selectedClientOption, setSelectedClientOption] = useState<ClienteOption | null>(null)
-  const [clientSearchTerm, setClientSearchTerm] = useState('')
-  const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false)
-
-  // Sincronizar clientes si cambian las props iniciales
-  useEffect(() => {
-    if (clientesIniciales && clientesIniciales.length > 0) {
-      setClientesList(clientesIniciales)
-    }
-  }, [clientesIniciales])
-
-  // Opciones de productos 3D para el buscador predictivo
-  const productosComboboxItems: ComboboxItem[] = useMemo(() => {
-    return (productos || []).map(p => {
-      const displayName = p.nombreModelo.includes(' - ')
-        ? p.nombreModelo.replace(' - ', ' ➔ ')
-        : p.nombreModelo
-
-      return {
-        id: p.id,
-        label: displayName,
-        sublabel: `${p.lineaCategoria || 'General'} • Base: S/ ${Number(p.costoBase || 0).toFixed(2)}`,
-        badge: `S/ ${Number(p.precioMenor || 0).toFixed(2)}`,
-        icon: Boxes,
-      }
-    })
-  }, [productos])
-
-  // Filtrado de clientes para el dropdown
-  const filteredClientOptions = useMemo(() => {
-    if (!clientSearchTerm.trim()) {
-      return (clientesList || []).slice(0, 30)
-    }
-    const q = clientSearchTerm.trim().toLowerCase()
-    const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    return (clientesList || []).filter(c => {
-      const n = (c.nombre || '').toLowerCase()
-      const nNorm = n.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      const t = c.telefono || ''
-      const h = ((c.handleSocial || '')).toLowerCase()
-      return n.includes(q) || nNorm.includes(qNorm) || t.includes(q) || h.includes(q)
-    }).slice(0, 20)
-  }, [clientesList, clientSearchTerm])
-
-  // Detección preventiva de duplicados/similitud en modo "NUEVO"
-  const similarExistingClient = useMemo(() => {
-    if (clientSelectMode !== 'NEW' || !formCliente.trim()) return null
-    const cleanInput = formCliente.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    return (clientesList || []).find(c => {
-      const cleanC = (c.nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-      return cleanC === cleanInput || (cleanInput.length >= 4 && cleanC.includes(cleanInput))
-    }) || null
-  }, [clientSelectMode, formCliente, clientesList])
-
-  const handleSelectClient = (c: ClienteOption) => {
-    setSelectedClientOption(c)
-    setClientSelectMode('EXISTING')
-    setFormCliente(c.nombre)
-    if (c.telefono) setFormTelefono(c.telefono)
-    if (c.handleSocial) setFormHandleSocial(c.handleSocial)
-    if (c.canalOrigen || c.canalPreferido) setFormCanal(c.canalOrigen || c.canalPreferido || 'WhatsApp')
-    if (c.direccion || c.distrito) setFormDestino(c.direccion || c.distrito || '')
-    setIsClientDropdownOpen(false)
-    setClientSearchTerm('')
-  }
-
-  const handleSwitchToNewClient = (presetName = '') => {
-    setSelectedClientOption(null)
-    setClientSelectMode('NEW')
-    setFormCliente(presetName || clientSearchTerm.trim() || formCliente || '')
-    setIsClientDropdownOpen(false)
-  }
-
-  const [isRegisteringClientInline, setIsRegisteringClientInline] = useState(false)
-
-  const handleRegisterClientInline = async () => {
-    if (!formCliente.trim()) {
-      toast.error('Ingresa al menos el nombre del cliente')
-      return
-    }
-    setIsRegisteringClientInline(true)
-    try {
-      const created = await createCliente({
-        nombre: formCliente.trim(),
-        telefono: formTelefono.trim() || undefined,
-        handleSocial: formHandleSocial.trim() || undefined,
-        canalOrigen: formCanal,
-        direccion: formDestino.trim() || undefined
-      })
-      const newOption: ClienteOption = {
-        id: created.id,
-        nombre: created.nombre,
-        telefono: created.telefono,
-        handleSocial: created.handleSocial,
-        canalOrigen: created.canalOrigen,
-        canalPreferido: created.canalOrigen,
-        direccion: created.direccion
-      }
-      setClientesList(prev => [newOption, ...prev.filter(c => c.id !== newOption.id)])
-      setSelectedClientOption(newOption)
-      setClientSelectMode('EXISTING')
-      toast.success(`Cliente "${created.nombre}" guardado y vinculado`)
-    } catch (err: any) {
-      toast.error(err.message || 'Error al registrar cliente')
-    } finally {
-      setIsRegisteringClientInline(false)
-    }
-  }
-
   const handleTogglePostventa = async (pedidoId: string, nuevoEstado: boolean, e?: React.MouseEvent) => {
     if (e) e.stopPropagation()
     const nowIso = new Date().toISOString()
-    // Actualización optimista inmediata
     setPedidos(prev => prev.map(p => {
       if (p.id === pedidoId) {
         return {
@@ -549,9 +165,9 @@ export function PedidosClient({
     try {
       const res = await toggleSeguimientoPostventa(pedidoId, nuevoEstado)
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as PedidoView) : p))
         if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
-          setSelectedPedidoDetail(res.pedido as any)
+          setSelectedPedidoDetail(res.pedido as PedidoView)
         }
       }
     } catch (err) {
@@ -565,232 +181,13 @@ export function PedidosClient({
       const isPostventa = target ? target.seguimientoPostventa : false
       const res = await toggleSeguimientoPostventa(pedidoId, isPostventa, notas)
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as PedidoView) : p))
         if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
-          setSelectedPedidoDetail(res.pedido as any)
+          setSelectedPedidoDetail(res.pedido as PedidoView)
         }
       }
     } catch (err) {
       console.error('Error saving postventa notas:', err)
-    }
-  }
-
-  // Lista dinámica de ítems
-  const [formItems, setFormItems] = useState<FormItemState[]>(() => {
-    const defaultProd = productos[0]
-    const defaultFilId = getDefaultFilamentoId(filamentos)
-    return [
-      {
-        id: 'item-1',
-        productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: defaultFilId,
-        coloresIds: defaultFilId ? [defaultFilId] : [],
-        personalizacion: '',
-        cantidad: 1,
-        tipoPrecio: 'MENOR',
-        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
-        costoPackaging: '',
-        porcentajeAdicional: 0,
-        gramosConsumidos: 0
-      }
-    ]
-  })
-
-  // =========================================================================
-  // HELPER PARA AGREGAR / EDITAR ÍTEMS EN EL FORMULARIO
-  // =========================================================================
-  const addItem = () => {
-    const defaultProd = productos[0]
-    const defaultFilId = getDefaultFilamentoId(filamentos)
-    setFormItems(prev => [
-      ...prev,
-      {
-        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-        productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: defaultFilId,
-        coloresIds: defaultFilId ? [defaultFilId] : [],
-        personalizacion: '',
-        cantidad: 1,
-        tipoPrecio: 'MENOR',
-        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
-        costoPackaging: '',
-        porcentajeAdicional: 0,
-        gramosConsumidos: 0
-      }
-    ])
-  }
-
-  const removeItem = (id: string) => {
-    if (formItems.length <= 1) return
-    setFormItems(prev => prev.filter(i => i.id !== id))
-  }
-
-  const updateItem = (id: string, updates: Partial<FormItemState>) => {
-    setFormItems(prev => prev.map(item => {
-      if (item.id !== id) return item
-      const merged = { ...item, ...updates }
-
-      // Si cambió el producto, recalcular precio base
-      if (updates.productoId && updates.productoId !== item.productoId) {
-        const p = productos.find(prod => prod.id === updates.productoId)
-        if (p) {
-          let pUnit = p.precioMenor
-          if (merged.tipoPrecio === 'MAYOR' || (merged.tipoPrecio as string) === 'AMIGOS') pUnit = p.precioMayor
-          else if (merged.tipoPrecio === 'MENOR' || (merged.tipoPrecio as string) === 'MERCADO') pUnit = p.precioMenor
-          merged.precioUnitario = pUnit
-        }
-      }
-
-      // Si cambió el tier de precio
-      if (updates.tipoPrecio && updates.tipoPrecio !== item.tipoPrecio) {
-        const p = productos.find(prod => prod.id === merged.productoId)
-        if (p) {
-          if (updates.tipoPrecio === 'MAYOR' || (updates.tipoPrecio as string) === 'AMIGOS') merged.precioUnitario = p.precioMayor
-          else if (updates.tipoPrecio === 'MENOR' || (updates.tipoPrecio as string) === 'MERCADO') merged.precioUnitario = p.precioMenor
-        }
-      }
-
-      return merged
-    }))
-  }
-
-  // Cálculos dinámicos del formulario
-  const formSubtotalCalculado = useMemo(() => {
-    return formItems.reduce((sum, it) => {
-      const u = Number(it.precioUnitario) || 0
-      const pack = Number(it.costoPackaging) || 0
-      const q = Math.max(1, Number(it.cantidad) || 1)
-      return sum + ((u + pack) * q)
-    }, 0)
-  }, [formItems])
-
-  const formTotalCalculado = useMemo(() => {
-    const env = Number(formCostoEnvio) || 0
-    return Number((formSubtotalCalculado + env).toFixed(2))
-  }, [formSubtotalCalculado, formCostoEnvio])
-
-  const formSaldoPendienteCalculado = useMemo(() => {
-    const pag = Number(formMontoPagado) || 0
-    return Math.max(0, Number((formTotalCalculado - pag).toFixed(2)))
-  }, [formTotalCalculado, formMontoPagado])
-
-  // =========================================================================
-  // RESET FORMULARIO
-  // =========================================================================
-  const resetForm = () => {
-    const defaultProd = productos[0]
-    const defaultFilId = getDefaultFilamentoId(filamentos)
-    setFormFecha(new Date().toISOString().split('T')[0])
-    setFormCliente('')
-    setFormTelefono('')
-    setFormCanal('WhatsApp')
-    setFormHandleSocial('')
-    setSelectedClientOption(null)
-    setClientSelectMode((clientesList || []).length > 0 ? 'EXISTING' : 'NEW')
-    setClientSearchTerm('')
-    setIsClientDropdownOpen(false)
-    setFormDestino('')
-    setFormDiaEntrega('')
-    setFormNotas('')
-    setFormCostoEnvio('')
-    setFormMontoPagado('')
-    setFormMetodoPago('YAPE')
-    setFormNotasPago('')
-    setFormDescontarStock(true)
-    setFormItems([
-      {
-        id: 'item-1',
-        productoId: defaultProd ? defaultProd.id : '',
-        colorFilamentoId: defaultFilId,
-        coloresIds: defaultFilId ? [defaultFilId] : [],
-        personalizacion: '',
-        cantidad: 1,
-        tipoPrecio: 'MENOR',
-        precioUnitario: defaultProd ? defaultProd.precioMenor : '',
-        costoPackaging: '',
-        porcentajeAdicional: 0,
-        gramosConsumidos: 0
-      }
-    ])
-  }
-
-  // =========================================================================
-  // GUARDAR NUEVO PEDIDO MULTIPRODUCTO
-  // =========================================================================
-  const handleSubmitNuevoPedido = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (clientSelectMode === 'EXISTING' && !selectedClientOption) {
-      toast.error('Por favor busca y selecciona un cliente registrado, o haz clic en "+ Registrar Nuevo".')
-      return
-    }
-
-    if (!formCliente.trim()) {
-      toast.error('Por favor ingresa el nombre del cliente.')
-      return
-    }
-
-    if (formItems.some(i => !i.productoId)) {
-      alert('Todos los ítems deben tener un producto seleccionado.')
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const res = await createPedido({
-        fecha: formFecha,
-        cliente: formCliente.trim(),
-        telefono: formTelefono.trim() || undefined,
-        canalVenta: formCanal,
-        handleSocial: formHandleSocial.trim() || undefined,
-        destinoEnvio: formDestino.trim() || undefined,
-        diaEntregaPrometida: formDiaEntrega.trim() || undefined,
-        notas: formNotas.trim() || undefined,
-        costoEnvio: Number(formCostoEnvio) || 0,
-        montoPagado: Number(formMontoPagado) || 0,
-        metodoPago: formMetodoPago,
-        notasPago: formNotasPago.trim() || undefined,
-        descontarStock: formDescontarStock,
-        items: formItems.map(it => ({
-          productoId: it.productoId,
-          colorFilamentoId: it.coloresIds?.[0] || it.colorFilamentoId || undefined,
-          coloresIds: it.coloresIds || [],
-          personalizacion: it.personalizacion.trim() || undefined,
-          cantidad: Number(it.cantidad) || 1,
-          tipoPrecio: it.tipoPrecio,
-          precioUnitario: Number(it.precioUnitario) || 0,
-          costoPackaging: Number(it.costoPackaging) || 0,
-          porcentajeAdicional: Number(it.porcentajeAdicional) || 0,
-          gramosConsumidos: Number(it.gramosConsumidos) || 0
-        }))
-      })
-
-      if (res.success && res.pedido) {
-        setPedidos(prev => [res.pedido as any, ...prev])
-        const cleanName = formCliente.trim()
-        if (!clientesList.some(c => c.nombre.toLowerCase() === cleanName.toLowerCase())) {
-          setClientesList(prev => [
-            {
-              id: `auto-${cleanName.toLowerCase()}`,
-              nombre: cleanName,
-              telefono: formTelefono.trim() || null,
-              handleSocial: formHandleSocial.trim() || null,
-              canalPreferido: formCanal,
-              canalOrigen: formCanal,
-              direccion: formDestino.trim() || null
-            },
-            ...prev
-          ])
-        }
-        setIsNewOrderModalOpen(false)
-        resetForm()
-        toast.success(`Pedido ${res.pedido.codigo} registrado exitosamente`)
-      } else {
-        alert(res.error || 'No se pudo crear el pedido')
-      }
-    } catch (err: any) {
-      alert(err.message || 'Error inesperado al crear el pedido')
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -819,9 +216,9 @@ export function PedidosClient({
     try {
       const res = await updateEstadoPedido(pedidoId, nuevoEstado)
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as PedidoView) : p))
         if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
-          setSelectedPedidoDetail(res.pedido as any)
+          setSelectedPedidoDetail(res.pedido as PedidoView)
         }
       } else {
         alert(res.error || 'Error al cambiar estado')
@@ -845,8 +242,8 @@ export function PedidosClient({
     try {
       const res = await addPagoPedido(selectedPedidoDetail.id, data)
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === selectedPedidoDetail.id ? (res.pedido as any) : p))
-        setSelectedPedidoDetail(res.pedido as any)
+        setPedidos(prev => prev.map(p => p.id === selectedPedidoDetail.id ? (res.pedido as PedidoView) : p))
+        setSelectedPedidoDetail(res.pedido as PedidoView)
         return true
       } else {
         alert(res.error || 'No se pudo registrar el abono')
@@ -896,9 +293,9 @@ export function PedidosClient({
       })
 
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === editingPago.pedidoId ? (res.pedido as any) : p))
+        setPedidos(prev => prev.map(p => p.id === editingPago.pedidoId ? (res.pedido as PedidoView) : p))
         if (selectedPedidoDetail && selectedPedidoDetail.id === editingPago.pedidoId) {
-          setSelectedPedidoDetail(res.pedido as any)
+          setSelectedPedidoDetail(res.pedido as PedidoView)
         }
         setIsEditPagoModalOpen(false)
         setEditingPago(null)
@@ -917,9 +314,9 @@ export function PedidosClient({
     try {
       const res = await deletePagoPedido(pagoId)
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as PedidoView) : p))
         if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
-          setSelectedPedidoDetail(res.pedido as any)
+          setSelectedPedidoDetail(res.pedido as PedidoView)
         }
       } else {
         alert(res.error || 'No se pudo eliminar el abono')
@@ -948,9 +345,9 @@ export function PedidosClient({
     try {
       const res = await asignarCajasAPedido({ pedidoId, cajas })
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as PedidoView) : p))
         if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
-          setSelectedPedidoDetail(res.pedido as any)
+          setSelectedPedidoDetail(res.pedido as PedidoView)
         }
         await reloadStockCajas()
         toast.success('Cajas asignadas correctamente al pedido')
@@ -969,9 +366,9 @@ export function PedidosClient({
     try {
       const res = await quitarCajasDePedido(pedidoId)
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as PedidoView) : p))
         if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
-          setSelectedPedidoDetail(res.pedido as any)
+          setSelectedPedidoDetail(res.pedido as PedidoView)
         }
         await reloadStockCajas()
         toast.success('Asignación de cajas removida')
@@ -997,9 +394,9 @@ export function PedidosClient({
     try {
       const res = await asignarCajaRapida(pedidoId, targetLot.id, 1)
       if (res.success && res.pedido) {
-        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as any) : p))
+        setPedidos(prev => prev.map(p => p.id === pedidoId ? (res.pedido as PedidoView) : p))
         if (selectedPedidoDetail && selectedPedidoDetail.id === pedidoId) {
-          setSelectedPedidoDetail(res.pedido as any)
+          setSelectedPedidoDetail(res.pedido as PedidoView)
         }
         await reloadStockCajas()
         toast.success(`1 caja asignada al pedido (${targetLot.concepto})`)
@@ -1010,25 +407,6 @@ export function PedidosClient({
       toast.error(err.message || 'Error al asignar caja')
     }
   }
-
-  // =========================================================================
-  // ELIMINAR PEDIDO
-  // =========================================================================
-  const handleEliminarPedido = async (id: string, codigo: string) => {
-    if (!confirm(`¿Estás seguro de eliminar el pedido ${codigo}?`)) return
-    try {
-      const res = await deletePedido(id)
-      if (res.success) {
-        setPedidos(prev => prev.filter(p => p.id !== id))
-        if (selectedPedidoDetail?.id === id) setSelectedPedidoDetail(null)
-      } else {
-        alert(res.error || 'No se pudo eliminar el pedido')
-      }
-    } catch (err: any) {
-      alert(err.message || 'Error al eliminar pedido')
-    }
-  }
-
 
   // =========================================================================
   // FILTRADO Y KPIS
@@ -1089,10 +467,6 @@ export function PedidosClient({
     }
   }, [pedidos, dateRange])
 
-  const pedidosSinCajaCount = useMemo(() => {
-    return pedidos.filter(p => p.estado !== 'CANCELADO' && (!p.totalCajas || p.totalCajas === 0)).length
-  }, [pedidos])
-
   const handleSort = (field: 'fecha' | 'codigo' | 'cliente' | 'cantidad' | 'total' | 'saldoPendiente' | 'estado') => {
     if (sortField === field) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
@@ -1109,7 +483,7 @@ export function PedidosClient({
       const getPriority = (estado: string) => {
         if (estado === 'ENTREGADO') return 2
         if (estado === 'CANCELADO') return 3
-        return 1 // Activos: PENDIENTE, EN_TALLER, PAGO_VALIDADO, EN_PRODUCCION, EMPAQUETANDO, LISTO_ENTREGA
+        return 1
       }
 
       const priorityDiff = getPriority(a.estado) - getPriority(b.estado)
@@ -1207,10 +581,10 @@ export function PedidosClient({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">
               Gestión de Pedidos
             </h1>
-            <span className="bg-muted text-muted-foreground text-xs font-semibold px-2 py-0.5 rounded-lg border border-border">
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-muted text-muted-foreground tabular-nums border border-border/50 font-medium">
               {kpis.totalPedidos}
             </span>
           </div>
@@ -1220,14 +594,11 @@ export function PedidosClient({
         </div>
 
         <Button
-          onClick={() => {
-            resetForm()
-            setIsNewOrderModalOpen(true)
-          }}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs md:text-sm px-4 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto active:scale-[0.98] border-0"
+          onClick={() => setIsNewOrderModalOpen(true)}
+          className="lg:hidden bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs px-3 h-8 rounded-lg shadow-none transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto active:scale-[0.98] border-0"
         >
-          <Plus className="h-4 w-4 stroke-[2]" />
-          <span>+ Nuevo Pedido</span>
+          <Plus className="h-3.5 w-3.5" />
+          <span>Nuevo Pedido</span>
         </Button>
       </div>
 
@@ -1272,7 +643,6 @@ export function PedidosClient({
           onInfoClick={() => setSelectedKpiExplainer('pedidos_cobrado')}
         />
       </div>
-
 
       {selectedCajasFilter === 'SIN_CAJA' && (
         <div className="flex items-center justify-between px-3.5 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-700 dark:text-amber-400">
@@ -1322,47 +692,45 @@ export function PedidosClient({
       {/* ========================================================================= */}
       {/* 4. TABLA DE PEDIDOS (CERO SCROLL HORIZONTAL, TABLE-FIXED W-FULL)          */}
       {/* ========================================================================= */}
-      <div className="bg-card border border-border rounded-xl shadow-xs overflow-hidden">
+      <div className="bg-card border border-border/60 rounded-xl shadow-none overflow-hidden">
         {filteredPedidos.length === 0 ? (
-          <div className="py-16 px-4 text-center">
-            <div className="mx-auto w-12 h-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground mb-3">
-              <Boxes className="h-6 w-6 stroke-[1.5]" />
-            </div>
-            <h3 className="text-sm font-semibold text-foreground">No se encontraron pedidos</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-              No hay pedidos que coincidan con los filtros de búsqueda o fecha seleccionados.
-            </p>
-            {(search || selectedEstadoFilter !== 'ACTIVOS' || selectedPagoFilter !== 'TODOS' || selectedPostventaFilter !== 'TODOS') && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearch('')
-                  setSelectedEstadoFilter('ACTIVOS')
-                  setSelectedPagoFilter('TODOS')
-                  setSelectedPostventaFilter('TODOS')
-                  setDateRange(getPresetDateRange('TODO'))
-                  setCurrentPage(1)
-                }}
-                className="mt-4 h-8 px-3 rounded-lg border-border bg-card hover:bg-muted text-foreground text-xs font-medium cursor-pointer"
-              >
-                Restablecer filtros
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            icon={Boxes}
+            title="No se encontraron pedidos"
+            description="No hay pedidos que coincidan con los filtros de búsqueda o fecha seleccionados."
+            action={
+              (search || selectedEstadoFilter !== 'ACTIVOS' || selectedPagoFilter !== 'TODOS' || selectedPostventaFilter !== 'TODOS') ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearch('')
+                    setSelectedEstadoFilter('ACTIVOS')
+                    setSelectedPagoFilter('TODOS')
+                    setSelectedPostventaFilter('TODOS')
+                    setDateRange(getPresetDateRange('TODO'))
+                    setCurrentPage(1)
+                  }}
+                  className="rounded-lg border-border"
+                >
+                  Restablecer filtros
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <>
-            {/* Vista Desktop (>= md): Tabla table-fixed con CERO scroll horizontal */}
-            <div className="hidden md:block w-full overflow-hidden">
+            {/* Vista Desktop (>= lg): Tabla table-fixed con CERO scroll horizontal */}
+            <div className="hidden lg:block w-full overflow-hidden">
               <Table className="w-full table-fixed">
-                <TableHeader className="bg-secondary/40 border-y border-border/70 text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                <TableHeader className="bg-muted/20 border-b border-border/60 text-[11px] font-medium text-muted-foreground tracking-wider uppercase select-none">
                   <TableRow className="border-none hover:bg-transparent">
                     {/* 1. PEDIDO (12% / pl-5) */}
                     <TableHead className="w-[12%] pl-5 pr-3 py-3 text-left">
                       <button
                         type="button"
                         onClick={() => handleSort('codigo')}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase select-none"
                       >
                         <span>PEDIDO</span>
                         {sortField === 'codigo' || sortField === 'fecha' ? (
@@ -1378,7 +746,7 @@ export function PedidosClient({
                       <button
                         type="button"
                         onClick={() => handleSort('cliente')}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase select-none"
                       >
                         <span>CLIENTE</span>
                         {sortField === 'cliente' ? (
@@ -1394,7 +762,7 @@ export function PedidosClient({
                       <button
                         type="button"
                         onClick={() => handleSort('cantidad')}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase select-none"
                       >
                         <span>PRODUCTOS & FILAMENTOS</span>
                         {sortField === 'cantidad' ? (
@@ -1406,7 +774,7 @@ export function PedidosClient({
                     </TableHead>
 
                     {/* 4. ENTREGA & DESTINO (15% / px-3) */}
-                    <TableHead className="w-[15%] px-3 py-3 text-left text-[11px] font-semibold text-muted-foreground tracking-wider uppercase">
+                    <TableHead className="w-[15%] px-3 py-3 text-left text-[11px] font-medium text-muted-foreground tracking-wider uppercase select-none">
                       <span>ENTREGA & DESTINO</span>
                     </TableHead>
 
@@ -1415,7 +783,7 @@ export function PedidosClient({
                       <button
                         type="button"
                         onClick={() => handleSort('estado')}
-                        className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                        className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase select-none"
                       >
                         <span>ESTADO & POSTVENTA</span>
                         {sortField === 'estado' ? (
@@ -1431,7 +799,7 @@ export function PedidosClient({
                       <button
                         type="button"
                         onClick={() => handleSort('total')}
-                        className="inline-flex items-center justify-end gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase"
+                        className="inline-flex items-center justify-end gap-1.5 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer tracking-wider uppercase select-none"
                       >
                         <span>TOTAL & BALANCE</span>
                         {sortField === 'total' || sortField === 'saldoPendiente' ? (
@@ -1460,8 +828,8 @@ export function PedidosClient({
               </Table>
             </div>
 
-            {/* Vista Móvil (< md): Tarjetas Touch-Friendly Fluidas (CERO scroll horizontal) */}
-            <div className="block md:hidden p-3 space-y-3">
+            {/* Vista Móvil (< lg): Tarjetas Touch-Friendly Fluidas (CERO scroll horizontal) */}
+            <div className="block lg:hidden p-3 space-y-3">
               {paginatedPedidos.map((p) => (
                 <OrderCardMobile
                   key={p.id}
@@ -1481,7 +849,7 @@ export function PedidosClient({
         {/* PIE DE TABLA: SELECTOR DE REGISTROS Y PAGINACIÓN AL PIE                    */}
         {/* ========================================================================= */}
         {filteredPedidos.length > 0 && (
-          <div className="p-3 bg-muted/20 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="p-3 bg-muted/20 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Mostrar:</span>
               <select
@@ -1490,20 +858,20 @@ export function PedidosClient({
                   setItemsPerPage(Number(e.target.value))
                   setCurrentPage(1)
                 }}
-                className="h-8 rounded-lg border border-input bg-background px-2 text-xs font-medium text-foreground cursor-pointer focus:outline-none"
+                className="h-8 rounded-lg border border-border/60 bg-background px-2 text-xs font-medium text-foreground cursor-pointer focus:outline-none"
               >
                 <option value={10}>10</option>
                 <option value={20}>20</option>
                 <option value={50}>50</option>
               </select>
               <span className="text-muted-foreground ml-1">
-                de <strong className="text-foreground">{sortedPedidos.length}</strong> pedidos
+                de <strong className="text-foreground tabular-nums">{sortedPedidos.length}</strong> pedidos
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground font-medium">
-                Página {currentPage} de {Math.max(1, totalPages)}
+                Página <span className="tabular-nums">{currentPage}</span> de <span className="tabular-nums">{Math.max(1, totalPages)}</span>
               </span>
               <div className="flex items-center gap-0.5">
                 <Button
@@ -1558,7 +926,6 @@ export function PedidosClient({
         }}
       />
 
-
       {/* ========================================================================= */}
       {/* 6. MODAL: DETALLE Y TICKET DE PEDIDO (PRINT / WHATSAPP / ABONOS)          */}
       {/* ========================================================================= */}
@@ -1579,154 +946,19 @@ export function PedidosClient({
       />
 
       {/* ========================================================================= */}
-      {/* 6.5. MODAL: EDITAR FECHA / MONTO DE ABONO                                 */}
+      {/* 6.5. MODAL MODULAR: EDITAR FECHA / MONTO DE ABONO                        */}
       {/* ========================================================================= */}
-      {isEditPagoModalOpen && editingPago && (
-        <div className="fixed inset-0 isolate z-[60] bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="bg-muted/40 border-b border-border p-4 sm:p-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-accent text-accent-foreground border border-accent flex items-center justify-center shadow-xs">
-                  <DollarSign className="h-5 w-5 stroke-[2.5]" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-foreground">Editar Registro de Abono</h3>
-                  <p className="text-xs text-muted-foreground">Ajusta la fecha contable, monto o método de este abono.</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditPagoModalOpen(false)
-                  setEditingPago(null)
-                }}
-                className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleEditPagoSubmit} className="p-5 sm:p-6 space-y-4">
-              {/* Fecha */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-foreground font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-primary" />
-                  Fecha Real de Cobranza *
-                </Label>
-                <Input
-                  type="date"
-                  value={editingPago.fecha}
-                  onChange={(e) => setEditingPago(prev => prev ? { ...prev, fecha: e.target.value } : null)}
-                  required
-                  className="bg-background border-border text-foreground font-mono text-sm font-semibold rounded-xl focus:border-primary"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Esta fecha se reflejará exactamente en el Flujo de Caja e ingresos de ese día.
-                </p>
-              </div>
-
-              {/* Monto */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-foreground font-semibold uppercase tracking-wider">
-                  Monto Cobrado (S/) *
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">S/</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editingPago.monto}
-                    onChange={(e) => setEditingPago(prev => prev ? { ...prev, monto: e.target.value } : null)}
-                    required
-                    placeholder="0.00"
-                    className="pl-9 bg-background border-border text-foreground font-mono text-base font-bold rounded-xl focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              {/* Método de Pago */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-foreground font-semibold uppercase tracking-wider">
-                  Método de Pago *
-                </Label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {['YAPE', 'PLIN', 'BCP', 'EFECTIVO'].map(metodo => {
-                    const isSel = editingPago.metodoPago === metodo
-                    return (
-                      <button
-                        key={metodo}
-                        type="button"
-                        onClick={() => setEditingPago(prev => prev ? { ...prev, metodoPago: metodo } : null)}
-                        className={`py-2 px-1 text-center rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                          isSel 
-                            ? 'bg-primary text-primary-foreground border-primary shadow-xs' 
-                            : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-                        }`}
-                      >
-                        {metodo}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Tipo de Abono */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-foreground font-semibold uppercase tracking-wider">
-                  Tipo de Abono *
-                </Label>
-                <select
-                  value={editingPago.tipo}
-                  onChange={(e) => setEditingPago(prev => prev ? { ...prev, tipo: e.target.value } : null)}
-                  className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground"
-                >
-                  <option value="ANTICIPO">Anticipo / Adelanto</option>
-                  <option value="SALDO_ENTREGA">Liquidación / Saldo Final</option>
-                  <option value="ABONO">Abono Parcial</option>
-                </select>
-              </div>
-
-              {/* Notas */}
-              <div className="space-y-1.5">
-                <Label className="text-xs text-foreground font-semibold uppercase tracking-wider">
-                  Notas o N° de Operación (Opcional)
-                </Label>
-                <Input
-                  value={editingPago.notas}
-                  onChange={(e) => setEditingPago(prev => prev ? { ...prev, notas: e.target.value } : null)}
-                  placeholder="Ej: Operación 481920..."
-                  className="bg-background border-border text-foreground text-xs rounded-xl"
-                />
-              </div>
-
-              {/* Botones de acción */}
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditPagoModalOpen(false)
-                    setEditingPago(null)
-                  }}
-                  className="px-4 h-9 text-xs font-medium border-border bg-card hover:bg-muted text-muted-foreground rounded-xl cursor-pointer"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isSubmittingEditPago}
-                  className="px-5 h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl cursor-pointer"
-                >
-                  {isSubmittingEditPago ? 'Guardando...' : 'Guardar Cambios'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <EditPagoModal
+        isOpen={isEditPagoModalOpen}
+        onClose={() => {
+          setIsEditPagoModalOpen(false)
+          setEditingPago(null)
+        }}
+        editingPago={editingPago}
+        setEditingPago={setEditingPago}
+        onSubmit={handleEditPagoSubmit}
+        isSubmitting={isSubmittingEditPago}
+      />
 
       {/* ========================================================================= */}
       {/* 7. MODAL: EDITAR / MANTENIMIENTO DE PEDIDO                                */}

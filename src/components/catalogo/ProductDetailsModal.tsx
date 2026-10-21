@@ -121,45 +121,45 @@ export function ProductDetailsModal({
       <DialogContent
         showCloseButton={false}
         finalFocus={false}
-        overlayClassName="bg-black/40 backdrop-blur-xs fixed inset-0 z-50"
-        className="w-full max-w-2xl bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] z-50 gap-0 p-0 sm:max-w-2xl"
+        overlayClassName="bg-black/50 backdrop-blur-[2px] fixed inset-0 z-50"
+        className="w-full max-w-2xl bg-card border border-border/80 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[88vh] z-50 p-0 sm:max-w-2xl text-foreground"
       >
         {/* ========================================================================= */}
         {/* ENCABEZADO DEL MODAL (FIJO)                                               */}
         {/* ========================================================================= */}
-        <div className="px-6 py-5 border-b border-border/70 bg-card/40 flex items-start justify-between gap-4 shrink-0">
+        <div className="px-6 py-4 border-b border-border/60 bg-card/95 backdrop-blur-xs flex items-start justify-between gap-4 shrink-0">
           <div className="min-w-0 flex-1">
-            <DialogTitle className="text-xl font-bold text-foreground leading-snug truncate" title={baseName}>
+            <DialogTitle className="text-base font-semibold tracking-tight text-foreground leading-snug truncate" title={baseName}>
               {baseName}
             </DialogTitle>
 
-            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               {/* Chip de categoría */}
-              <span className="bg-secondary border border-border/70 text-foreground text-xs font-semibold px-2.5 py-0.5 rounded-md">
+              <span className="bg-muted/60 border border-border/50 text-muted-foreground text-xs font-medium px-2 py-0.5 rounded-md">
                 {categoria}
               </span>
 
               {/* Badge de versión */}
               {isGroup && totalVersiones > 1 ? (
-                <span className="bg-accent text-accent-foreground text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/70 shrink-0">
+                <span className="bg-muted/60 text-muted-foreground text-[11px] font-medium px-2 py-0.5 rounded-md border border-border/50 shrink-0">
                   {totalVersiones} versiones
                 </span>
               ) : (
-                <span className="bg-accent text-accent-foreground text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/70 shrink-0">
+                <span className="bg-muted/60 text-muted-foreground text-[11px] font-medium px-2 py-0.5 rounded-md border border-border/50 shrink-0">
                   Versión única
                 </span>
               )}
 
               {/* Fecha de alta y pedidos asociados */}
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground font-mono m-0">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-primary" />
-                  <span>{formatFechaRegistro(fecha)}</span>
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground font-mono tabular-nums m-0">
+                <span className="flex items-center gap-1 font-sans">
+                  <Calendar className="h-3 w-3 text-muted-foreground" />
+                  <span className="font-mono tabular-nums">{formatFechaRegistro(fecha)}</span>
                 </span>
                 <span className="text-muted-foreground/40">•</span>
-                <span className="flex items-center gap-1 text-foreground font-semibold">
+                <span className="flex items-center gap-1 text-foreground font-medium font-sans">
                   <ShoppingBag className="h-3 w-3 text-primary" />
-                  <span>{pedidosCount} {pedidosCount === 1 ? 'pedido asociado' : 'pedidos asociados'}</span>
+                  <span className="font-mono tabular-nums">{pedidosCount}</span> {pedidosCount === 1 ? 'pedido' : 'pedidos'}
                 </span>
               </div>
             </div>
@@ -170,8 +170,9 @@ export function ProductDetailsModal({
             <Button
               type="button"
               variant="outline"
+              size="sm"
               onClick={onEdit}
-              className="border-border text-foreground hover:bg-secondary rounded-xl h-8 px-3 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+              className="border-border/60 text-foreground hover:bg-muted/50 rounded-lg h-8 px-2.5 text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <Pencil className="h-3.5 w-3.5 text-primary" />
               <span>Editar</span>
@@ -180,7 +181,7 @@ export function ProductDetailsModal({
             <button
               type="button"
               onClick={onClose}
-              className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/60 flex items-center justify-center transition-colors cursor-pointer p-0"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border/60 flex items-center justify-center transition-colors cursor-pointer p-0"
               title="Cerrar modal"
             >
               <X className="h-4 w-4" />
@@ -194,7 +195,7 @@ export function ProductDetailsModal({
         {/* ========================================================================= */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1 text-foreground">
           {/* Bloque 1: Visor / Preview del Modelo */}
-          <div className="w-full h-44 rounded-xl bg-secondary/50 border border-border/80 flex flex-col items-center justify-center relative overflow-hidden shadow-2xs group">
+          <div className="w-full h-44 rounded-xl bg-muted/20 border border-border/60 flex flex-col items-center justify-center relative overflow-hidden group">
             {imageUrl ? (
               <img
                 src={imageUrl}
@@ -203,7 +204,7 @@ export function ProductDetailsModal({
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-center p-4">
-                <Boxes className="w-10 h-10 text-primary/70 mb-2 stroke-[1.8]" />
+                <Boxes className="w-9 h-9 text-muted-foreground/60 mb-2 stroke-[1.8]" />
                 <span className="text-xs font-medium text-muted-foreground">
                   Modelo 3D sin fotografía asignada
                 </span>
@@ -217,7 +218,7 @@ export function ProductDetailsModal({
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Abrir en ${getDomainBadgeLabel(makerworldUrl)}`}
-                className="bg-card/90 backdrop-blur-xs border border-border/80 text-foreground hover:bg-card text-xs font-semibold h-7 px-2.5 rounded-lg flex items-center gap-1.5 shadow-xs absolute bottom-3 left-3 cursor-pointer transition-colors"
+                className="bg-card/90 backdrop-blur-xs border border-border/80 text-foreground hover:bg-card text-xs font-medium h-7 px-2.5 rounded-lg flex items-center gap-1.5 shadow-xs absolute bottom-3 left-3 cursor-pointer transition-colors"
               >
                 <ExternalLink className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Ver en {getDomainBadgeLabel(makerworldUrl)}</span>
@@ -228,10 +229,10 @@ export function ProductDetailsModal({
             <button
               type="button"
               onClick={handleCopyFicha}
-              className="bg-card/90 backdrop-blur-xs border border-border/80 text-foreground hover:bg-card text-xs font-semibold h-7 px-2.5 rounded-lg flex items-center gap-1.5 shadow-xs absolute bottom-3 right-3 cursor-pointer transition-colors"
+              className="bg-card/90 backdrop-blur-xs border border-border/80 text-foreground hover:bg-card text-xs font-medium h-7 px-2.5 rounded-lg flex items-center gap-1.5 shadow-xs absolute bottom-3 right-3 cursor-pointer transition-colors"
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5 text-emerald-700" />
+                <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               ) : (
                 <Share2 className="h-3.5 w-3.5 text-primary" />
               )}
@@ -241,18 +242,18 @@ export function ProductDetailsModal({
 
           {/* Bloque 2: Estructura de Precios & Rentabilidad */}
           <div>
-            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2.5 flex items-center gap-2">
-              <DollarSign className="h-3.5 w-3.5 text-primary" />
-              <span>ESTRUCTURA DE PRECIOS & RENTABILIDAD</span>
+            <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5 select-none">
+              <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Estructura de Precios & Rentabilidad</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 bg-card border border-border rounded-xl p-4 shadow-2xs text-center font-mono">
+            <div className="grid grid-cols-3 gap-3 bg-muted/20 border border-border/50 rounded-xl p-4 text-center font-mono tabular-nums">
               {/* Costo Base */}
               <div className="space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block font-sans">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block font-sans">
                   Costo Base
                 </span>
-                <span className="text-base font-extrabold text-foreground mt-0.5 block truncate">
+                <span className="text-base font-semibold text-foreground mt-0.5 block truncate">
                   {minCosto === maxCosto
                     ? formatCurrency(minCosto)
                     : `${formatCurrency(minCosto)} – ${formatCurrency(maxCosto)}`}
@@ -260,31 +261,31 @@ export function ProductDetailsModal({
               </div>
 
               {/* PVP Menor */}
-              <div className="space-y-1 border-x border-border/70 px-2">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block font-sans">
+              <div className="space-y-1 border-x border-border/40 px-2">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block font-sans">
                   PVP Menor
                 </span>
-                <span className="text-base font-extrabold text-foreground mt-0.5 block truncate">
+                <span className="text-base font-semibold text-foreground mt-0.5 block truncate">
                   {minMenor === maxMenor
                     ? formatCurrency(minMenor)
                     : `${formatCurrency(minMenor)} – ${formatCurrency(maxMenor)}`}
                 </span>
-                <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block mt-0.5 font-mono">
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 block mt-0.5 font-mono tabular-nums">
                   {calcMargen(minMenor, minCosto)}
                 </span>
               </div>
 
               {/* PVP Mayor */}
               <div className="space-y-1">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block font-sans">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block font-sans">
                   PVP Mayor
                 </span>
-                <span className="text-base font-extrabold text-foreground mt-0.5 block truncate">
+                <span className="text-base font-semibold text-foreground mt-0.5 block truncate">
                   {minMayor === maxMayor
                     ? formatCurrency(minMayor)
                     : `${formatCurrency(minMayor)} – ${formatCurrency(maxMayor)}`}
                 </span>
-                <span className="text-[10px] font-bold text-primary block mt-0.5 font-mono">
+                <span className="text-[10px] font-semibold text-primary block mt-0.5 font-mono tabular-nums">
                   {calcMargen(minMayor, minCosto)}
                 </span>
               </div>
@@ -293,9 +294,9 @@ export function ProductDetailsModal({
 
           {/* Bloque 3: Tabla Comparativa de Versiones (Renderizado Condicional) */}
           {isGroup && group && group.variants.length > 1 && (
-            <div className="bg-card border border-border rounded-xl p-3.5 space-y-2 shadow-2xs">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
-                <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <div className="bg-card border border-border/60 rounded-xl p-3.5 space-y-2">
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/50">
+                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                   <Layers className="h-3.5 w-3.5 text-primary" />
                   Comparativa de Versiones ({group.variants.length})
                 </span>
@@ -319,43 +320,43 @@ export function ProductDetailsModal({
                       className="pt-2 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-primary/70 font-mono text-xs select-none">└─</span>
-                        <span className="text-xs font-semibold text-foreground truncate">
+                        <span className="text-muted-foreground/60 font-mono text-xs select-none">└─</span>
+                        <span className="text-xs font-medium text-foreground truncate">
                           {v.variantName}
                         </span>
                         {p.activo ? (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 text-[9px] font-bold shrink-0">
-                            • Activo
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium shrink-0">
+                            Activo
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-secondary border border-border text-muted-foreground text-[9px] font-medium shrink-0">
+                          <span className="px-2 py-0.5 rounded-md bg-muted/60 border border-border/50 text-muted-foreground text-[10px] font-medium shrink-0">
                             Archivado
                           </span>
                         )}
                         <span
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-secondary border border-border/60 text-[9px] text-muted-foreground font-mono shrink-0"
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted/50 border border-border/50 text-[10px] text-muted-foreground font-mono tabular-nums shrink-0"
                           title={`Versión asociada a ${p.pedidosCount ?? 0} pedidos`}
                         >
-                          <ShoppingBag className="w-2.5 h-2.5 text-primary" />
+                          <ShoppingBag className="w-2.5 h-2.5 text-muted-foreground" />
                           <span>{p.pedidosCount ?? 0} ped.</span>
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2.5 text-xs font-mono shrink-0">
+                      <div className="flex items-center gap-2.5 text-xs font-mono tabular-nums shrink-0">
                         <span className="text-[11px] text-muted-foreground">
-                          Base: <strong className="text-foreground">{formatCurrency(costo)}</strong>
+                          Base: <strong className="text-foreground font-semibold">{formatCurrency(costo)}</strong>
                         </span>
                         <span className="text-muted-foreground/40">•</span>
-                        <span className="text-[11px] text-foreground font-semibold">
+                        <span className="text-[11px] text-foreground font-medium">
                           Menor: {formatCurrency(menor)}{' '}
-                          <span className="text-emerald-800 dark:text-emerald-300 font-bold text-[10px]">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-[10px]">
                             ({margenMenor})
                           </span>
                         </span>
                         <span className="text-muted-foreground/40">•</span>
-                        <span className="text-[11px] text-foreground font-semibold">
+                        <span className="text-[11px] text-foreground font-medium">
                           Mayor: {formatCurrency(mayor)}{' '}
-                          <span className="text-primary font-bold text-[10px]">
+                          <span className="text-primary font-semibold text-[10px]">
                             ({margenMayor})
                           </span>
                         </span>
@@ -369,14 +370,14 @@ export function ProductDetailsModal({
 
           {/* Bloque 4: Parámetros de Fabricación & Taller */}
           <div>
-            <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2.5 flex items-center gap-2">
-              <Wrench className="h-3.5 w-3.5 text-primary" />
-              <span>PARÁMETROS DE FABRICACIÓN & TALLER</span>
+            <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5 select-none">
+              <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Parámetros de Fabricación & Taller</span>
             </div>
 
-            <div className="bg-secondary/40 border border-border rounded-xl p-4 space-y-3 shadow-2xs">
+            <div className="bg-muted/20 border border-border/50 rounded-xl p-4 space-y-3">
               <div className="space-y-1">
-                <p className="text-xs text-foreground/90 leading-relaxed italic bg-card/60 p-3 rounded-lg border border-border/50">
+                <p className="text-xs text-muted-foreground leading-relaxed italic bg-card/60 p-3 rounded-lg border border-border/50">
                   {notasTaller ? (
                     notasTaller
                   ) : (
@@ -385,22 +386,22 @@ export function ProductDetailsModal({
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3 text-xs">
+              <div className="pt-2 border-t border-border/50 flex items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
-                  <Calendar className="h-3.5 w-3.5 text-primary" />
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                   <span>
-                    Alta en catálogo: <strong className="text-foreground">{formatFechaRegistro(fecha)}</strong>
+                    Alta en catálogo: <strong className="text-foreground font-mono tabular-nums">{formatFechaRegistro(fecha)}</strong>
                   </span>
                 </div>
 
                 <div>
                   {isActive ? (
-                    <span className="bg-emerald-500/10 text-emerald-800 border border-emerald-500/20 text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-700" />
-                      • Activo
+                    <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-medium px-2.5 py-0.5 rounded-md inline-flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      Activo
                     </span>
                   ) : (
-                    <span className="bg-secondary border border-border text-muted-foreground text-xs font-medium px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                    <span className="bg-muted/60 border border-border/50 text-muted-foreground text-xs font-medium px-2.5 py-0.5 rounded-md inline-flex items-center gap-1">
                       Archivado
                     </span>
                   )}
@@ -413,22 +414,24 @@ export function ProductDetailsModal({
         {/* ========================================================================= */}
         {/* FOOTER DEL MODAL (FIJO)                                                   */}
         {/* ========================================================================= */}
-        <div className="px-6 py-4 border-t border-border/70 bg-card/40 flex items-center justify-between mt-auto shrink-0">
+        <div className="px-6 py-3.5 border-t border-border/60 bg-muted/20 flex items-center justify-between mt-auto shrink-0">
           <Button
             type="button"
             variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary h-10 px-4 cursor-pointer"
+            className="rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground h-8 px-3 cursor-pointer"
           >
             Cerrar
           </Button>
 
           <Button
             type="button"
+            size="sm"
             onClick={handleCrearPedido}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs h-10 px-5 rounded-xl shadow-md shadow-primary/20 flex items-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-8 px-4 rounded-lg flex items-center gap-1.5 cursor-pointer"
           >
-            <PlusCircle className="h-4 w-4" />
+            <PlusCircle className="h-3.5 w-3.5" />
             <span>Crear Pedido con este Modelo</span>
           </Button>
         </div>

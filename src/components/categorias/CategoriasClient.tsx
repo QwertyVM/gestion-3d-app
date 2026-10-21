@@ -18,7 +18,7 @@ import {
   updateCategoria,
   deleteCategoria
 } from '@/actions/categorias'
-import { ProductDetailDialog } from '@/components/catalogo/ProductDetailModal'
+import { ProductDetailsModal as ProductDetailDialog } from '@/components/catalogo/ProductDetailsModal'
 import type { ProductoItem } from '@/components/catalogo/CatalogoClient'
 import { CategoryStatsCards, CategoryFilterTab } from './CategoryStatsCards'
 import { CategorySearchBar } from './CategorySearchBar'
@@ -217,46 +217,46 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
   const hasActiveFilters = Boolean(search.trim() || activeTab !== 'todas')
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 bg-background text-foreground min-h-screen">
+    <div className="max-w-7xl mx-auto space-y-5 text-foreground">
       {/* ========================================================================= */}
       {/* 1. CABECERA & ACCIONES PRINCIPALES                                        */}
       {/* ========================================================================= */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {/* Breadcrumb sutil */}
-        <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-2">
+        <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 mb-1">
           <Link
             href="/catalogo"
-            className="hover:text-primary transition-colors flex items-center gap-1"
+            className="hover:text-foreground transition-colors flex items-center gap-1"
           >
             <span>Catálogo</span>
           </Link>
-          <span className="text-muted-foreground/50">/</span>
-          <span className="text-foreground font-semibold">Categorías de Productos</span>
+          <span className="text-muted-foreground/40">/</span>
+          <span className="text-foreground font-medium">Categorías de Productos</span>
         </div>
 
         {/* Título Principal & Botones de Acción */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-              <Boxes className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0">
+              <Boxes className="w-4.5 h-4.5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              <h1 className="text-lg font-semibold tracking-tight text-foreground">
                 Gestión de Categorías
               </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                Organización y familias de modelos 3D del taller.
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Organización y familias de modelos 3D del taller
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
             {/* Ver Productos */}
             <Link
               href="/catalogo"
-              className="border border-border bg-card text-foreground hover:bg-secondary rounded-xl h-10 px-4 text-xs font-semibold shadow-2xs flex items-center gap-2 transition-colors cursor-pointer flex-1 sm:flex-initial justify-center"
+              className="border border-border/80 bg-background text-foreground hover:bg-muted rounded-lg h-8 px-3 text-xs font-medium shadow-none flex items-center gap-1.5 transition-colors cursor-pointer flex-1 sm:flex-initial justify-center"
             >
-              <Package className="w-4 h-4 text-primary" />
+              <Package className="w-3.5 h-3.5 text-muted-foreground" />
               <span>Ver Productos ({totalModelosSum})</span>
             </Link>
 
@@ -264,9 +264,9 @@ export function CategoriasClient({ categoriasIniciales }: CategoriasClientProps)
             <button
               type="button"
               onClick={handleOpenCreate}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-10 px-4 text-xs font-semibold shadow-sm flex items-center gap-2 transition-all active:scale-[0.98] cursor-pointer flex-1 sm:flex-initial justify-center"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg h-8 px-3 text-xs font-medium shadow-none flex items-center gap-1.5 transition-all cursor-pointer flex-1 sm:flex-initial justify-center"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5" />
               <span>Nueva Categoría</span>
             </button>
           </div>

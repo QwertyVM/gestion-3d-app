@@ -231,7 +231,7 @@ export function OrderLogisticsSection({
                   setEditFechaPostventa(null)
                 }
               }}
-              className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-primary cursor-pointer accent-[#A36F4C]"
+              className="h-3.5 w-3.5 rounded border-input text-primary focus:ring-primary cursor-pointer accent-primary"
             />
             <span>¿Seguimiento postventa realizado?</span>
           </label>

@@ -175,11 +175,11 @@ export function OrderItemCard({
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-3.5 space-y-2.5 shadow-sm transition-all duration-200 hover:border-primary/30 animate-in fade-in-50 slide-in-from-top-1 relative">
+    <div className="bg-muted/25 border border-border/50 rounded-xl p-3.5 space-y-2.5 shadow-none transition-colors duration-150 relative">
       {/* Cabecera de la Tarjeta con Layout Flex Compacto */}
-      <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
-        <span className="bg-accent/80 text-accent-foreground font-semibold px-2 py-0.5 rounded-md text-[11px] flex items-center gap-1.5">
-          <Package className="h-3 w-3 text-accent-foreground" />
+      <div className="flex items-center justify-between pb-1.5 border-b border-border/50">
+        <span className="bg-muted text-muted-foreground font-medium px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1.5 border border-border/50">
+          <Package className="h-3 w-3 text-muted-foreground" />
           <span>PRODUCTO #{index + 1}</span>
         </span>
 
@@ -187,7 +187,7 @@ export function OrderItemCard({
           <button
             type="button"
             onClick={() => onRemoveItem(item.id)}
-            className="text-destructive hover:bg-destructive/10 rounded-md p-1 text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md p-1 text-xs font-medium cursor-pointer transition-colors flex items-center gap-1"
             title="Quitar este producto del pedido"
           >
             <Trash2 className="h-3 w-3" />
@@ -200,46 +200,46 @@ export function OrderItemCard({
       <div className="flex flex-col sm:flex-row gap-2.5 items-start">
         {/* Selección de Modelo 3D (visual picker trigger) */}
         <div className="flex-1 w-full sm:min-w-0 space-y-1">
-          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <Boxes className="h-3 w-3 text-primary" />
+          <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <Boxes className="h-3 w-3 text-muted-foreground" />
             Modelo 3D *
           </Label>
           {!isSelected ? (
             <button
               type="button"
               onClick={() => setIsPickerOpen(true)}
-              className="w-full h-12 rounded-xl border border-dashed border-primary/50 bg-secondary/30 hover:bg-secondary/60 hover:border-primary text-foreground text-xs font-semibold flex items-center justify-between px-4 transition-all group cursor-pointer"
+              className="w-full h-11 rounded-lg border border-dashed border-border/80 bg-background/50 hover:bg-muted/40 hover:border-border text-foreground text-xs font-medium flex items-center justify-between px-3.5 transition-all group cursor-pointer"
             >
               <div className="flex items-center min-w-0">
-                <Sparkles className="text-primary w-4 h-4 mr-2 group-hover:scale-110 transition-transform shrink-0" />
+                <Sparkles className="text-primary w-3.5 h-3.5 mr-2 group-hover:scale-110 transition-transform shrink-0" />
                 <span className="truncate">Seleccionar modelo 3D (Explorar galería)...</span>
               </div>
-              <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0">
-                Catálogo Visual
+              <span className="bg-muted text-muted-foreground text-[10px] font-medium px-2 py-0.5 rounded-md shrink-0 border border-border/50">
+                Catálogo
               </span>
             </button>
           ) : (
-            <div className="w-full bg-card border border-border rounded-xl p-2.5 flex items-center justify-between shadow-2xs">
+            <div className="w-full bg-background border border-border/60 rounded-lg p-2 flex items-center justify-between shadow-none">
               <div className="flex items-center gap-2.5 min-w-0">
                 {selectedProductInfo?.imageUrl ? (
                   <img
                     src={selectedProductInfo.imageUrl}
                     alt={selectedProductInfo.name}
-                    className="w-11 h-11 rounded-lg object-cover border border-border/70 shrink-0"
+                    className="w-10 h-10 rounded-md object-cover border border-border/60 shrink-0"
                   />
                 ) : (
-                  <div className="w-11 h-11 rounded-lg bg-secondary/70 border border-border/70 flex items-center justify-center shrink-0 text-primary/60">
-                    <Boxes className="w-5 h-5 stroke-[1.5]" />
+                  <div className="w-10 h-10 rounded-md bg-muted border border-border/60 flex items-center justify-center shrink-0 text-muted-foreground">
+                    <Boxes className="w-4 h-4 stroke-[1.5]" />
                   </div>
                 )}
                 <div className="min-w-0">
                   <div
-                    className="text-xs font-bold text-foreground truncate"
+                    className="text-xs font-medium text-foreground truncate"
                     title={selectedProductInfo?.name}
                   >
                     {selectedProductInfo?.name}
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate font-mono">
+                  <div className="text-[10px] text-muted-foreground truncate font-mono tabular-nums">
                     {selectedProductInfo?.tierSubtext}
                   </div>
                 </div>
@@ -411,7 +411,7 @@ export function OrderItemCard({
       <div className="flex flex-wrap sm:flex-nowrap items-end gap-2.5">
         {/* Tier (Por Menor) */}
         <div className="flex-1 min-w-[110px] space-y-1">
-          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+          <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
             Tier
           </Label>
           <select
@@ -434,7 +434,7 @@ export function OrderItemCard({
                 precioUnitario: newPrice
               })
             }}
-            className="w-full h-9 rounded-xl border border-input bg-card/80 text-foreground text-xs font-semibold px-2 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+            className="w-full h-9 rounded-lg border border-border/80 bg-background text-foreground text-xs font-medium px-2 focus-visible:ring-1 focus-visible:ring-ring transition-colors cursor-pointer"
           >
             <option value="MENOR">Por Menor</option>
             <option value="MAYOR">Por Mayor</option>
@@ -444,7 +444,7 @@ export function OrderItemCard({
 
         {/* Cantidad (w-20) */}
         <div className="w-20 shrink-0 space-y-1">
-          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+          <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
             Cantidad
           </Label>
           <Input
@@ -455,13 +455,13 @@ export function OrderItemCard({
             value={item.cantidad}
             onFocus={(e) => e.target.select()}
             onChange={(e) => onUpdateItem(item.id, { cantidad: e.target.value })}
-            className="h-9 rounded-xl border-input bg-card/80 text-foreground text-xs font-mono font-semibold px-2 text-center focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="h-9 rounded-lg border-border/80 bg-background text-foreground text-xs font-mono font-medium px-2 text-center focus-visible:ring-1 focus-visible:ring-ring transition-colors tabular-nums"
           />
         </div>
 
         {/* Unitario S/ (w-24) */}
         <div className="w-24 shrink-0 space-y-1">
-          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block truncate">
+          <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block truncate">
             Unitario S/
           </Label>
           <Input
@@ -471,13 +471,13 @@ export function OrderItemCard({
             value={item.precioUnitario}
             onFocus={(e) => e.target.select()}
             onChange={(e) => onUpdateItem(item.id, { precioUnitario: e.target.value, tipoPrecio: 'PERSONALIZADO' })}
-            className="h-9 rounded-xl border-input bg-card/80 text-foreground text-xs font-mono font-bold px-2 text-right focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="h-9 rounded-lg border-border/80 bg-background text-foreground text-xs font-mono font-medium px-2 text-right focus-visible:ring-1 focus-visible:ring-ring transition-colors tabular-nums"
           />
         </div>
 
         {/* Packaging S/ (w-24) */}
         <div className="w-24 shrink-0 space-y-1">
-          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block truncate">
+          <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block truncate">
             Packaging S/
           </Label>
           <Input
@@ -487,16 +487,16 @@ export function OrderItemCard({
             value={item.costoPackaging}
             onFocus={(e) => e.target.select()}
             onChange={(e) => onUpdateItem(item.id, { costoPackaging: e.target.value })}
-            className="h-9 rounded-xl border-input bg-card/80 text-foreground text-xs font-mono px-2 text-right focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="h-9 rounded-lg border-border/80 bg-background text-foreground text-xs font-mono font-medium px-2 text-right focus-visible:ring-1 focus-visible:ring-ring transition-colors tabular-nums"
           />
         </div>
 
         {/* Subtotal Ítem (badge destacado a la derecha) */}
         <div className="shrink-0 space-y-1 text-right flex flex-col items-end">
-          <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block">
+          <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
             Subtotal Ítem
           </Label>
-          <div className="h-9 px-3 rounded-xl bg-secondary border border-border/80 flex items-center justify-center font-bold text-xs font-mono text-foreground shadow-2xs">
+          <div className="h-9 px-3 rounded-lg bg-muted/40 border border-border/60 flex items-center justify-center font-semibold text-xs font-mono text-foreground tabular-nums tracking-tight">
             {formatCurrency(itemSubtotal)}
           </div>
         </div>
@@ -508,7 +508,7 @@ export function OrderItemCard({
           placeholder="Notas / Personalización / Grabado del modelo (opcional)..."
           value={item.personalizacion}
           onChange={(e) => onUpdateItem(item.id, { personalizacion: e.target.value })}
-          className="h-8 rounded-lg border-input/70 bg-card/60 text-foreground text-xs placeholder:text-muted-foreground/50 focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all w-full"
+          className="h-8 rounded-lg border-border/70 bg-background text-foreground text-xs placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-ring transition-colors w-full"
         />
       </div>
     </div>
