@@ -23,11 +23,11 @@ export function EmptyState({
 }: EmptyStateProps) {
   const renderIcon = () => {
     if (!Icon) return null
-    if (typeof Icon === 'function') {
-      const LucideComp = Icon as LucideIcon
-      return <LucideComp className={cn('stroke-[1.5]', compact ? 'h-5 w-5' : 'h-6 w-6')} />
+    if (React.isValidElement(Icon)) {
+      return Icon
     }
-    return Icon
+    const Component = Icon as React.ComponentType<{ className?: string }>
+    return <Component className={cn('stroke-[1.5]', compact ? 'h-5 w-5' : 'h-6 w-6')} />
   }
 
   return (
