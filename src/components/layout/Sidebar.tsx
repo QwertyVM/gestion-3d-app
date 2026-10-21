@@ -54,7 +54,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
   
   const isClientes = pathname.startsWith('/clientes')
   const isPackaging = pathname.startsWith('/packaging')
-  const isTiendaSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario') || isPackaging || isClientes
+  const isTiendaSection = pathname.startsWith('/catalogo') || pathname.startsWith('/inventario') || isPackaging
 
   // Collapsible Accordion states
   const [tiendaOpen, setTiendaOpen] = useState(true)
@@ -92,13 +92,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
 
   return (
     <aside className={cn(
-      'flex h-full flex-col bg-[#F8F6F2] text-[#75695D] select-none transition-colors border-r border-[#E2D9CC]',
+      'flex h-full flex-col bg-sidebar text-muted-foreground select-none transition-colors border-r border-border/60',
       isMobile ? 'w-full' : 'w-64'
     )}>
       {/* ========================================================================= */}
       {/* 1. ENCABEZADO (BRAND HEADER / BUSINESS SWITCHER)                         */}
       {/* ========================================================================= */}
-      <div className="p-3 border-b border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0 flex items-center justify-between gap-2">
+      <div className="p-3 border-b border-border/60 bg-sidebar flex-shrink-0 flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
           <BusinessSwitcher />
         </div>
@@ -107,7 +107,7 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-[#75695D] hover:text-[#241C15] hover:bg-[#EFE5D8] border border-[#E2D9CC] transition-colors cursor-pointer shrink-0"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-border/60 transition-colors cursor-pointer shrink-0"
             title="Cerrar Menú"
           >
             <X className="h-4 w-4" />
@@ -118,10 +118,10 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       {/* ========================================================================= */}
       {/* 2. LISTA DE NAVEGACIÓN REESTRUCTURADA                                      */}
       {/* ========================================================================= */}
-      <div className="flex-1 overflow-y-auto py-3 px-3 space-y-1 bg-[#F8F6F2] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex-1 overflow-y-auto py-3 px-3 space-y-1 bg-sidebar [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         
         {/* ======================================================================= */}
-        {/* PRIMERA JERARQUÍA: DASHBOARD Y PEDIDOS                                  */}
+        {/* PRIMERA JERARQUÍA: COMERCIAL & CRM (DASHBOARD, PEDIDOS, CLIENTES)        */}
         {/* ======================================================================= */}
         
         {/* DASHBOARD PRINCIPAL */}
@@ -129,13 +129,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           href="/"
           onClick={handleLinkClick}
           className={cn(
-            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
+            'flex items-center gap-2.5 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
             isDashboard
-              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
-              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+              ? 'bg-secondary text-foreground font-semibold border border-border/60'
+              : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
           )}
         >
-          <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboard ? (is3D ? 'text-amber-600' : 'text-indigo-600') : 'text-[#75695D]')} />
+          <LayoutDashboard className={cn('h-4 w-4 shrink-0', isDashboard ? 'text-primary' : 'text-muted-foreground/70')} />
           <span>Dashboard</span>
         </Link>
 
@@ -144,20 +144,35 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
           href="/pedidos"
           onClick={handleLinkClick}
           className={cn(
-            'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
+            'flex items-center gap-2.5 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
             isPedidos
-              ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
-              : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+              ? 'bg-secondary text-foreground font-semibold border border-border/60'
+              : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
           )}
         >
-          <ShoppingBag className={cn('h-4 w-4 shrink-0', isPedidos ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
+          <ShoppingBag className={cn('h-4 w-4 shrink-0', isPedidos ? 'text-primary' : 'text-muted-foreground/70')} />
           <span>Pedidos</span>
 
           {metrics.pedidosPendientes > 0 && (
-            <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
+            <span className="ml-auto text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-muted text-muted-foreground tabular-nums border border-border/50">
               {metrics.pedidosPendientes}
             </span>
           )}
+        </Link>
+
+        {/* CLIENTES (CRM) */}
+        <Link
+          href="/clientes"
+          onClick={handleLinkClick}
+          className={cn(
+            'flex items-center gap-2.5 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
+            isClientes
+              ? 'bg-secondary text-foreground font-semibold border border-border/60'
+              : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+          )}
+        >
+          <Users className={cn('h-4 w-4 shrink-0', isClientes ? 'text-primary' : 'text-muted-foreground/70')} />
+          <span>Clientes</span>
         </Link>
 
         {/* TALLER DE PRODUCCIÓN (3D EXCLUSIVO) */}
@@ -166,17 +181,17 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
             href="/taller"
             onClick={handleLinkClick}
             className={cn(
-              'flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 min-h-[38px]',
+              'flex items-center gap-2.5 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
               isTaller
-                ? 'bg-white text-[#241C15] shadow-xs border border-[#E2D9CC]'
-                : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             )}
           >
-            <Hammer className={cn('h-4 w-4 shrink-0', isTaller ? 'text-amber-600' : 'text-[#75695D]')} />
+            <Hammer className={cn('h-4 w-4 shrink-0', isTaller ? 'text-primary' : 'text-muted-foreground/70')} />
             <span>Taller de Producción</span>
 
             {(metrics.piezasTallerPendientes ?? 0) > 0 && (
-              <span className="ml-auto text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-[#FAF7F4] text-[#1E5E3A] border border-[#E2D9CC]">
+              <span className="ml-auto text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-muted text-muted-foreground tabular-nums border border-border/50">
                 {metrics.piezasTallerPendientes} pzas
               </span>
             )}
@@ -184,45 +199,45 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
         )}
 
         {/* ======================================================================= */}
-        {/* SECCIÓN TIENDA: PRODUCTOS, CATEGORÍAS, CLIENTES                         */}
+        {/* SECCIÓN CATÁLOGO & INVENTARIO                                           */}
         {/* ======================================================================= */}
         <div className="pt-2">
           <button
             type="button"
             onClick={() => setTiendaOpen(!tiendaOpen)}
             className={cn(
-              'w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 cursor-pointer min-h-[36px]',
+              'w-full flex items-center justify-between rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150 cursor-pointer',
               isTiendaSection
-                ? 'text-[#241C15] font-black'
-                : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                ? 'text-foreground font-semibold'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             )}
           >
             <div className="flex items-center gap-2.5">
-              <Store className={cn('h-4 w-4 shrink-0', isTiendaSection ? (is3D ? 'text-amber-600' : 'text-indigo-600') : 'text-[#75695D]')} />
+              <Store className={cn('h-4 w-4 shrink-0', isTiendaSection ? 'text-primary' : 'text-muted-foreground/70')} />
               <span>Tienda</span>
             </div>
             <ChevronDown 
               className={cn(
-                'h-3.5 w-3.5 transition-transform duration-200 text-[#75695D]',
+                'h-3.5 w-3.5 transition-transform duration-200 text-muted-foreground/60',
                 tiendaOpen ? 'rotate-0' : '-rotate-90'
               )} 
             />
           </button>
 
           {tiendaOpen && (
-            <div className="pl-3 space-y-0.5 my-1 border-l border-[#E2D9CC] ml-3 transition-all">
+            <div className="pl-2 space-y-0.5 my-1 border-l border-border/60 ml-2.5 transition-all">
               {/* PRODUCTOS */}
               <Link
                 href="/catalogo"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                   pathname === '/catalogo'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                    ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
-                <PackageSearch className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
+                <PackageSearch className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
                 <span>{is3D ? 'Productos 3D' : 'Juegos de Mesa'}</span>
               </Link>
 
@@ -231,32 +246,15 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 href="/catalogo/categorias"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                   pathname === '/catalogo/categorias'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                    ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
-                <Layers className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
+                <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
                 <span>Categorías</span>
               </Link>
-
-              {/* CLIENTES */}
-              <Link
-                href="/clientes"
-                onClick={handleLinkClick}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
-                  isClientes
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
-                )}
-              >
-                <Users className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
-                <span>Clientes</span>
-              </Link>
-
-
 
               {/* INVENTARIO FILAMENTOS (3D) */}
               {is3D && (
@@ -264,18 +262,18 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                   href="/catalogo/inventario"
                   onClick={handleLinkClick}
                   className={cn(
-                    'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                    'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                     pathname === '/catalogo/inventario' || pathname === '/inventario'
-                      ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                      : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                      ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                   )}
                 >
-                  <CircleDot className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                  <CircleDot className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span>Inventario Filamentos</span>
 
                   {metrics.filamentosCriticos > 0 && (
                     <span 
-                      className="ml-auto text-[10px] font-mono font-bold text-[#854D0E] bg-[#FEF3C7] border border-[#FDE68A] px-1.5 py-0.5 rounded-md"
+                      className="ml-auto text-[10px] font-mono font-medium px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 tabular-nums"
                       title={`${metrics.filamentosCriticos} bobinas críticas`}
                     >
                       {metrics.filamentosCriticos}
@@ -290,13 +288,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                   href="/packaging"
                   onClick={handleLinkClick}
                   className={cn(
-                    'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                    'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                     isPackaging
-                      ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                      : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                      ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                   )}
                 >
-                  <Package className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                  <Package className="h-3.5 w-3.5 shrink-0 text-primary" />
                   <span>Packaging & Cajas</span>
                 </Link>
               )}
@@ -312,38 +310,38 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
             type="button"
             onClick={() => setFinanzasOpen(!finanzasOpen)}
             className={cn(
-              'w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs font-bold transition-all duration-150 cursor-pointer min-h-[36px]',
+              'w-full flex items-center justify-between rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150 cursor-pointer',
               isFinanzasSection
-                ? 'text-[#241C15] font-black'
-                : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                ? 'text-foreground font-semibold'
+                : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
             )}
           >
             <div className="flex items-center gap-2.5">
-              <Wallet className={cn('h-4 w-4 shrink-0', isFinanzasSection ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
+              <Wallet className={cn('h-4 w-4 shrink-0', isFinanzasSection ? 'text-primary' : 'text-muted-foreground/70')} />
               <span>Finanzas</span>
             </div>
             <ChevronDown 
               className={cn(
-                'h-3.5 w-3.5 transition-transform duration-200 text-[#75695D]',
+                'h-3.5 w-3.5 transition-transform duration-200 text-muted-foreground/60',
                 finanzasOpen ? 'rotate-0' : '-rotate-90'
               )} 
             />
           </button>
 
           {finanzasOpen && (
-            <div className="pl-3 space-y-0.5 my-1 border-l border-[#E2D9CC] ml-3 transition-all">
+            <div className="pl-2 space-y-0.5 my-1 border-l border-border/60 ml-2.5 transition-all">
               {/* FLUJO DE CAJA */}
               <Link
-                href="/finanzas/flujo-caja"
+                href="/finanzas"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
-                  pathname === '/finanzas/flujo-caja' || pathname === '/finanzas' || pathname === '/inversiones' || pathname === '/inversiones/flujo-caja'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                  'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
+                  pathname === '/finanzas' || pathname === '/finanzas/flujo-caja' || pathname === '/inversiones' || pathname === '/inversiones/flujo-caja'
+                    ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
-                <DollarSign className="h-3.5 w-3.5 shrink-0 text-[#1E5E3A]" />
+                <DollarSign className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>Flujo de Caja</span>
               </Link>
 
@@ -352,28 +350,28 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 href="/finanzas/rentabilidad"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                   pathname === '/finanzas/rentabilidad'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                    ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
-                <Coins className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                <Coins className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
                 <span>Rentabilidad & Sueldos</span>
               </Link>
 
-              {/* HISTÓRICO MENSUAL (AHORA DENTRO DE FINANZAS) */}
+              {/* HISTÓRICO MENSUAL */}
               <Link
                 href="/historico-mensual"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                   isHistorico
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                    ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
-                <History className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                <History className="h-3.5 w-3.5 shrink-0 text-primary" />
                 <span>Histórico Mensual</span>
               </Link>
 
@@ -382,13 +380,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 href="/finanzas/ingresos"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                   pathname === '/finanzas/ingresos'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                    ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
-                <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-[#1E5E3A]" />
+                <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>Ingresos</span>
               </Link>
 
@@ -397,13 +395,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 href="/finanzas/egresos"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                   pathname === '/finanzas/egresos'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                    ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
-                <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-[#A36F4C]" />
+                <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
                 <span>Egresos</span>
               </Link>
 
@@ -412,13 +410,13 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
                 href="/finanzas/tags"
                 onClick={handleLinkClick}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all duration-150 min-h-[32px]',
+                  'flex items-center gap-2 rounded-lg px-2.5 h-8 text-[13px] font-medium transition-all duration-150',
                   pathname === '/finanzas/tags'
-                    ? 'bg-white text-[#241C15] font-bold shadow-xs border border-[#E2D9CC]'
-                    : 'text-[#75695D] hover:bg-[#F1ECE4] hover:text-[#241C15]'
+                    ? 'bg-secondary text-foreground font-semibold border border-border/60'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 )}
               >
-                <Tag className="h-3.5 w-3.5 shrink-0 text-[#75695D]" />
+                <Tag className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
                 <span>Tags de Gasto</span>
               </Link>
             </div>
@@ -429,26 +427,26 @@ export function Sidebar({ isMobile = false, onClose }: SidebarProps) {
       {/* ========================================================================= */}
       {/* 3. FOOTER DEL NEGOCIO                                                     */}
       {/* ========================================================================= */}
-      <div className="mt-auto p-3 border-t border-[#E2D9CC] bg-[#F8F6F2] flex-shrink-0">
-        <div className="rounded-xl border border-[#E2D9CC] p-2.5 flex items-center gap-2.5 bg-white shadow-xs">
+      <div className="mt-auto p-3 border-t border-border/60 bg-sidebar flex-shrink-0">
+        <div className="rounded-xl border border-border/60 p-2.5 flex items-center gap-2.5 bg-card shadow-none">
           <div
-            className={`h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
+            className={`h-7 w-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
               is3D
-                ? 'bg-amber-600 text-white'
-                : 'bg-indigo-600 text-white'
+                ? 'bg-amber-600/90 text-white'
+                : 'bg-indigo-600/90 text-white'
             }`}
           >
             {is3D ? '3D' : 'BG'}
           </div>
           <div className="flex-1 min-w-0">
-            <span className="font-bold text-xs text-[#241C15] truncate block leading-tight">
+            <span className="font-semibold text-xs text-foreground truncate block leading-tight">
               {config.name}
             </span>
-            <span className="text-[10px] text-[#75695D] truncate block leading-tight">
+            <span className="text-[10px] text-muted-foreground truncate block leading-tight font-mono">
               {config.badge} • Activo
             </span>
           </div>
-          <div className="w-2 h-2 rounded-full bg-[#1E5E3A] shrink-0" title="En línea" />
+          <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="En línea" />
         </div>
       </div>
     </aside>

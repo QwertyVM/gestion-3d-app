@@ -8,7 +8,7 @@ export async function getNavLiveMetrics(negocio?: TipoNegocio) {
   try {
     const targetNegocio = negocio || await getActiveNegocioServer()
 
-    const [pedidosPendientes, filamentosCriticos, itemsPedidos, ventasPendientes] = await Promise.all([
+    const [pedidosPendientes, filamentosCriticos, itemsPedidos] = await Promise.all([
       prisma.pedido.count({
         where: {
           negocio: targetNegocio,
@@ -37,22 +37,10 @@ export async function getNavLiveMetrics(negocio?: TipoNegocio) {
           }
         },
         select: { cantidad: true }
-      }) : Promise.resolve([]),
-      targetNegocio === '3D' ? prisma.venta.findMany({
-        where: {
-          negocio: '3D',
-          estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'EN_TALLER', 'EMPAQUETANDO'] },
-          producto: {
-            negocio: '3D'
-          }
-        },
-        select: { cantidad: true }
       }) : Promise.resolve([])
     ])
 
-    const totalPiezasTaller = 
-      itemsPedidos.reduce((sum, it) => sum + Number(it.cantidad || 1), 0) +
-      ventasPendientes.reduce((sum, v) => sum + Number(v.cantidad || 1), 0)
+    const totalPiezasTaller = itemsPedidos.reduce((sum, it) => sum + Number(it.cantidad || 1), 0)
 
     return {
       pedidosPendientes,

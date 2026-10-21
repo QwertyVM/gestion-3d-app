@@ -99,11 +99,11 @@ export function MultiColorPicker({
       {/* Header Label and Clear button */}
       {label && (
         <div className="flex items-center justify-between">
-          <Label className="text-[11px] text-[#241C15] font-bold flex items-center gap-1.5">
-            <Palette className="h-3.5 w-3.5 text-[#A36F4C]" />
+          <Label className="text-[11px] text-foreground font-bold flex items-center gap-1.5">
+            <Palette className="h-3.5 w-3.5 text-primary" />
             <span>{label}</span>
             {selectedColorIds.length > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-[#EFE5D8] text-[#633E20] border border-[#D4BEA7]">
+              <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-primary/10 text-primary border border-primary/20">
                 {selectedColorIds.length} {selectedColorIds.length === 1 ? 'color' : 'colores'}
               </span>
             )}
@@ -112,7 +112,7 @@ export function MultiColorPicker({
             <button
               type="button"
               onClick={handleClearAll}
-              className="text-[10px] text-[#A34335] hover:underline font-semibold cursor-pointer"
+              className="text-[10px] text-rose-600 dark:text-rose-400 hover:underline font-semibold cursor-pointer"
             >
               Quitar todos
             </button>
@@ -123,12 +123,12 @@ export function MultiColorPicker({
       {/* Selected Color Badges / Pills Container */}
       <div 
         onClick={() => setIsOpen(prev => !prev)}
-        className="min-h-[36px] p-1.5 rounded-xl border border-[#E2D9CC] bg-[#FFFFFF] hover:border-[#A36F4C] transition-colors cursor-pointer flex flex-wrap items-center gap-1.5 shadow-2xs"
+        className="min-h-[36px] p-1.5 rounded-xl border border-border/80 bg-background hover:border-primary/60 transition-colors cursor-pointer flex flex-wrap items-center gap-1.5 shadow-2xs"
       >
         {selectedFilamentos.length === 0 ? (
-          <div className="flex items-center justify-between w-full px-1 text-xs text-[#75695D]">
+          <div className="flex items-center justify-between w-full px-1 text-xs text-muted-foreground">
             <span className="italic">{placeholder}</span>
-            <div className="flex items-center gap-1 text-[11px] font-bold text-[#A36F4C]">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-primary">
               <span>Elegir</span>
               {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </div>
@@ -143,7 +143,7 @@ export function MultiColorPicker({
                 return (
                   <span
                     key={f.id}
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-[#F8F6F2] border border-[#DCD3C6] text-xs font-bold text-[#241C15] shadow-2xs group"
+                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-muted/40 border border-border/80 text-xs font-bold text-foreground shadow-2xs group"
                   >
                     <span 
                       className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0 shadow-xs"
@@ -151,12 +151,12 @@ export function MultiColorPicker({
                     />
                     <span className="truncate max-w-[120px]">{f.nombreColor}</span>
                     {esBajo && (
-                      <span className="text-[10px] text-[#854D0E]" title="Bajo stock en bobina">⚠️</span>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400" title="Bajo stock en bobina">⚠️</span>
                     )}
                     <button
                       type="button"
                       onClick={(e) => handleRemoveColor(f.id, e)}
-                      className="text-[#75695D] hover:text-[#A34335] hover:bg-[#EAE4DC] rounded-full p-0.5 transition-colors cursor-pointer"
+                      className="text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 hover:bg-muted rounded-full p-0.5 transition-colors cursor-pointer"
                       title="Eliminar este color"
                     >
                       <X className="h-3 w-3" />
@@ -165,7 +165,7 @@ export function MultiColorPicker({
                 )
               })}
             </div>
-            <div className="flex items-center gap-1 text-[11px] font-bold text-[#A36F4C] pr-1">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-primary pr-1">
               {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             </div>
           </>
@@ -174,17 +174,17 @@ export function MultiColorPicker({
 
       {/* Expandable Multi-Color Selector Palette */}
       {isOpen && (
-        <div className="p-2.5 rounded-xl bg-[#FAF8F5] border border-[#DCD3C6] space-y-2 animate-in fade-in-50 duration-150 shadow-sm">
+        <div className="p-2.5 rounded-xl bg-card border border-border/80 space-y-2 animate-in fade-in-50 duration-150 shadow-sm">
           {/* Quick Search and Selection Counter */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#75695D]" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Buscar color o material..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-7 pl-8 text-xs bg-[#FFFFFF] border-[#E2D9CC] rounded-lg"
+                className="h-7 pl-8 text-xs bg-background border-border/80 rounded-lg"
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -194,7 +194,7 @@ export function MultiColorPicker({
                 variant="outline"
                 size="sm"
                 onClick={handleClearAll}
-                className="h-7 text-[11px] text-[#A34335] border-red-200 hover:bg-red-50 px-2 rounded-lg"
+                className="h-7 text-[11px] text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/10 px-2 rounded-lg cursor-pointer"
               >
                 Limpiar ({selectedColorIds.length})
               </Button>
@@ -209,10 +209,10 @@ export function MultiColorPicker({
               const esBajoStock = g < 300 || Boolean(f.alertaCritica)
 
               const chipClasses = isSelected
-                ? 'bg-[#EFE5D8] text-[#633E20] border-[#A36F4C] ring-2 ring-[#A36F4C] shadow-2xs font-bold'
+                ? 'bg-primary/10 text-primary border-primary ring-2 ring-primary/40 shadow-2xs font-bold'
                 : esBajoStock
-                  ? 'bg-[#FEF9C3] text-[#854D0E] border-[#FDE047] hover:bg-[#FEF08A] hover:border-[#EAB308] font-medium shadow-2xs'
-                  : 'bg-[#FFFFFF] text-[#241C15] border-[#E2D9CC] hover:bg-[#F8F6F2] hover:border-[#A36F4C] font-medium shadow-2xs'
+                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/20 hover:border-amber-500/50 font-medium shadow-2xs'
+                  : 'bg-background text-foreground border-border/80 hover:bg-muted/40 hover:border-primary/50 font-medium shadow-2xs'
 
               const tooltipText = esBajoStock
                 ? `⚠️ ${f.nombreColor}: Bajo stock (${g}g disponibles)`
@@ -232,12 +232,12 @@ export function MultiColorPicker({
                   />
                   <div className="flex items-center justify-between min-w-0 flex-1 gap-1">
                     <span className="truncate text-[11px]">{f.nombreColor}</span>
-                    <span className="text-[10px] font-mono text-[#75695D] flex-shrink-0">
+                    <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">
                       {esBajoStock ? `⚠️${g}g` : `${g}g`}
                     </span>
                   </div>
                   {isSelected && (
-                    <Check className="h-3.5 w-3.5 text-[#633E20] stroke-[2.5] flex-shrink-0" />
+                    <Check className="h-3.5 w-3.5 text-primary stroke-[2.5] flex-shrink-0" />
                   )}
                 </button>
               )
@@ -245,13 +245,13 @@ export function MultiColorPicker({
           </div>
 
           {filteredFilamentos.length === 0 && (
-            <div className="py-2 text-center text-xs text-[#75695D] italic">
+            <div className="py-2 text-center text-xs text-muted-foreground italic">
               No se encontraron colores con &quot;{search}&quot;
             </div>
           )}
 
           {/* Quick Selection Summary info */}
-          <div className="flex items-center justify-between pt-1 border-t border-[#E2D9CC]/60 text-[10px] text-[#75695D]">
+          <div className="flex items-center justify-between pt-1 border-t border-border/60 text-[10px] text-muted-foreground">
             <span>
               {selectedColorIds.length === 0
                 ? 'Toca cualquier color para asignarlo.'
@@ -260,7 +260,7 @@ export function MultiColorPicker({
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="text-[#A36F4C] font-bold hover:underline cursor-pointer"
+              className="text-primary font-bold hover:underline cursor-pointer"
             >
               Cerrar paleta
             </button>

@@ -225,7 +225,7 @@ export function SearchableCombobox({
       {/* Search Input Container */}
       <div className="relative w-full flex items-center">
         {/* Leading Search / Package / Tag Icon */}
-        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#75695D] flex items-center justify-center">
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground flex items-center justify-center">
           <LeadingIcon className="h-5 w-5" />
         </div>
 
@@ -263,22 +263,22 @@ export function SearchableCombobox({
           }}
           onKeyDown={handleKeyDown}
           className={cn(
-            'w-full bg-[#FFFFFF] border border-[#E2D9CC] text-[#241C15] placeholder:text-[#75695D] font-medium shadow-sm transition-all outline-none truncate',
-            'focus:border-[#A36F4C] focus:ring-2 focus:ring-[#A36F4C]/20 focus:bg-[#FFFFFF]',
-            'disabled:opacity-50 disabled:bg-[#F4EFEA] disabled:cursor-not-allowed',
+            'w-full bg-background border border-border/80 text-foreground placeholder:text-muted-foreground/70 font-medium shadow-2xs transition-all outline-none truncate',
+            'focus:border-primary/80 focus:ring-2 focus:ring-primary/20 focus:bg-background',
+            'disabled:opacity-50 disabled:bg-muted/30 disabled:cursor-not-allowed',
             sizeClasses[size],
             inputClassName
           )}
         />
 
         {/* Trailing Controls (Clear X + Chevron) */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[#75695D]">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-muted-foreground">
           {clearable && query && !disabled && (
             <button
               type="button"
               tabIndex={-1}
               onClick={handleClear}
-              className="p-1 rounded-lg text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+              className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
               title="Limpiar"
             >
               <X className="h-3.5 w-3.5" />
@@ -295,9 +295,9 @@ export function SearchableCombobox({
                 inputRef.current?.focus()
               }
             }}
-            className="p-1 rounded-lg text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA] transition-colors cursor-pointer"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer"
           >
-            <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', isOpen && 'rotate-180 text-[#A36F4C]')} />
+            <ChevronDown className={cn('h-4 w-4 transition-transform duration-200', isOpen && 'rotate-180 text-primary')} />
           </button>
         </div>
       </div>
@@ -307,20 +307,20 @@ export function SearchableCombobox({
         <div 
           id={`${componentId}-listbox`}
           role="listbox"
-          className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#FFFFFF] border border-[#E2D9CC] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-card border border-border/80 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
           <div ref={listRef} className="max-h-64 overflow-y-auto p-1.5 space-y-1 scrollbar-thin">
             {filteredItems.length === 0 ? (
               <div className="py-4 px-3 text-center space-y-2">
-                <p className="text-xs text-[#75695D] font-medium">{emptyMessage}</p>
+                <p className="text-xs text-muted-foreground font-medium">{emptyMessage}</p>
                 {allowCustomInput && query.trim() && (
                   <button
                     type="button"
                     onClick={handleCreateCustom}
-                    className="w-full flex items-center justify-center gap-1.5 p-2 rounded-lg bg-[#F4FAF5] border border-[#B4E3C0] text-[#1E5E3A] text-xs font-bold hover:bg-[#EBF7EE] transition-colors cursor-pointer"
+                    className="w-full flex items-center justify-center gap-1.5 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-colors cursor-pointer"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    <span>{customCreateLabel} <strong className="font-mono">"{query.trim()}"</strong></span>
+                    <span>{customCreateLabel} <strong className="font-mono">&quot;{query.trim()}&quot;</strong></span>
                   </button>
                 )}
               </div>
@@ -339,20 +339,20 @@ export function SearchableCombobox({
                     onMouseEnter={() => setHighlightedIndex(index)}
                     className={cn(
                       'flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs transition-all cursor-pointer select-none',
-                      isSelected && 'bg-[#FDFBF7] text-[#A36F4C] font-bold border border-[#A36F4C]/30 shadow-xs',
-                      isHighlighted && !isSelected && 'bg-[#F4EFEA] text-[#241C15]',
-                      !isSelected && !isHighlighted && 'text-[#241C15] hover:bg-[#F4EFEA]',
+                      isSelected && 'bg-primary/10 text-primary font-bold border border-primary/30 shadow-xs',
+                      isHighlighted && !isSelected && 'bg-muted/60 text-foreground',
+                      !isSelected && !isHighlighted && 'text-foreground hover:bg-muted/40',
                       item.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
                     )}
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       {ItemIcon && (
-                        <ItemIcon className={cn('h-4 w-4 flex-shrink-0', isSelected ? 'text-[#A36F4C]' : 'text-[#75695D]')} />
+                        <ItemIcon className={cn('h-4 w-4 flex-shrink-0', isSelected ? 'text-primary' : 'text-muted-foreground')} />
                       )}
                       <div className="min-w-0 flex-1 flex flex-col">
                         <span className="truncate leading-tight">{item.label}</span>
                         {item.sublabel && (
-                          <span className="text-[11px] text-[#75695D] font-normal truncate mt-0.5">{item.sublabel}</span>
+                          <span className="text-[11px] text-muted-foreground font-normal truncate mt-0.5">{item.sublabel}</span>
                         )}
                       </div>
                     </div>
@@ -361,14 +361,14 @@ export function SearchableCombobox({
                       {item.badge && (
                         <span className={cn(
                           'text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border',
-                          item.badgeColor || 'bg-[#F4EFEA] border-[#DCD3C6] text-[#75695D]'
+                          item.badgeColor || 'bg-muted/60 border-border/60 text-muted-foreground'
                         )}>
                           {item.badge}
                         </span>
                       )}
 
                       {isSelected && (
-                        <Check className="h-4 w-4 text-[#A36F4C] stroke-[2.5]" />
+                        <Check className="h-4 w-4 text-primary stroke-[2.5]" />
                       )}
                     </div>
                   </div>
@@ -381,10 +381,10 @@ export function SearchableCombobox({
               <button
                 type="button"
                 onClick={handleCreateCustom}
-                className="w-full mt-1.5 flex items-center justify-center gap-1.5 p-2 rounded-lg bg-[#F4FAF5] border border-[#B4E3C0] text-[#1E5E3A] text-xs font-bold hover:bg-[#EBF7EE] transition-colors cursor-pointer"
+                className="w-full mt-1.5 flex items-center justify-center gap-1.5 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 transition-colors cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>{customCreateLabel} <strong className="font-mono">"{query.trim()}"</strong></span>
+                <span>{customCreateLabel} <strong className="font-mono">&quot;{query.trim()}&quot;</strong></span>
               </button>
             )}
           </div>

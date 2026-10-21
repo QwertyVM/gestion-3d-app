@@ -16,12 +16,12 @@ export interface MultiTagInputProps {
 
 // Paleta de colores armónicos NOVA para los tags
 const TAG_COLOR_PALETTES = [
-  'bg-[#EFE5D8] text-[#633E20] border-[#D4BEA7]',
-  'bg-[#EBF7EE] text-[#1E5E3A] border-[#B4E3C0]',
-  'bg-[#FDF6E2] text-[#8C6D1F] border-[#E8D49B]',
-  'bg-[#EBF3FC] text-[#245D99] border-[#B9D5F3]',
-  'bg-[#F3EDFA] text-[#6A389D] border-[#D6C2ED]',
-  'bg-[#FDF2F0] text-[#944917] border-[#F2C0B8]',
+  'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
+  'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
+  'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
+  'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20',
+  'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20',
+  'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20',
 ]
 
 export function getTagColorClass(tag: string): string {
@@ -95,11 +95,11 @@ export function MultiTagInput({
     <div className={`space-y-2 ${className}`}>
       {label && (
         <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-[#241C15] flex items-center gap-1.5">
-            <TagIcon className="h-3.5 w-3.5 text-[#A36F4C]" />
+          <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+            <TagIcon className="h-3.5 w-3.5 text-primary" />
             <span>{label}</span>
           </label>
-          <span className="text-[10px] text-[#75695D]">
+          <span className="text-[10px] text-muted-foreground">
             {currentTags.length}/{maxTags} tags
           </span>
         </div>
@@ -108,7 +108,7 @@ export function MultiTagInput({
       {/* Input container with chips */}
       <div 
         onClick={() => inputRef.current?.focus()}
-        className="min-h-[42px] p-2 bg-[#FAF8F5] border border-[#E2D9CC] rounded-xl flex flex-wrap items-center gap-1.5 focus-within:bg-white focus-within:border-[#A36F4C] focus-within:ring-1 focus-within:ring-[#A36F4C] transition-all cursor-text"
+        className="min-h-[42px] p-2 bg-background border border-border/80 rounded-xl flex flex-wrap items-center gap-1.5 focus-within:border-primary/70 focus-within:ring-1 focus-within:ring-primary/50 transition-all cursor-text shadow-2xs"
       >
         {currentTags.map((tag, idx) => {
           const colorClass = getTagColorClass(tag)
@@ -146,7 +146,7 @@ export function MultiTagInput({
               }
             }}
             placeholder={currentTags.length === 0 ? placeholder : 'Agregar otro tag...'}
-            className="flex-1 min-w-[140px] bg-transparent text-xs text-[#241C15] placeholder:text-[#75695D]/60 focus:outline-none py-1 px-1"
+            className="flex-1 min-w-[140px] bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none py-1 px-1"
           />
         )}
       </div>
@@ -154,7 +154,7 @@ export function MultiTagInput({
       {/* Sugerencias Rápidas */}
       {availableSuggestions.length > 0 && (
         <div className="space-y-1 pt-0.5">
-          <span className="text-[10px] font-bold text-[#75695D] uppercase tracking-wider block">
+          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
             Sugerencias de Tags:
           </span>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -167,8 +167,8 @@ export function MultiTagInput({
                   onClick={() => handleSuggestionClick(sug)}
                   className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
                     isSelected
-                      ? 'bg-[#241C15] text-white border-[#241C15] font-bold shadow-2xs'
-                      : 'bg-[#FFFFFF] text-[#75695D] hover:text-[#241C15] hover:border-[#D4BEA7] border-[#E2D9CC]'
+                      ? 'bg-primary text-primary-foreground border-primary font-bold shadow-2xs'
+                      : 'bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 border-border/80'
                   }`}
                 >
                   {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}

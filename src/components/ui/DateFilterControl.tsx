@@ -310,10 +310,10 @@ export function DateFilterControl({
                 size === 'sm' ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-full'
               } border flex items-center justify-center transition-all shrink-0 ${
                 isPrevDisabled
-                  ? 'opacity-35 cursor-not-allowed bg-[#FAF8F5] border-[#E2D9CC] text-[#B0A495] shadow-none'
+                  ? 'opacity-35 cursor-not-allowed bg-muted/20 border-border/60 text-muted-foreground shadow-none'
                   : !isAllActive
-                  ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF] cursor-pointer shadow-2xs'
-                  : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
+                  ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/15 cursor-pointer shadow-2xs'
+                  : 'bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
               }`}
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -328,11 +328,11 @@ export function DateFilterControl({
               size === 'sm' ? 'h-8 px-3 rounded-full' : 'h-9 px-3.5 rounded-full'
             } border flex items-center gap-1.5 sm:gap-2 text-xs font-medium transition-all shadow-2xs cursor-pointer ${
               !isAllActive
-                ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF]'
-                : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/15'
+                : 'bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/40'
             }`}
           >
-            <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-[#A36F4C]' : 'text-muted-foreground'}`} />
+            <Calendar className={`h-3.5 w-3.5 shrink-0 ${!isAllActive ? 'text-primary' : 'text-muted-foreground'}`} />
             <span className="truncate max-w-[170px] sm:max-w-[220px]">{getDisplayLabel()}</span>
             <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -357,10 +357,10 @@ export function DateFilterControl({
                 size === 'sm' ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-full'
               } border flex items-center justify-center transition-all shrink-0 ${
                 isNextDisabled
-                  ? 'opacity-35 cursor-not-allowed bg-[#FAF8F5] border-[#E2D9CC] text-[#B0A495] shadow-none'
+                  ? 'opacity-35 cursor-not-allowed bg-muted/20 border-border/60 text-muted-foreground shadow-none'
                   : !isAllActive
-                  ? 'bg-[#FDF6E2] border-[#D4BEA7] text-[#633E20] hover:bg-[#F9ECCF] cursor-pointer shadow-2xs'
-                  : 'bg-background border-input text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
+                  ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/15 cursor-pointer shadow-2xs'
+                  : 'bg-background border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer shadow-2xs'
               }`}
             >
               <ChevronRight className="h-3.5 w-3.5" />
@@ -372,21 +372,21 @@ export function DateFilterControl({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className={`absolute top-full mt-1.5 w-76 sm:w-84 max-w-[calc(100vw-24px)] rounded-2xl bg-[#FFFFFF] border border-[#E2D9CC] shadow-2xl z-50 p-3.5 space-y-3 ${
+          className={`absolute top-full mt-1.5 w-76 sm:w-84 max-w-[calc(100vw-24px)] rounded-2xl bg-card border border-border/80 shadow-2xl z-50 p-3.5 space-y-3 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between pb-2 border-b border-[#E2D9CC]/70">
-            <span className="text-[11px] font-bold text-[#241C15] uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-[#A36F4C]" />
+          <div className="flex items-center justify-between pb-2 border-b border-border/60">
+            <span className="text-[11px] font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-primary" />
               {label}
             </span>
             {value.preset !== 'TODO' && (
               <button
                 type="button"
                 onClick={() => handleSelectPreset('TODO')}
-                className="text-[10px] text-[#A36F4C] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
               >
                 <RotateCcw className="h-2.5 w-2.5" />
                 Ir a Histórico
@@ -402,8 +402,8 @@ export function DateFilterControl({
                 onClick={() => handleSelectPreset('TODO')}
                 className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer ${
                   value.preset === 'TODO'
-                    ? 'bg-[#75695D] text-white shadow-2xs'
-                    : 'bg-[#FAF8F5] text-[#75695D] hover:text-[#241C15] hover:bg-[#F4EFEA]'
+                    ? 'bg-primary text-primary-foreground shadow-2xs'
+                    : 'bg-muted/30 text-muted-foreground hover:text-foreground hover:bg-muted/60'
                 }`}
               >
                 <span>🌐 Histórico</span>
@@ -416,8 +416,8 @@ export function DateFilterControl({
               onClick={() => handleSelectPreset('ESTE_MES')}
               className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer ${
                 value.preset === 'ESTE_MES'
-                  ? 'bg-[#A36F4C] text-white shadow-2xs'
-                  : 'bg-[#F8F6F2] text-[#241C15] hover:bg-[#EFE5D8]'
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'bg-muted/30 text-foreground hover:bg-muted/60'
               }`}
             >
               <span>📅 Mes Actual ({MESES_ES[new Date().getMonth()]})</span>
@@ -426,7 +426,7 @@ export function DateFilterControl({
 
             {/* Mes personalizado seleccionado mediante flechas horizontales */}
             {isCustomSpecificMonth && (
-              <div className="px-3 py-2 rounded-lg text-xs font-bold bg-[#A36F4C] text-white flex items-center justify-between shadow-2xs">
+              <div className="px-3 py-2 rounded-lg text-xs font-bold bg-primary text-primary-foreground flex items-center justify-between shadow-2xs">
                 <span>📅 {MESES_ES[fullMonthInfo.monthIndex]} {fullMonthInfo.year}</span>
                 <Check className="h-3.5 w-3.5 shrink-0" />
               </div>
@@ -437,13 +437,13 @@ export function DateFilterControl({
               onClick={() => handleSelectPreset('ESTA_SEMANA')}
               className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer ${
                 value.preset === 'ESTA_SEMANA'
-                  ? 'bg-[#A36F4C] text-white shadow-2xs'
-                  : 'bg-[#F8F6F2] text-[#241C15] hover:bg-[#EFE5D8]'
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'bg-muted/30 text-foreground hover:bg-muted/60'
               }`}
             >
               <div className="flex flex-col">
                 <span>📆 Esta Semana (Lun - Dom)</span>
-                <span className={`text-[10px] font-normal ${value.preset === 'ESTA_SEMANA' ? 'text-white/80' : 'text-[#75695D]'}`}>
+                <span className={`text-[10px] font-normal ${value.preset === 'ESTA_SEMANA' ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                   {formatFechaEvolucion(estaSemanaRange.from!)} - {formatFechaEvolucion(estaSemanaRange.to!)}
                 </span>
               </div>
@@ -455,13 +455,13 @@ export function DateFilterControl({
               onClick={() => handleSelectPreset('SEMANA_ANTERIOR')}
               className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer ${
                 value.preset === 'SEMANA_ANTERIOR'
-                  ? 'bg-[#A36F4C] text-white shadow-2xs'
-                  : 'bg-[#F8F6F2] text-[#241C15] hover:bg-[#EFE5D8]'
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'bg-muted/30 text-foreground hover:bg-muted/60'
               }`}
             >
               <div className="flex flex-col">
                 <span>⏪ Semana Pasada (Última semana)</span>
-                <span className={`text-[10px] font-normal ${value.preset === 'SEMANA_ANTERIOR' ? 'text-white/80' : 'text-[#75695D]'}`}>
+                <span className={`text-[10px] font-normal ${value.preset === 'SEMANA_ANTERIOR' ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                   {formatFechaEvolucion(semanaAnteriorRange.from!)} - {formatFechaEvolucion(semanaAnteriorRange.to!)}
                 </span>
               </div>
@@ -473,8 +473,8 @@ export function DateFilterControl({
               onClick={() => handleSelectPreset('ULTIMOS_3_MESES')}
               className={`px-3 py-2 rounded-lg text-xs font-bold text-left transition-colors flex items-center justify-between cursor-pointer ${
                 value.preset === 'ULTIMOS_3_MESES'
-                  ? 'bg-[#A36F4C] text-white shadow-2xs'
-                  : 'bg-[#F8F6F2] text-[#241C15] hover:bg-[#EFE5D8]'
+                  ? 'bg-primary text-primary-foreground shadow-2xs'
+                  : 'bg-muted/30 text-foreground hover:bg-muted/60'
               }`}
             >
               <span>⏱️ Hace 3 meses</span>

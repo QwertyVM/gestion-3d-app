@@ -1,7 +1,6 @@
-'use client'
-
 import React from 'react'
-import { Box } from 'lucide-react'
+import { Box, Dices } from 'lucide-react'
+import { useBusiness } from '@/context/BusinessContext'
 
 interface BusinessSwitcherProps {
   compact?: boolean
@@ -9,26 +8,38 @@ interface BusinessSwitcherProps {
 }
 
 export function BusinessSwitcher({ compact = false, className = '' }: BusinessSwitcherProps) {
+  const { config, is3D } = useBusiness()
+
   return (
     <div className={`w-full ${className}`}>
-      <div className="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl bg-white border border-[#E2D9CC] shadow-2xs">
+      <div className="w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl bg-card border border-border/60 shadow-none">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           {/* Brand Avatar */}
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-2xs bg-[#A36F4C] text-white">
-            <Box className="w-4 h-4 stroke-[2.2]" />
+          <div
+            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-white ${
+              is3D ? 'bg-amber-600/90' : 'bg-indigo-600/90'
+            }`}
+          >
+            {is3D ? <Box className="w-4 h-4 stroke-[2.2]" /> : <Dices className="w-4 h-4 stroke-[2.2]" />}
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-xs tracking-tight text-[#241C15] truncate">
-                NOVA 3D Studio
+              <span className="font-semibold text-xs tracking-tight text-foreground truncate">
+                {config.name}
               </span>
-              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full border bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]">
-                3D
+              <span
+                className={`text-[9px] font-mono font-medium px-1.5 py-0.2 rounded-md border ${
+                  is3D
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                    : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20'
+                }`}
+              >
+                {config.id}
               </span>
             </div>
-            <p className="text-[10px] text-[#8C7E72] truncate">
-              Taller de Impresión 3D
+            <p className="text-[10px] text-muted-foreground truncate">
+              {config.badge}
             </p>
           </div>
         </div>
