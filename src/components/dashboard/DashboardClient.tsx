@@ -50,7 +50,7 @@ import { WorkshopPulseRibbon } from '@/components/dashboard/WorkshopPulseRibbon'
 import { useBusiness } from '@/context/BusinessContext'
 import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 import { KpiInfoTrigger } from '@/components/ui/KpiInfoTrigger'
-import { StatCard } from '@/components/ui/StatCard'
+import { ExecutiveKpiRows } from '@/components/dashboard/ExecutiveKpiRows'
 import { 
   DatePreset,
   DateRange, 
@@ -1101,74 +1101,17 @@ export function DashboardClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. SALUD FINANCIERA EJECUTIVA (4 TARJETAS MAESTRAS DE ANÁLISIS COMERCIAL)  */}
+      {/* 2. SALUD FINANCIERA EJECUTIVA (RENGLONES MINIMALISTAS DE ALTA DENSIDAD)   */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-        {/* 1. Facturación Neta Comercial */}
-        <StatCard
-          label="Facturación Neta"
-          value={formatCurrency(dynamicKpis.ingresosVentas)}
-          sublabel={`${filteredVentas.length} pedidos • Cobrado: ${formatCurrency(dynamicKpis.totalCobradoVentas)} (${dynamicKpis.tasaCobranza.toFixed(0)}%)`}
-          icon={<TrendingUp className="h-4 w-4" />}
-          delta={{ 
-            value: `${formatCurrency(dynamicKpis.ticketPromedio)} / ped`, 
-            isPositive: true, 
-            label: `${totalPiezasPeriodo} uds` 
-          }}
-          badge={
-            dynamicKpis.saldoPorCobrar > 0
-              ? { text: `Por cobrar: ${formatCurrency(dynamicKpis.saldoPorCobrar)}`, variant: 'warning' }
-              : { text: '100% Cobrado', variant: 'success' }
-          }
-          onInfoClick={() => setSelectedKpiExplainer('facturacion_periodo')}
-        />
-
-        {/* 2. Margen Bruto de Taller (Unit Economics Real) */}
-        <StatCard
-          label="Margen Bruto Taller"
-          value={`+${formatCurrency(dynamicKpis.gananciaNeta)}`}
-          sublabel={`Insumos & Envíos: ${formatCurrency(dynamicKpis.costoDirectoTotal)} • Ganancia: +${formatCurrency(dynamicKpis.margenUnitarioPromedio)} / ped`}
-          icon={<Layers className="h-4 w-4" />}
-          variant={dynamicKpis.gananciaNeta >= 0 ? 'success' : 'destructive'}
-          badge={{ 
-            text: `${dynamicKpis.margenPorcentaje.toFixed(1)}% margen`, 
-            variant: dynamicKpis.margenPorcentaje >= 30 ? 'success' : 'warning' 
-          }}
-          onInfoClick={() => setSelectedKpiExplainer('utilidad_operativa')}
-        />
-
-        {/* 3. Caja Real Disponible (Liquidez Neta Libre de Fijos) */}
-        <StatCard
-          label="Caja Líquida Libre"
-          value={formatCurrency(gasto.gastoDisponibleHoy)}
-          sublabel={`Total en Cuenta: ${formatCurrency(gasto.saldoActualCaja)} • Blindado Fijo: ${formatCurrency(gasto.totalBlindadoMes)}`}
-          icon={<ShieldCheck className="h-4 w-4" />}
-          variant={gasto.gastoDisponibleHoy > 0 ? 'success' : 'warning'}
-          badge={{ 
-            text: gasto.gastoDisponibleHoy > 0 ? 'Liquidez Segura' : 'Alerta de Caja', 
-            variant: gasto.gastoDisponibleHoy > 0 ? 'success' : 'warning' 
-          }}
-          onInfoClick={() => setSelectedKpiExplainer('gasto_libre_disponible')}
-        />
-
-        {/* 4. Punto de Equilibrio & Cobertura de Costos */}
-        <StatCard
-          label="Punto de Equilibrio"
-          value={`${breakEven.cobertura.toFixed(0)}% cubierto`}
-          sublabel={
-            breakEven.superavit >= 0 
-              ? `+${formatCurrency(breakEven.superavit)} superávit sobre fijos (${formatCurrency(breakEven.totalFijos)})` 
-              : `Faltan ${formatCurrency(Math.abs(breakEven.superavit))} (~${breakEven.pedidosFaltantes} peds p/ fijos: ${formatCurrency(breakEven.totalFijos)})`
-          }
-          icon={<Target className="h-4 w-4" />}
-          variant={breakEven.superavit >= 0 ? 'success' : 'warning'}
-          badge={{ 
-            text: breakEven.superavit >= 0 ? 'Fijos Cubiertos' : `${breakEven.pedidosFaltantes} peds faltan`, 
-            variant: breakEven.superavit >= 0 ? 'success' : 'warning' 
-          }}
-          onInfoClick={() => setSelectedKpiExplainer('break_even')}
-        />
-      </div>
+      <ExecutiveKpiRows
+        dynamicKpis={dynamicKpis}
+        gasto={gasto}
+        breakEven={breakEven}
+        filteredVentasCount={filteredVentas.length}
+        totalPiezasPeriodo={totalPiezasPeriodo}
+        onInfoClick={setSelectedKpiExplainer}
+        formatCurrency={formatCurrency}
+      />
 
       {/* ========================================================================= */}
       {/* 2.b PULSO OPERATIVO DE TALLER 3D (CINTA RÁPIDA DE FABRICACIÓN)            */}
