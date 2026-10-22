@@ -2064,7 +2064,7 @@ export function CashFlowHubView({
       {/* MODAL GESTIÓN COMPLETA DEL PLAN DE GASTOS & BLINDAJE                      */}
       {/* ========================================================================= */}
       <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto bg-card border-border rounded-2xl p-6 shadow-2xl space-y-5">
+        <DialogContent showCloseButton={false} className="w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto bg-card border-border rounded-2xl p-6 shadow-2xl space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border">
             <div>
               <DialogTitle className="text-lg font-black text-foreground flex items-center gap-2">
@@ -2091,6 +2091,15 @@ export function CashFlowHubView({
               >
                 <Plus className="h-4 w-4 stroke-[2.5]" />
                 Nuevo Gasto al Plan
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsPlanModalOpen(false)}
+                className="h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer shrink-0"
+                title="Cerrar ventana"
+              >
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>

@@ -124,7 +124,11 @@ export function StatCard({
           )}
           {icon && (
             <div className={cn('w-4 h-4 shrink-0 flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5', styles.iconBgClass)}>
-              {icon}
+              {React.isValidElement(icon)
+                ? icon
+                : typeof icon === 'function' || (typeof icon === 'object' && icon !== null && ('render' in icon || '$$typeof' in icon))
+                  ? React.createElement(icon as any, { className: 'w-3.5 h-3.5' })
+                  : (icon as any)}
             </div>
           )}
         </div>

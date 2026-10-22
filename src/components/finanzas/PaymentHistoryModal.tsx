@@ -4,6 +4,8 @@ import React from 'react'
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -77,9 +79,9 @@ export function PaymentHistoryModal({
                 {getIconoCompromiso(item.categoria, item.concepto)}
               </div>
               <div className="flex items-center gap-2 flex-wrap min-w-0">
-                <h3 className="text-base font-bold text-foreground">
+                <DialogTitle className="text-base font-bold text-foreground">
                   Historial de Pagos
-                </h3>
+                </DialogTitle>
                 <span
                   className="bg-secondary border border-border text-foreground text-xs font-semibold px-2.5 py-0.5 rounded-md ml-2 truncate max-w-[200px]"
                   title={item.concepto}
@@ -88,11 +90,11 @@ export function PaymentHistoryModal({
                 </span>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 pl-13">
+            <DialogDescription className="text-xs text-muted-foreground mt-1 pl-13">
               {esPrestamo
                 ? 'Registro cronológico de amortización de cuotas del préstamo de capital'
                 : 'Registro de egresos contables asentados en caja para este servicio'}
-            </p>
+            </DialogDescription>
           </div>
 
           {/* Botón X de Cierre */}

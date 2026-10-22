@@ -20,6 +20,7 @@ interface DynamicKpis {
   gananciaNeta: number
   costoDirectoTotal?: number
   margenPorcentaje: number
+  markupPorcentaje?: number
   ticketPromedio: number
   margenUnitarioPromedio: number
   [key: string]: any
@@ -90,10 +91,12 @@ export function ExecutiveKpiRows({
       value: `+${formatCurrency(dynamicKpis.gananciaNeta)}`,
       valueColor: dynamicKpis.gananciaNeta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
       primaryContext: `Insumos & Envíos: ${formatCurrency(dynamicKpis.costoDirectoTotal || 0)} · Ganancia: +${formatCurrency(dynamicKpis.margenUnitarioPromedio)} / ped`,
-      secondaryContext: 'Unit Economics Real',
+      secondaryContext: dynamicKpis.markupPorcentaje != null 
+        ? `${dynamicKpis.markupPorcentaje.toFixed(0)}% markup s/ costo` 
+        : 'Unit Economics Real',
       badge: {
-        text: `${dynamicKpis.margenPorcentaje.toFixed(1)}% margen`,
-        className: dynamicKpis.margenPorcentaje >= 30
+        text: `${dynamicKpis.margenPorcentaje.toFixed(1)}% margen bruto`,
+        className: dynamicKpis.margenPorcentaje >= 20
           ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
           : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
       }

@@ -179,6 +179,7 @@ export function ClienteDetalleDrawer({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent 
         side="right" 
+        showCloseButton={false}
         className="w-full sm:max-w-md md:max-w-lg bg-background p-0 border-l border-border/60 flex flex-col z-50 overflow-hidden"
       >
         {/* Cabecera del Drawer */}

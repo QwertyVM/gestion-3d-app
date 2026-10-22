@@ -149,7 +149,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-w-xl p-0 gap-0 overflow-hidden border border-border/80 shadow-2xl bg-card rounded-2xl">
+      <DialogContent showCloseButton={false} className="max-w-xl p-0 gap-0 overflow-hidden border border-border/80 shadow-2xl bg-card rounded-2xl">
         <DialogTitle className="sr-only">Búsqueda Global y Comandos</DialogTitle>
         <DialogDescription className="sr-only">Navega rápidamente o cotiza piezas 3D en vivo</DialogDescription>
 

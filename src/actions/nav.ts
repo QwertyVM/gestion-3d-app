@@ -26,21 +26,18 @@ export async function getNavLiveMetrics(negocio?: TipoNegocio) {
           ]
         }
       }) : Promise.resolve(0),
-      targetNegocio === '3D' ? prisma.itemPedido.findMany({
+      targetNegocio === '3D' ? prisma.itemPedido.aggregate({
         where: {
           pedido: {
             negocio: '3D',
             estado: { in: ['PENDIENTE', 'EN_PRODUCCION', 'EN_TALLER', 'EMPAQUETANDO'] }
-          },
-          producto: {
-            negocio: '3D'
           }
         },
-        select: { cantidad: true }
-      }) : Promise.resolve([])
+        _sum: { cantidad: true }
+      }) : Promise.resolve({ _sum: { cantidad: 0 } })
     ])
 
-    const totalPiezasTaller = itemsPedidos.reduce((sum, it) => sum + Number(it.cantidad || 1), 0)
+    const totalPiezasTaller = Number(itemsPedidos?._sum?.cantidad || 0)
 
     return {
       pedidosPendientes,

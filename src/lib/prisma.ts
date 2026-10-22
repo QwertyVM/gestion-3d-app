@@ -1,47 +1,23 @@
 import { PrismaClient } from '@prisma/client'
 
 const prismaClientSingleton = () => {
-  return new PrismaClient()
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+  })
 }
 
 declare global {
   var prismaGlobal: undefined | ReturnType<typeof prismaClientSingleton>
 }
 
-export function getPrisma(): PrismaClient {
-  if (
-    !globalThis.prismaGlobal || 
-    !('pagoVenta' in globalThis.prismaGlobal) || 
-    !('cliente' in globalThis.prismaGlobal) ||
-    !('configuracionTienda' in globalThis.prismaGlobal) ||
-    !('partidaPresupuesto' in globalThis.prismaGlobal) ||
-    !('ingreso' in globalThis.prismaGlobal)
-  ) {
-    if (globalThis.prismaGlobal) {
-      try {
-        (globalThis.prismaGlobal as any).$disconnect()
-      } catch (e) {}
-    }
-    globalThis.prismaGlobal = prismaClientSingleton()
-  }
-  return globalThis.prismaGlobal
+const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prismaGlobal = prisma
 }
 
-const prisma = new Proxy({} as PrismaClient, {
-  get(_target, prop) {
-    let client = getPrisma()
-    if (!(prop in client)) {
-      // Re-instantiate if a newly compiled model is being accessed
-      globalThis.prismaGlobal = prismaClientSingleton()
-      client = globalThis.prismaGlobal
-    }
-    const value = (client as any)[prop]
-    if (typeof value === 'function') {
-      return value.bind(client)
-    }
-    return value
-  }
-})
+export function getPrisma(): PrismaClient {
+  return prisma
+}
 
 export default prisma
-

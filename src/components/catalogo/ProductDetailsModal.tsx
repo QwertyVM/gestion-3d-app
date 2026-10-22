@@ -132,6 +132,9 @@ export function ProductDetailsModal({
             <DialogTitle className="text-base font-semibold tracking-tight text-foreground leading-snug truncate" title={baseName}>
               {baseName}
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Ficha técnica, variantes y desglose de costos del producto
+            </DialogDescription>
 
             <div className="flex flex-wrap items-center gap-2 mt-1">
               {/* Chip de categoría */}

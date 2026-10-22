@@ -572,6 +572,89 @@ export async function getDatosPresupuestoTranquilidad(negocio?: TipoNegocio): Pr
   }
 }
 
+export async function calcularResumenBlindado(
+  inversiones: any[],
+  partidasPlan: ItemPartidaPlan[],
+  saldoActualCaja: number = 0
+) {
+  const cuotaMensual = 388.68
+  const pagosPrestamo = inversiones.filter(e => 
+    e.categoria === 'FINANCIERO' && 
+    !e.itemConcepto?.toLowerCase().includes('itf') &&
+    !e.itemConcepto?.toLowerCase().includes('comisi') &&
+    (
+      e.itemConcepto?.toLowerCase().includes('préstamo') || 
+      e.itemConcepto?.toLowerCase().includes('prestamo') || 
+      e.itemConcepto?.toLowerCase().includes('cuota') ||
+      (Number(e.costoTotal || 0) >= 100 && e.subcategoria?.toLowerCase().includes('bcp'))
+    )
+  )
+
+  const montoPagadoTotal = pagosPrestamo.reduce((acc, p) => acc + Number(p.costoTotal || 0), 0)
+
+  const pagoOctubre = pagosPrestamo.find(p => {
+    const d = new Date(p.createdAt)
+    return (d.getMonth() === 9 && d.getFullYear() === 2026) || p.itemConcepto?.toLowerCase().includes('cuota 2')
+  })
+
+  const pagadaEnPeriodo = Boolean(pagoOctubre)
+
+  const planActualizado = partidasPlan.map(p => {
+    if (p.id === 'gasto-cuota-prestamo') {
+      return {
+        ...p,
+        pagado: pagadaEnPeriodo
+      }
+    }
+
+    const egresosDePartida = inversiones.filter(e => {
+      if (e.categoria === 'FINANCIERO') return false
+      const conceptoLower = (e.itemConcepto || '').toLowerCase()
+      const pConceptoLower = (p.concepto || '').toLowerCase()
+      const pSubLower = (p.subconcepto || '').toLowerCase()
+      return conceptoLower.includes(pConceptoLower) || (pSubLower && conceptoLower.includes(pSubLower.slice(0, 10)))
+    })
+
+    const egresoOct = egresosDePartida.find(e => {
+      const d = new Date(e.createdAt)
+      return (d.getMonth() === 9 && d.getFullYear() === 2026) ||
+             (e.itemConcepto && e.itemConcepto.toLowerCase().includes('octubre')) ||
+             (e.especificacionColor && e.especificacionColor.toLowerCase().includes('octubre'))
+    })
+
+    const estaPagadoOct = Boolean(p.pagado || egresoOct)
+    return {
+      ...p,
+      pagado: estaPagadoOct
+    }
+  })
+
+  const partidasBlindadasResumen: PartidaBlindadaResumen[] = planActualizado
+    .filter(p => p.tipo === 'Blindado')
+    .map(p => ({
+      id: p.id,
+      concepto: p.concepto,
+      presupuesto: Number(p.presupuesto || 0),
+      pagado: Boolean(p.pagado),
+      montoPendiente: p.pagado ? 0 : Number(p.presupuesto || 0)
+    }))
+
+  const totalBlindadoPendiente = partidasBlindadasResumen.reduce((sum, p) => sum + p.montoPendiente, 0)
+  const gastoDisponibleLibre = Math.max(0, saldoActualCaja - totalBlindadoPendiente)
+
+  return {
+    saldoActualCaja,
+    totalBlindadoMes: totalBlindadoPendiente,
+    gastoDisponibleHoy: gastoDisponibleLibre,
+    cuotaPrestamoMensual: cuotaMensual,
+    cuotaPrestamoPendiente: pagadaEnPeriodo ? 0 : cuotaMensual,
+    totalPagadoPrestamoMes: montoPagadoTotal,
+    reservaCapexMensual: 878.00,
+    gastosFijosTaller: 111.00,
+    partidasBlindadas: partidasBlindadasResumen
+  }
+}
+
 export async function getResumenBlindadoOficial(negocio?: TipoNegocio) {
   const datos = await getDatosPresupuestoTranquilidad(negocio)
   return {

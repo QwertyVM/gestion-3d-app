@@ -45,7 +45,6 @@ import { CategoryFinancialBreakdownCard } from '@/components/dashboard/CategoryF
 import { AcquisitionChannelsCard } from '@/components/dashboard/AcquisitionChannelsCard'
 import { ClienteDetalleDrawer } from '@/components/clientes/ClienteDetalleDrawer'
 import { OperationalPulseBar } from '@/components/dashboard/OperationalPulseBar'
-import { LiveWorkshopPulse } from '@/components/dashboard/LiveWorkshopPulse'
 import { useBusiness } from '@/context/BusinessContext'
 import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 import { KpiInfoTrigger } from '@/components/ui/KpiInfoTrigger'
@@ -216,6 +215,7 @@ interface DashboardClientProps {
     costoDirectoTotal?: number
     gananciaNeta: number
     margenPorcentaje: number
+    markupPorcentaje?: number
     totalCobradoVentas: number
     saldoPorCobrar: number
     egresosTotales: number
@@ -299,8 +299,13 @@ export function DashboardClient({
       const fallbackTotalEgresos = fallbackCostos + fallbackEgresos
       const fallbackUtilidadOperativa = fallbackTotalIngresos - fallbackTotalEgresos
 
+      const fallbackMargen = fallbackIngresos > 0 ? (fallbackGanancia / fallbackIngresos) * 100 : 0
+      const fallbackMarkup = fallbackCostos > 0 ? (fallbackGanancia / fallbackCostos) * 100 : 0
+
       return {
         ...initialKpis,
+        margenPorcentaje: fallbackMargen,
+        markupPorcentaje: fallbackMarkup,
         totalIngresosPeriodo: fallbackTotalIngresos,
         totalEgresosPeriodo: fallbackTotalEgresos,
         utilidadOperativa: fallbackUtilidadOperativa,
@@ -340,7 +345,8 @@ export function DashboardClient({
     const costoDirectoTotal = costoFabricacionTotal + costoCajasTotal + costoEnvioTotal
 
     const gananciaNeta = ingresosVentas - costoDirectoTotal
-    const margenPorcentaje = costoDirectoTotal > 0 ? (gananciaNeta / costoDirectoTotal) * 100 : 0
+    const margenPorcentaje = ingresosVentas > 0 ? (gananciaNeta / ingresosVentas) * 100 : 0
+    const markupPorcentaje = costoDirectoTotal > 0 ? (gananciaNeta / costoDirectoTotal) * 100 : 0
 
     // Cobranzas efectivas dentro del período
     const totalCobradoVentas = rawVentas.reduce((sum: number, v: any) => {
@@ -374,6 +380,7 @@ export function DashboardClient({
       costoDirectoTotal,
       gananciaNeta,
       margenPorcentaje,
+      markupPorcentaje,
       totalCobradoVentas,
       saldoPorCobrar,
       egresosTotales,
@@ -1460,18 +1467,7 @@ export function DashboardClient({
       </div>
 
       {/* ========================================================================= */}
-      {/* 6. OPERACIONES DE FABRICACIÓN & DISPONIBILIDAD DE MATERIAL (EN DETALLE)   */}
-      {/* ========================================================================= */}
-      {is3D && (
-        <LiveWorkshopPulse 
-          pedidos={rawVentas} 
-          filamentos={rawFilamentos}
-          is3D={is3D}
-        />
-      )}
-
-      {/* ========================================================================= */}
-      {/* 7. DRAWER DE DETALLE DEL CLIENTE & MODAL DE AUDITORÍA DE KPIS             */}
+      {/* 6. DRAWER DE DETALLE DEL CLIENTE & MODAL DE AUDITORÍA DE KPIS             */}
       {/* ========================================================================= */}
       <ClienteDetalleDrawer 
         isOpen={drawerOpen}

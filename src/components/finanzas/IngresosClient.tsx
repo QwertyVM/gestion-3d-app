@@ -1004,7 +1004,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
 
       {/* Modal: Registrar Ingreso Directo */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-card border-border text-foreground w-[95vw] sm:max-w-lg max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl sm:rounded-3xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card border-border text-foreground w-[95vw] sm:max-w-lg max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl sm:rounded-3xl z-50">
           <form onSubmit={handleSubmitCreate} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
             <div className="p-5 sm:p-6 pb-4 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
@@ -1167,7 +1167,7 @@ export function IngresosClient({ ventas, pedidos, ingresosDirectos }: IngresosCl
 
       {/* Modal: Editar Ingreso Directo */}
       <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <DialogContent className="bg-card border-border text-foreground w-[95vw] sm:max-w-lg max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl sm:rounded-3xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card border-border text-foreground w-[95vw] sm:max-w-lg max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl sm:rounded-3xl z-50">
           <form onSubmit={handleSubmitEdit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
             <div className="p-5 sm:p-6 pb-4 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">

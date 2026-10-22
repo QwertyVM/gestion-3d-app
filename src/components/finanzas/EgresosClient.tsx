@@ -1622,7 +1622,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       {/* 5. Modal: Registrar Nuevo Egreso                                          */}
       {/* ========================================================================= */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="bg-card border-border text-foreground w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card border-border text-foreground w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
           <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
             <div className="p-5 sm:p-6 pb-4 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">

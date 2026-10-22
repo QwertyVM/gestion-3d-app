@@ -47,7 +47,7 @@ export function ThermalTicketModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden border border-border shadow-2xl bg-card rounded-2xl">
+      <DialogContent showCloseButton={false} className="max-w-md p-0 gap-0 overflow-hidden border border-border shadow-2xl bg-card rounded-2xl">
         <DialogTitle className="sr-only">Ticket Térmico de Despacho 80mm</DialogTitle>
         <DialogDescription className="sr-only">Formato de impresión para mini-impresora Bluetooth y caja de despacho</DialogDescription>
 

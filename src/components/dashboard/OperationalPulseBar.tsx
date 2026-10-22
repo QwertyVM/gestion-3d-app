@@ -148,13 +148,19 @@ export function OperationalPulseBar({
     })
   }, [pedidos, todayStr])
 
+  // 4. Seguimiento Postventa: Pedidos entregados con ventana activa de contacto (últimos 7 días)
   const pedidosPostventaDia = useMemo(() => {
+    const now = new Date()
+    const ventanaReciente = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
     return pedidos.filter(p => {
       if (p.estado !== 'ENTREGADO') return false
       if (!p.seguimientoPostventa) return false
-      if (!p.fechaPostventa) return true
-      const postventaDate = String(p.fechaPostventa).split('T')[0]
-      return postventaDate <= todayStr
+      const postventaDate = p.fechaPostventa 
+        ? String(p.fechaPostventa).split('T')[0] 
+        : (p.fecha ? String(p.fecha).split('T')[0] : null)
+      if (!postventaDate) return false
+      return postventaDate >= ventanaReciente && postventaDate <= todayStr
     })
   }, [pedidos, todayStr])
 
@@ -310,7 +316,7 @@ export function OperationalPulseBar({
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <PackageCheck className="w-3.5 h-3.5 text-sky-600" />
-              Seguimiento de satisfacción y reseñas ({pedidosPostventaDia.length} clientes)
+              Seguimiento de satisfacción y reseñas recientes ({pedidosPostventaDia.length} clientes)
             </span>
             <button
               type="button"

@@ -1,4 +1,4 @@
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export type DomainTopic = 
   | 'orders'
@@ -87,4 +87,18 @@ export function revalidateDomain(...topics: DomainTopic[]) {
       // Ignorar de forma segura fuera del request store de Next.js
     }
   })
+
+  topics.forEach(t => {
+    try {
+      revalidateTag(t, { expire: 0 })
+    } catch {
+      // Ignorar fuera del request store
+    }
+  })
+
+  try {
+    revalidateTag('dashboard', { expire: 0 })
+  } catch {
+    // Ignorar fuera del request store
+  }
 }

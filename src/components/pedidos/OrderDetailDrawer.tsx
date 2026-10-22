@@ -106,9 +106,9 @@ export function OrderDetailDrawer({
               <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-muted text-muted-foreground border border-border/50">
                 {displayCodigo}
               </span>
-              <h2 className="text-base font-semibold text-foreground tracking-tight truncate">
+              <SheetTitle className="text-base font-semibold text-foreground tracking-tight truncate">
                 {pedido.cliente}
-              </h2>
+              </SheetTitle>
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               Registrado: {formatDate(pedido.fecha)} • Canal: {pedido.canalVenta || 'Directo'}

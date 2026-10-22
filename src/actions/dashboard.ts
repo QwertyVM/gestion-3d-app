@@ -5,12 +5,12 @@ import { getPedidos, addPagoPedido } from '@/actions/pedidos'
 import { registrarAbono } from '@/actions/ventas'
 import { TipoNegocio } from '@/lib/business'
 import { getActiveNegocioServer } from '@/lib/business-server'
-import { getResumenBlindadoOficial } from '@/actions/presupuesto'
+import { unstable_cache } from 'next/cache'
+import { calcularResumenBlindado, getPartidasPlanDB } from '@/actions/presupuesto'
 
-export async function getDashboardData(negocio?: TipoNegocio) {
-  const targetNegocio = negocio || await getActiveNegocioServer()
+async function computeDashboardData(targetNegocio: TipoNegocio) {
 
-  const [inversiones, pedidos, ingresosDirectos, filamentos] = await Promise.all([
+  const [inversiones, pedidos, ingresosDirectos, filamentos, partidasPlan] = await Promise.all([
     prisma.inversion.findMany({
       where: { negocio: targetNegocio },
       orderBy: { createdAt: 'desc' }
@@ -22,7 +22,8 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     }),
     targetNegocio === '3D' ? prisma.inventarioFilamento.findMany({
       where: { activo: true }
-    }) : Promise.resolve([])
+    }) : Promise.resolve([]),
+    getPartidasPlanDB(targetNegocio)
   ])
 
   // 1. Egresos / Inversión Total en el Taller (Maquinaria + Insumos + Servicios)
@@ -42,8 +43,11 @@ export async function getDashboardData(negocio?: TipoNegocio) {
   // 4. GANANCIA NETA EN VENTAS (Ingresos por Venta - Costos Directos: Fabricación + Cajas + Envío)
   const gananciaNeta = ingresosVentas - costoDirectoTotal
 
-  // 5. Margen de Ganancia sobre Costo Real (%)
-  const margenPorcentaje = costoDirectoTotal > 0 
+  // 5. Margen Bruto Real sobre Ventas (%) y Markup sobre Costo (%)
+  const margenPorcentaje = ingresosVentas > 0
+    ? (gananciaNeta / ingresosVentas) * 100
+    : 0
+  const markupPorcentaje = costoDirectoTotal > 0 
     ? (gananciaNeta / costoDirectoTotal) * 100 
     : 0
 
@@ -412,9 +416,9 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     .sort((a, b) => b.gananciaNeta - a.gananciaNeta || b.totalFacturado - a.totalFacturado)
     .slice(0, 5)
 
-  // 14. Capacidad de Gasto y Fondos Blindados directos desde Proyecciones y Presupuestos
-  const resumenBlindado = await getResumenBlindadoOficial()
+  // 14. Capacidad de Gasto y Fondos Blindados directos desde Proyecciones y Presupuestos (in-memory instantáneo)
   const saldoActualCaja = Math.max(0, (totalCobradoVentas + totalIngresosDirectos) - egresosTotales)
+  const resumenBlindado = await calcularResumenBlindado(inversiones, partidasPlan, saldoActualCaja)
   const totalBlindadoMes = resumenBlindado.totalBlindadoMes
   const gastoDisponibleHoy = Math.max(0, saldoActualCaja - totalBlindadoMes)
   const margenUnitarioPromedio = ticketPromedio > 0 ? (gananciaNeta / Math.max(1, pedidos.length)) : 97.00
@@ -459,6 +463,7 @@ export async function getDashboardData(negocio?: TipoNegocio) {
       costoDirectoTotal,
       gananciaNeta,
       margenPorcentaje,
+      markupPorcentaje,
       totalCobradoVentas,
       saldoPorCobrar,
       egresosTotales,
@@ -489,6 +494,20 @@ export async function getDashboardData(negocio?: TipoNegocio) {
     rawIngresosDirectos: serializedIngresosDirectos,
     rawFilamentos: serializedFilamentos
   }
+}
+
+const getCachedDashboardData = unstable_cache(
+  async (targetNegocio: TipoNegocio) => computeDashboardData(targetNegocio),
+  ['dashboard-data-cache'],
+  {
+    tags: ['dashboard', 'orders', 'finance', 'inventory'],
+    revalidate: 60
+  }
+)
+
+export async function getDashboardData(negocio?: TipoNegocio) {
+  const targetNegocio = negocio || await getActiveNegocioServer()
+  return getCachedDashboardData(targetNegocio)
 }
 
 export async function registrarAbonoDashboard(
