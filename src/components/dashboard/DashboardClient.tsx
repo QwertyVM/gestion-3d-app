@@ -255,6 +255,7 @@ export function DashboardClient({
   const [soloDiasConVentas, setSoloDiasConVentas] = useState(true)
   const [rankingArticulosMode, setRankingArticulosMode] = useState<'RENTABILIDAD' | 'VOLUMEN'>('RENTABILIDAD')
   const [rankingTab, setRankingTab] = useState<'CLIENTES' | 'ARTICULOS'>('CLIENTES')
+  const [dashboardView, setDashboardView] = useState<'FINANZAS' | 'COMERCIAL' | 'INTEGRAL'>('FINANZAS')
 
   // Drawer de Detalle del Cliente
   const [selectedClienteDrawer, setSelectedClienteDrawer] = useState<string | null>(null)
@@ -582,6 +583,28 @@ export function DashboardClient({
       }
     })
   }, [filteredVentas, dateRange])
+
+  // Micro-Sparklines para los renglones ejecutivos
+  const sparklineData = useMemo(() => {
+    if (!metricasEvolucion || metricasEvolucion.length === 0) return undefined
+    const slice = metricasEvolucion.slice(-14)
+    return {
+      ventas: slice.map(d => d.ventaTotal),
+      margen: slice.map(d => Math.max(0, d.utilidad)),
+      caja: slice.map(d => d.ventasAcum),
+      cobertura: slice.map(d => Math.min(100, Math.round((d.utilidadAcum / (breakEven.totalFijos || 1)) * 100)))
+    }
+  }, [metricasEvolucion, breakEven.totalFijos])
+
+  // Capital inmovilizado en stock (Filamentos disponibles en taller)
+  const capitalInmovilizado = useMemo(() => {
+    if (!rawFilamentos || rawFilamentos.length === 0) return 0
+    return rawFilamentos.reduce((sum: number, f: any) => {
+      const gramos = Number(f.stockGramos || 0)
+      const costoBobina = Number(f.costoBobinaRef || 65)
+      return sum + (gramos * (costoBobina / 1000))
+    }, 0)
+  }, [rawFilamentos])
 
   // 7. Top 5 Clientes en valor en el período seleccionado
   const topClientesDinamico = useMemo(() => {
@@ -1117,6 +1140,8 @@ export function DashboardClient({
         totalPiezasPeriodo={totalPiezasPeriodo}
         onInfoClick={setSelectedKpiExplainer}
         formatCurrency={formatCurrency}
+        sparklineData={sparklineData}
+        capitalInmovilizado={capitalInmovilizado}
       />
 
       {/* ========================================================================= */}
@@ -1130,341 +1155,402 @@ export function DashboardClient({
       />
 
       {/* ========================================================================= */}
+      {/* 3. SELECTOR DE ENFOQUE ANALÍTICO (SEGMENTED CONTROL MINIMALISTA)          */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-border/50">
+        <div className="inline-flex items-center p-0.5 rounded-xl bg-muted/40 border border-border/60 self-start">
+          <button
+            type="button"
+            onClick={() => setDashboardView('FINANZAS')}
+            aria-label="Finanzas y Flujo de Caja"
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              dashboardView === 'FINANZAS'
+                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-primary" />
+            <span>Finanzas & Flujo</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDashboardView('COMERCIAL')}
+            aria-label="Comercial y Clientes"
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              dashboardView === 'COMERCIAL'
+                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+            <span>Comercial & Clientes</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDashboardView('INTEGRAL')}
+            aria-label="Vista Completa"
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              dashboardView === 'INTEGRAL'
+                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="hidden sm:inline">Vista Completa</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] text-muted-foreground hidden sm:inline">
+          {dashboardView === 'FINANZAS' 
+            ? 'Márgenes netos y desglose de caja del período' 
+            : dashboardView === 'COMERCIAL' 
+            ? 'Rankings de demanda y canales de captación' 
+            : 'Módulos financieros y comerciales consolidados'}
+        </span>
+      </div>
+
+      {/* ========================================================================= */}
       {/* 4. BLOQUE FINANCIERO (GRÁFICO DE MÁRGENES + DESGLOSE DE FONDOS Y COSTOS)  */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-        {/* Gráfico Margen Real por Pedido & Curva Acumulada (7 cols) */}
-        <Card className="lg:col-span-7 bg-card border border-border/60 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[420px]">
-          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <CardTitle className="text-foreground text-sm font-semibold tracking-tight">
-                    {chartMode === 'DIARIO' ? 'Margen Real por Pedido' : 'Curva Acumulativa del Período'}
-                  </CardTitle>
-                  {chartMode === 'DIARIO' && (
-                    <button
-                      type="button"
-                      onClick={() => setSoloDiasConVentas(!soloDiasConVentas)}
-                      className="text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 border border-border/50 px-2 py-0.5 rounded-md font-medium cursor-pointer transition-colors"
-                      title="Alternar entre ver solo días con ventas o todo el calendario"
-                    >
-                      {soloDiasConVentas ? '⚡ Días con venta' : '📅 Todo el mes'}
-                    </button>
-                  )}
+      {(dashboardView === 'FINANZAS' || dashboardView === 'INTEGRAL') && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+          {/* Gráfico Margen Real por Pedido & Curva Acumulada (7 cols) */}
+          <Card className="lg:col-span-7 bg-card border border-border/60 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[420px]">
+            <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CardTitle className="text-foreground text-sm font-semibold tracking-tight">
+                      {chartMode === 'DIARIO' ? 'Margen Real por Pedido' : 'Curva Acumulativa del Período'}
+                    </CardTitle>
+                    {chartMode === 'DIARIO' && (
+                      <button
+                        type="button"
+                        onClick={() => setSoloDiasConVentas(!soloDiasConVentas)}
+                        className="text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 border border-border/50 px-2 py-0.5 rounded-md font-medium cursor-pointer transition-colors"
+                        title="Alternar entre ver solo días con ventas o todo el calendario"
+                      >
+                        {soloDiasConVentas ? '⚡ Días con venta' : '📅 Todo el mes'}
+                      </button>
+                    )}
+                  </div>
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                    {chartMode === 'DIARIO' 
+                      ? 'Costo de producción + ganancia neta día a día con curva de venta total' 
+                      : 'Tendencia acumulada de facturación y margen neto del período'}
+                  </CardDescription>
                 </div>
-                <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                  {chartMode === 'DIARIO' 
-                    ? 'Costo de producción + ganancia neta día a día con curva de venta total' 
-                    : 'Tendencia acumulada de facturación y margen neto del período'}
-                </CardDescription>
-              </div>
 
-              {/* Selector Simplificado: [ Margen Diario | Acumulado ] */}
-              <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shrink-0 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setChartMode('DIARIO')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    chartMode === 'DIARIO'
-                      ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Margen Diario
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChartMode('ACUMULADO')}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    chartMode === 'ACUMULADO'
-                      ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Acumulado
-                </button>
+                {/* Selector Simplificado: [ Margen Diario | Acumulado ] */}
+                <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setChartMode('DIARIO')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap ${
+                      chartMode === 'DIARIO'
+                        ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Margen Diario
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartMode('ACUMULADO')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap ${
+                      chartMode === 'ACUMULADO'
+                        ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Acumulado
+                  </button>
+                </div>
               </div>
-            </div>
-          </CardHeader>
+            </CardHeader>
 
-          <CardContent className="p-3 sm:p-5 pt-3 flex-1 flex flex-col justify-center">
-            {metricasEvolucion.length === 0 ? (
-              <div className="h-[280px] flex items-center justify-center text-xs text-muted-foreground italic">
-                No hay movimientos registrados en el período seleccionado.
-              </div>
-            ) : chartMode === 'DIARIO' ? (
-              renderMargenChart(metricasEvolucion)
-            ) : (
-              renderAcumuladoChart(metricasEvolucion)
-            )}
-          </CardContent>
-        </Card>
+            <CardContent className="p-3 sm:p-5 pt-3 flex-1 flex flex-col justify-center">
+              {metricasEvolucion.length === 0 ? (
+                <div className="h-[280px] flex items-center justify-center text-xs text-muted-foreground italic">
+                  No hay movimientos registrados en el período seleccionado.
+                </div>
+              ) : chartMode === 'DIARIO' ? (
+                renderMargenChart(metricasEvolucion)
+              ) : (
+                renderAcumuladoChart(metricasEvolucion)
+              )}
+            </CardContent>
+          </Card>
 
-        {/* Distribución de Ingresos & Egresos (CategoryFinancialBreakdownCard) (5 cols) */}
-        <div className="lg:col-span-5 h-full">
-          <CategoryFinancialBreakdownCard
-            ventas={filteredVentas}
-            inversiones={filteredInversiones}
-            ingresosDirectos={filteredIngresosDirectos}
-            ticketPromedio={dynamicKpis.ticketPromedio}
-            totalPedidos={filteredVentas.length}
-            className="h-full min-h-[420px]"
-          />
+          {/* Distribución de Ingresos & Egresos (CategoryFinancialBreakdownCard) (5 cols) */}
+          <div className="lg:col-span-5 h-full">
+            <CategoryFinancialBreakdownCard
+              ventas={filteredVentas}
+              inversiones={filteredInversiones}
+              ingresosDirectos={filteredIngresosDirectos}
+              ticketPromedio={dynamicKpis.ticketPromedio}
+              totalPedidos={filteredVentas.length}
+              className="h-full min-h-[420px]"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 5. BLOQUE DE INTELIGENCIA COMERCIAL & TALLER                              */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-        {/* RANKINGS DEL PERÍODO (6 cols): [ Top Clientes ] [ Top Artículos ] */}
-        <Card className="lg:col-span-6 bg-card border border-border/60 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[360px]">
-          <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Trophy className="h-4 w-4 text-amber-500" />
-                <CardTitle className="text-sm font-semibold tracking-tight text-foreground">
-                  Rankings del Período
-                </CardTitle>
-              </div>
-
-              {/* Selector de Rankings: [ Top Clientes | Top Artículos ] */}
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setRankingTab('CLIENTES')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                      rankingTab === 'CLIENTES'
-                        ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5" />
-                    <span>Clientes</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRankingTab('ARTICULOS')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-                      rankingTab === 'ARTICULOS'
-                        ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    <Package className="w-3.5 h-3.5" />
-                    <span>Artículos</span>
-                  </button>
+      {(dashboardView === 'COMERCIAL' || dashboardView === 'INTEGRAL') && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+          {/* RANKINGS DEL PERÍODO (6 cols): [ Top Clientes ] [ Top Artículos ] */}
+          <Card className="lg:col-span-6 bg-card border border-border/60 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[360px]">
+            <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-amber-500" />
+                  <CardTitle className="text-sm font-semibold tracking-tight text-foreground">
+                    Rankings del Período
+                  </CardTitle>
                 </div>
 
-                {rankingTab === 'CLIENTES' ? (
-                  <Link
-                    href="/pedidos"
-                    className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <span>Pedidos</span>
-                    <ArrowUpRight className="h-3 w-3" />
-                  </Link>
+                {/* Selector de Rankings: [ Top Clientes | Top Artículos ] */}
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setRankingTab('CLIENTES')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                        rankingTab === 'CLIENTES'
+                          ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Clientes</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRankingTab('ARTICULOS')}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+                        rankingTab === 'ARTICULOS'
+                          ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Package className="w-3.5 h-3.5" />
+                      <span>Artículos</span>
+                    </button>
+                  </div>
+
+                  {rankingTab === 'CLIENTES' ? (
+                    <Link
+                      href="/pedidos"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <span>Pedidos</span>
+                      <ArrowUpRight className="h-3 w-3" />
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/catalogo"
+                      className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <span>Catálogo</span>
+                      <ArrowUpRight className="h-3 w-3" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Sub-toggle para Artículos: Ganancia vs Unidades */}
+              {rankingTab === 'ARTICULOS' && (
+                <div className="flex items-center justify-between pt-2 text-[11px]">
+                  <span className="text-muted-foreground text-[10px] uppercase font-semibold tracking-wider">
+                    Ordenar por:
+                  </span>
+                  <div className="inline-flex items-center p-0.5 rounded-md bg-muted/30 border border-border/50">
+                    <button
+                      type="button"
+                      onClick={() => setRankingArticulosMode('RENTABILIDAD')}
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
+                        rankingArticulosMode === 'RENTABILIDAD'
+                          ? 'bg-card text-foreground font-semibold shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Ganancia
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRankingArticulosMode('VOLUMEN')}
+                      className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
+                        rankingArticulosMode === 'VOLUMEN'
+                          ? 'bg-card text-foreground font-semibold shadow-2xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Unidades
+                    </button>
+                  </div>
+                </div>
+              )}
+            </CardHeader>
+
+            <CardContent className="p-0 flex-1 divide-y divide-border/40">
+              {rankingTab === 'CLIENTES' ? (
+                topClientesDinamico.length === 0 ? (
+                  <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
+                    <Users className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                    <p>No hay compras registradas en este período.</p>
+                  </div>
                 ) : (
-                  <Link
-                    href="/catalogo"
-                    className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <span>Catálogo</span>
-                    <ArrowUpRight className="h-3 w-3" />
-                  </Link>
-                )}
-              </div>
-            </div>
+                  topClientesDinamico.map((c, index) => {
+                    const rankClass = 
+                      index === 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
+                      index === 1 ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30' :
+                      index === 2 ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' :
+                      'bg-muted/60 text-muted-foreground border-border/60'
 
-            {/* Sub-toggle para Artículos: Ganancia vs Unidades */}
-            {rankingTab === 'ARTICULOS' && (
-              <div className="flex items-center justify-between pt-2 text-[11px]">
-                <span className="text-muted-foreground text-[10px] uppercase font-semibold tracking-wider">
-                  Ordenar por:
-                </span>
-                <div className="inline-flex items-center p-0.5 rounded-md bg-muted/30 border border-border/50">
-                  <button
-                    type="button"
-                    onClick={() => setRankingArticulosMode('RENTABILIDAD')}
-                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
-                      rankingArticulosMode === 'RENTABILIDAD'
-                        ? 'bg-card text-foreground font-semibold shadow-2xs'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Ganancia
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRankingArticulosMode('VOLUMEN')}
-                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all cursor-pointer ${
-                      rankingArticulosMode === 'VOLUMEN'
-                        ? 'bg-card text-foreground font-semibold shadow-2xs'
-                        : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    Unidades
-                  </button>
-                </div>
-              </div>
-            )}
-          </CardHeader>
+                    return (
+                      <div 
+                        key={`${c.cliente}-${index}`}
+                        onClick={() => handleOpenClienteDetalle(c.cliente)}
+                        className="px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors cursor-pointer group"
+                        title={`Ver estado de cuenta de ${formatClienteNombre(c.cliente)}`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-mono font-bold border shrink-0 ${rankClass}`}>
+                            {index + 1}
+                          </span>
 
-          <CardContent className="p-0 flex-1 divide-y divide-border/40">
-            {rankingTab === 'CLIENTES' ? (
-              topClientesDinamico.length === 0 ? (
-                <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
-                  <Users className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-                  <p>No hay compras registradas en este período.</p>
-                </div>
-              ) : (
-                topClientesDinamico.map((c, index) => {
-                  const rankClass = 
-                    index === 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
-                    index === 1 ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30' :
-                    index === 2 ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' :
-                    'bg-muted/60 text-muted-foreground border-border/60'
+                          <div className="w-8 h-8 rounded-full bg-muted border border-border/60 text-muted-foreground text-xs font-semibold flex items-center justify-center shrink-0 group-hover:border-primary/40 group-hover:text-primary transition-colors">
+                            {getInitials(c.cliente)}
+                          </div>
 
-                  return (
-                    <div 
-                      key={`${c.cliente}-${index}`}
-                      onClick={() => handleOpenClienteDetalle(c.cliente)}
-                      className="px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors cursor-pointer group"
-                      title={`Ver estado de cuenta de ${formatClienteNombre(c.cliente)}`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-mono font-bold border shrink-0 ${rankClass}`}>
-                          {index + 1}
-                        </span>
-
-                        <div className="w-8 h-8 rounded-full bg-muted border border-border/60 text-muted-foreground text-xs font-semibold flex items-center justify-center shrink-0 group-hover:border-primary/40 group-hover:text-primary transition-colors">
-                          {getInitials(c.cliente)}
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors block">
+                              {formatClienteNombre(c.cliente)}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate mt-0.5">
+                              <span>{c.pedidosCount} {c.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
+                              <span>•</span>
+                              <span>{c.piezasCount} piezas</span>
+                              {c.canalPreferido && (
+                                <>
+                                  <span>•</span>
+                                  <span className="px-1.5 py-0.2 rounded bg-secondary text-secondary-foreground text-[10px] font-medium border border-border/40">
+                                    {c.canalPreferido}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                            {formatClienteNombre(c.cliente)}
-                          </h4>
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate mt-0.5">
-                            <span>{c.pedidosCount} {c.pedidosCount === 1 ? 'pedido' : 'pedidos'}</span>
-                            <span>•</span>
-                            <span>{c.piezasCount} piezas</span>
-                            {c.canalPreferido && (
-                              <>
-                                <span>•</span>
-                                <span className="px-1.5 py-0.2 rounded bg-secondary text-secondary-foreground text-[10px] font-medium border border-border/40">
-                                  {c.canalPreferido}
-                                </span>
-                              </>
+                        <div className="text-right shrink-0 space-y-0.5">
+                          <div className="text-xs sm:text-sm font-mono font-semibold text-foreground tabular-nums tracking-tight">
+                            {formatCurrency(c.totalComprado)}
+                          </div>
+                          <div>
+                            {c.saldoPendiente > 0 ? (
+                              <span className="text-[10px] font-medium font-mono text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md inline-block tabular-nums">
+                                Debe {formatCurrency(c.saldoPendiente)}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md inline-block">
+                                Al día
+                              </span>
                             )}
                           </div>
                         </div>
                       </div>
+                    )
+                  })
+                )
+              ) : (
+                topArticulosDinamico.length === 0 ? (
+                  <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
+                    <Package className="h-6 w-6 text-muted-foreground/40 mx-auto" />
+                    <p>No hay artículos despachados en este período.</p>
+                  </div>
+                ) : (
+                  topArticulosDinamico.map((art, index) => {
+                    const rankClass = 
+                      index === 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
+                      index === 1 ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30' :
+                      index === 2 ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' :
+                      'bg-muted/60 text-muted-foreground border-border/60'
 
-                      <div className="text-right shrink-0 space-y-0.5">
-                        <div className="text-xs sm:text-sm font-mono font-semibold text-foreground tabular-nums tracking-tight">
-                          {formatCurrency(c.totalComprado)}
-                        </div>
-                        <div>
-                          {c.saldoPendiente > 0 ? (
-                            <span className="text-[10px] font-medium font-mono text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md inline-block tabular-nums">
-                              Debe {formatCurrency(c.saldoPendiente)}
-                            </span>
+                    return (
+                      <div 
+                        key={`${art.id}-${index}`}
+                        className="px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-mono font-bold border shrink-0 ${rankClass}`}>
+                            {index + 1}
+                          </span>
+
+                          {art.imageUrl ? (
+                            <img 
+                              src={art.imageUrl} 
+                              alt={art.nombreModelo} 
+                              className="w-8 h-8 rounded-lg object-cover border border-border/60 shrink-0" 
+                            />
                           ) : (
-                            <span className="text-[10px] font-medium font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md inline-block">
-                              Al día
-                            </span>
+                            <div className="w-8 h-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center shrink-0 text-muted-foreground">
+                              <Package className="h-3.5 w-3.5 stroke-[1.5]" />
+                            </div>
                           )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })
-              )
-            ) : (
-              topArticulosDinamico.length === 0 ? (
-                <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
-                  <Package className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-                  <p>No hay artículos despachados en este período.</p>
-                </div>
-              ) : (
-                topArticulosDinamico.map((art, index) => {
-                  const rankClass = 
-                    index === 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
-                    index === 1 ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30' :
-                    index === 2 ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' :
-                    'bg-muted/60 text-muted-foreground border-border/60'
 
-                  return (
-                    <div 
-                      key={`${art.id}-${index}`}
-                      className="px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-mono font-bold border shrink-0 ${rankClass}`}>
-                          {index + 1}
-                        </span>
-
-                        {art.imageUrl ? (
-                          <img 
-                            src={art.imageUrl} 
-                            alt={art.nombreModelo} 
-                            className="w-8 h-8 rounded-lg object-cover border border-border/60 shrink-0" 
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center shrink-0 text-muted-foreground">
-                            <Package className="h-3.5 w-3.5 stroke-[1.5]" />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-foreground leading-snug line-clamp-1 block" title={art.nombreModelo}>
+                              {art.nombreModelo}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate mt-0.5">
+                              <span>{art.unidadesVendidas} {art.unidadesVendidas === 1 ? 'ud' : 'uds'}</span>
+                              <span>•</span>
+                              <span className="font-mono">S/ {art.totalFacturado.toFixed(2)}</span>
+                              {art.lineaCategoria && (
+                                <>
+                                  <span>•</span>
+                                  <span className="px-1.5 py-0.2 rounded bg-secondary text-secondary-foreground text-[10px] font-medium border border-border/40">
+                                    {art.lineaCategoria}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        )}
+                        </div>
 
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-xs font-semibold text-foreground leading-snug line-clamp-1" title={art.nombreModelo}>
-                            {art.nombreModelo}
-                          </h4>
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground truncate mt-0.5">
-                            <span>{art.unidadesVendidas} {art.unidadesVendidas === 1 ? 'ud' : 'uds'}</span>
-                            <span>•</span>
-                            <span className="font-mono">S/ {art.totalFacturado.toFixed(2)}</span>
-                            {art.lineaCategoria && (
-                              <>
-                                <span>•</span>
-                                <span className="px-1.5 py-0.2 rounded bg-secondary text-secondary-foreground text-[10px] font-medium border border-border/40">
-                                  {art.lineaCategoria}
-                                </span>
-                              </>
-                            )}
+                        <div className="text-right shrink-0 space-y-0.5">
+                          <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums font-mono tracking-tight">
+                            +{formatCurrency(art.gananciaNeta || 0)}
+                          </div>
+                          <div className="text-[10px] font-medium font-mono text-muted-foreground tabular-nums">
+                            {art.margenPorcentaje != null ? `${art.margenPorcentaje.toFixed(0)}% margen` : ''}
                           </div>
                         </div>
                       </div>
+                    )
+                  })
+                )
+              )}
+            </CardContent>
+          </Card>
 
-                      <div className="text-right shrink-0 space-y-0.5">
-                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums font-mono tracking-tight">
-                          +{formatCurrency(art.gananciaNeta || 0)}
-                        </div>
-                        <div className="text-[10px] font-medium font-mono text-muted-foreground tabular-nums">
-                          {art.margenPorcentaje != null ? `${art.margenPorcentaje.toFixed(0)}% margen` : ''}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })
-              )
-            )}
-          </CardContent>
-        </Card>
-
-        {/* CANALES DE CAPTACIÓN (6 cols): Gráfico Donut (Círculo Pastel) + Rendimiento */}
-        <div className="lg:col-span-6 h-full">
-          <AcquisitionChannelsCard
-            ventas={filteredVentas}
-            ticketPromedio={dynamicKpis.ticketPromedio}
-            totalPedidos={filteredVentas.length}
-            className="h-full"
-          />
+          {/* CANALES DE CAPTACIÓN (6 cols): Gráfico Donut (Círculo Pastel) + Rendimiento */}
+          <div className="lg:col-span-6 h-full">
+            <AcquisitionChannelsCard
+              ventas={filteredVentas}
+              ticketPromedio={dynamicKpis.ticketPromedio}
+              totalPedidos={filteredVentas.length}
+              className="h-full"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 6. DRAWER DE DETALLE DEL CLIENTE & MODAL DE AUDITORÍA DE KPIS             */}

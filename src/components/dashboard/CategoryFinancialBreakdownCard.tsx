@@ -384,7 +384,10 @@ export function CategoryFinancialBreakdownCard({
                         Pasivo / No Comercial
                       </span>
                       <Tooltip>
-                        <TooltipTrigger className="text-muted-foreground hover:text-foreground cursor-pointer inline-flex items-center">
+                        <TooltipTrigger 
+                          aria-label="Más información sobre inyección de capital"
+                          className="text-muted-foreground hover:text-foreground cursor-pointer inline-flex items-center"
+                        >
                           <Info className="w-3.5 h-3.5 opacity-70" />
                         </TooltipTrigger>
                         <TooltipContent className="bg-card text-foreground border border-border text-xs max-w-xs p-2.5 rounded-xl shadow-lg">

@@ -277,7 +277,7 @@ export function OperationalPulseBar({
                 'inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md transition-colors cursor-pointer',
                 showDrawer === 'postventa'
                   ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 font-semibold'
-                  : 'text-sky-600 dark:text-sky-400 hover:bg-sky-500/10'
+                  : 'text-sky-700 dark:text-sky-300 hover:bg-sky-500/10'
               )}
             >
               <PackageCheck className="w-3.5 h-3.5" />

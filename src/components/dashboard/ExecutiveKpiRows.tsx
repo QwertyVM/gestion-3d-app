@@ -6,10 +6,13 @@ import {
   Layers, 
   ShieldCheck, 
   Target, 
-  Rows3, 
-  Columns2
+  SlidersHorizontal,
+  Workflow
 } from 'lucide-react'
 import { KpiInfoTrigger } from '@/components/ui/KpiInfoTrigger'
+import { MicroSparkline } from '@/components/ui/MicroSparkline'
+import { FinancialWaterfallModal } from '@/components/dashboard/FinancialWaterfallModal'
+import { FinancialWhatIfModal } from '@/components/dashboard/FinancialWhatIfModal'
 import { cn } from '@/lib/utils'
 
 interface DynamicKpis {
@@ -47,6 +50,13 @@ interface ExecutiveKpiRowsProps {
   totalPiezasPeriodo: number
   onInfoClick: (key: string) => void
   formatCurrency: (val: number) => string
+  sparklineData?: {
+    ventas: number[]
+    margen: number[]
+    caja: number[]
+    cobertura: number[]
+  }
+  capitalInmovilizado?: number
   className?: string
 }
 
@@ -58,12 +68,44 @@ export function ExecutiveKpiRows({
   totalPiezasPeriodo,
   onInfoClick,
   formatCurrency,
+  sparklineData,
+  capitalInmovilizado = 0,
   className
 }: ExecutiveKpiRowsProps) {
-  // Modo de visualización: 'rows' (4 renglones ejecutivos completos) o 'compact' (2 columnas x 2 renglones)
-  const [layoutMode, setLayoutMode] = useState<'rows' | 'compact'>('rows')
+  const [isWaterfallOpen, setIsWaterfallOpen] = useState(false)
+  const [isWhatIfOpen, setIsWhatIfOpen] = useState(false)
 
-  const items = [
+  // 1. Cálculo de Pista de Despegue (Runway)
+  const fijosMensuales = gasto.totalBlindadoMes || 1377.68
+  const runwayDias = fijosMensuales > 0 
+    ? Math.max(0, Math.round((gasto.saldoActualCaja / fijosMensuales) * 30)) 
+    : 999
+  const runwayMeses = fijosMensuales > 0 
+    ? (gasto.saldoActualCaja / fijosMensuales).toFixed(1) 
+    : '∞'
+
+  // 2. Semáforo de Salud Financiera Global
+  const isHealthOptimal = breakEven.cobertura >= 100 && runwayDias >= 30
+  const isHealthCritical = runwayDias < 15 || gasto.saldoActualCaja <= 0
+  const healthStatus = isHealthOptimal
+    ? { 
+        label: 'Salud Financiera Sólida', 
+        badgeClass: 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20', 
+        dotClass: 'bg-emerald-500' 
+      }
+    : isHealthCritical
+    ? { 
+        label: 'Tensión de Liquidez', 
+        badgeClass: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20', 
+        dotClass: 'bg-rose-500' 
+      }
+    : { 
+        label: 'Vigilancia Operativa', 
+        badgeClass: 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20', 
+        dotClass: 'bg-amber-500' 
+      }
+
+  const kpis = [
     {
       id: 'facturacion',
       title: 'Facturación Neta',
@@ -72,33 +114,33 @@ export function ExecutiveKpiRows({
       iconBg: 'bg-emerald-500/10 border-emerald-500/20',
       value: formatCurrency(dynamicKpis.ingresosVentas),
       valueColor: 'text-foreground',
-      primaryContext: `${filteredVentasCount} pedidos (${totalPiezasPeriodo} uds) · Ticket prom: ${formatCurrency(dynamicKpis.ticketPromedio)} / ped`,
-      secondaryContext: `Cobrado: ${formatCurrency(dynamicKpis.totalCobradoVentas)} (${dynamicKpis.tasaCobranza.toFixed(0)}%)`,
+      primaryContext: `${filteredVentasCount} pedidos (${totalPiezasPeriodo} uds) · Ticket prom: ${formatCurrency(dynamicKpis.ticketPromedio)}`,
+      sparkline: sparklineData?.ventas,
+      sparklineColor: '#059669',
       badge: dynamicKpis.saldoPorCobrar > 0 ? {
         text: `Por cobrar: ${formatCurrency(dynamicKpis.saldoPorCobrar)}`,
-        className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+        className: 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20'
       } : {
-        text: '100% Cobrado',
-        className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+        text: `${dynamicKpis.tasaCobranza.toFixed(0)}% cobrado`,
+        className: 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20'
       }
     },
     {
       id: 'margen',
-      title: 'Margen Bruto Taller',
+      title: 'Margen Bruto Real',
       infoKey: 'utilidad_operativa',
       icon: <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />,
       iconBg: 'bg-emerald-500/10 border-emerald-500/20',
       value: `+${formatCurrency(dynamicKpis.gananciaNeta)}`,
-      valueColor: dynamicKpis.gananciaNeta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
-      primaryContext: `Insumos & Envíos: ${formatCurrency(dynamicKpis.costoDirectoTotal || 0)} · Ganancia: +${formatCurrency(dynamicKpis.margenUnitarioPromedio)} / ped`,
-      secondaryContext: dynamicKpis.markupPorcentaje != null 
-        ? `${dynamicKpis.markupPorcentaje.toFixed(0)}% markup s/ costo` 
-        : 'Unit Economics Real',
+      valueColor: dynamicKpis.gananciaNeta >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400',
+      primaryContext: `Ganancia unit: +${formatCurrency(dynamicKpis.margenUnitarioPromedio)} / ped · Insumos: ${formatCurrency(dynamicKpis.costoDirectoTotal || 0)}`,
+      sparkline: sparklineData?.margen,
+      sparklineColor: '#10b981',
       badge: {
-        text: `${dynamicKpis.margenPorcentaje.toFixed(1)}% margen bruto`,
+        text: `${dynamicKpis.margenPorcentaje.toFixed(1)}% margen`,
         className: dynamicKpis.margenPorcentaje >= 20
-          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+          ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20'
+          : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20'
       }
     },
     {
@@ -108,14 +150,15 @@ export function ExecutiveKpiRows({
       icon: <ShieldCheck className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />,
       iconBg: 'bg-sky-500/10 border-sky-500/20',
       value: formatCurrency(gasto.gastoDisponibleHoy),
-      valueColor: gasto.gastoDisponibleHoy > 0 ? 'text-foreground' : 'text-amber-600 dark:text-amber-400',
-      primaryContext: `Saldo en Cuenta: ${formatCurrency(gasto.saldoActualCaja)} · Blindado Fijos: ${formatCurrency(gasto.totalBlindadoMes)}`,
-      secondaryContext: 'Tesorería disponible para operar',
+      valueColor: gasto.gastoDisponibleHoy > 0 ? 'text-foreground' : 'text-amber-700 dark:text-amber-400',
+      primaryContext: `Saldo: ${formatCurrency(gasto.saldoActualCaja)} · Fijos: ${formatCurrency(gasto.totalBlindadoMes)}${capitalInmovilizado > 0 ? ` · Stock: ${formatCurrency(capitalInmovilizado)}` : ''}`,
+      sparkline: sparklineData?.caja,
+      sparklineColor: '#0284c7',
       badge: {
-        text: gasto.gastoDisponibleHoy > 0 ? 'Liquidez Segura' : 'Alerta de Caja',
+        text: `Runway: ${runwayDias}d (~${runwayMeses}m)`,
         className: gasto.gastoDisponibleHoy > 0
-          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+          ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20'
+          : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20'
       }
     },
     {
@@ -125,194 +168,133 @@ export function ExecutiveKpiRows({
       icon: <Target className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />,
       iconBg: 'bg-amber-500/10 border-amber-500/20',
       value: `${breakEven.cobertura.toFixed(0)}% cubierto`,
-      valueColor: breakEven.superavit >= 0 ? 'text-foreground' : 'text-amber-600 dark:text-amber-400',
+      valueColor: breakEven.superavit >= 0 ? 'text-foreground' : 'text-amber-700 dark:text-amber-400',
       primaryContext: breakEven.superavit >= 0
-        ? `+${formatCurrency(breakEven.superavit)} superávit sobre fijos (${formatCurrency(breakEven.totalFijos)})`
-        : `Faltan ${formatCurrency(Math.abs(breakEven.superavit))} para fijos (${formatCurrency(breakEven.totalFijos)})`,
-      secondaryContext: 'Cobertura de costos fijos del mes',
+        ? `+${formatCurrency(breakEven.superavit)} sobre fijos de ${formatCurrency(breakEven.totalFijos)}`
+        : `Faltan ${formatCurrency(Math.abs(breakEven.superavit))} (~${breakEven.pedidosFaltantes} peds)`,
+      sparkline: sparklineData?.cobertura,
+      sparklineColor: '#d97706',
       badge: {
-        text: breakEven.superavit >= 0 ? 'Fijos Cubiertos' : `~${breakEven.pedidosFaltantes} peds faltan`,
+        text: breakEven.superavit >= 0 ? 'Fijos Cubiertos' : `Faltan ~${breakEven.pedidosFaltantes} peds`,
         className: breakEven.superavit >= 0
-          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+          ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-500/20'
+          : 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/20'
       }
     }
   ]
 
   return (
-    <div className={cn('bg-card border border-border/70 rounded-2xl overflow-hidden shadow-2xs', className)}>
-      {/* Micro-Barra Superior Opcional: Selector de Densidad / Renglones */}
-      <div className="flex items-center justify-between px-3.5 py-1.5 bg-muted/20 border-b border-border/50 text-[11px] text-muted-foreground select-none">
-        <span className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground/80">
-          Salud Financiera & Comercial
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setLayoutMode('rows')}
-            title="Ver en renglones completos"
-            className={cn(
-              'flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors cursor-pointer',
-              layoutMode === 'rows'
-                ? 'bg-background text-foreground shadow-2xs border border-border/60'
-                : 'hover:text-foreground text-muted-foreground'
-            )}
-          >
-            <Rows3 className="w-3 h-3" />
-            <span className="hidden sm:inline">Renglones</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setLayoutMode('compact')}
-            title="Ver en 2 columnas compactas"
-            className={cn(
-              'flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors cursor-pointer',
-              layoutMode === 'compact'
-                ? 'bg-background text-foreground shadow-2xs border border-border/60'
-                : 'hover:text-foreground text-muted-foreground'
-            )}
-          >
-            <Columns2 className="w-3 h-3" />
-            <span className="hidden sm:inline">2 Columnas</span>
-          </button>
-        </div>
-      </div>
+    <>
+      <div className={cn('space-y-2.5', className)}>
+        {/* Barra Superior Esbelta: Estado de Salud + Accesos Rápidos */}
+        <div className="flex items-center justify-between px-1 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+              Rendimiento Ejecutivo
+            </span>
+            <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold border', healthStatus.badgeClass)}>
+              <span className={cn('w-1.5 h-1.5 rounded-full', healthStatus.dotClass)} />
+              <span>{healthStatus.label}</span>
+            </span>
+          </div>
 
-      {/* Contenedor de Renglones */}
-      {layoutMode === 'rows' ? (
-        /* Modo 1: 4 Renglones Ejecutivos Continuos */
-        <div className="divide-y divide-border/60">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col sm:flex-row sm:items-center justify-between px-3.5 sm:px-4 py-2.5 gap-2 hover:bg-muted/30 transition-colors"
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsWaterfallOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-card hover:bg-muted text-foreground border border-border/60 transition-colors cursor-pointer shadow-2xs"
+              title="Abrir visualización de Cascada Financiera (Waterfall)"
             >
-              {/* Lado Izquierdo: Ícono, Título, Info Trigger y Contexto Primario */}
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className={cn('w-6 h-6 rounded-md flex items-center justify-center shrink-0 border', item.iconBg)}>
-                  {item.icon}
-                </div>
+              <Workflow className="w-3.5 h-3.5 text-primary" />
+              <span>Cascada</span>
+            </button>
 
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs sm:text-sm font-semibold text-foreground tracking-tight whitespace-nowrap">
-                      {item.title}
-                    </span>
-                    <KpiInfoTrigger
-                      onClick={() => onInfoClick(item.infoKey)}
-                      title={`Ver detalles y fórmula de ${item.title}`}
-                    />
-                    <span className="text-muted-foreground/40 hidden md:inline">•</span>
-                    <span className="text-[11px] text-muted-foreground truncate hidden md:inline">
-                      {item.primaryContext}
-                    </span>
+            <button
+              type="button"
+              onClick={() => setIsWhatIfOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-card hover:bg-muted text-foreground border border-border/60 transition-colors cursor-pointer shadow-2xs"
+              title="Abrir simulador de sensibilidad What-If"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+              <span>Simulador</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 KPI Cards Ejecutivas en Grid Equilibrado */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {kpis.map((kpi) => (
+            <div
+              key={kpi.id}
+              className="bg-card border border-border/70 rounded-xl p-3.5 shadow-2xs hover:border-border transition-all flex flex-col justify-between gap-2.5 group"
+            >
+              {/* Header de la Card: Ícono + Título + Sparkline */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={cn('w-6 h-6 rounded-md flex items-center justify-center shrink-0 border', kpi.iconBg)}>
+                    {kpi.icon}
                   </div>
-                  {/* Contexto visible en pantallas chicas */}
-                  <p className="text-[10px] text-muted-foreground truncate md:hidden">
-                    {item.primaryContext}
-                  </p>
+                  <span className="text-xs font-semibold text-foreground tracking-tight truncate">
+                    {kpi.title}
+                  </span>
+                  <KpiInfoTrigger
+                    onClick={() => onInfoClick(kpi.infoKey)}
+                    title={`Ver desglose de ${kpi.title}`}
+                  />
                 </div>
+
+                {kpi.sparkline && kpi.sparkline.length > 1 && (
+                  <MicroSparkline
+                    data={kpi.sparkline}
+                    color={kpi.sparklineColor}
+                    width={48}
+                    height={16}
+                  />
+                )}
               </div>
 
-              {/* Lado Derecho: Desglose Secundario, Badge y Métrica Principal */}
-              <div className="flex items-center justify-between sm:justify-end gap-2.5 sm:gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-border/40">
-                <span className="text-[11px] font-mono text-muted-foreground hidden lg:inline">
-                  {item.secondaryContext}
+              {/* Métrica Central + Badge */}
+              <div className="flex items-baseline justify-between gap-2 pt-0.5">
+                <span className={cn('text-xl font-mono font-bold tracking-tight tabular-nums', kpi.valueColor)}>
+                  {kpi.value}
                 </span>
 
-                <span className={cn('text-[10px] font-mono font-medium px-2 py-0.5 rounded-md border whitespace-nowrap', item.badge.className)}>
-                  {item.badge.text}
-                </span>
-
-                <span className={cn('text-sm sm:text-base font-mono font-bold tracking-tight tabular-nums min-w-[90px] text-right', item.valueColor)}>
-                  {item.value}
+                <span className={cn('text-[10px] font-mono font-medium px-2 py-0.5 rounded-md border whitespace-nowrap', kpi.badge.className)}>
+                  {kpi.badge.text}
                 </span>
               </div>
+
+              {/* Contexto Inferior */}
+              <p className="text-[11px] text-muted-foreground truncate border-t border-border/40 pt-1.5">
+                {kpi.primaryContext}
+              </p>
             </div>
           ))}
         </div>
-      ) : (
-        /* Modo 2: 2 Columnas x 2 Renglones Compactos */
-        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border/60">
-          {/* Columna Izquierda: Facturación y Caja Líquida */}
-          <div className="divide-y divide-border/60">
-            {[items[0], items[2]].map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between px-3.5 sm:px-4 py-2.5 gap-2 hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={cn('w-6 h-6 rounded-md flex items-center justify-center shrink-0 border', item.iconBg)}>
-                    {item.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs sm:text-sm font-semibold text-foreground tracking-tight whitespace-nowrap">
-                        {item.title}
-                      </span>
-                      <KpiInfoTrigger
-                        onClick={() => onInfoClick(item.infoKey)}
-                        title={`Ver detalles de ${item.title}`}
-                      />
-                    </div>
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
-                      {item.primaryContext}
-                    </p>
-                  </div>
-                </div>
+      </div>
 
-                <div className="flex flex-col items-end shrink-0 pl-2">
-                  <span className={cn('text-sm sm:text-base font-mono font-bold tracking-tight tabular-nums', item.valueColor)}>
-                    {item.value}
-                  </span>
-                  <span className={cn('text-[9px] font-mono font-medium px-1.5 py-0.2 rounded border mt-0.5 whitespace-nowrap', item.badge.className)}>
-                    {item.badge.text}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Modales Estratégicos */}
+      <FinancialWaterfallModal
+        open={isWaterfallOpen}
+        onOpenChange={setIsWaterfallOpen}
+        ingresosVentas={dynamicKpis.ingresosVentas}
+        costoDirectoTotal={dynamicKpis.costoDirectoTotal || 0}
+        gananciaNeta={dynamicKpis.gananciaNeta}
+        totalFijos={breakEven.totalFijos}
+        superavit={breakEven.superavit}
+        filteredVentasCount={filteredVentasCount}
+      />
 
-          {/* Columna Derecha: Margen Bruto y Punto de Equilibrio */}
-          <div className="divide-y divide-border/60">
-            {[items[1], items[3]].map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between px-3.5 sm:px-4 py-2.5 gap-2 hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={cn('w-6 h-6 rounded-md flex items-center justify-center shrink-0 border', item.iconBg)}>
-                    {item.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs sm:text-sm font-semibold text-foreground tracking-tight whitespace-nowrap">
-                        {item.title}
-                      </span>
-                      <KpiInfoTrigger
-                        onClick={() => onInfoClick(item.infoKey)}
-                        title={`Ver detalles de ${item.title}`}
-                      />
-                    </div>
-                    <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
-                      {item.primaryContext}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col items-end shrink-0 pl-2">
-                  <span className={cn('text-sm sm:text-base font-mono font-bold tracking-tight tabular-nums', item.valueColor)}>
-                    {item.value}
-                  </span>
-                  <span className={cn('text-[9px] font-mono font-medium px-1.5 py-0.2 rounded border mt-0.5 whitespace-nowrap', item.badge.className)}>
-                    {item.badge.text}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      <FinancialWhatIfModal
+        open={isWhatIfOpen}
+        onOpenChange={setIsWhatIfOpen}
+        currentIngresos={dynamicKpis.ingresosVentas}
+        currentCostoDirecto={dynamicKpis.costoDirectoTotal || 0}
+        currentGanancia={dynamicKpis.gananciaNeta}
+        currentFijos={breakEven.totalFijos}
+        currentVentasCount={filteredVentasCount}
+        currentSaldoCaja={gasto.saldoActualCaja}
+      />
+    </>
   )
 }

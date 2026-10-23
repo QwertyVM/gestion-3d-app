@@ -104,12 +104,12 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
           <button
             type="button"
             onClick={() => setIsCommandPaletteOpen(true)}
-            className="w-full h-8 px-3 text-xs bg-muted/40 hover:bg-muted/70 border border-border/60 rounded-lg text-muted-foreground hover:text-foreground flex items-center justify-between transition-colors cursor-pointer shadow-none group"
+            className="w-full h-8 px-3 text-xs bg-muted/40 hover:bg-muted/70 border border-border/60 rounded-lg text-foreground/75 hover:text-foreground flex items-center justify-between transition-colors cursor-pointer shadow-none group"
           >
             <div className="flex items-center gap-2 min-w-0">
               <Search className="h-3.5 w-3.5 text-muted-foreground/70 group-hover:text-primary transition-colors" />
-              <span className="truncate hidden sm:inline">Buscar o tipea &apos;120g 4h&apos; para cotizar...</span>
-              <span className="truncate sm:hidden">Buscar o cotizar...</span>
+              <span className="truncate hidden sm:inline">Buscar pedidos, clientes o productos...</span>
+              <span className="truncate sm:hidden">Buscar...</span>
             </div>
             <kbd className="hidden lg:inline-flex h-4.5 select-none items-center gap-0.5 rounded border border-border/60 bg-background px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
               <span>⌘</span>K

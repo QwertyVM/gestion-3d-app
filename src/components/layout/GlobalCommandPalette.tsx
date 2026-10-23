@@ -151,7 +151,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent showCloseButton={false} className="max-w-xl p-0 gap-0 overflow-hidden border border-border/80 shadow-2xl bg-card rounded-2xl">
         <DialogTitle className="sr-only">Búsqueda Global y Comandos</DialogTitle>
-        <DialogDescription className="sr-only">Navega rápidamente o cotiza piezas 3D en vivo</DialogDescription>
+        <DialogDescription className="sr-only">Navega rápidamente y busca pedidos, clientes o productos</DialogDescription>
 
         {/* Input Bar */}
         <div className="flex items-center gap-3 px-4 h-12 border-b border-border/60 bg-card">
@@ -162,7 +162,7 @@ export function GlobalCommandPalette({ isOpen, onClose }: GlobalCommandPalettePr
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar o tipea '120g 4h' para cotizar..."
+            placeholder="Buscar pedidos, clientes, productos o navegación..."
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none border-none font-medium"
           />
           {query ? (
