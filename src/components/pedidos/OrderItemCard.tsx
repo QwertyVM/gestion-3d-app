@@ -175,19 +175,23 @@ export function OrderItemCard({
   }
 
   return (
-    <div className="bg-muted/25 border border-border/50 rounded-xl p-3.5 space-y-2.5 shadow-none transition-colors duration-150 relative">
-      {/* Cabecera de la Tarjeta con Layout Flex Compacto */}
-      <div className="flex items-center justify-between pb-1.5 border-b border-border/50">
-        <span className="bg-muted text-muted-foreground font-medium px-2 py-0.5 rounded-md text-[10px] flex items-center gap-1.5 border border-border/50">
-          <Package className="h-3 w-3 text-muted-foreground" />
-          <span>PRODUCTO #{index + 1}</span>
-        </span>
+    <div className="bg-muted/20 border border-border/60 rounded-xl p-3.5 space-y-3 transition-colors duration-150 relative">
+      {/* Cabecera del Ítem */}
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-mono font-medium text-muted-foreground">
+            #{index + 1}
+          </span>
+          <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+            Ítem
+          </span>
+        </div>
 
         {totalItems > 1 && (
           <button
             type="button"
             onClick={() => onRemoveItem(item.id)}
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md p-1 text-xs font-medium cursor-pointer transition-colors flex items-center gap-1"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md px-2 py-0.5 text-xs font-medium cursor-pointer transition-colors flex items-center gap-1"
             title="Quitar este producto del pedido"
           >
             <Trash2 className="h-3 w-3" />
@@ -196,11 +200,11 @@ export function OrderItemCard({
         )}
       </div>
 
-      {/* Fila 1: Modelo 3D (flexible) y Filamento(s) (multi-select compacto) */}
+      {/* Fila 1: Modelo 3D (flexible) y Filamento(s) */}
       <div className="flex flex-col sm:flex-row gap-2.5 items-start">
-        {/* Selección de Modelo 3D (visual picker trigger) */}
+        {/* Selección de Modelo 3D */}
         <div className="flex-1 w-full sm:min-w-0 space-y-1">
-          <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
             <Boxes className="h-3 w-3 text-muted-foreground" />
             Modelo 3D *
           </Label>
@@ -208,27 +212,27 @@ export function OrderItemCard({
             <button
               type="button"
               onClick={() => setIsPickerOpen(true)}
-              className="w-full h-11 rounded-lg border border-dashed border-border/80 bg-background/50 hover:bg-muted/40 hover:border-border text-foreground text-xs font-medium flex items-center justify-between px-3.5 transition-all group cursor-pointer"
+              className="w-full h-10 rounded-lg border border-dashed border-border/80 bg-background hover:bg-muted/40 text-foreground text-xs font-medium flex items-center justify-between px-3 transition-all group cursor-pointer"
             >
               <div className="flex items-center min-w-0">
-                <Sparkles className="text-primary w-3.5 h-3.5 mr-2 group-hover:scale-110 transition-transform shrink-0" />
-                <span className="truncate">Seleccionar modelo 3D (Explorar galería)...</span>
+                <Sparkles className="text-muted-foreground group-hover:text-foreground w-3.5 h-3.5 mr-2 transition-colors shrink-0" />
+                <span className="truncate">Seleccionar modelo del catálogo...</span>
               </div>
-              <span className="bg-muted text-muted-foreground text-[10px] font-medium px-2 py-0.5 rounded-md shrink-0 border border-border/50">
-                Catálogo
+              <span className="text-[11px] text-muted-foreground font-mono font-medium">
+                Explorar →
               </span>
             </button>
           ) : (
-            <div className="w-full bg-background border border-border/60 rounded-lg p-2 flex items-center justify-between shadow-none">
+            <div className="w-full bg-background border border-border/70 rounded-lg p-2 flex items-center justify-between shadow-none">
               <div className="flex items-center gap-2.5 min-w-0">
                 {selectedProductInfo?.imageUrl ? (
                   <img
                     src={selectedProductInfo.imageUrl}
                     alt={selectedProductInfo.name}
-                    className="w-10 h-10 rounded-md object-cover border border-border/60 shrink-0"
+                    className="w-9 h-9 rounded-md object-cover border border-border/50 shrink-0"
                   />
                 ) : (
-                  <div className="w-10 h-10 rounded-md bg-muted border border-border/60 flex items-center justify-center shrink-0 text-muted-foreground">
+                  <div className="w-9 h-9 rounded-md bg-muted border border-border/50 flex items-center justify-center shrink-0 text-muted-foreground">
                     <Boxes className="w-4 h-4 stroke-[1.5]" />
                   </div>
                 )}
@@ -239,7 +243,7 @@ export function OrderItemCard({
                   >
                     {selectedProductInfo?.name}
                   </div>
-                  <div className="text-[10px] text-muted-foreground truncate font-mono tabular-nums">
+                  <div className="text-[11px] text-muted-foreground truncate font-mono tabular-nums">
                     {selectedProductInfo?.tierSubtext}
                   </div>
                 </div>
@@ -250,9 +254,8 @@ export function OrderItemCard({
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsPickerOpen(true)}
-                className="text-primary hover:bg-primary/10 text-xs font-semibold h-8 px-3 rounded-lg flex items-center gap-1 cursor-pointer shrink-0"
+                className="text-foreground hover:bg-muted text-xs font-medium h-7 px-2.5 rounded-md flex items-center gap-1 cursor-pointer shrink-0"
               >
-                <Sparkles className="w-3.5 h-3.5" />
                 <span>Cambiar</span>
               </Button>
             </div>
@@ -282,14 +285,14 @@ export function OrderItemCard({
           />
         </div>
 
-        {/* Multi-selector de Filamentos (compacto) */}
+        {/* Multi-selector de Filamentos */}
         <div ref={filamentDropdownRef} className="w-full sm:w-[42%] shrink-0 space-y-1 relative">
           <div className="flex items-center justify-between">
-            <Label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-              <Palette className="h-3 w-3 text-primary" />
+            <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <Palette className="h-3 w-3 text-muted-foreground" />
               <span>Filamento(s)</span>
               {selectedFilaments.length > 0 && (
-                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-accent text-accent-foreground border border-border">
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-muted text-foreground border border-border/50">
                   {selectedFilaments.length}
                 </span>
               )}
@@ -298,7 +301,7 @@ export function OrderItemCard({
               <button
                 type="button"
                 onClick={handleClearAllFilaments}
-                className="text-[10px] text-muted-foreground hover:text-destructive cursor-pointer font-normal underline-offset-2 hover:underline"
+                className="text-[10px] text-muted-foreground hover:text-foreground cursor-pointer font-normal underline-offset-2 hover:underline"
               >
                 Limpiar
               </button>
@@ -308,11 +311,11 @@ export function OrderItemCard({
           {/* Trigger de Selección */}
           <div
             onClick={() => setIsFilamentOpen(prev => !prev)}
-            className="min-h-[36px] p-1 px-2 rounded-xl border border-input bg-card/80 text-foreground text-xs focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 flex flex-wrap items-center gap-1 cursor-pointer shadow-2xs transition-all"
+            className="min-h-[38px] p-1 px-2.5 rounded-lg border border-border/70 bg-background text-foreground text-xs focus-within:border-foreground/40 focus-within:ring-1 focus-within:ring-foreground/20 flex flex-wrap items-center gap-1 cursor-pointer transition-all"
           >
             {selectedFilaments.length === 0 ? (
               <div className="flex items-center justify-between w-full px-1 text-xs text-muted-foreground">
-                <span className="italic text-[11px]">Sin asignar / Varios colores</span>
+                <span className="text-[11px]">Sin asignar / Varios colores</span>
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               </div>
             ) : (
@@ -321,7 +324,7 @@ export function OrderItemCard({
                   {selectedFilaments.map((f) => (
                     <span
                       key={f.id}
-                      className="bg-secondary text-secondary-foreground text-[11px] px-2 py-0.5 rounded-md border border-border/80 flex items-center gap-1 shadow-2xs group"
+                      className="bg-muted text-foreground text-[11px] px-2 py-0.5 rounded-md border border-border/60 flex items-center gap-1 group"
                     >
                       <span
                         className="w-2 h-2 rounded-full inline-block mr-0.5 border border-black/20 shrink-0"

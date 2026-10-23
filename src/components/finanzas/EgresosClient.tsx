@@ -1622,15 +1622,15 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       {/* 5. Modal: Registrar Nuevo Egreso                                          */}
       {/* ========================================================================= */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent showCloseButton={false} className="bg-card border-border text-foreground w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card border-border/80 text-foreground w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-xl rounded-2xl z-50">
           <form onSubmit={handleCreateSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            <div className="p-5 sm:p-6 pb-4 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
+            <div className="p-4 sm:p-5 border-b border-border/50 bg-card/95 backdrop-blur-xs flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl border shadow-xs ${formCategoria === 'FINANCIERO' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700' : formCategoria === 'PERSONAL' ? 'bg-sky-500/10 border-sky-500/20 text-sky-700' : 'bg-accent border-border text-primary'}`}>
-                  {formCategoria === 'FINANCIERO' ? <Landmark className="h-5 w-5 stroke-[2.5]" /> : formCategoria === 'PERSONAL' ? <Users className="h-5 w-5 stroke-[2.5]" /> : <Plus className="h-5 w-5 stroke-[2.5]" />}
+                <div className="p-2 rounded-lg bg-muted text-foreground">
+                  {formCategoria === 'FINANCIERO' ? <Landmark className="h-4 w-4" /> : formCategoria === 'PERSONAL' ? <Users className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 </div>
                 <div>
-                  <DialogTitle className="text-base sm:text-lg font-extrabold text-foreground">
+                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                     {formCategoria === 'FINANCIERO' 
                       ? 'Registrar Gasto Bancario / ITF' 
                       : formCategoria === 'PERSONAL'
@@ -1643,9 +1643,9 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                     {formCategoria === 'FINANCIERO' 
                       ? 'Registro rápido del ITF o comisiones cobradas por la entidad bancaria.' 
                       : formCategoria === 'PERSONAL'
-                        ? 'Registra pagos de mano de obra, colaboradores de apoyo o sueldos de taller.'
+                        ? 'Registra pagos de mano de obra o sueldos de taller.'
                         : isBG 
-                          ? 'Añade compras de juegos de mesa, pedidos a distribuidoras o gastos operativos.' 
+                          ? 'Añade compras de juegos de mesa o gastos operativos.' 
                           : 'Añade compras de insumos, fletes o activos para el taller.'}
                   </DialogDescription>
                 </div>
@@ -1653,19 +1653,20 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               <button
                 type="button"
                 onClick={() => setOpenModal(false)}
-                className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer"
+                title="Cerrar modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
-              {/* Selector de Categoría Principal */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 touch-pan-y">
+              {/* Selector de Categoría Minimalista */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-foreground">
+                <Label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   Categoría Principal *
                 </Label>
-                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
+                <div className="flex flex-wrap gap-1.5">
                   {activeCategoriasConfig.map(cat => {
                     const isSelected = formCategoria === cat.id
                     const Icon = cat.icon
@@ -1674,20 +1675,14 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         key={cat.id}
                         type="button"
                         onClick={() => handleSelectCategoria(cat.id as any)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer flex items-center gap-1.5 ${
                           isSelected
-                            ? 'bg-card border-primary ring-1 ring-primary/40 text-foreground shadow-xs'
-                            : 'bg-secondary border-border text-muted-foreground hover:border-input hover:text-foreground'
+                            ? 'bg-foreground text-background border-foreground font-semibold shadow-xs'
+                            : 'bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                          {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-foreground leading-tight">{cat.label}</div>
-                          <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{cat.desc}</div>
-                        </div>
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{cat.label}</span>
                       </button>
                     )
                   })}
@@ -1696,38 +1691,38 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
               {/* Fecha y Persona */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">Fecha del Egreso *</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Fecha del Egreso *</Label>
                   <Input 
                     type="date"
                     value={formFecha}
                     onChange={(e) => setFormFecha(e.target.value)}
                     required
-                    className="bg-secondary/40 border-input text-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
+                    className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs font-mono focus-visible:ring-1 focus-visible:ring-ring"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">Responsable / Persona *</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Responsable / Persona *</Label>
                   <Input 
                     value={formPersona}
                     onChange={(e) => setFormPersona(e.target.value)}
                     placeholder="Víctor"
                     required
-                    className="bg-secondary/40 border-input text-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
+                    className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs focus-visible:ring-1 focus-visible:ring-ring"
                   />
                 </div>
               </div>
 
               {/* Helper específico para Gasto Bancario / ITF */}
               {formCategoria === 'FINANCIERO' && (
-                <div className="space-y-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <div className="space-y-2 p-3 rounded-lg bg-muted/20 border border-border/50">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                      <Landmark className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                      <Landmark className="h-3.5 w-3.5 text-muted-foreground" />
                       Banco o Entidad Financiera
                     </span>
-                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Selección rápida</span>
+                    <span className="text-[10px] text-muted-foreground">Selección rápida</span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
@@ -1741,10 +1736,10 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                             setFormSubcategoria(b.name)
                             if (!formConcepto) setFormConcepto('ITF')
                           }}
-                          className={`px-2.5 py-1 text-xs rounded-lg font-bold border transition-all cursor-pointer ${
+                          className={`px-2.5 py-1 text-xs rounded-md font-medium border transition-colors cursor-pointer ${
                             isBankSelected
-                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
-                              : 'bg-card text-muted-foreground border-emerald-500/30 hover:border-emerald-500 hover:text-emerald-800'
+                              ? 'bg-foreground text-background border-foreground font-semibold shadow-xs'
+                              : 'bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted'
                           }`}
                         >
                           {b.name}
@@ -1757,17 +1752,17 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
               {/* Helper específico para Compra de Juegos de Mesa */}
               {formCategoria === 'MERCADERIA' && productos && productos.length > 0 && (
-                <div className="space-y-2 p-3 rounded-xl bg-sky-500/10 border border-sky-500/20">
-                  <div className="flex items-center justify-between text-xs font-bold text-sky-800 dark:text-sky-300">
+                <div className="space-y-2 p-3 rounded-lg bg-muted/20 border border-border/50">
+                  <div className="flex items-center justify-between text-xs font-medium text-foreground">
                     <span className="flex items-center gap-1.5">
-                      <Dice5 className="h-3.5 w-3.5" />
+                      <Dice5 className="h-3.5 w-3.5 text-muted-foreground" />
                       Vincular Juego del Catálogo (Opcional)
                     </span>
-                    <span className="text-[10px] text-sky-700/80 dark:text-sky-400 font-normal">Autocompleta costo base</span>
+                    <span className="text-[10px] text-muted-foreground">Autocompleta costo base</span>
                   </div>
 
                   <select
-                    className="w-full text-xs bg-card border border-input rounded-xl p-2 text-foreground focus:ring-1 focus:ring-primary"
+                    className="w-full text-xs bg-background border border-border/70 rounded-lg p-2 text-foreground focus:ring-1 focus:ring-ring focus:outline-hidden"
                     defaultValue=""
                     onChange={(e) => {
                       const sel = productos.find(p => p.id === e.target.value)
@@ -1792,7 +1787,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               {/* Concepto del Gasto */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">
+                  <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                     {formCategoria === 'FINANCIERO' 
                       ? 'Concepto Financiero *' 
                       : formCategoria === 'MERCADERIA' 
@@ -1811,7 +1806,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                           setFormConcepto('Sueldo Jamile')
                           setFormSubcategoria('Sueldo, Jamile')
                         }}
-                        className="px-2 py-0.5 rounded bg-sky-600 text-white hover:bg-sky-700 cursor-pointer font-bold transition-colors"
+                        className="px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60 hover:bg-muted/80 cursor-pointer font-medium transition-colors"
                       >
                         Sueldo Jamile
                       </button>
@@ -1821,7 +1816,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                           setFormConcepto('Apoyo Taller / Post-procesado')
                           setFormSubcategoria('Apoyo Taller, Operario')
                         }}
-                        className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 hover:bg-sky-200 cursor-pointer font-medium"
+                        className="px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60 hover:bg-muted/80 cursor-pointer font-medium transition-colors"
                       >
                         Apoyo Taller
                       </button>
@@ -1838,21 +1833,21 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                           setFormCostoUnitario('388.68')
                           setFormSubcategoria('BCP')
                         }}
-                        className="px-2 py-0.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer font-bold transition-colors"
+                        className="px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60 hover:bg-muted/80 cursor-pointer font-medium transition-colors"
                       >
                         Cuota Préstamo
                       </button>
                       <button
                         type="button"
                         onClick={() => setFormConcepto('ITF')}
-                        className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 cursor-pointer font-medium"
+                        className="px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60 hover:bg-muted/80 cursor-pointer font-medium transition-colors"
                       >
                         ITF
                       </button>
                       <button
                         type="button"
                         onClick={() => setFormConcepto('Comisión Transferencia')}
-                        className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 hover:bg-emerald-200 cursor-pointer font-medium"
+                        className="px-2 py-0.5 rounded-md bg-muted text-foreground border border-border/60 hover:bg-muted/80 cursor-pointer font-medium transition-colors"
                       >
                         Comisión
                       </button>
@@ -1873,20 +1868,20 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                           : 'Ej: Filamento PLA Hyper Creality Negro 1kg...'
                   }
                   required
-                  className="bg-secondary/40 border-input text-foreground placeholder:text-muted-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
+                  className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/60"
                 />
               </div>
 
               {/* Multi-Tags */}
-              <div className="space-y-2 p-3.5 rounded-xl bg-secondary/50 border border-border">
+              <div className="space-y-2 p-3 rounded-lg bg-muted/20 border border-border/50">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Tag className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="h-3 w-3 text-muted-foreground" />
                     {formCategoria === 'FINANCIERO' ? 'Etiqueta del Banco (Tag)' : 'Tags / Etiquetas'}
                   </span>
                   <Link 
                     href="/finanzas/tags" 
-                    className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-1"
+                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 underline-offset-2 hover:underline"
                   >
                     Gestionar tags <ExternalLink className="h-2.5 w-2.5" />
                   </Link>
@@ -1894,8 +1889,8 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
                 {/* Distributor quick chips for board games */}
                 {formCategoria === 'MERCADERIA' && (
-                  <div className="flex flex-wrap items-center gap-1 mb-1.5">
-                    <span className="text-[10px] text-muted-foreground font-bold mr-1">Distribuidor:</span>
+                  <div className="flex flex-wrap items-center gap-1 mb-1">
+                    <span className="text-[10px] text-muted-foreground mr-1">Distribuidor:</span>
                     {DISTRIBUIDORAS_JUEGOS.map(dist => (
                       <button
                         key={dist}
@@ -1906,7 +1901,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                             setFormSubcategoria([...current, dist].join(', '))
                           }
                         }}
-                        className="px-2 py-0.5 text-[10px] rounded-md font-semibold bg-card border border-input text-muted-foreground hover:text-foreground hover:border-primary cursor-pointer"
+                        className="px-2 py-0.5 text-[10px] rounded-md font-medium bg-background border border-border/60 text-muted-foreground hover:text-foreground cursor-pointer"
                       >
                         +{dist}
                       </button>
@@ -1923,20 +1918,20 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               </div>
 
               {/* Costos y Cantidades */}
-              <div className="p-3.5 rounded-xl bg-secondary/50 border border-border space-y-3">
+              <div className="p-3.5 rounded-lg bg-muted/20 border border-border/50 space-y-3">
                 {/* Montos rápidos para ITF */}
                 {formCategoria === 'FINANCIERO' && (
                   <div className="flex items-center gap-1.5 flex-wrap pb-1">
-                    <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-bold">Monto rápido ITF:</span>
+                    <span className="text-[11px] text-muted-foreground">Monto rápido ITF:</span>
                     {MONTOS_ITF_COMUNES.map(m => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => setFormCostoUnitario(m)}
-                        className={`px-2 py-0.5 text-xs rounded-md font-mono font-bold border transition-all cursor-pointer ${
+                        className={`px-2 py-0.5 text-xs rounded-md font-mono font-medium border transition-colors cursor-pointer ${
                           formCostoUnitario === m
-                            ? 'bg-emerald-700 text-white border-emerald-700'
-                            : 'bg-card text-emerald-800 border-emerald-500/30 hover:bg-emerald-50'
+                            ? 'bg-foreground text-background border-foreground font-semibold'
+                            : 'bg-background text-muted-foreground border-border/60 hover:text-foreground'
                         }`}
                       >
                         S/ {m}
@@ -1946,16 +1941,16 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-foreground font-bold">Cantidad *</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Cantidad *</Label>
                     <div className="flex items-center">
                       <button
                         type="button"
                         disabled={formCategoria === 'FINANCIERO'}
                         onClick={handleDecrementCantidad}
-                        className="h-9 px-2.5 bg-card border border-r-0 border-input rounded-l-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        className="h-9 px-2.5 bg-background border border-r-0 border-border/70 rounded-l-lg text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
-                        <Minus className="h-3.5 w-3.5" />
+                        <Minus className="h-3 w-3" />
                       </button>
                       <Input 
                         type="number"
@@ -1964,25 +1959,25 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         value={formCantidad}
                         onChange={(e) => setFormCantidad(e.target.value)}
                         required
-                        className="bg-card border-input text-foreground text-center font-mono font-bold text-sm h-9 rounded-none focus:border-primary disabled:bg-muted"
+                        className="bg-background border-border/70 text-foreground text-center font-mono font-medium text-xs h-9 rounded-none focus-visible:ring-0 disabled:bg-muted"
                       />
                       <button
                         type="button"
                         disabled={formCategoria === 'FINANCIERO'}
                         onClick={handleIncrementCantidad}
-                        className="h-9 px-2.5 bg-card border border-l-0 border-input rounded-r-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        className="h-9 px-2.5 bg-background border border-l-0 border-border/70 rounded-r-lg text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-foreground font-bold">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                       {formCategoria === 'FINANCIERO' ? 'Monto Cobrado (S/) *' : 'Costo Unit. (S/) *'}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground">S/</span>
                       <Input 
                         type="number"
                         step="0.01"
@@ -1991,15 +1986,15 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         onChange={(e) => setFormCostoUnitario(e.target.value)}
                         placeholder="0.00"
                         required
-                        className="pl-8 bg-card border-input text-foreground text-sm font-mono font-bold h-9 rounded-xl focus:border-primary"
+                        className="pl-7 bg-background border-border/70 text-foreground text-xs font-mono font-medium h-9 rounded-lg focus-visible:ring-1 focus-visible:ring-ring"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-foreground font-bold">Flete / Envío (S/)</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Flete / Envío (S/)</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground">S/</span>
                       <Input 
                         type="number"
                         step="0.01"
@@ -2008,7 +2003,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         value={formCostoEnvio}
                         onChange={(e) => setFormCostoEnvio(e.target.value)}
                         placeholder="0.00"
-                        className="pl-8 bg-card border-input text-foreground text-sm font-mono h-9 rounded-xl focus:border-primary disabled:bg-muted"
+                        className="pl-7 bg-background border-border/70 text-foreground text-xs font-mono h-9 rounded-lg focus-visible:ring-1 focus-visible:ring-ring disabled:bg-muted"
                       />
                     </div>
                   </div>
@@ -2016,39 +2011,39 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               </div>
 
               {/* Previsualización en Vivo */}
-              <div className="p-3.5 rounded-xl bg-card border border-border flex items-center justify-between">
+              <div className="px-4 py-3 rounded-lg border border-border/50 bg-muted/20 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Total a Registrar</span>
-                  <span className="text-xl font-extrabold text-destructive font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium block">Total a Registrar</span>
+                  <span className="text-base font-semibold text-foreground font-mono tabular-nums">
                     {formatCurrency(liveCostMetrics.totalCalculado)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Costo Real / Unidad</span>
-                  <span className="text-sm font-bold text-foreground font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium block">Costo Real / Unidad</span>
+                  <span className="text-xs font-medium text-muted-foreground font-mono tabular-nums">
                     {formatCurrency(liveCostMetrics.costoRealUnitario)}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="px-5 sm:px-6 py-4 border-t border-border bg-card flex items-center justify-end gap-3 flex-shrink-0">
+            <div className="px-4 sm:px-6 py-3 border-t border-border/50 bg-card flex items-center justify-end gap-2 shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
                 onClick={() => setOpenModal(false)}
-                className="text-muted-foreground hover:text-foreground hover:bg-secondary text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                className="text-muted-foreground hover:text-foreground text-xs h-8 px-3 rounded-md cursor-pointer font-medium"
               >
                 Cancelar
               </Button>
               <Button 
                 type="submit" 
                 disabled={isSubmitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-8 px-4 rounded-lg shadow-none cursor-pointer disabled:opacity-50 transition-colors"
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                     Guardando...
                   </>
                 ) : (
@@ -2064,15 +2059,15 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
       {/* 6. Modal: Editar Egreso                                                   */}
       {/* ========================================================================= */}
       <Dialog open={openEditModal} onOpenChange={setOpenEditModal}>
-        <DialogContent showCloseButton={false} className="bg-card border-border text-foreground w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-2xl rounded-2xl z-50">
+        <DialogContent showCloseButton={false} className="bg-card border-border/80 text-foreground w-[95vw] sm:max-w-xl max-h-[90dvh] p-0 flex flex-col overflow-hidden shadow-xl rounded-2xl z-50">
           <form onSubmit={handleEditSubmit} className="flex flex-col max-h-[90dvh] h-full overflow-hidden">
-            <div className="p-5 sm:p-6 pb-4 border-b border-border bg-card flex items-center justify-between flex-shrink-0">
+            <div className="p-4 sm:p-5 border-b border-border/50 bg-card/95 backdrop-blur-xs flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-accent border border-border text-primary">
-                  <Pencil className="h-5 w-5" />
+                <div className="p-2 rounded-lg bg-muted text-foreground">
+                  <Pencil className="h-4 w-4" />
                 </div>
                 <div>
-                  <DialogTitle className="text-base sm:text-lg font-extrabold text-foreground">
+                  <DialogTitle className="text-base font-semibold tracking-tight text-foreground">
                     {formCategoria === 'FINANCIERO' 
                       ? 'Editar Gasto Bancario / ITF' 
                       : formCategoria === 'PERSONAL'
@@ -2087,19 +2082,20 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               <button
                 type="button"
                 onClick={() => setOpenEditModal(false)}
-                className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-secondary transition-colors cursor-pointer"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-muted transition-colors cursor-pointer"
+                title="Cerrar modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 touch-pan-y">
-              {/* Selector de Categoría */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 touch-pan-y">
+              {/* Selector de Categoría Minimalista */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-foreground">
+                <Label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                   Categoría Principal *
                 </Label>
-                <div className="grid gap-2 grid-cols-2 sm:grid-cols-3">
+                <div className="flex flex-wrap gap-1.5">
                   {activeCategoriasConfig.map(cat => {
                     const isSelected = formCategoria === cat.id
                     const Icon = cat.icon
@@ -2108,20 +2104,14 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         key={cat.id}
                         type="button"
                         onClick={() => handleSelectCategoria(cat.id as any)}
-                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1 ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer flex items-center gap-1.5 ${
                           isSelected
-                            ? 'bg-card border-primary ring-1 ring-primary/40 text-foreground shadow-xs'
-                            : 'bg-secondary border-border text-muted-foreground hover:border-input hover:text-foreground'
+                            ? 'bg-foreground text-background border-foreground font-semibold shadow-xs'
+                            : 'bg-muted/40 border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <Icon className={`h-4 w-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                          {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-foreground leading-tight">{cat.label}</div>
-                          <div className="text-[10px] text-muted-foreground line-clamp-1 mt-0.5">{cat.desc}</div>
-                        </div>
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{cat.label}</span>
                       </button>
                     )
                   })}
@@ -2130,38 +2120,38 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
               {/* Fecha y Persona */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">Fecha del Egreso *</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Fecha del Egreso *</Label>
                   <Input 
                     type="date"
                     value={formFecha}
                     onChange={(e) => setFormFecha(e.target.value)}
                     required
-                    className="bg-secondary/40 border-input text-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
+                    className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs font-mono focus-visible:ring-1 focus-visible:ring-ring"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-foreground font-bold uppercase tracking-wider">Responsable / Persona *</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Responsable / Persona *</Label>
                   <Input 
                     value={formPersona}
                     onChange={(e) => setFormPersona(e.target.value)}
                     placeholder="Víctor"
                     required
-                    className="bg-secondary/40 border-input text-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
+                    className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs focus-visible:ring-1 focus-visible:ring-ring"
                   />
                 </div>
               </div>
 
               {/* Helper específico para Gasto Bancario / ITF */}
               {formCategoria === 'FINANCIERO' && (
-                <div className="space-y-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <div className="space-y-2 p-3 rounded-lg bg-muted/20 border border-border/50">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                      <Landmark className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                      <Landmark className="h-3.5 w-3.5 text-muted-foreground" />
                       Banco o Entidad Financiera
                     </span>
-                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold">Selección rápida</span>
+                    <span className="text-[10px] text-muted-foreground">Selección rápida</span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
@@ -2175,10 +2165,10 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                             setFormSubcategoria(b.name)
                             if (!formConcepto) setFormConcepto('ITF')
                           }}
-                          className={`px-2.5 py-1 text-xs rounded-lg font-bold border transition-all cursor-pointer ${
+                          className={`px-2.5 py-1 text-xs rounded-md font-medium border transition-colors cursor-pointer ${
                             isBankSelected
-                              ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
-                              : 'bg-card text-muted-foreground border-emerald-500/30 hover:border-emerald-500 hover:text-emerald-800'
+                              ? 'bg-foreground text-background border-foreground font-semibold shadow-xs'
+                              : 'bg-background text-muted-foreground border-border/60 hover:text-foreground hover:bg-muted'
                           }`}
                         >
                           {b.name}
@@ -2191,7 +2181,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
 
               {/* Concepto */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-foreground font-bold uppercase tracking-wider">
+                <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   {formCategoria === 'FINANCIERO' 
                     ? 'Concepto Financiero *' 
                     : formCategoria === 'MERCADERIA' 
@@ -2213,20 +2203,20 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                           : 'Ej: Filamento PLA Hyper Creality Negro 1kg...'
                   }
                   required
-                  className="bg-secondary/40 border-input text-foreground placeholder:text-muted-foreground text-sm rounded-xl focus:border-primary focus:bg-card"
+                  className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/60"
                 />
               </div>
 
               {/* Multi-Tags */}
-              <div className="space-y-2 p-3.5 rounded-xl bg-secondary/50 border border-border">
+              <div className="space-y-2 p-3 rounded-lg bg-muted/20 border border-border/50">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Tag className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Tag className="h-3 w-3 text-muted-foreground" />
                     Tags / Etiquetas
                   </span>
                   <Link 
                     href="/finanzas/tags" 
-                    className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-1"
+                    className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 underline-offset-2 hover:underline"
                   >
                     Gestionar tags <ExternalLink className="h-2.5 w-2.5" />
                   </Link>
@@ -2241,19 +2231,19 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               </div>
 
               {/* Costos y Cantidades */}
-              <div className="p-3.5 rounded-xl bg-secondary/50 border border-border space-y-3">
+              <div className="p-3.5 rounded-lg bg-muted/20 border border-border/50 space-y-3">
                 {formCategoria === 'FINANCIERO' && (
                   <div className="flex items-center gap-1.5 flex-wrap pb-1">
-                    <span className="text-[11px] text-emerald-800 dark:text-emerald-300 font-bold">Monto rápido ITF:</span>
+                    <span className="text-[11px] text-muted-foreground">Monto rápido ITF:</span>
                     {MONTOS_ITF_COMUNES.map(m => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => setFormCostoUnitario(m)}
-                        className={`px-2 py-0.5 text-xs rounded-md font-mono font-bold border transition-all cursor-pointer ${
+                        className={`px-2 py-0.5 text-xs rounded-md font-mono font-medium border transition-colors cursor-pointer ${
                           formCostoUnitario === m
-                            ? 'bg-emerald-700 text-white border-emerald-700'
-                            : 'bg-card text-emerald-800 border-emerald-500/30 hover:bg-emerald-50'
+                            ? 'bg-foreground text-background border-foreground font-semibold'
+                            : 'bg-background text-muted-foreground border-border/60 hover:text-foreground'
                         }`}
                       >
                         S/ {m}
@@ -2263,16 +2253,16 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-foreground font-bold">Cantidad *</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Cantidad *</Label>
                     <div className="flex items-center">
                       <button
                         type="button"
                         disabled={formCategoria === 'FINANCIERO' || formCategoria === 'PERSONAL'}
                         onClick={handleDecrementCantidad}
-                        className="h-9 px-2.5 bg-card border border-r-0 border-input rounded-l-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        className="h-9 px-2.5 bg-background border border-r-0 border-border/70 rounded-l-lg text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
-                        <Minus className="h-3.5 w-3.5" />
+                        <Minus className="h-3 w-3" />
                       </button>
                       <Input 
                         type="number"
@@ -2281,25 +2271,25 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         value={formCantidad}
                         onChange={(e) => setFormCantidad(e.target.value)}
                         required
-                        className="bg-card border-input text-foreground text-center font-mono font-bold text-sm h-9 rounded-none focus:border-primary disabled:bg-muted"
+                        className="bg-background border-border/70 text-foreground text-center font-mono font-medium text-xs h-9 rounded-none focus-visible:ring-0 disabled:bg-muted"
                       />
                       <button
                         type="button"
                         disabled={formCategoria === 'FINANCIERO' || formCategoria === 'PERSONAL'}
                         onClick={handleIncrementCantidad}
-                        className="h-9 px-2.5 bg-card border border-l-0 border-input rounded-r-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
+                        className="h-9 px-2.5 bg-background border border-l-0 border-border/70 rounded-r-lg text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center cursor-pointer disabled:opacity-40"
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="h-3 w-3" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-foreground font-bold">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                       {formCategoria === 'FINANCIERO' ? 'Monto Cobrado (S/) *' : formCategoria === 'PERSONAL' ? 'Monto / Sueldo (S/) *' : 'Costo Unit. (S/) *'}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground">S/</span>
                       <Input 
                         type="number"
                         step="0.01"
@@ -2308,15 +2298,15 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         onChange={(e) => setFormCostoUnitario(e.target.value)}
                         placeholder="0.00"
                         required
-                        className="pl-8 bg-card border-input text-foreground text-sm font-mono font-bold h-9 rounded-xl focus:border-primary"
+                        className="pl-7 bg-background border-border/70 text-foreground text-xs font-mono font-medium h-9 rounded-lg focus-visible:ring-1 focus-visible:ring-ring"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-foreground font-bold">Flete / Envío (S/)</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Flete / Envío (S/)</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-muted-foreground">S/</span>
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground">S/</span>
                       <Input 
                         type="number"
                         step="0.01"
@@ -2325,7 +2315,7 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
                         value={formCostoEnvio}
                         onChange={(e) => setFormCostoEnvio(e.target.value)}
                         placeholder="0.00"
-                        className="pl-8 bg-card border-input text-foreground text-sm font-mono h-9 rounded-xl focus:border-primary disabled:bg-muted"
+                        className="pl-7 bg-background border-border/70 text-foreground text-xs font-mono h-9 rounded-lg focus-visible:ring-1 focus-visible:ring-ring disabled:bg-muted"
                       />
                     </div>
                   </div>
@@ -2333,52 +2323,52 @@ export function EgresosClient({ egresos, tags = [], productos = [] }: EgresosCli
               </div>
 
               {/* Previsualización en Vivo */}
-              <div className="p-3.5 rounded-xl bg-card border border-border flex items-center justify-between">
+              <div className="px-4 py-3 rounded-lg border border-border/50 bg-muted/20 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Total a Registrar</span>
-                  <span className="text-xl font-extrabold text-destructive font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium block">Total a Registrar</span>
+                  <span className="text-base font-semibold text-foreground font-mono tabular-nums">
                     {formatCurrency(liveCostMetrics.totalCalculado)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Costo Real / Unidad</span>
-                  <span className="text-sm font-bold text-foreground font-mono">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium block">Costo Real / Unidad</span>
+                  <span className="text-xs font-medium text-muted-foreground font-mono tabular-nums">
                     {formatCurrency(liveCostMetrics.costoRealUnitario)}
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="px-5 sm:px-6 py-4 border-t border-border bg-card flex items-center justify-between flex-shrink-0">
+            <div className="px-4 sm:px-6 py-3 border-t border-border/50 bg-card flex items-center justify-between flex-shrink-0">
               {editingItem && (
                 <Button 
                   type="button" 
                   variant="ghost" 
                   onClick={() => handleDelete(editingItem.id, editingItem.itemConcepto)}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 text-xs rounded-xl cursor-pointer font-bold active:scale-[0.98]"
+                  className="text-muted-foreground hover:text-destructive text-xs h-8 px-2.5 rounded-md cursor-pointer font-medium"
                 >
-                  <Trash2 className="h-4 w-4 mr-1.5" />
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
                   Eliminar Egreso
                 </Button>
               )}
 
-              <div className="flex items-center gap-3 ml-auto">
+              <div className="flex items-center gap-2 ml-auto">
                 <Button 
                   type="button" 
                   variant="ghost" 
                   onClick={() => setOpenEditModal(false)}
-                  className="text-muted-foreground hover:text-foreground hover:bg-secondary text-xs px-4 py-2.5 rounded-xl cursor-pointer font-medium active:scale-[0.98]"
+                  className="text-muted-foreground hover:text-foreground text-xs h-8 px-3 rounded-md cursor-pointer font-medium"
                 >
                   Cancelar
                 </Button>
                 <Button 
                   type="submit" 
                   disabled={isSubmitting}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs px-5 py-2.5 rounded-xl shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-[0.98]"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs h-8 px-4 rounded-lg shadow-none cursor-pointer disabled:opacity-50 transition-colors"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                       Actualizando...
                     </>
                   ) : (

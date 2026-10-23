@@ -255,7 +255,7 @@ export function RegisterMultiProductOrderModal({
         {/* Modal Form Container con Flex Col y Scroll Confinado */}
         <form onSubmit={handleSubmitNuevoPedido} className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           {/* Contenedor con Scroll y Padding Inferior Calibrado (pb-28) */}
-          <div className="flex-1 overflow-y-auto pr-1 p-4 sm:p-6 pb-28 space-y-5">
+          <div className="flex-1 overflow-y-auto pr-1 p-4 sm:p-6 pb-28 space-y-6">
             {/* SECCIÓN 1: DATOS DEL CLIENTE Y DESPACHO */}
             <OrderCustomerSection
               clientSelectMode={clientSelectMode}
@@ -290,30 +290,27 @@ export function RegisterMultiProductOrderModal({
             />
 
             {/* SECCIÓN 2: PRODUCTOS DEL PEDIDO */}
-            <div className="bg-card border border-border/60 rounded-xl p-4 sm:p-5 mb-4 space-y-3.5 shadow-none">
-              <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                <div className="flex items-center">
-                  <span className="bg-primary/10 text-primary font-medium text-xs w-5 h-5 rounded-md inline-flex items-center justify-center mr-2 shrink-0">
-                    2
-                  </span>
-                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <ShoppingBag className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-mono text-muted-foreground">02.</span>
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
                     Productos del Pedido ({formItems.length})
                   </span>
                 </div>
 
-                {/* Botón de Acción Secundaria Distinguido */}
+                {/* Botón Minimalista Agregar Producto */}
                 <button
                   type="button"
                   onClick={addItem}
-                  className="h-8 px-3 rounded-lg border border-border/60 bg-background hover:bg-muted text-xs font-medium text-foreground transition-colors cursor-pointer flex items-center gap-1.5"
+                  className="h-7 px-2.5 rounded-md border border-border/60 bg-background hover:bg-muted text-xs font-medium text-foreground transition-colors cursor-pointer flex items-center gap-1"
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>+ Agregar Producto</span>
+                  <Plus className="h-3 w-3" />
+                  <span>Agregar Producto</span>
                 </button>
               </div>
 
-              {/* Lista de Tarjetas de Producto Modulares */}
+              {/* Lista de Ítems */}
               <div className="space-y-3">
                 {formItems.map((item, index) => (
                   <OrderItemCard
@@ -333,35 +330,35 @@ export function RegisterMultiProductOrderModal({
             </div>
 
             {/* SECCIÓN 2.5: CAJA DE PACKAGING & DESCUENTO DE STOCK */}
-            <div className="bg-card border border-border/60 rounded-xl p-4 space-y-3 shadow-none">
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-3 space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
                   <input
                     type="checkbox"
                     checked={formHasCaja}
                     onChange={(e) => setFormHasCaja(e.target.checked)}
-                    className="w-4 h-4 rounded text-primary focus:ring-ring border-border/80 cursor-pointer"
+                    className="w-3.5 h-3.5 rounded text-primary focus:ring-ring border-border/80 cursor-pointer"
                   />
                   <span>Incluir Caja de Packaging (descuenta stock)</span>
                 </label>
 
                 {formHasCaja && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 tabular-nums">
+                  <span className="text-[11px] font-mono text-muted-foreground tabular-nums">
                     Costo: S/ {(formCajasCantidad * (stockCajas?.lotes.find(l => l.id === formCajasLotId)?.costoUnitario || 2.40)).toFixed(2)}
                   </span>
                 )}
               </div>
 
               {formHasCaja && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
                   <div className="sm:col-span-2 space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground block">
+                    <label className="text-[10px] font-medium text-muted-foreground block">
                       Lote de Cajas Registrado
                     </label>
                     <select
                       value={formCajasLotId}
                       onChange={(e) => setFormCajasLotId(e.target.value)}
-                      className="w-full h-9 rounded-lg border border-border/80 bg-background px-2.5 text-xs text-foreground focus:outline-hidden"
+                      className="w-full h-8 rounded-md border border-border/70 bg-background px-2 text-xs text-foreground focus:outline-hidden"
                     >
                       {(stockCajas?.lotes || []).map((lote) => {
                         const code = lote.codigo || `LOT-${lote.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
@@ -375,8 +372,8 @@ export function RegisterMultiProductOrderModal({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground block">
-                      Cantidad Cajas
+                    <label className="text-[10px] font-medium text-muted-foreground block">
+                      Cantidad
                     </label>
                     <input
                       type="number"
@@ -384,7 +381,7 @@ export function RegisterMultiProductOrderModal({
                       max="50"
                       value={formCajasCantidad}
                       onChange={(e) => setFormCajasCantidad(Math.max(1, Number(e.target.value) || 1))}
-                      className="w-full h-9 rounded-lg border border-border/80 bg-background text-center text-xs font-mono font-semibold text-foreground focus:outline-hidden tabular-nums"
+                      className="w-full h-8 rounded-md border border-border/70 bg-background text-center text-xs font-mono font-medium text-foreground focus:outline-hidden tabular-nums"
                     />
                   </div>
                 </div>

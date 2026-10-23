@@ -9,13 +9,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { 
-  TrendingUp, 
-  Package, 
-  ShieldCheck, 
-  DollarSign, 
-  Layers,
-  ArrowDownRight,
-  Equal
+  X,
+  Workflow,
+  Sparkles
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 
@@ -40,157 +36,277 @@ export function FinancialWaterfallModal({
   superavit,
   filteredVentasCount
 }: FinancialWaterfallModalProps) {
-  // Porcentajes relativos a la facturación bruta
+  // Proporciones relativas a la facturación
   const base = Math.max(1, ingresosVentas)
-  const pctCosto = ((costoDirectoTotal / base) * 100).toFixed(1)
-  const pctMargenContribucion = ((gananciaNeta / base) * 100).toFixed(1)
-  const pctFijos = ((totalFijos / base) * 100).toFixed(1)
-  const pctNetoLibre = ((superavit / base) * 100).toFixed(1)
+  const pctCosto = (costoDirectoTotal / base) * 100
+  const pctMargen = (gananciaNeta / base) * 100
+  const pctFijos = (totalFijos / base) * 100
+  const pctNeto = (superavit / base) * 100
 
-  const steps = [
-    {
-      id: 'ingresos',
-      title: '1. Facturación Bruta Total',
-      subtitle: `${filteredVentasCount} pedidos facturados en el período`,
-      amount: ingresosVentas,
-      percentage: '100%',
-      type: 'base',
-      colorClass: 'text-foreground bg-primary/10 border-primary/20',
-      barColor: 'bg-primary',
-      barWidth: '100%',
-      icon: <DollarSign className="w-4 h-4 text-primary" />
-    },
-    {
-      id: 'costos_directos',
-      title: '2. (-) Costo Directo de Producción',
-      subtitle: 'Insumos, filamento base, empaque/cajas y fletes',
-      amount: -costoDirectoTotal,
-      percentage: `-${pctCosto}%`,
-      type: 'subtraction',
-      colorClass: 'text-rose-700 dark:text-rose-400 bg-rose-500/10 border-rose-500/20',
-      barColor: 'bg-rose-500',
-      barWidth: `${Math.min(100, Math.max(5, (costoDirectoTotal / base) * 100))}%`,
-      icon: <Package className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-    },
-    {
-      id: 'margen_bruto',
-      title: '3. (=) Margen de Contribución Taller',
-      subtitle: 'Utilidad operativa generada para absorber costos fijos',
-      amount: gananciaNeta,
-      percentage: `${pctMargenContribucion}%`,
-      type: 'subtotal',
-      colorClass: 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-      barColor: 'bg-emerald-500',
-      barWidth: `${Math.min(100, Math.max(5, (gananciaNeta / base) * 100))}%`,
-      icon: <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-    },
-    {
-      id: 'costos_fijos',
-      title: '4. (-) Compromisos Blindados del Mes',
-      subtitle: 'Alquiler, servicios, amortización y cuotas fijas reservadas',
-      amount: -totalFijos,
-      percentage: `-${pctFijos}%`,
-      type: 'subtraction',
-      colorClass: 'text-amber-800 dark:text-amber-300 bg-amber-500/10 border-amber-500/20',
-      barColor: 'bg-amber-500',
-      barWidth: `${Math.min(100, Math.max(5, (totalFijos / base) * 100))}%`,
-      icon: <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-    },
-    {
-      id: 'utilidad_libre',
-      title: '5. (=) Beneficio Neto Real Disponible',
-      subtitle: superavit >= 0 
-        ? 'Superávit libre de polvo y paja para reinversión o socios'
-        : 'Déficit operativo: faltan fondos para cubrir la totalidad de fijos',
-      amount: superavit,
-      percentage: `${pctNetoLibre}%`,
-      type: 'result',
-      colorClass: superavit >= 0 
-        ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
-        : 'text-rose-700 dark:text-rose-400 bg-rose-500/15 border-rose-500/30',
-      barColor: superavit >= 0 ? 'bg-emerald-600' : 'bg-rose-600',
-      barWidth: `${Math.min(100, Math.max(5, (Math.abs(superavit) / base) * 100))}%`,
-      icon: <TrendingUp className={`w-4 h-4 ${superavit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`} />
-    }
-  ]
+  // Anatomía de cada S/ 1.00
+  const solCosto = ((costoDirectoTotal / base) * 1).toFixed(2)
+  const solFijos = ((totalFijos / base) * 1).toFixed(2)
+  const solNeto = ((Math.max(0, superavit) / base) * 1).toFixed(2)
+
+  // Alturas proporcionales para el gráfico SVG (Canvas de 120px de altura efectiva)
+  const chartHeight = 110
+  const barWidth = 44
+
+  const hFacturacion = chartHeight
+  const yFacturacion = 10
+
+  const hCostos = Math.max(6, (pctCosto / 100) * chartHeight)
+  const yCostos = yFacturacion // Comienza en el tope de Facturación y baja
+
+  const hMargen = Math.max(6, (pctMargen / 100) * chartHeight)
+  const yMargen = yFacturacion + hCostos // Parte desde donde quedaron los costos
+
+  const hFijos = Math.max(6, (pctFijos / 100) * chartHeight)
+  const yFijos = yMargen // Comienza en el tope del margen y baja
+
+  const hNeto = Math.max(6, (Math.abs(pctNeto) / 100) * chartHeight)
+  const yNeto = Math.min(yFacturacion + chartHeight - hNeto, yFijos + hFijos)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl p-5 sm:p-6">
-        <DialogHeader className="space-y-1 text-left border-b border-border/60 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <TrendingUp className="w-4 h-4" />
-            </div>
-            <div>
-              <DialogTitle className="text-base font-bold text-foreground">
-                Cascada Financiera (Waterfall)
+      <DialogContent showCloseButton={false} className="max-w-lg w-[95vw] rounded-2xl p-5 sm:p-6 bg-card border border-border/60 shadow-xl overflow-hidden text-foreground">
+        {/* Cabecera Esbelta Minimalista */}
+        <div className="flex items-start justify-between gap-3 border-b border-border/50 pb-3.5">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <Workflow className="w-4 h-4 text-primary" />
+              <DialogTitle className="text-base font-bold text-foreground tracking-tight">
+                Cascada de Flujo Financiero
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Visualización de extremo a extremo: cómo fluye cada sol desde la venta hasta la ganancia libre.
-              </DialogDescription>
             </div>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Flujo descendente desde cada venta hasta tu beneficio neto disponible.
+            </DialogDescription>
           </div>
-        </DialogHeader>
 
-        {/* Pasos de la Cascada */}
-        <div className="space-y-3 py-2">
-          {steps.map((step) => (
-            <div 
-              key={step.id} 
-              className="p-3 sm:p-3.5 rounded-xl bg-card border border-border/70 hover:border-border transition-colors space-y-2"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${step.colorClass}`}>
-                    {step.icon}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground tracking-tight">
-                      {step.title}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {step.subtitle}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0">
-                  <span className={`text-xs sm:text-sm font-mono font-bold tracking-tight tabular-nums block ${
-                    step.amount >= 0 ? 'text-foreground' : 'text-rose-700 dark:text-rose-400'
-                  }`}>
-                    {step.amount < 0 ? '-' : (step.type === 'subtotal' || step.type === 'result') ? '' : ''}
-                    {formatCurrency(Math.abs(step.amount))}
-                  </span>
-                  <span className="text-[10px] font-mono text-muted-foreground">
-                    {step.percentage} de ventas
-                  </span>
-                </div>
-              </div>
-
-              {/* Barra de proporción visual */}
-              <div className="w-full h-1.5 bg-muted/60 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${step.barColor}`} 
-                  style={{ width: step.barWidth }}
-                />
-              </div>
-            </div>
-          ))}
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            aria-label="Cerrar ventana"
+            className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Resumen Ejecutivo del Asesor */}
-        <div className="p-3.5 rounded-xl bg-muted/40 border border-border/60 text-xs space-y-1.5">
-          <p className="font-semibold text-foreground flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            Dictamen del Asesor Financiero:
-          </p>
-          <p className="text-muted-foreground text-[11px] leading-relaxed">
-            {superavit >= 0 
-              ? `Tus ventas del período cubrieron el 100% de los costos directos y absorbieron la totalidad de costos fijos (${formatCurrency(totalFijos)}). Tienes un superávit neto real de ${formatCurrency(superavit)} (${pctNetoLibre}% de margen final).`
-              : `Aún no se alcanza el punto de absorción total de fijos. Faltan ${formatCurrency(Math.abs(superavit))} para cubrir el presupuesto blindado del mes.`
-            }
-          </p>
+        {/* 1. AUTÉNTICO WATERFALL BRIDGE CHART (SVG CONTINUO) */}
+        <div className="py-2.5">
+          <div className="w-full bg-muted/20 border border-border/40 rounded-xl p-3 sm:p-4">
+            <svg 
+              viewBox="0 0 340 160" 
+              className="w-full h-auto overflow-visible select-none"
+              aria-label="Gráfico de Cascada de Flujo de Fondos"
+            >
+              {/* Línea Base de Suelo */}
+              <line x1="10" y1="120" x2="330" y2="120" stroke="currentColor" strokeOpacity="0.15" strokeWidth="1" />
+
+              {/* Columna 1: Facturación Bruta (Pilar Base) */}
+              <g>
+                <rect 
+                  x="15" 
+                  y={yFacturacion} 
+                  width={barWidth} 
+                  height={hFacturacion} 
+                  rx="4" 
+                  className="fill-primary/15 stroke-primary/50" 
+                  strokeWidth="1.5"
+                />
+                <text x="37" y={yFacturacion - 4} textAnchor="middle" className="text-[10px] font-mono font-bold fill-foreground">
+                  100%
+                </text>
+                <text x="37" y="134" textAnchor="middle" className="text-[9px] font-medium fill-muted-foreground">
+                  Ventas
+                </text>
+              </g>
+
+              {/* Línea Guía 1 a 2 */}
+              <line x1="59" y1={yFacturacion} x2="80" y2={yFacturacion} stroke="currentColor" strokeOpacity="0.3" strokeDasharray="2 2" />
+
+              {/* Columna 2: (-) Costos Directos (Cae desde el tope) */}
+              <g>
+                <rect 
+                  x="80" 
+                  y={yCostos} 
+                  width={barWidth} 
+                  height={hCostos} 
+                  rx="4" 
+                  className="fill-rose-500/20 stroke-rose-500/70" 
+                  strokeWidth="1.5"
+                />
+                <text x="102" y={yCostos + hCostos / 2 + 3} textAnchor="middle" className="text-[9px] font-mono font-bold fill-rose-600 dark:fill-rose-400">
+                  -{pctCosto.toFixed(0)}%
+                </text>
+                <text x="102" y="134" textAnchor="middle" className="text-[9px] font-medium fill-muted-foreground">
+                  Insumos
+                </text>
+              </g>
+
+              {/* Línea Guía 2 a 3 */}
+              <line x1="124" y1={yMargen} x2="145" y2={yMargen} stroke="currentColor" strokeOpacity="0.3" strokeDasharray="2 2" />
+
+              {/* Columna 3: (=) Margen Bruto (Subtotal flotante) */}
+              <g>
+                <rect 
+                  x="145" 
+                  y={yMargen} 
+                  width={barWidth} 
+                  height={hMargen} 
+                  rx="4" 
+                  className="fill-emerald-500/15 stroke-emerald-500/60" 
+                  strokeWidth="1.5"
+                />
+                <text x="167" y={yMargen - 4} textAnchor="middle" className="text-[10px] font-mono font-bold fill-emerald-700 dark:fill-emerald-400">
+                  {pctMargen.toFixed(0)}%
+                </text>
+                <text x="167" y="134" textAnchor="middle" className="text-[9px] font-medium fill-muted-foreground">
+                  Margen
+                </text>
+              </g>
+
+              {/* Línea Guía 3 a 4 */}
+              <line x1="189" y1={yMargen} x2="210" y2={yMargen} stroke="currentColor" strokeOpacity="0.3" strokeDasharray="2 2" />
+
+              {/* Columna 4: (-) Fijos Blindados (Cae desde el margen) */}
+              <g>
+                <rect 
+                  x="210" 
+                  y={yFijos} 
+                  width={barWidth} 
+                  height={hFijos} 
+                  rx="4" 
+                  className="fill-amber-500/20 stroke-amber-500/70" 
+                  strokeWidth="1.5"
+                />
+                <text x="232" y={yFijos + hFijos / 2 + 3} textAnchor="middle" className="text-[9px] font-mono font-bold fill-amber-700 dark:fill-amber-400">
+                  -{pctFijos.toFixed(0)}%
+                </text>
+                <text x="232" y="134" textAnchor="middle" className="text-[9px] font-medium fill-muted-foreground">
+                  Fijos
+                </text>
+              </g>
+
+              {/* Línea Guía 4 a 5 */}
+              <line x1="254" y1={yNeto} x2="275" y2={yNeto} stroke="currentColor" strokeOpacity="0.3" strokeDasharray="2 2" />
+
+              {/* Columna 5: (=) Beneficio Neto Real (Aterriza en el suelo) */}
+              <g>
+                <rect 
+                  x="275" 
+                  y={yNeto} 
+                  width={barWidth} 
+                  height={hNeto} 
+                  rx="4" 
+                  className={superavit >= 0 ? 'fill-emerald-600 stroke-emerald-700' : 'fill-rose-600 stroke-rose-700'} 
+                  strokeWidth="1.5"
+                />
+                <text x="297" y={yNeto - 4} textAnchor="middle" className={`text-[10px] font-mono font-bold ${superavit >= 0 ? 'fill-emerald-600 dark:fill-emerald-400' : 'fill-rose-600'}`}>
+                  {pctNeto.toFixed(0)}%
+                </text>
+                <text x="297" y="134" textAnchor="middle" className="text-[9px] font-semibold fill-foreground">
+                  Neto Libre
+                </text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        {/* 2. ANATOMÍA DE CADA S/ 1.00 (CINTA HORIZONTAL CONTINUA) */}
+        <div className="space-y-1.5 py-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-semibold text-foreground text-[11px] flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              Anatomía de cada S/ 1.00 vendido:
+            </span>
+            <span className="font-mono text-[11px] text-muted-foreground">
+              {filteredVentasCount} pedidos
+            </span>
+          </div>
+
+          {/* Ribbon Continuo */}
+          <div className="w-full h-2.5 rounded-full overflow-hidden flex bg-muted/40">
+            <div 
+              style={{ width: `${Math.max(5, pctNeto)}%` }} 
+              className="h-full bg-emerald-500 transition-all duration-300" 
+              title={`Utilidad Neta: ${pctNeto.toFixed(1)}%`} 
+            />
+            <div 
+              style={{ width: `${Math.max(5, pctFijos)}%` }} 
+              className="h-full bg-amber-500 transition-all duration-300" 
+              title={`Fijos Blindados: ${pctFijos.toFixed(1)}%`} 
+            />
+            <div 
+              style={{ width: `${Math.max(5, pctCosto)}%` }} 
+              className="h-full bg-rose-500 transition-all duration-300" 
+              title={`Insumos Directos: ${pctCosto.toFixed(1)}%`} 
+            />
+          </div>
+
+          {/* Leyenda Horizontal Limpia */}
+          <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground pt-0.5">
+            <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              S/ {solNeto} Ganancia
+            </span>
+            <span className="flex items-center gap-1 text-amber-700 dark:text-amber-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              S/ {solFijos} Fijos
+            </span>
+            <span className="flex items-center gap-1 text-rose-700 dark:text-rose-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              S/ {solCosto} Insumos
+            </span>
+          </div>
+        </div>
+
+        {/* 3. LEDGER CONTABLE TABULAR MINIMALISTA (SIN CAJAS ANIDADAS) */}
+        <div className="border-t border-border/50 divide-y divide-border/40 text-xs pt-1">
+          <div className="py-2 flex items-center justify-between">
+            <span className="text-foreground font-medium">Facturación Bruta</span>
+            <span className="font-mono font-bold text-foreground tabular-nums">
+              {formatCurrency(ingresosVentas)}
+            </span>
+          </div>
+
+          <div className="py-2 flex items-center justify-between text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="text-rose-500 font-mono">−</span>
+              Costo Directo (Insumos/Packaging)
+            </span>
+            <span className="font-mono text-rose-700 dark:text-rose-400 tabular-nums">
+              −{formatCurrency(costoDirectoTotal)}
+            </span>
+          </div>
+
+          <div className="py-2 flex items-center justify-between font-medium">
+            <span className="text-emerald-700 dark:text-emerald-400">Margen de Contribución</span>
+            <span className="font-mono text-emerald-700 dark:text-emerald-400 tabular-nums font-semibold">
+              +{formatCurrency(gananciaNeta)}
+            </span>
+          </div>
+
+          <div className="py-2 flex items-center justify-between text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="text-amber-500 font-mono">−</span>
+              Costos Fijos Blindados del Mes
+            </span>
+            <span className="font-mono text-amber-800 dark:text-amber-400 tabular-nums">
+              −{formatCurrency(totalFijos)}
+            </span>
+          </div>
+
+          <div className="py-2.5 flex items-center justify-between font-bold text-sm bg-muted/20 px-2 -mx-2 rounded-lg">
+            <span className={superavit >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700'}>
+              Beneficio Neto Real
+            </span>
+            <span className={`font-mono tabular-nums ${superavit >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700'}`}>
+              {superavit >= 0 ? '+' : ''}{formatCurrency(superavit)}
+            </span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

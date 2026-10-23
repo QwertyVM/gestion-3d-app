@@ -86,61 +86,57 @@ export function OrderCustomerSection({
   onRegisterClientInline
 }: OrderCustomerSectionProps) {
   return (
-    <div className="bg-card/70 border border-border rounded-xl p-3.5 sm:p-5 mb-5 space-y-4 shadow-sm">
-      {/* Encabezado de la Sección con Stepper Badge y Selector Segmentado */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-border gap-3">
-        <div className="flex items-center">
-          <span className="bg-primary/10 text-primary font-bold text-xs w-6 h-6 rounded-full inline-flex items-center justify-center mr-2 shrink-0">
-            1
-          </span>
-          <span className="text-xs font-extrabold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-            <User className="h-3.5 w-3.5 text-primary" />
-            Datos del Cliente y Despacho
+    <div className="space-y-4">
+      {/* Encabezado Minimalista de Sección */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2.5 border-b border-border/50 gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-mono text-muted-foreground">01.</span>
+          <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+            Cliente &amp; Despacho
           </span>
         </div>
 
-        {/* Control segmentado superior unificado (Tabs / Toggle Group) */}
-        <div className="bg-muted p-1 rounded-xl flex gap-1 w-fit border border-border/60 self-start sm:self-auto">
+        {/* Control segmentado minimalista */}
+        <div className="inline-flex items-center bg-muted/60 p-0.5 rounded-lg border border-border/50 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => {
               setClientSelectMode('EXISTING')
               setIsClientDropdownOpen(false)
             }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
               clientSelectMode === 'EXISTING'
-                ? 'bg-card text-foreground shadow-xs font-bold'
+                ? 'bg-background text-foreground shadow-xs font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <UserCheck className="h-3.5 w-3.5 text-primary" />
-            <span>Cliente Existente</span>
-            <span className="bg-card text-muted-foreground px-2 py-0.5 rounded-full text-xs font-mono font-bold border border-border/60">
-              {clientesList.length}
+            <UserCheck className="h-3.5 w-3.5" />
+            <span>Cliente Registrado</span>
+            <span className="text-[10px] font-mono text-muted-foreground ml-0.5">
+              ({clientesList.length})
             </span>
           </button>
 
           <button
             type="button"
             onClick={() => onSwitchToNewClient()}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer ${
               clientSelectMode === 'NEW'
-                ? 'bg-card text-foreground shadow-xs font-bold'
+                ? 'bg-background text-foreground shadow-xs font-semibold'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <UserPlus className="h-3.5 w-3.5 text-primary" />
+            <UserPlus className="h-3.5 w-3.5" />
             <span>+ Nuevo Cliente</span>
           </button>
         </div>
       </div>
 
-      {/* 1. METADATOS DE LA ORDEN: Fila de 2 Columnas (Fecha del Pedido y Canal de Venta) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        {/* Fecha del Pedido */}
+      {/* 1. METADATOS DE LA ORDEN: Fecha y Canal */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <Calendar className="h-3 w-3 text-primary" />
+          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <Calendar className="h-3 w-3 text-muted-foreground" />
             Fecha del Pedido *
           </Label>
           <Input
@@ -148,19 +144,18 @@ export function OrderCustomerSection({
             required
             value={formFecha}
             onChange={(e) => setFormFecha(e.target.value)}
-            className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm font-mono focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs font-mono focus-visible:ring-1 focus-visible:ring-ring"
           />
         </div>
 
-        {/* Canal de Venta */}
         <div className="space-y-1">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
+          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
             Canal de Venta
           </Label>
           <select
             value={formCanal}
             onChange={(e) => setFormCanal(e.target.value)}
-            className="w-full h-10 rounded-xl border border-input bg-card/80 text-foreground text-sm font-medium px-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+            className="w-full h-9 rounded-lg border border-border/70 bg-background text-foreground text-xs font-medium px-2.5 focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer"
           >
             <option value="WhatsApp">WhatsApp</option>
             <option value="Instagram">Instagram</option>
@@ -172,29 +167,29 @@ export function OrderCustomerSection({
         </div>
       </div>
 
-      {/* 2. GESTIÓN DEL CLIENTE SEGÚN TAB ACTIVO */}
+      {/* 2. GESTIÓN DEL CLIENTE */}
       {clientSelectMode === 'EXISTING' ? (
-        <div className="space-y-3 pt-1">
+        <div className="space-y-2 pt-0.5">
           {selectedClientOption ? (
-            /* Card compacta de cliente vinculado */
-            <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl px-4 py-2.5 flex items-center justify-between gap-3 shadow-2xs">
+            /* Fila de cliente seleccionado */
+            <div className="bg-muted/30 border border-border/60 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 font-bold text-xs flex items-center justify-center shrink-0">
+                <div className="h-7 w-7 rounded-md bg-foreground/10 text-foreground font-semibold text-xs flex items-center justify-center shrink-0">
                   {selectedClientOption.nombre.slice(0, 2).toUpperCase()}
                 </div>
-                <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-sm text-stone-900 dark:text-stone-100 truncate">
+                <div className="min-w-0 flex items-center gap-2 flex-wrap text-xs">
+                  <span className="font-semibold text-foreground truncate">
                     {selectedClientOption.nombre}
                   </span>
                   {selectedClientOption.telefono && (
-                    <span className="inline-flex items-center gap-1 font-mono text-[11px] px-2 py-0.5 rounded-md bg-white/80 dark:bg-stone-900/80 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">
-                      <Phone className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+                      <Phone className="h-2.5 w-2.5" />
                       {selectedClientOption.telefono}
                     </span>
                   )}
                   {selectedClientOption.handleSocial && (
-                    <span className="inline-flex items-center gap-1 font-mono text-[11px] px-2 py-0.5 rounded-md bg-white/80 dark:bg-stone-900/80 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">
-                      <AtSign className="h-2.5 w-2.5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+                      <AtSign className="h-2.5 w-2.5" />
                       {selectedClientOption.handleSocial.replace(/^@/, '')}
                     </span>
                   )}
@@ -203,52 +198,52 @@ export function OrderCustomerSection({
 
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={onClearSelectedClient}
-                className="text-xs h-7 px-2.5 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-200 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 font-medium flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs"
+                className="text-xs h-7 px-2.5 text-muted-foreground hover:text-foreground hover:bg-muted font-medium flex items-center gap-1 shrink-0 cursor-pointer"
               >
-                <X className="h-3 w-3 text-stone-500" />
+                <X className="h-3 w-3" />
                 <span>Cambiar</span>
               </Button>
             </div>
           ) : (
             /* Buscador de clientes registrados */
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Buscar cliente registrado por nombre, teléfono o @instagram..."
+                placeholder="Buscar por nombre, teléfono o @instagram..."
                 value={clientSearchTerm}
                 onChange={(e) => {
                   setClientSearchTerm(e.target.value)
                   setIsClientDropdownOpen(true)
                 }}
                 onFocus={() => setIsClientDropdownOpen(true)}
-                className="pl-9 pr-9 h-10 rounded-xl border-input bg-card text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60 w-full shadow-2xs"
+                className="pl-8.5 pr-8 h-9 rounded-lg border-border/70 bg-background text-foreground text-xs focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/60 w-full"
               />
               {clientSearchTerm && (
                 <button
                   type="button"
                   onClick={() => setClientSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
 
               {/* Popover de autocompletado flotante */}
               {isClientDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full mt-1.5 bg-popover border border-border shadow-lg rounded-xl overflow-hidden py-1 z-50 max-h-60 overflow-y-auto divide-y divide-border/60 animate-in fade-in-50 duration-150">
-                  <div className="px-3 py-1.5 bg-muted/50 text-[11px] font-bold text-muted-foreground flex items-center justify-between border-b border-border">
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-popover border border-border shadow-lg rounded-xl overflow-hidden py-1 z-50 max-h-60 overflow-y-auto divide-y divide-border/50 animate-in fade-in-50 duration-150">
+                  <div className="px-3 py-1.5 bg-muted/40 text-[11px] font-medium text-muted-foreground flex items-center justify-between">
                     <span>
                       {clientSearchTerm.trim()
                         ? `Resultados para "${clientSearchTerm}" (${filteredClientOptions.length})`
-                        : `Clientes registrados (${clientesList.length}) - Selecciona uno:`}
+                        : `Clientes registrados (${clientesList.length})`}
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsClientDropdownOpen(false)}
-                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer font-medium"
+                      className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       Cerrar
                     </button>
@@ -259,30 +254,30 @@ export function OrderCustomerSection({
                       <div
                         key={c.id}
                         onClick={() => onSelectClient(c)}
-                        className="hover:bg-muted/70 transition-colors cursor-pointer px-3 py-2 text-xs flex justify-between items-center group"
+                        className="hover:bg-muted/60 transition-colors cursor-pointer px-3 py-2 text-xs flex justify-between items-center group"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="h-7 w-7 rounded-lg bg-accent text-accent-foreground flex items-center justify-center font-bold text-xs shrink-0">
+                          <div className="h-6 w-6 rounded-md bg-muted text-foreground flex items-center justify-center font-medium text-[11px] shrink-0">
                             {c.nombre.slice(0, 1).toUpperCase()}
                           </div>
                           <div className="truncate">
-                            <span className="font-bold text-xs text-foreground block truncate">
+                            <span className="font-medium text-xs text-foreground block truncate">
                               {c.nombre}
                             </span>
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
-                              {c.telefono && <span>📞 {c.telefono}</span>}
+                              {c.telefono && <span>{c.telefono}</span>}
                               {c.handleSocial && <span>@{c.handleSocial.replace(/^@/, '')}</span>}
-                              {c.distrito && <span>📍 {c.distrito}</span>}
+                              {c.distrito && <span>{c.distrito}</span>}
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-secondary border border-border text-muted-foreground font-mono">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono">
                             {c.canalOrigen || c.canalPreferido || 'Directo'}
                           </span>
-                          <span className="text-xs text-primary font-bold group-hover:translate-x-0.5 transition-transform">
-                            Seleccionar →
+                          <span className="text-xs text-primary font-medium group-hover:translate-x-0.5 transition-transform">
+                            Elegir →
                           </span>
                         </div>
                       </div>
@@ -290,13 +285,13 @@ export function OrderCustomerSection({
                   ) : (
                     <div className="p-4 text-center space-y-2">
                       <p className="text-xs text-muted-foreground">
-                        No se encontró ningún cliente registrado con &quot;{clientSearchTerm}&quot;.
+                        No se encontró ningún cliente con &quot;{clientSearchTerm}&quot;.
                       </p>
                       <Button
                         type="button"
                         size="sm"
                         onClick={() => onSwitchToNewClient(clientSearchTerm)}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs rounded-xl"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs rounded-lg h-8"
                       >
                         <UserPlus className="h-3.5 w-3.5 mr-1.5" />
                         Registrar &quot;{clientSearchTerm}&quot; como nuevo cliente
@@ -309,21 +304,19 @@ export function OrderCustomerSection({
           )}
         </div>
       ) : (
-        /* 3. ESTADO "NUEVO CLIENTE": Inputs Editables y Limpios en 3 Columnas */
-        <div className="space-y-3 pt-1">
-          {/* Advertencia preventiva si existe cliente similar */}
+        /* ESTADO "NUEVO CLIENTE" */
+        <div className="space-y-3 pt-0.5">
           {similarExistingClient && (
-            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in-50 duration-150">
+            <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <div className="flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-xs text-foreground">
-                  <span className="font-bold block text-amber-800 dark:text-amber-200">
-                    ¡Atención! Ya existe un cliente similar registrado:
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-semibold text-foreground block">
+                    Existe un cliente similar: &quot;{similarExistingClient.nombre}&quot;
                   </span>
-                  <span className="text-muted-foreground">
-                    &quot;{similarExistingClient.nombre}&quot;
-                    {similarExistingClient.telefono ? ` (📞 ${similarExistingClient.telefono})` : ''}
-                    {similarExistingClient.handleSocial ? ` (@${similarExistingClient.handleSocial.replace(/^@/, '')})` : ''}
+                  <span className="text-muted-foreground text-[11px]">
+                    {similarExistingClient.telefono ? `Tel: ${similarExistingClient.telefono}` : ''}
+                    {similarExistingClient.handleSocial ? ` • @${similarExistingClient.handleSocial.replace(/^@/, '')}` : ''}
                   </span>
                 </div>
               </div>
@@ -331,64 +324,59 @@ export function OrderCustomerSection({
                 type="button"
                 size="sm"
                 onClick={() => onSelectClient(similarExistingClient)}
-                className="bg-amber-600 hover:bg-amber-700 text-white text-xs rounded-xl shrink-0 h-8 font-semibold cursor-pointer"
+                className="bg-muted hover:bg-muted/80 text-foreground border border-border/60 text-xs rounded-md shrink-0 h-7 font-medium cursor-pointer"
               >
-                <Check className="h-3.5 w-3.5 mr-1" />
-                Usar &quot;{similarExistingClient.nombre}&quot;
+                <Check className="h-3 w-3 mr-1" />
+                Usar existente
               </Button>
             </div>
           )}
 
-          {/* Cuadrícula de 3 Columnas Limpias y Editables */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            {/* Nombre Completo * */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <User className="h-3 w-3 text-primary" />
+              <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <User className="h-3 w-3 text-muted-foreground" />
                 Nombre Completo *
               </Label>
               <Input
                 required
-                placeholder="Nombre del nuevo cliente..."
+                placeholder="Nombre del cliente..."
                 value={formCliente}
                 onChange={(e) => setFormCliente(e.target.value)}
-                className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/60"
               />
             </div>
 
-            {/* Teléfono / WhatsApp */}
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Phone className="h-3 w-3 text-primary" />
+              <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Phone className="h-3 w-3 text-muted-foreground" />
                 Teléfono / WhatsApp
               </Label>
               <Input
                 placeholder="Ej: 987654321"
                 value={formTelefono}
                 onChange={(e) => setFormTelefono(e.target.value)}
-                className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm font-mono focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs font-mono focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/60"
               />
             </div>
 
-            {/* @ Instagram */}
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <AtSign className="h-3 w-3 text-primary" />
+              <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <AtSign className="h-3 w-3 text-muted-foreground" />
                 @ Instagram
               </Label>
               <Input
                 placeholder="@usuario"
                 value={formHandleSocial}
                 onChange={(e) => setFormHandleSocial(e.target.value)}
-                className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+                className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/60"
               />
             </div>
           </div>
 
-          {/* Opción de guardar en directorio */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-1 border-t border-border/60">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-1">
             <span className="text-[11px] text-muted-foreground">
-              💡 Se registrará automáticamente con el pedido o puedes guardarlo de inmediato.
+              Se vinculará automáticamente al guardar la orden.
             </span>
             <Button
               type="button"
@@ -396,20 +384,19 @@ export function OrderCustomerSection({
               variant="outline"
               disabled={!formCliente.trim() || isRegisteringClientInline}
               onClick={onRegisterClientInline}
-              className="text-[11px] h-7 border-border text-foreground bg-card hover:bg-muted rounded-xl cursor-pointer shrink-0 self-end sm:self-auto"
+              className="text-[11px] h-7 border-border/60 text-muted-foreground hover:text-foreground bg-background rounded-md cursor-pointer shrink-0"
             >
-              {isRegisteringClientInline ? 'Guardando...' : '💾 Guardar en Directorio'}
+              {isRegisteringClientInline ? 'Guardando...' : 'Guardar en Directorio'}
             </Button>
           </div>
         </div>
       )}
 
-      {/* 4. FILA DE DESPACHO: 2 Columnas Limpias (Entrega Pactada y Destino / Agencia) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-        {/* Entrega Pactada */}
+      {/* 3. FILA DE DESPACHO: Entrega Pactada y Destino */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
         <div className="space-y-1">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <Clock className="h-3 w-3 text-primary" />
+          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <Clock className="h-3 w-3 text-muted-foreground" />
             Entrega Pactada
           </Label>
           <DeliveryDatePicker
@@ -419,17 +406,16 @@ export function OrderCustomerSection({
           />
         </div>
 
-        {/* Destino / Dirección / Agencia */}
         <div className="space-y-1">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <MapPin className="h-3 w-3 text-primary" />
+          <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <MapPin className="h-3 w-3 text-muted-foreground" />
             Destino / Agencia
           </Label>
           <Input
             placeholder="Ej: Shalom Agencia Miraflores, Lima..."
             value={formDestino}
             onChange={(e) => setFormDestino(e.target.value)}
-            className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground/60"
+            className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs focus-visible:ring-1 focus-visible:ring-ring placeholder:text-muted-foreground/60"
           />
         </div>
       </div>

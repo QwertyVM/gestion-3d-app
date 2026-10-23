@@ -99,33 +99,33 @@ export function OrderPaymentsList({
 
       {/* Lista de Abonos */}
       {pagos.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {pagos.map((pg, idx) => (
             <div
               key={pg.id}
-              className="p-3 rounded-xl bg-card border border-border flex items-center justify-between text-xs gap-3 shadow-2xs hover:bg-muted/30 transition-colors"
+              className="p-2.5 rounded-lg border border-border/50 bg-muted/20 flex items-center justify-between text-xs gap-3 hover:bg-muted/40 transition-colors"
             >
               <div className="flex-1 min-w-0 pr-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-foreground">Abono #{idx + 1}</span>
-                  <Badge variant="outline" className="text-[10px] bg-secondary text-foreground border-border font-medium px-2 py-0.5 rounded-md">
+                  <span className="font-medium text-foreground">Abono #{idx + 1}</span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50">
                     {pg.metodoPago} • {pg.tipo}
-                  </Badge>
+                  </span>
                 </div>
-                <span className="text-[11px] text-muted-foreground block mt-0.5 truncate">
+                <span className="text-[11px] text-muted-foreground block mt-0.5 truncate font-mono">
                   {formatDate(pg.fecha)} {pg.notas ? `• ${pg.notas}` : ''}
                 </span>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <span className="font-mono font-bold text-sm text-foreground">
+                <span className="font-mono font-medium text-xs text-foreground tabular-nums">
                   +{formatCurrency(pg.monto)}
                 </span>
                 <button
                   type="button"
                   title="Editar abono"
                   onClick={() => onOpenEditPago(pg)}
-                  className="p-1.5 rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
@@ -134,7 +134,7 @@ export function OrderPaymentsList({
                   title="Eliminar abono"
                   disabled={isDeletingId === pg.id}
                   onClick={() => handleDelete(pg.id)}
-                  className="p-1.5 rounded-lg border border-border bg-card hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer disabled:opacity-50"
+                  className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {isDeletingId === pg.id ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -147,32 +147,32 @@ export function OrderPaymentsList({
           ))}
         </div>
       ) : (
-        <div className="p-3 bg-card border border-border rounded-xl text-center">
-          <p className="text-xs text-muted-foreground italic">No se han registrado abonos para este pedido.</p>
+        <div className="p-3 rounded-lg border border-border/50 bg-muted/10 text-center">
+          <p className="text-xs text-muted-foreground">No se han registrado abonos para este pedido.</p>
         </div>
       )}
 
       {/* Formulario para Registrar Nuevo Abono (si tiene saldo pendiente) */}
       {saldoPendiente > 0 && (
-        <form onSubmit={handleSubmit} className="p-3.5 rounded-xl bg-card border border-border space-y-3 shadow-2xs">
-          <span className="text-xs font-bold text-foreground block">
+        <form onSubmit={handleSubmit} className="p-3 rounded-lg border border-border/50 bg-muted/20 space-y-2.5">
+          <span className="text-xs font-semibold text-foreground uppercase tracking-wider block">
             + Registrar Abono
           </span>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground font-semibold">Fecha *</Label>
+              <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Fecha *</Label>
               <Input
                 type="date"
                 required
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
-                className="h-8 bg-background border-border text-xs font-mono font-semibold rounded-lg"
+                className="h-8 bg-background border-border/70 text-xs font-mono rounded-md"
               />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground font-semibold">Monto (S/) *</Label>
+              <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Monto (S/) *</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -181,16 +181,16 @@ export function OrderPaymentsList({
                 value={monto}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => setMonto(e.target.value)}
-                className="h-8 bg-background border-border text-xs font-mono font-semibold rounded-lg"
+                className="h-8 bg-background border-border/70 text-xs font-mono rounded-md tabular-nums"
               />
             </div>
 
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground font-semibold">Medio de Pago</Label>
+              <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Medio</Label>
               <select
                 value={metodo}
                 onChange={(e) => setMetodo(e.target.value)}
-                className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full h-8 rounded-md border border-border/70 bg-background px-2 text-xs font-medium text-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
               >
                 <option value="YAPE">Yape</option>
                 <option value="PLIN">Plin</option>
@@ -201,13 +201,13 @@ export function OrderPaymentsList({
             </div>
 
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground font-semibold">Tipo</Label>
+              <Label className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Tipo</Label>
               <select
                 value={tipo}
                 onChange={(e) => setTipo(e.target.value)}
-                className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full h-8 rounded-md border border-border/70 bg-background px-2 text-xs font-medium text-foreground focus:outline-hidden focus:ring-1 focus:ring-ring"
               >
-                <option value="SALDO_ENTREGA">Liquidación / Saldo Final</option>
+                <option value="SALDO_ENTREGA">Saldo Final</option>
                 <option value="ABONO">Abono Parcial</option>
                 <option value="ANTICIPO">Anticipo</option>
               </select>
@@ -219,13 +219,13 @@ export function OrderPaymentsList({
               placeholder="Nota u operación (opcional)..."
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
-              className="h-8 bg-background border-border text-xs flex-1 rounded-lg"
+              className="h-8 bg-background border-border/70 text-xs flex-1 rounded-md"
             />
             <Button
               type="submit"
               size="sm"
               disabled={isSubmitting}
-              className="h-8 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs rounded-xl cursor-pointer shrink-0 w-full sm:w-auto"
+              className="h-8 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-xs rounded-lg cursor-pointer shrink-0 w-full sm:w-auto shadow-none"
             >
               {isSubmitting ? (
                 <>

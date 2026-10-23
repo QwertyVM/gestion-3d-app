@@ -34,28 +34,24 @@ export function OrderSummarySection({
   const montoAnticipo = Number(formMontoPagado) || 0
 
   return (
-    <div className="bg-card/70 border border-border rounded-xl p-5 mb-2 space-y-4 shadow-sm">
-      {/* Encabezado con Stepper Badge */}
-      <div className="flex items-center pb-3 border-b border-border">
-        <span className="bg-primary/10 text-primary font-bold text-xs w-6 h-6 rounded-full inline-flex items-center justify-center mr-2 shrink-0">
-          3
-        </span>
-        <span className="text-xs font-extrabold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-          <DollarSign className="h-3.5 w-3.5 text-primary" />
-          Totales y Liquidación Dinámica
+    <div className="space-y-4">
+      {/* Encabezado Minimalista */}
+      <div className="flex items-center gap-2 pb-2.5 border-b border-border/50">
+        <span className="text-[11px] font-mono text-muted-foreground">03.</span>
+        <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
+          Totales &amp; Liquidación
         </span>
       </div>
 
-      {/* Grid de 2 Bloques: Inputs Financieros vs Tarjeta Consolidada */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Bloque Izquierdo: Flujo Compacto y Estrictamente Ordenado (7 columnas) */}
+      {/* Grid de 2 Bloques: Inputs Financieros vs Resumen Contable */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        {/* Bloque Izquierdo: Inputs de Envío, Método y Anticipo */}
         <div className="lg:col-span-7 space-y-3">
-          {/* Fila 1 (2 cols): [ Costo de Envío (S/) ] y [ Método de Pago (select) ] */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Costo de Envío */}
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <Truck className="h-3 w-3 text-primary" />
+              <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Truck className="h-3 w-3 text-muted-foreground" />
                 Costo de Envío (S/)
               </Label>
               <Input
@@ -65,20 +61,20 @@ export function OrderSummarySection({
                 value={formCostoEnvio}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => setFormCostoEnvio(e.target.value)}
-                className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm font-mono font-semibold focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs font-mono font-medium focus-visible:ring-1 focus-visible:ring-ring tabular-nums"
               />
             </div>
 
             {/* Método de Pago */}
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <CreditCard className="h-3 w-3 text-primary" />
+              <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <CreditCard className="h-3 w-3 text-muted-foreground" />
                 Método de Pago
               </Label>
               <select
                 value={formMetodoPago}
                 onChange={(e) => setFormMetodoPago(e.target.value)}
-                className="w-full h-10 rounded-xl border border-input bg-card/80 text-foreground text-sm font-semibold px-3 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                className="w-full h-9 rounded-lg border border-border/70 bg-background text-foreground text-xs font-medium px-2.5 focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer"
               >
                 <option value="YAPE">Yape</option>
                 <option value="PLIN">Plin</option>
@@ -89,12 +85,12 @@ export function OrderSummarySection({
             </div>
           </div>
 
-          {/* Fila 2 (1 col): [ Abono / Anticipo (S/) ] con Atajos en Grid de 3 Columnas Fijas */}
-          <div className="space-y-2">
+          {/* Abono / Anticipo con atajos mínimos */}
+          <div className="space-y-1.5 pt-0.5">
             <div className="space-y-1">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                <DollarSign className="h-3 w-3 text-primary" />
-                Abono / Anticipo (S/)
+              <Label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <DollarSign className="h-3 w-3 text-muted-foreground" />
+                Abono / Anticipo Inicial (S/)
               </Label>
               <Input
                 type="number"
@@ -103,111 +99,77 @@ export function OrderSummarySection({
                 value={formMontoPagado}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => setFormMontoPagado(e.target.value)}
-                className="h-10 rounded-xl border-input bg-card/80 text-foreground text-sm font-mono font-bold text-primary focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                className="h-9 rounded-lg border-border/70 bg-background text-foreground text-xs font-mono font-medium focus-visible:ring-1 focus-visible:ring-ring tabular-nums"
               />
             </div>
 
-            {/* Atajos de Anticipo: Grid de 3 Columnas Fijas y Altura Uniforme */}
-            <div className="space-y-1.5 pt-0.5">
-              <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-primary" />
-                Atajos de Anticipo:
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  title={`50% Anticipo (S/ ${(total * 0.5).toFixed(2)})`}
-                  onClick={() => setFormMontoPagado((total * 0.5).toFixed(2))}
-                  className="text-xs py-1.5 px-2 text-center truncate rounded-lg font-medium bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors cursor-pointer"
-                >
-                  50% Anticipo
-                </button>
-                <button
-                  type="button"
-                  title={`Pago 100% Total (S/ ${total.toFixed(2)})`}
-                  onClick={() => setFormMontoPagado(total.toFixed(2))}
-                  className="text-xs py-1.5 px-2 text-center truncate rounded-lg font-semibold bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 transition-colors cursor-pointer"
-                >
-                  Pago 100% Total
-                </button>
-                <button
-                  type="button"
-                  title="S/ 0 Contraentrega"
-                  onClick={() => setFormMontoPagado('0')}
-                  className="text-xs py-1.5 px-2 text-center truncate rounded-lg font-medium bg-muted hover:bg-muted/80 text-muted-foreground border border-border transition-colors cursor-pointer"
-                >
-                  S/ 0 Contraentrega
-                </button>
-              </div>
+            {/* Atajos Rápidos Minimalistas */}
+            <div className="flex items-center gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setFormMontoPagado((total * 0.5).toFixed(2))}
+                className="text-[11px] font-mono py-1 px-2.5 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50 transition-colors cursor-pointer"
+              >
+                50% (S/ {(total * 0.5).toFixed(2)})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormMontoPagado(total.toFixed(2))}
+                className="text-[11px] font-mono py-1 px-2.5 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50 transition-colors cursor-pointer"
+              >
+                100% (S/ {total.toFixed(2)})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormMontoPagado('0')}
+                className="text-[11px] font-mono py-1 px-2.5 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground border border-border/50 transition-colors cursor-pointer"
+              >
+                S/ 0 Contraentrega
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Bloque Derecho: Desglose Operativo de Balance (5 columnas) */}
-        <div className="lg:col-span-5 h-fit bg-secondary/50 border border-border rounded-xl p-3.5 space-y-2.5 shadow-2xs">
-          <div className="flex items-center justify-between pb-1.5 border-b border-border/60">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Resumen de Balance
-            </span>
-            <span className="text-[10px] font-mono text-muted-foreground/70">
-              Desglose Operativo
-            </span>
-          </div>
-
-          {/* Cálculo Matemático Operativo */}
-          <div className="text-[10.5px] font-mono text-muted-foreground bg-muted/60 rounded-lg px-2.5 py-1 text-center border border-border/50">
-            Subtotal + Envío − Anticipo = Saldo por Cobrar
+        {/* Bloque Derecho: Resumen Contable Limpio */}
+        <div className="lg:col-span-5 rounded-xl border border-border/60 bg-muted/20 p-3.5 space-y-2.5">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground pb-1.5 border-b border-border/40">
+            Resumen de Liquidación
           </div>
 
           <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <span className="text-muted-foreground/60 font-mono">(+)</span> Subtotal:
-              </span>
-              <span className="font-mono font-semibold text-foreground">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span>Subtotal Productos</span>
+              <span className="font-mono tabular-nums text-foreground">
                 {formatCurrency(subtotal)}
               </span>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <span className="text-muted-foreground/60 font-mono">(+)</span> Envío:
-              </span>
-              <span className="font-mono font-medium text-foreground">
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span>Envío</span>
+              <span className="font-mono tabular-nums text-foreground">
                 {montoEnvio > 0 ? formatCurrency(montoEnvio) : 'S/ 0.00'}
               </span>
             </div>
 
-            {/* Total Pedido con tipografía reducida */}
-            <div className="flex items-center justify-between py-1 border-t border-border/60 text-xs">
-              <span className="font-semibold text-muted-foreground flex items-center gap-1 uppercase tracking-wide text-[11px]">
-                <span className="text-muted-foreground/60 font-mono">(=)</span> Total Pedido:
-              </span>
-              <span className="font-mono font-bold text-foreground text-xs">
+            <div className="flex items-center justify-between py-1.5 border-t border-border/40 font-medium text-foreground">
+              <span>Total Pedido</span>
+              <span className="font-mono text-sm tabular-nums">
                 {formatCurrency(total)}
               </span>
             </div>
 
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground flex items-center gap-1">
-                <span className="text-muted-foreground/60 font-mono">(−)</span> Anticipo:
-              </span>
-              <span className="font-mono font-medium text-primary">
-                − {formatCurrency(montoAnticipo)}
+            <div className="flex items-center justify-between text-muted-foreground">
+              <span>Anticipo</span>
+              <span className="font-mono tabular-nums text-foreground">
+                {montoAnticipo > 0 ? `− ${formatCurrency(montoAnticipo)}` : 'S/ 0.00'}
               </span>
             </div>
 
-            {/* Saldo por Cobrar con tipografía reducida */}
-            <div className="flex items-center justify-between pt-1.5 border-t border-border/60">
-              <div>
-                <span className="font-semibold text-foreground flex items-center gap-1 text-xs">
-                  <span className="text-muted-foreground/60 font-mono">(=)</span> Saldo por Cobrar:
-                </span>
-                <span className="text-[10px] text-muted-foreground block pl-4">
-                  {saldoPendiente === 0 ? 'Liquidado' : 'Pendiente al entregar'}
-                </span>
-              </div>
-              <span className="font-mono font-bold text-xs text-stone-900 dark:text-stone-100 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded border border-stone-200 dark:border-stone-700">
+            <div className="flex items-center justify-between pt-2 border-t border-border/40">
+              <span className="font-medium text-xs text-foreground">
+                Saldo Pendiente
+              </span>
+              <span className="font-mono font-medium text-xs text-foreground tabular-nums">
                 {formatCurrency(saldoPendiente)}
               </span>
             </div>
