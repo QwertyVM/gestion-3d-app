@@ -9,18 +9,26 @@ import {
   Clock,
   RefreshCw,
   ExternalLink,
-  CheckCircle2
+  CheckCircle2,
+  Cpu,
+  Calculator,
+  Sparkles,
+  ListOrdered
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import {
   TallerDataResponse,
+  PiezaTaller,
   updateEstadoPieza,
   updateEnlaceModelo
 } from '@/actions/taller'
 import { ProductionKpiCard } from './ProductionKpiCard'
 import { ProductionQueueView } from './ProductionQueueView'
 import { ProductionInsightsSection } from './ProductionInsightsSection'
+import { ProductionByColorView } from './ProductionByColorView'
+import { PrinterFleetWidget } from './PrinterFleetWidget'
+import { SlicingCostBreakdownModal } from './SlicingCostBreakdownModal'
 import { KpiExplainerModal } from '@/components/ui/KpiExplainerModal'
 
 export function TallerClient({ data }: { data: TallerDataResponse }) {
@@ -28,6 +36,12 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
   const [isPending, startTransition] = useTransition()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedKpiExplainer, setSelectedKpiExplainer] = useState<string | null>(null)
+
+  // Selector de Vista Activa en Taller
+  const [activeTab, setActiveTab] = useState<'COLA' | 'COLORES' | 'FLOTA'>('COLA')
+  const [coloresExpandidos, setColoresExpandidos] = useState<Record<string, boolean>>({})
+  const [isCostModalOpen, setIsCostModalOpen] = useState(false)
+  const [selectedPieceForCost, setSelectedPieceForCost] = useState<PiezaTaller | null>(null)
 
   // Estado optimista local y loader individual para feedback instantáneo (<50ms)
   const [piezasOpt, setPiezasOpt] = useState<Record<string, 'PENDIENTE' | 'EN_PRODUCCION' | 'EN_TALLER' | 'EMPAQUETANDO' | 'LISTO_ENTREGA' | 'ENTREGADO'>>({})
@@ -185,28 +199,52 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
     setTimeout(() => setIsRefreshing(false), 500)
   }
 
+  const handleToggleColorExpandido = (key: string) => {
+    setColoresExpandidos(prev => ({ ...prev, [key]: !prev[key] }))
+  }
+
   return (
-    <div className="space-y-4 animate-in fade-in duration-300">
+    <div className="space-y-4 animate-in fade-in duration-300 max-w-7xl mx-auto pb-12">
       {/* ========================================================================= */}
       {/* 1. ENCABEZADO Y ACCIONES PRINCIPALES                                      */}
       {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-b border-border/60 pb-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            Taller de Producción 3D
-          </h1>
+          <div className="flex items-center gap-2 mb-0.5">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
+              Taller de Producción 3D
+            </h1>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground border border-border/50">
+              NOVA 3D Studio
+            </span>
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Cola de fabricación e impresión 3D, control de estados y priorización por entrega.
+            Cola de fabricación e impresión 3D, optimización por color, control de flota y cálculo de merma.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* Botón Calculadora de Costos 3D */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setSelectedPieceForCost(todasPiezas.find(p => p.estado === 'PENDIENTE') || todasPiezas[0] || null)
+              setIsCostModalOpen(true)
+            }}
+            className="rounded-xl border-border bg-card text-foreground hover:bg-muted text-xs h-8 px-3 cursor-pointer shadow-2xs gap-1.5 transition-all"
+            title="Abrir calculadora de costos reales de impresión 3D (luz, filamento, merma)"
+          >
+            <Calculator className="w-3.5 h-3.5 text-primary" />
+            <span>Calculadora Coste 3D</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={handleManualRefresh}
             disabled={isRefreshing || isPending}
-            className="rounded-xl border-border bg-card text-foreground hover:bg-muted text-xs h-9 px-3 cursor-pointer shadow-xs gap-1.5 transition-all"
+            className="rounded-xl border-border bg-card text-foreground hover:bg-muted text-xs h-8 px-2.5 cursor-pointer shadow-2xs gap-1.5 transition-all"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing || isPending ? 'animate-spin text-primary' : ''}`} />
             <span>Actualizar</span>
@@ -216,7 +254,7 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
             <Button
               variant="ghost"
               size="sm"
-              className="rounded-xl text-muted-foreground hover:text-foreground text-xs h-9 px-3 cursor-pointer gap-1.5 transition-all"
+              className="rounded-xl text-muted-foreground hover:text-foreground text-xs h-8 px-2.5 cursor-pointer gap-1.5 transition-all"
             >
               <span>Ver Pedidos</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -226,73 +264,86 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. CICLO OPERATIVO DE TALLER: 4 KPIS EN CUADRÍCULA BALANCEADA              */}
+      {/* 2. CICLO OPERATIVO DE TALLER: PANEL UNIFICADO CON HAIRLINE DIVIDERS       */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-6">
+      <div className="bg-card border border-border/40 rounded-2xl overflow-hidden divide-y sm:divide-y-0 sm:divide-x divide-border/30 grid grid-cols-2 lg:grid-cols-4 shadow-2xs mb-3">
         {/* KPI 1 - POR FABRICAR */}
-        <ProductionKpiCard
-          label="POR FABRICAR"
-          onInfoClick={() => setSelectedKpiExplainer('taller_por_fabricar')}
-          value={
-            <span className="flex items-baseline gap-1.5">
-              <span>{metricasActivas.totalPiezasPendientes}</span>
-              <span className="text-xs text-muted-foreground font-normal font-sans">
+        <div 
+          onClick={() => setSelectedKpiExplainer('taller_por_fabricar')}
+          className="p-4 sm:p-5 flex flex-col justify-between gap-3 group hover:bg-muted/10 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-muted-foreground gap-1.5">
+            <span className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground/80 font-medium truncate">
+              Por Fabricar
+            </span>
+            <Clock className="w-3.5 h-3.5 text-muted-foreground/60" />
+          </div>
+
+          <div className="pt-0.5">
+            <div className="text-2xl sm:text-3xl font-mono font-semibold tracking-tight text-foreground tabular-nums">
+              {metricasActivas.totalPiezasPendientes}
+              <span className="text-xs text-muted-foreground font-normal font-sans ml-1.5">
                 {metricasActivas.totalPiezasPendientes === 1 ? 'pza' : 'uds'}
               </span>
-            </span>
-          }
-          sublabel={
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span>En espera de impresión</span>
             </div>
-          }
-          icon={<Clock className="w-4 h-4 text-primary/70" />}
-        />
+            <p className="text-[11px] text-muted-foreground/75 mt-0.5 truncate">
+              En cola de espera de impresión
+            </p>
+          </div>
+        </div>
 
         {/* KPI 2 - MODELOS DISTINTOS */}
-        <ProductionKpiCard
-          label="MODELOS DISTINTOS"
-          onInfoClick={() => setSelectedKpiExplainer('taller_modelos_distintos')}
-          value={
-            <span className="flex items-baseline gap-1.5">
-              <span>{metricasActivas.totalModelosDistintos}</span>
-              <span className="text-xs text-muted-foreground font-normal font-sans">
+        <div 
+          onClick={() => setSelectedKpiExplainer('taller_modelos_distintos')}
+          className="p-4 sm:p-5 flex flex-col justify-between gap-3 group hover:bg-muted/10 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-muted-foreground gap-1.5">
+            <span className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground/80 font-medium truncate">
+              Modelos Distintos
+            </span>
+            <Layers className="w-3.5 h-3.5 text-muted-foreground/60" />
+          </div>
+
+          <div className="pt-0.5">
+            <div className="text-2xl sm:text-3xl font-mono font-semibold tracking-tight text-foreground tabular-nums">
+              {metricasActivas.totalModelosDistintos}
+              <span className="text-xs text-muted-foreground font-normal font-sans ml-1.5">
                 {metricasActivas.totalModelosDistintos === 1 ? 'diseño' : 'diseños'}
               </span>
-            </span>
-          }
-          sublabel={
-            <div className="flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span>Agrupados para lote</span>
             </div>
-          }
-          icon={<Layers className="w-4 h-4 text-primary/70" />}
-        />
+            <p className="text-[11px] text-muted-foreground/75 mt-0.5 truncate">
+              Agrupados para fabricación en lote
+            </p>
+          </div>
+        </div>
 
         {/* KPI 3 - COLORES ASIGNADOS */}
-        <ProductionKpiCard
-          label="COLORES ASIGNADOS"
-          onInfoClick={() => setSelectedKpiExplainer('taller_colores_asignados')}
-          value={
-            <span className="flex items-baseline gap-1.5">
-              <span>{metricasActivas.totalColoresAsignados}</span>
-              <span className="text-xs text-muted-foreground font-normal font-sans">
-                {metricasActivas.totalColoresAsignados === 1 ? 'color' : 'colores'}
-              </span>
+        <div 
+          onClick={() => setSelectedKpiExplainer('taller_colores_asignados')}
+          className="p-4 sm:p-5 flex flex-col justify-between gap-3 group hover:bg-muted/10 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-muted-foreground gap-1.5">
+            <span className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground/80 font-medium truncate">
+              Colores Requeridos
             </span>
-          }
-          sublabel={
-            <div className="flex items-center gap-1.5 min-w-0">
-              <Palette className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span className="truncate">Carretes requeridos</span>
+            <Palette className="w-3.5 h-3.5 text-muted-foreground/60" />
+          </div>
+
+          <div className="pt-0.5">
+            <div className="text-2xl sm:text-3xl font-mono font-semibold tracking-tight text-foreground tabular-nums">
+              {metricasActivas.totalColoresAsignados}
+              <span className="text-xs text-muted-foreground font-normal font-sans ml-1.5">
+                {metricasActivas.totalColoresAsignados === 1 ? 'bobina' : 'bobinas'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="text-[11px] text-muted-foreground/75 truncate">Filamentos:</span>
               {metricasActivas.coloresPreview.length > 0 && (
-                <div className="flex items-center -space-x-1 ml-1 shrink-0">
-                  {metricasActivas.coloresPreview.slice(0, 3).map((col, idx) => (
+                <div className="flex items-center -space-x-1 shrink-0 ml-1">
+                  {metricasActivas.coloresPreview.slice(0, 4).map((col, idx) => (
                     <span
                       key={idx}
-                      className="w-2.5 h-2.5 rounded-full border border-black/15 shadow-2xs inline-block shrink-0"
+                      className="w-2.5 h-2.5 rounded-full border border-border/50 inline-block shrink-0"
                       style={{ backgroundColor: col.codigoHex }}
                       title={col.nombreColor}
                     />
@@ -300,31 +351,33 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
                 </div>
               )}
             </div>
-          }
-          icon={<Palette className="w-4 h-4 text-primary/70" />}
-        />
+          </div>
+        </div>
 
         {/* KPI 4 - LISTAS PARA DESPACHO */}
-        <ProductionKpiCard
-          label="LISTAS PARA DESPACHO"
-          onInfoClick={() => setSelectedKpiExplainer('taller_listas_despacho')}
-          className="p-4.5 pr-5"
-          value={
-            <span className="flex items-baseline gap-1.5">
-              <span>{metricasActivas.totalPiezasListas}</span>
-              <span className="text-xs text-muted-foreground font-normal font-sans">
-                {metricasActivas.totalPiezasListas === 1 ? 'pieza lista' : 'piezas listas'}
-              </span>
+        <div 
+          onClick={() => setSelectedKpiExplainer('taller_listas_despacho')}
+          className="p-4 sm:p-5 flex flex-col justify-between gap-3 group hover:bg-muted/10 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-muted-foreground gap-1.5">
+            <span className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground/80 font-medium truncate">
+              Listas p/ Entrega
             </span>
-          }
-          sublabel={
-            <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-400 min-w-0">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span className="whitespace-nowrap">Listas para empaque o recojo</span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          </div>
+
+          <div className="pt-0.5">
+            <div className="text-2xl sm:text-3xl font-mono font-semibold tracking-tight text-foreground tabular-nums">
+              {metricasActivas.totalPiezasListas}
+              <span className="text-xs text-muted-foreground font-normal font-sans ml-1.5">
+                {metricasActivas.totalPiezasListas === 1 ? 'pieza' : 'piezas'}
+              </span>
             </div>
-          }
-          icon={<CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-        />
+            <p className="text-[11px] text-muted-foreground/75 mt-0.5 truncate">
+              Listas para empaque o recojo
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -333,14 +386,92 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
       <ProductionInsightsSection piezas={piezasParaEstadisticas} />
 
       {/* ========================================================================= */}
-      {/* 4. COLA DE PRODUCCIÓN PRINCIPAL                                           */}
+      {/* 4. SELECTOR DE VISTAS OPERATIVAS (SEGMENTED CONTROL MODERNO)               */}
       {/* ========================================================================= */}
-      <ProductionQueueView
-        piezas={todasPiezas}
-        loadingPieceId={loadingPieceId}
-        onCambiarEstado={handleCambiarEstado}
-        onActualizarEnlace={handleActualizarEnlace}
-        metricasActivas={metricasActivas}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-border/50">
+        <div className="inline-flex items-center p-0.5 rounded-xl bg-muted/40 border border-border/60 self-start">
+          <button
+            type="button"
+            onClick={() => setActiveTab('COLA')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'COLA'
+                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ListOrdered className="w-3.5 h-3.5 text-primary" />
+            <span>Cola de Producción ({metricasActivas.totalPiezasActivas})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('COLORES')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'COLORES'
+                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Palette className="w-3.5 h-3.5 text-amber-500" />
+            <span>Tanda por Color ({data.gruposPorColor?.length || 0})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('FLOTA')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'FLOTA'
+                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5 text-sky-500" />
+            <span>Flota de Impresoras 3D</span>
+          </button>
+        </div>
+
+        <span className="text-[11px] text-muted-foreground hidden sm:inline">
+          {activeTab === 'COLA' && 'Orden cronológico según fecha pactada de entrega al cliente'}
+          {activeTab === 'COLORES' && 'Agrupación para minimizar cambios de filamento y purgas en taller'}
+          {activeTab === 'FLOTA' && 'Estado de las máquinas, asignación directa y consumo eléctrico en soles'}
+        </span>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 5. VISTAS CONDICIONALES SEGÚN TAB SELECCIONADA                            */}
+      {/* ========================================================================= */}
+      {activeTab === 'COLA' && (
+        <ProductionQueueView
+          piezas={todasPiezas}
+          loadingPieceId={loadingPieceId}
+          onCambiarEstado={handleCambiarEstado}
+          onActualizarEnlace={handleActualizarEnlace}
+          metricasActivas={metricasActivas}
+        />
+      )}
+
+      {activeTab === 'COLORES' && (
+        <ProductionByColorView
+          grupos={data.gruposPorColor || []}
+          coloresExpandidos={coloresExpandidos}
+          onToggleExpandido={handleToggleColorExpandido}
+        />
+      )}
+
+      {activeTab === 'FLOTA' && (
+        <PrinterFleetWidget
+          piezasPendientes={todasPiezas}
+          onAssignToPrinter={(printerId, pieza) => {
+            handleCambiarEstado(pieza.tipoRegistro, pieza.id, 'EN_PRODUCCION')
+          }}
+        />
+      )}
+
+      {/* Modal de Cálculo Real de Costes 3D */}
+      <SlicingCostBreakdownModal
+        open={isCostModalOpen}
+        onOpenChange={setIsCostModalOpen}
+        pieza={selectedPieceForCost}
       />
 
       {/* Modal Explicador de Fórmulas y Transacciones de KPI */}
@@ -355,3 +486,4 @@ export function TallerClient({ data }: { data: TallerDataResponse }) {
 
 // Aliases para máxima compatibilidad con las especificaciones de arquitectura
 export { TallerClient as ProductionDashboardView, TallerClient as TallerProduccionPage }
+

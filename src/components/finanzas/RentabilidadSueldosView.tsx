@@ -11,22 +11,22 @@ import {
   DollarSign,
   AlertCircle,
   CheckCircle2,
-  HelpCircle,
   Sliders,
   Wallet,
   ArrowRight,
   Info,
-  Building2,
   Layers,
   Sparkles,
-  ChevronRight,
-  Users
+  Users,
+  Copy,
+  Check,
+  Target,
+  PieChart,
+  CheckSquare,
+  Lock,
+  ArrowUpRight
 } from 'lucide-react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
 import { formatCurrency, cn } from '@/lib/utils'
 import type { RentabilidadSueldosResumen, MesRentabilidadData } from '@/actions/rentabilidad'
 
@@ -48,14 +48,21 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
   // Configuración de socios (2 personas)
   const numSocios = activeMes.numSocios || 2
 
-  // Simulador de asignación de sueldo
-  const [modoSimulacion, setModoSimulacion] = useState<'POR_SOCIO' | 'TOTAL'>('POR_SOCIO')
+  // Modo de simulación: Equitativo 50/50 o Individual por socio
+  const [modoReparto, setModoReparto] = useState<'EQUILIBRADO' | 'INDIVIDUAL'>('EQUILIBRADO')
   const [sueldoSimulado, setSueldoSimulado] = useState<string>('400')
-  const inputNum = Math.max(0, parseFloat(sueldoSimulado) || 0)
+  const [sueldoVictor, setSueldoVictor] = useState<string>('400')
+  const [sueldoSocio2, setSueldoSocio2] = useState<string>('400')
 
-  // Montos según el modo de simulación
-  const sueldoPorSocio = modoSimulacion === 'POR_SOCIO' ? inputNum : (numSocios > 0 ? inputNum / numSocios : inputNum)
-  const sueldoTotalEmpresa = modoSimulacion === 'POR_SOCIO' ? inputNum * numSocios : inputNum
+  // Copiado al portapapeles
+  const [copiado, setCopiado] = useState(false)
+
+  // Montos computados
+  const inputNum = Math.max(0, parseFloat(sueldoSimulado) || 0)
+  const montoVictor = modoReparto === 'EQUILIBRADO' ? inputNum : Math.max(0, parseFloat(sueldoVictor) || 0)
+  const montoSocio2 = modoReparto === 'EQUILIBRADO' ? inputNum : Math.max(0, parseFloat(sueldoSocio2) || 0)
+  const sueldoTotalEmpresa = modoReparto === 'EQUILIBRADO' ? inputNum * numSocios : (montoVictor + montoSocio2)
+  const sueldoPorSocioPromedio = numSocios > 0 ? sueldoTotalEmpresa / numSocios : sueldoTotalEmpresa
 
   // Cálculos reactivos de la simulación
   const saldoPostSueldo = activeMes.saldoAcumulado - sueldoTotalEmpresa
@@ -63,6 +70,23 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
   const esSueldoSeguro = sueldoTotalEmpresa > 0 && sueldoTotalEmpresa <= activeMes.capacidadSueldoSeguro
   const esSueldoAlerta = sueldoTotalEmpresa > activeMes.capacidadSueldoSeguro && sueldoTotalEmpresa <= activeMes.saldoAcumulado
   const esSueldoPeligro = sueldoTotalEmpresa > activeMes.saldoAcumulado
+
+  // Pista de Aterrizaje (Runway) post-retiro en días
+  const fijosMensuales = activeMes.totalBlindadosMes || 1377.68
+  const runwayDiasPostRetiro = fijosMensuales > 0 
+    ? Math.max(0, Math.round((saldoPostSueldo / fijosMensuales) * 30))
+    : 999
+
+  // Cálculo de Punto de Equilibrio Digno (Con Sueldos de Socios)
+  const margenPromedioRatio = activeMes.margenOperativoPct > 15 ? (activeMes.margenOperativoPct / 100) : 0.55
+  const costoTotalFijoMasSueldos = fijosMensuales + sueldoTotalEmpresa
+  const metaFacturacionConSueldos = margenPromedioRatio > 0 ? (costoTotalFijoMasSueldos / margenPromedioRatio) : 0
+  const pctMetaSueldosAlcanzada = metaFacturacionConSueldos > 0 
+    ? Math.min(100, Math.round((activeMes.ventasCobradas / metaFacturacionConSueldos) * 100))
+    : 0
+  const ventasFaltantesMeta = Math.max(0, metaFacturacionConSueldos - activeMes.ventasCobradas)
+  const ticketPromedio = 50 // S/ 50 por pedido estándar
+  const pedidosFaltantesMeta = Math.ceil(ventasFaltantesMeta / ticketPromedio)
 
   // Porcentajes para la barra de cascada
   const pctCompras = activeMes.ventasCobradas > 0
@@ -78,203 +102,201 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
     ? Math.max(0, 100 - pctCompras - pctOperativos - pctBlindados)
     : 0
 
+  // Copiar resumen formateado para enviar por WhatsApp al socio
+  const handleCopiarResumenSocios = () => {
+    const texto = `📊 *Resumen Financiero & Sueldos - ${activeMes.nombreMes}* 🚀\n` +
+      `• Negocio: Taller 3D (${initialData.negocio})\n` +
+      `• Ventas Cobradas: ${formatCurrency(activeMes.ventasCobradas)}\n` +
+      `• Compras Insumos: -${formatCurrency(activeMes.comprasDirectas)}\n` +
+      `• Gastos Blindados (BCP/Servicios): -${formatCurrency(activeMes.totalBlindadosMes)}\n` +
+      `• Utilidad Neta del Mes: +${formatCurrency(activeMes.utilidadMes)} (${activeMes.margenOperativoPct}% margen)\n` +
+      `• Caja Acumulada Total: ${formatCurrency(activeMes.saldoAcumulado)}\n` +
+      `• Reserva Obligaciones: ${formatCurrency(activeMes.reservaObligaciones)}\n\n` +
+      `💰 *Propuesta de Retiro / Sueldo:*\n` +
+      `• Víctor: ${formatCurrency(montoVictor)}\n` +
+      `• Socio 2: ${formatCurrency(montoSocio2)}\n` +
+      `• Total Retiro: ${formatCurrency(sueldoTotalEmpresa)}\n` +
+      `• Caja Restante Post-Sueldo: ${formatCurrency(saldoPostSueldo)}\n` +
+      `• Pista de Seguridad: ${runwayDiasPostRetiro} días de fijos cubiertos\n\n` +
+      `Diagnóstico: ${esSueldoSeguro ? '✅ 100% Sostenible y Seguro' : esSueldoAlerta ? '⚠️ Consume parte de la Reserva' : '❌ Fondos Insuficientes'}`
+
+    navigator.clipboard.writeText(texto)
+    setCopiado(true)
+    toast.success('¡Resumen financiero copiado! Listo para enviar a tu socio por WhatsApp.')
+    setTimeout(() => setCopiado(false), 3000)
+  }
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-4 pb-12">
       {/* ========================================================================= */}
-      {/* 1. CABECERA & CONTROLES DE NAVEGACIÓN                                     */}
+      {/* 1. CABECERA EJECUTIVA MINIMALISTA & SELECTOR DE MES                       */}
       {/* ========================================================================= */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-border/60">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-b border-border/40 pb-3">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="outline" className="text-[11px] font-medium border-border/50 text-muted-foreground bg-muted/60">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground/70 font-medium">
+              Finanzas & Socios
+            </span>
+            <span className="text-muted-foreground/40 text-xs">/</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-muted/40 text-muted-foreground border border-border/30">
               {initialData.negocio === '3D' ? 'Taller 3D' : 'Board Games'}
-            </Badge>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              Modelo Financiero P&L + Carry-over
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+          <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
             Rentabilidad Mensual & Asignación de Sueldos
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5 max-w-3xl">
-            Evalúa la utilidad real del mes frente al colchón acumulado en caja, asegurando el pago de obligaciones antes de asignar retiros de socios o sueldos.
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Auditoría de caja, margen operativo mensual y simulador de retiros seguros para fundadores.
           </p>
         </div>
 
-        {/* Selector de Mes Activo */}
-        <div className="flex items-center gap-2 self-start md:self-auto bg-card p-1.5 rounded-lg border border-border/60 shadow-none">
-          <Calendar className="w-4 h-4 text-muted-foreground ml-2 shrink-0" />
-          <select
-            value={selectedMesKey}
-            onChange={(e) => setSelectedMesKey(e.target.value)}
-            className="text-xs font-semibold text-foreground bg-transparent outline-none cursor-pointer pr-2"
+        {/* Acciones Rápidas: Copiar Acta & Selector de Mes */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <button
+            type="button"
+            onClick={handleCopiarResumenSocios}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border/40 bg-card hover:bg-muted/50 text-foreground text-xs font-medium cursor-pointer transition-colors shadow-2xs"
+            title="Copiar resumen ejecutivo para enviar a los socios por WhatsApp"
           >
-            {initialData.meses.map((m) => (
-              <option key={m.mesKey} value={m.mesKey}>
-                {m.nombreMes} {m.mesKey === initialData.mesSeleccionado.mesKey ? '(Actual)' : ''}
-              </option>
-            ))}
-          </select>
+            {copiado ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Copiado</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>Copiar Acta para Socios</span>
+              </>
+            )}
+          </button>
+
+          <div className="flex items-center gap-1.5 bg-card px-2.5 h-8 rounded-lg border border-border/40 shadow-2xs text-xs font-medium">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <select
+              value={selectedMesKey}
+              onChange={(e) => setSelectedMesKey(e.target.value)}
+              className="bg-transparent outline-none cursor-pointer pr-1 text-foreground font-semibold text-xs"
+            >
+              {initialData.meses.map((m) => (
+                <option key={m.mesKey} value={m.mesKey} className="bg-popover text-foreground">
+                  {m.nombreMes} {m.mesKey === initialData.mesSeleccionado.mesKey ? '(Actual)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. EL TRÍPTICO DE DECISIÓN FINANCIERA (KPIS DE RENTABILIDAD & CAJA)       */}
+      {/* 2. EL TRÍPTICO EJECUTIVO: PANEL UNIFICADO CON HAIRLINE DIVIDERS           */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* TARJETA 1: UTILIDAD DEL MES (P&L PURO) */}
-        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2 border-b border-border/40">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              1. Utilidad del Mes ({activeMes.nombreMes.split(' ')[0]})
+      <div className="bg-card border border-border/40 rounded-2xl overflow-hidden divide-y md:divide-y-0 md:divide-x divide-border/30 grid grid-cols-1 md:grid-cols-3 shadow-2xs">
+        {/* COLUMNA 1: UTILIDAD OPERATIVA DEL MES (P&L PURO) */}
+        <div className="p-4 sm:p-5 flex flex-col justify-between gap-3 group hover:bg-muted/10 transition-colors">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+              1. Utilidad del Mes
             </span>
-            <span
-              className={cn(
-                'text-[10px] font-medium px-2 py-0.5 rounded-md border',
-                activeMes.utilidadMes >= 0
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-              )}
-            >
-              {activeMes.margenOperativoPct}% Margen
+            <span className={cn(
+              'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded border',
+              activeMes.utilidadMes >= 0
+                ? 'bg-muted/40 text-emerald-600 dark:text-emerald-400 border-border/30'
+                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+            )}>
+              {activeMes.margenOperativoPct}% margen
             </span>
           </div>
 
-          <div className="my-3">
-            <div
-              className={cn(
-                'text-2xl font-semibold font-mono tracking-tight tabular-nums',
-                activeMes.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-              )}
-            >
+          <div className="pt-0.5">
+            <div className={cn(
+              'text-2xl sm:text-3xl font-mono font-semibold tracking-tight tabular-nums',
+              activeMes.utilidadMes >= 0 ? 'text-foreground' : 'text-rose-600 dark:text-rose-400'
+            )}>
               {activeMes.utilidadMes >= 0 ? '+' : ''}
               {formatCurrency(activeMes.utilidadMes)}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5 font-normal">
-              Rendimiento operativo generado exclusivamente en estos 30 días.
+            <p className="text-[11px] text-muted-foreground/75 mt-0.5 truncate">
+              Rendimiento neto de {activeMes.nombreMes.split(' ')[0]}
             </p>
           </div>
 
-          {/* Micro cascada del mes */}
-          <div className="pt-2 border-t border-border/40 space-y-1 text-xs">
+          {/* Micro cascada con hairline dividers */}
+          <div className="pt-2 border-t border-border/20 space-y-1 text-xs">
             <div className="flex justify-between text-muted-foreground">
               <span>Ventas Cobradas:</span>
-              <span className="font-mono font-semibold text-foreground tabular-nums">
+              <span className="font-mono font-medium text-foreground tabular-nums">
                 {formatCurrency(activeMes.ventasCobradas)}
               </span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>(-) Compras Material:</span>
-              <span className="font-mono font-medium text-amber-600 dark:text-amber-400 tabular-nums">
+              <span>(-) Compras Material / Insumos:</span>
+              <span className="font-mono tabular-nums text-muted-foreground">
                 -{formatCurrency(activeMes.comprasDirectas)}
               </span>
             </div>
-            {activeMes.gastosPersonal > 0 && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>(-) Personal & Colaboradores:</span>
-                <span className="font-mono font-medium text-blue-600 dark:text-blue-400 tabular-nums">
-                  -{formatCurrency(activeMes.gastosPersonal)}
-                </span>
-              </div>
-            )}
             <div className="flex justify-between text-muted-foreground">
-              <span>(-) Gastos Operativos:</span>
-              <span className="font-mono font-medium text-muted-foreground tabular-nums">
+              <span>(-) Gastos Operativos & Envíos:</span>
+              <span className="font-mono tabular-nums text-muted-foreground">
                 -{formatCurrency(activeMes.gastosOperativos)}
               </span>
             </div>
-            {activeMes.gastosBlindadosPagados > 0 && (
-              <div className="flex justify-between text-muted-foreground">
-                <span>(-) Blindados Pagados:</span>
-                <span className="font-mono font-medium text-rose-600 dark:text-rose-400 tabular-nums">
-                  -{formatCurrency(activeMes.gastosBlindadosPagados)}
-                </span>
-              </div>
-            )}
-            {activeMes.compromisosPendientes > 0 && (
-              <>
-                <div className="flex justify-between text-muted-foreground bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                  <span className="text-amber-600 dark:text-amber-400 font-medium">(-) Blindados a Fin de Mes:</span>
-                  <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
-                    -{formatCurrency(activeMes.compromisosPendientes)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs pt-1 border-t border-border/40 font-semibold">
-                  <span className="text-foreground">Utilidad Proyectada Cierre:</span>
-                  <span
-                    className={cn(
-                      'font-mono tabular-nums',
-                      activeMes.utilidadProyectadaCierre >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                    )}
-                  >
-                    {activeMes.utilidadProyectadaCierre >= 0 ? '+' : ''}
-                    {formatCurrency(activeMes.utilidadProyectadaCierre)} ({activeMes.margenProyectadoPct}%)
-                  </span>
-                </div>
-              </>
-            )}
+            <div className="flex justify-between text-muted-foreground">
+              <span>(-) Gastos Blindados (BCP/Luz):</span>
+              <span className="font-mono tabular-nums text-muted-foreground">
+                -{formatCurrency(activeMes.totalBlindadosMes)}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* TARJETA 2: UTILIDAD / LIQUIDEZ ACUMULADA (CARRY-OVER) */}
-        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2 border-b border-border/40">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Wallet className="w-3.5 h-3.5 text-primary" />
-              2. Liquidez Acumulada (Caja)
+        {/* COLUMNA 2: LIQUIDEZ ACUMULADA EN CUENTA (CARRY-OVER) */}
+        <div className="p-4 sm:p-5 flex flex-col justify-between gap-3 group hover:bg-muted/10 transition-colors">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+              <Wallet className="w-3.5 h-3.5 text-muted-foreground" />
+              2. Caja Total Acumulada
             </span>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-muted/60 text-muted-foreground border border-border/50">
-              Colchón Histórico
+            <span className="text-[10px] font-mono text-muted-foreground/70 px-1.5 py-0.5 rounded bg-muted/40 border border-border/30">
+              Efectivo Real
             </span>
           </div>
 
-          <div className="my-3">
-            <div
-              className={cn(
-                'text-2xl font-semibold font-mono tracking-tight tabular-nums',
-                activeMes.saldoAcumulado >= 0 ? 'text-foreground' : 'text-rose-600 dark:text-rose-400'
-              )}
-            >
+          <div className="pt-0.5">
+            <div className="text-2xl sm:text-3xl font-mono font-semibold tracking-tight text-foreground tabular-nums">
               {formatCurrency(activeMes.saldoAcumulado)}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5 font-normal">
-              Efectivo real total en cuenta al cierre de {activeMes.nombreMes}.
+            <p className="text-[11px] text-muted-foreground/75 mt-0.5 truncate">
+              Saldo bancario consolidado al cierre del período
             </p>
           </div>
 
-          <div className="pt-2 border-t border-border/40 space-y-1 text-xs">
+          <div className="pt-2 border-t border-border/20 space-y-1 text-xs">
             <div className="flex justify-between text-muted-foreground">
-              <span>Saldo Inicial (Arrastre):</span>
-              <span className="font-mono font-semibold text-foreground tabular-nums">
+              <span>Saldo Inicial (Arrastre anterior):</span>
+              <span className="font-mono tabular-nums text-foreground">
                 {formatCurrency(activeMes.saldoInicial)}
               </span>
             </div>
             {activeMes.inyeccionCapital > 0 && (
-              <div className="flex justify-between text-muted-foreground bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
-                <span className="text-blue-600 dark:text-blue-400 font-medium">(+) Préstamo / Aportes:</span>
-                <span className="font-mono font-semibold text-blue-600 dark:text-blue-400 tabular-nums">
+              <div className="flex justify-between text-muted-foreground">
+                <span>(+) Inyección / Préstamo Capital:</span>
+                <span className="font-mono tabular-nums text-foreground">
                   +{formatCurrency(activeMes.inyeccionCapital)}
                 </span>
               </div>
             )}
             <div className="flex justify-between text-muted-foreground">
               <span>(+) Utilidad Operativa del Mes:</span>
-              <span
-                className={cn(
-                  'font-mono font-semibold tabular-nums',
-                  activeMes.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                )}
-              >
-                {activeMes.utilidadMes >= 0 ? '+' : ''}
-                {formatCurrency(activeMes.utilidadMes)}
+              <span className="font-mono tabular-nums text-foreground">
+                {activeMes.utilidadMes >= 0 ? '+' : ''}{formatCurrency(activeMes.utilidadMes)}
               </span>
             </div>
             {activeMes.activosFijosCapex > 0 && (
               <div className="flex justify-between text-muted-foreground">
-                <span>(-) Equipos / Capex:</span>
-                <span className="font-mono font-semibold text-foreground tabular-nums">
+                <span>(-) Inversión Capex / Máquinas:</span>
+                <span className="font-mono tabular-nums text-muted-foreground">
                   -{formatCurrency(activeMes.activosFijosCapex)}
                 </span>
               </div>
@@ -282,59 +304,48 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
           </div>
         </div>
 
-        {/* TARJETA 3: CAPACIDAD REAL DE SUELDO SEGURO */}
-        <div className="bg-card border border-border/60 rounded-xl p-4 shadow-none flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2 border-b border-border/40">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              3. Capacidad Máxima de Sueldo
+        {/* COLUMNA 3: CAPACIDAD REAL DE SUELDO SEGURO */}
+        <div className="p-4 sm:p-5 flex flex-col justify-between gap-3 group hover:bg-muted/10 transition-colors">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
+              3. Capacidad de Sueldo Seguro
             </span>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {numSocios} Socios (50/50)
+            <span className="text-[10px] font-mono text-muted-foreground/80 px-1.5 py-0.5 rounded bg-muted/40 border border-border/30">
+              {numSocios} socios
             </span>
           </div>
 
-          <div className="my-3">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-2xl font-semibold font-mono tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
+          <div className="pt-0.5">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl sm:text-3xl font-mono font-semibold tracking-tight text-foreground tabular-nums">
                 {formatCurrency(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)}
               </span>
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                c/u (por socio)
+              <span className="text-xs font-mono text-muted-foreground/70 uppercase">
+                c/u por socio
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5 font-normal">
-              Total disponible para ambos socios: <strong className="font-mono font-semibold text-foreground tabular-nums">{formatCurrency(activeMes.capacidadSueldoSeguro)}</strong> ({formatCurrency(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)} c/u).
+            <p className="text-[11px] text-muted-foreground/75 mt-0.5 truncate">
+              Total seguro para ambos: <strong className="font-mono text-foreground font-semibold">{formatCurrency(activeMes.capacidadSueldoSeguro)}</strong>
             </p>
           </div>
 
-          <div className="pt-2 border-t border-border/40 space-y-1 text-xs">
-            {activeMes.compromisosPendientes > 0 && (
-              <div className="flex justify-between text-amber-600 dark:text-amber-400 font-medium bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                <span>Cuotas / Servicios pendientes:</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  {formatCurrency(activeMes.compromisosPendientes)}
-                </span>
-              </div>
-            )}
+          <div className="pt-2 border-t border-border/20 space-y-1 text-xs">
             <div className="flex justify-between text-muted-foreground">
-              <span>Fondo de Reserva Total:</span>
-              <span className="font-mono font-medium text-amber-600 dark:text-amber-400 tabular-nums">
+              <span>Reserva Fija Blindada Protegida:</span>
+              <span className="font-mono tabular-nums text-foreground">
                 {formatCurrency(activeMes.reservaObligaciones)}
               </span>
             </div>
-            <div className="flex justify-between text-muted-foreground pt-1 border-t border-border/40 font-medium">
-              <span className="text-foreground">Diagnóstico Operativo:</span>
-              <span
-                className={cn(
-                  'font-medium text-[11px]',
-                  activeMes.estadoDiagnostico === 'EXCELENTE' && 'text-emerald-600 dark:text-emerald-400',
-                  activeMes.estadoDiagnostico === 'RENTABLE' && 'text-emerald-600 dark:text-emerald-400',
-                  activeMes.estadoDiagnostico === 'EQUILIBRIO' && 'text-amber-600 dark:text-amber-400',
-                  activeMes.estadoDiagnostico === 'DEFICIT' && 'text-rose-600 dark:text-rose-400'
-                )}
-              >
+            <div className="flex justify-between text-muted-foreground">
+              <span>Compromisos pendientes mes:</span>
+              <span className="font-mono tabular-nums text-muted-foreground">
+                {formatCurrency(activeMes.compromisosPendientes)}
+              </span>
+            </div>
+            <div className="flex justify-between text-muted-foreground pt-1 border-t border-border/20">
+              <span>Diagnóstico de Retiro:</span>
+              <span className="font-mono font-medium text-foreground text-[11px]">
                 {activeMes.estadoDiagnostico}
               </span>
             </div>
@@ -343,326 +354,502 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. CASCADA DE DISTRIBUCIÓN DEL INGRESO DEL MES                            */}
+      {/* 3. ESTRUCTURA DE DISTRIBUCIÓN DEL INGRESO (CINTA MINIMALISTA)              */}
       {/* ========================================================================= */}
-      <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
+      <div className="bg-card border border-border/40 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
+            <span className="text-xs font-semibold text-foreground tracking-tight">
               Estructura de Distribución de Ventas ({activeMes.nombreMes})
-            </h3>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Cómo se consumen las ventas cobradas antes de llegar a la utilidad neta.
+            </span>
+            <p className="text-[11px] text-muted-foreground">
+              Consumo de cada sol cobrado antes de generar beneficio libre.
             </p>
           </div>
-          <div className="text-xs font-mono font-semibold text-foreground tabular-nums">
-            Total Ventas: {formatCurrency(activeMes.ventasCobradas)}
+          <div className="text-xs font-mono text-muted-foreground">
+            Total facturado: <span className="font-semibold text-foreground">{formatCurrency(activeMes.ventasCobradas)}</span>
           </div>
         </div>
 
-        {/* Barra Proporcional */}
-        <div className="my-4">
-          <div className="h-6 w-full rounded-xl overflow-hidden bg-muted/40 flex border border-border/60 p-0.5">
+        {/* Barra Proporcional Esbelta */}
+        <div className="space-y-2">
+          <div className="h-3 w-full rounded-full overflow-hidden bg-muted/30 flex border border-border/30">
             {pctCompras > 0 && (
               <div
                 style={{ width: `${pctCompras}%` }}
-                className="bg-amber-500 rounded-l-lg flex items-center justify-center text-[10px] font-bold text-white truncate px-1 transition-all"
-                title={`Compras de Insumos: ${formatCurrency(activeMes.comprasDirectas)} (${pctCompras}%)`}
-              >
-                {pctCompras > 12 ? `${pctCompras}% Material` : ''}
-              </div>
+                className="bg-zinc-400 dark:bg-zinc-600 transition-all"
+                title={`Insumos & Filamento: ${formatCurrency(activeMes.comprasDirectas)} (${pctCompras}%)`}
+              />
             )}
             {pctOperativos > 0 && (
               <div
                 style={{ width: `${pctOperativos}%` }}
-                className="bg-orange-500 flex items-center justify-center text-[10px] font-bold text-white truncate px-1 transition-all"
-                title={`Gastos Operativos (Pauta/Envíos): ${formatCurrency(activeMes.gastosOperativos)} (${pctOperativos}%)`}
-              >
-                {pctOperativos > 12 ? `${pctOperativos}% Operativo` : ''}
-              </div>
+                className="bg-zinc-500 dark:bg-zinc-500 transition-all"
+                title={`Gastos Operativos: ${formatCurrency(activeMes.gastosOperativos)} (${pctOperativos}%)`}
+              />
             )}
             {pctBlindados > 0 && (
               <div
                 style={{ width: `${pctBlindados}%` }}
-                className="bg-rose-500 flex items-center justify-center text-[10px] font-bold text-white truncate px-1 transition-all"
-                title={`Gastos Blindados (BCP/Taller): ${formatCurrency(activeMes.totalBlindadosMes)} (${pctBlindados}%)`}
-              >
-                {pctBlindados > 12 ? `${pctBlindados}% Blindado` : ''}
-              </div>
+                className="bg-zinc-700 dark:bg-zinc-400 transition-all"
+                title={`Gastos Blindados (BCP/Luz): ${formatCurrency(activeMes.totalBlindadosMes)} (${pctBlindados}%)`}
+              />
             )}
             {pctUtilidad > 0 && (
               <div
                 style={{ width: `${pctUtilidad}%` }}
-                className="bg-emerald-600 rounded-r-lg flex items-center justify-center text-[10px] font-bold text-white truncate px-1 transition-all"
-                title={`Utilidad Limpia: ${formatCurrency(activeMes.utilidadMes)} (${pctUtilidad}%)`}
-              >
-                {pctUtilidad > 12 ? `${pctUtilidad}% Utilidad` : ''}
+                className="bg-emerald-600 dark:bg-emerald-500 transition-all"
+                title={`Utilidad Neta: ${formatCurrency(activeMes.utilidadMes)} (${pctUtilidad}%)`}
+              />
+            )}
+          </div>
+
+          {/* Leyenda Minimalista */}
+          <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground font-mono flex-wrap pt-0.5">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-zinc-400 dark:bg-zinc-600" />
+              <span>Insumos: {pctCompras}% ({formatCurrency(activeMes.comprasDirectas)})</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-zinc-500 dark:bg-zinc-500" />
+              <span>Operativo: {pctOperativos}% ({formatCurrency(activeMes.gastosOperativos)})</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-zinc-700 dark:bg-zinc-400" />
+              <span>Fijos Blindados: {pctBlindados}% ({formatCurrency(activeMes.totalBlindadosMes)})</span>
+            </span>
+            <span className="flex items-center gap-1.5 text-foreground font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-500" />
+              <span>Utilidad: {pctUtilidad}% (+{formatCurrency(activeMes.utilidadMes)})</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 4. SIMULADOR DINÁMICO DE RETIRO DE SOCIOS (VÍCTOR & SOCIO 2)              */}
+      {/* ========================================================================= */}
+      <div className="bg-card border border-border/40 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/30">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sliders className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground tracking-tight">
+                Simulador Dinámico de Asignación de Sueldos ({numSocios} Socios)
+              </h2>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Proyecta el impacto en la liquidez y días de supervivencia (runway) antes de realizar retiros.
+            </p>
+          </div>
+
+          {/* Toggle de Modo: 50/50 vs Individual */}
+          <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/40 text-xs shrink-0 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setModoReparto('EQUILIBRADO')}
+              className={cn(
+                'px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer',
+                modoReparto === 'EQUILIBRADO'
+                  ? 'bg-card text-foreground font-semibold border border-border/40 shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Reparto 50/50
+            </button>
+            <button
+              type="button"
+              onClick={() => setModoReparto('INDIVIDUAL')}
+              className={cn(
+                'px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer',
+                modoReparto === 'INDIVIDUAL'
+                  ? 'bg-card text-foreground font-semibold border border-border/40 shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Asignación Individual
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Lado Izquierdo: Inputs de Sueldo */}
+          <div className="lg:col-span-5 space-y-3">
+            {modoReparto === 'EQUILIBRADO' ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">Sueldo por Socio (c/u):</span>
+                  <span className="font-mono text-muted-foreground">Total: {formatCurrency(sueldoTotalEmpresa)}</span>
+                </div>
+
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono font-semibold text-muted-foreground">
+                    S/
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="50"
+                    value={sueldoSimulado}
+                    onChange={(e) => setSueldoSimulado(e.target.value)}
+                    className="w-full pl-8 pr-3 h-9 rounded-lg border border-border/40 bg-muted/20 text-foreground font-mono text-sm font-semibold outline-none focus:border-border transition-colors"
+                    placeholder="400.00"
+                  />
+                </div>
+
+                {/* Presets rápidos */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                  {[200, 300, 400, Math.floor(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)]
+                    .filter((v, idx, arr) => v > 0 && arr.indexOf(v) === idx)
+                    .map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setSueldoSimulado(String(val))}
+                        className="px-2 py-0.5 rounded text-[10px] font-mono font-medium border border-border/30 bg-muted/30 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                      >
+                        S/ {val} c/u
+                      </button>
+                    ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {/* Socio 1: Víctor */}
+                <div className="p-2.5 rounded-xl border border-border/30 bg-muted/15 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      Víctor (Operador Taller 3D)
+                    </span>
+                    <span className="font-mono font-semibold text-foreground tabular-nums">
+                      {formatCurrency(montoVictor)}
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="50"
+                    value={sueldoVictor}
+                    onChange={(e) => setSueldoVictor(e.target.value)}
+                    className="w-full px-2.5 h-8 rounded-lg border border-border/30 bg-background text-foreground font-mono text-xs font-semibold outline-none focus:border-border"
+                    placeholder="400.00"
+                  />
+                </div>
+
+                {/* Socio 2 */}
+                <div className="p-2.5 rounded-xl border border-border/30 bg-muted/15 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                      Socio 2 (Comercial / Capital)
+                    </span>
+                    <span className="font-mono font-semibold text-foreground tabular-nums">
+                      {formatCurrency(montoSocio2)}
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="50"
+                    value={sueldoSocio2}
+                    onChange={(e) => setSueldoSocio2(e.target.value)}
+                    className="w-full px-2.5 h-8 rounded-lg border border-border/30 bg-background text-foreground font-mono text-xs font-semibold outline-none focus:border-border"
+                    placeholder="400.00"
+                  />
+                </div>
+
+                <div className="flex justify-between items-center text-xs font-mono pt-1 text-muted-foreground">
+                  <span>Total Retiro Combinado:</span>
+                  <span className="font-semibold text-foreground">{formatCurrency(sueldoTotalEmpresa)}</span>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Leyenda de la Barra */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 mt-3 text-xs">
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/20 border border-border/50">
-              <div className="w-3 h-3 rounded-full bg-amber-500 shrink-0" />
-              <div className="min-w-0">
-                <span className="text-muted-foreground block text-[10px]">Compras Material:</span>
-                <span className="font-mono font-semibold text-foreground tabular-nums">
-                  {formatCurrency(activeMes.comprasDirectas)} ({pctCompras}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/20 border border-border/50">
-              <div className="w-3 h-3 rounded-full bg-orange-500 shrink-0" />
-              <div className="min-w-0">
-                <span className="text-muted-foreground block text-[10px]">Gastos Operativos:</span>
-                <span className="font-mono font-semibold text-foreground tabular-nums">
-                  {formatCurrency(activeMes.gastosOperativos)} ({pctOperativos}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/20 border border-border/50">
-              <div className="w-3 h-3 rounded-full bg-rose-500 shrink-0" />
-              <div className="min-w-0">
-                <span className="text-muted-foreground block text-[10px]">Gastos Blindados (BCP/Fijos):</span>
-                <span className="font-mono font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
-                  {formatCurrency(activeMes.totalBlindadosMes)} ({pctBlindados}%)
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/20 border border-border/50">
-              <div className="w-3 h-3 rounded-full bg-emerald-600 shrink-0" />
-              <div className="min-w-0">
-                <span className="text-muted-foreground block text-[10px]">Utilidad Pura del Mes:</span>
-                <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                  {formatCurrency(activeMes.utilidadMes)} ({pctUtilidad}%)
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 4. SIMULADOR INTERACTIVO DE ASIGNACIÓN DE SUELDO (2 SOCIOS)               */}
-      {/* ========================================================================= */}
-      <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <Sliders className="w-4 h-4 text-primary" />
-              Simulador de Asignación de Sueldo o Retiro ({numSocios} Socios)
-            </h3>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Evalúa el impacto en la caja acumulada al retirar sueldos para los {numSocios} socios protegiendo la reserva técnica.
-            </p>
-          </div>
-          <Badge variant="outline" className="text-[11px] font-semibold border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 self-start sm:self-auto flex items-center gap-1">
-            <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            Equipo de {numSocios} personas (50/50)
-          </Badge>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-2 items-center">
-          {/* Input de simulación */}
-          <div className="lg:col-span-5 space-y-3">
-            {/* Selector de modo: Por socio vs Total equipo */}
-            <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-xl border border-border/60 text-xs font-medium text-muted-foreground">
-              <button
-                type="button"
-                onClick={() => setModoSimulacion('POR_SOCIO')}
-                className={cn(
-                  'flex-1 py-1.5 px-2.5 rounded-lg transition-all text-center cursor-pointer',
-                  modoSimulacion === 'POR_SOCIO'
-                    ? 'bg-background text-foreground shadow-xs font-semibold'
-                    : 'hover:text-foreground'
-                )}
-              >
-                Por Socio (c/u × {numSocios})
-              </button>
-              <button
-                type="button"
-                onClick={() => setModoSimulacion('TOTAL')}
-                className={cn(
-                  'flex-1 py-1.5 px-2.5 rounded-lg transition-all text-center cursor-pointer',
-                  modoSimulacion === 'TOTAL'
-                    ? 'bg-background text-foreground shadow-xs font-semibold'
-                    : 'hover:text-foreground'
-                )}
-              >
-                Total Empresa (ambos)
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold text-foreground">
-                {modoSimulacion === 'POR_SOCIO'
-                  ? `¿Cuánto sueldo o retiro por socio deseas? (c/u)`
-                  : `¿Cuánto retiro total deseas para los ${numSocios} socios?`}
-              </Label>
-              <span className="text-[11px] font-mono font-medium text-muted-foreground tabular-nums">
-                {modoSimulacion === 'POR_SOCIO'
-                  ? `Total: ${formatCurrency(sueldoTotalEmpresa)}`
-                  : `c/u: ${formatCurrency(sueldoPorSocio)}`}
-              </span>
-            </div>
-
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
-                S/
-              </span>
-              <Input
-                type="number"
-                min="0"
-                step="50"
-                value={sueldoSimulado}
-                onChange={(e) => setSueldoSimulado(e.target.value)}
-                placeholder={modoSimulacion === 'POR_SOCIO' ? 'Ej. 400.00' : 'Ej. 800.00'}
-                className="pl-9 h-11 text-base font-mono font-semibold border-border/80 bg-background text-foreground rounded-xl focus-visible:ring-ring"
-              />
-            </div>
-
-            {/* Botones de montos rápidos adaptados */}
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {(modoSimulacion === 'POR_SOCIO'
-                ? [200, 300, 400, Math.floor(activeMes.capacidadSueldoPorSocio || activeMes.capacidadSueldoSeguro / numSocios)]
-                : [400, 600, 800, Math.floor(activeMes.capacidadSueldoSeguro)]
-              ).filter((v, idx, arr) => v > 0 && arr.indexOf(v) === idx).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => setSueldoSimulado(String(v))}
-                  className="px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 text-foreground transition-colors cursor-pointer tabular-nums"
-                >
-                  S/ {v} {modoSimulacion === 'POR_SOCIO' ? 'c/u' : 'total'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Resultado de la simulación */}
-          <div className="lg:col-span-7 bg-muted/20 border border-border/60 rounded-xl p-4">
-            <div className="flex items-center justify-between pb-2 border-b border-border/40">
-              <span className="text-xs font-semibold text-muted-foreground">
-                Diagnóstico del Retiro Simulado ({numSocios} personas)
-              </span>
-              {sueldoTotalEmpresa === 0 ? (
-                <Badge variant="outline" className="text-[10px] bg-background border-border/60 text-muted-foreground">
-                  Sin retiro ingresado
-                </Badge>
-              ) : esSueldoSeguro ? (
-                <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 text-[10px] font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  100% Sostenible y Seguro
-                </Badge>
-              ) : esSueldoAlerta ? (
-                <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 text-[10px] font-semibold flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Atención: Consume Reserva
-                </Badge>
-              ) : (
-                <Badge className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 text-[10px] font-semibold flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Peligro: Fondos Insuficientes
-                </Badge>
-              )}
-            </div>
-
-            {/* 4 Tarjetas de desglose exacto */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-3 text-xs">
-              <div className="bg-card p-2 rounded-lg border border-border/50">
-                <span className="text-muted-foreground block text-[10px] font-medium truncate">Retiro c/u:</span>
-                <span className="text-sm font-mono font-bold text-foreground block tabular-nums">
-                  {formatCurrency(sueldoPorSocio)}
-                </span>
-                <span className="text-[9px] text-muted-foreground">por socio</span>
-              </div>
-              <div className="bg-card p-2 rounded-lg border border-border/50">
-                <span className="text-muted-foreground block text-[10px] font-medium truncate">Total Empresa:</span>
-                <span className="text-sm font-mono font-bold text-foreground block tabular-nums">
+          {/* Lado Derecho: Telemetría de Impacto en Liquidez */}
+          <div className="lg:col-span-7 space-y-3">
+            {/* 4 Cajas de Telemetría */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="p-2.5 rounded-xl border border-border/30 bg-muted/10 space-y-0.5">
+                <span className="text-[10px] font-mono uppercase text-muted-foreground/70 block">Total Retiro</span>
+                <span className="font-mono text-sm font-semibold text-foreground block tabular-nums">
                   {formatCurrency(sueldoTotalEmpresa)}
                 </span>
-                <span className="text-[9px] text-muted-foreground">{numSocios} personas</span>
+                <span className="text-[10px] text-muted-foreground/60">Víctor + Socio 2</span>
               </div>
-              <div className="bg-card p-2 rounded-lg border border-border/50">
-                <span className="text-muted-foreground block text-[10px] font-medium truncate">Caja Restante:</span>
-                <span
-                  className={cn(
-                    'text-sm font-mono font-bold block tabular-nums',
-                    saldoPostSueldo >= 0 ? 'text-foreground' : 'text-rose-600 dark:text-rose-400'
-                  )}
-                >
+
+              <div className="p-2.5 rounded-xl border border-border/30 bg-muted/10 space-y-0.5">
+                <span className="text-[10px] font-mono uppercase text-muted-foreground/70 block">Caja Post-Retiro</span>
+                <span className={cn(
+                  'font-mono text-sm font-semibold block tabular-nums',
+                  saldoPostSueldo >= 0 ? 'text-foreground' : 'text-rose-600 dark:text-rose-400'
+                )}>
                   {formatCurrency(saldoPostSueldo)}
                 </span>
-                <span className="text-[9px] text-muted-foreground">en cuenta</span>
+                <span className="text-[10px] text-muted-foreground/60">en cuenta bancaria</span>
               </div>
-              <div className="bg-card p-2 rounded-lg border border-border/50">
-                <span className="text-muted-foreground block text-[10px] font-medium truncate">Reserva Fija:</span>
-                <span
-                  className={cn(
-                    'text-sm font-mono font-bold block tabular-nums',
-                    colchonRestante >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
-                  )}
-                >
+
+              <div className="p-2.5 rounded-xl border border-border/30 bg-muted/10 space-y-0.5">
+                <span className="text-[10px] font-mono uppercase text-muted-foreground/70 block">Reserva Fija</span>
+                <span className={cn(
+                  'font-mono text-sm font-semibold block tabular-nums',
+                  colchonRestante >= 0 ? 'text-foreground' : 'text-amber-600 dark:text-amber-400'
+                )}>
                   {formatCurrency(activeMes.reservaObligaciones)} {colchonRestante >= 0 ? '✓' : '⚠️'}
                 </span>
-                <span className="text-[9px] text-muted-foreground">blindada</span>
+                <span className="text-[10px] text-muted-foreground/60">BCP + Servicios</span>
+              </div>
+
+              <div className="p-2.5 rounded-xl border border-border/30 bg-muted/10 space-y-0.5">
+                <span className="text-[10px] font-mono uppercase text-muted-foreground/70 block">Pista de Caja</span>
+                <span className="font-mono text-sm font-semibold text-foreground block tabular-nums">
+                  {runwayDiasPostRetiro} días
+                </span>
+                <span className="text-[10px] text-muted-foreground/60">de supervivencia</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-muted-foreground leading-relaxed pt-2 border-t border-border/40">
-              {sueldoTotalEmpresa === 0 ? (
-                'Ingresa un monto para simular la salud de la caja tras el retiro de ambos socios.'
-              ) : esSueldoSeguro ? (
-                `Excelente decisión: Asignar ${formatCurrency(sueldoPorSocio)} a cada socio (${formatCurrency(sueldoTotalEmpresa)} en total para las ${numSocios} personas) es 100% seguro. Quedarán ${formatCurrency(saldoPostSueldo)} en caja, cubriendo completamente la reserva de obligaciones fijas de ${formatCurrency(activeMes.reservaObligaciones)}.`
-              ) : esSueldoAlerta ? (
-                `Advertencia: Hay suficiente caja (${formatCurrency(activeMes.saldoAcumulado)}), pero al retirar ${formatCurrency(sueldoTotalEmpresa)} entre ambos socios (${formatCurrency(sueldoPorSocio)} c/u), invaden ${formatCurrency(Math.abs(colchonRestante))} de la reserva mínima necesaria para el próximo mes.`
-              ) : (
-                `Inviable: El retiro propuesto (${formatCurrency(sueldoTotalEmpresa)} total, ${formatCurrency(sueldoPorSocio)} c/u) supera la caja total disponible (${formatCurrency(activeMes.saldoAcumulado)}). Te descapitalizarías inmediatamente.`
+            {/* Diagnóstico en Texto Concreto */}
+            <div className="p-3 rounded-xl border border-border/30 bg-muted/10 text-xs text-muted-foreground leading-relaxed flex items-start gap-2.5">
+              <span className={cn(
+                'w-2 h-2 rounded-full mt-1 shrink-0',
+                esSueldoSeguro ? 'bg-emerald-500' : esSueldoAlerta ? 'bg-amber-500' : 'bg-rose-500'
+              )} />
+              <div>
+                {sueldoTotalEmpresa === 0 ? (
+                  <span>Ingresa un monto para simular la sostenibilidad de la caja tras el retiro de ambos socios.</span>
+                ) : esSueldoSeguro ? (
+                  <span>
+                    <strong className="text-foreground">Retiro 100% Sostenible:</strong> Asignar {formatCurrency(sueldoTotalEmpresa)} deja {formatCurrency(saldoPostSueldo)} en caja, cubriendo enteramente la reserva blindada de {formatCurrency(activeMes.reservaObligaciones)} con {runwayDiasPostRetiro} días de pista de liquidez.
+                  </span>
+                ) : esSueldoAlerta ? (
+                  <span>
+                    <strong className="text-amber-600 dark:text-amber-400">Atención (Consume Reserva):</strong> Hay saldo suficiente en cuenta ({formatCurrency(activeMes.saldoAcumulado)}), pero el retiro invade {formatCurrency(Math.abs(colchonRestante))} de la reserva necesaria para pagar préstamos y luz del próximo mes.
+                  </span>
+                ) : (
+                  <span>
+                    <strong className="text-rose-600 dark:text-rose-400">Fondos Insuficientes:</strong> El retiro propuesto ({formatCurrency(sueldoTotalEmpresa)}) supera la caja total disponible ({formatCurrency(activeMes.saldoAcumulado)}).
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 5. PUNTO DE EQUILIBRIO DIGNO (BREAK-EVEN CON SUELDOS DE FUNDADORES)        */}
+      {/* ========================================================================= */}
+      <div className="bg-card border border-border/40 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+          <div>
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground tracking-tight">
+                Punto de Equilibrio con Sueldos Dignos ({activeMes.nombreMes})
+              </h2>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Ventas requeridas para cubrir gastos fijos MÁS la compensación operativa de ambos fundadores.
+            </p>
+          </div>
+
+          <div className="text-xs font-mono font-medium text-foreground">
+            {pctMetaSueldosAlcanzada}% cubierto
+          </div>
+        </div>
+
+        {/* Barra de Progreso */}
+        <div className="space-y-1.5">
+          <div className="h-2 w-full rounded-full bg-muted/30 overflow-hidden border border-border/30">
+            <div
+              className={cn(
+                'h-full transition-all duration-500 rounded-full',
+                pctMetaSueldosAlcanzada >= 100 ? 'bg-emerald-500' : 'bg-primary'
               )}
+              style={{ width: `${pctMetaSueldosAlcanzada}%` }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+            <span>Facturación Actual: <strong className="text-foreground">{formatCurrency(activeMes.ventasCobradas)}</strong></span>
+            <span>Meta con Sueldos: <strong className="text-foreground">{formatCurrency(metaFacturacionConSueldos)}</strong></span>
+          </div>
+        </div>
+
+        {/* Comparativa Conceptual: Supervivencia vs Digno */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs">
+          <div className="p-3 rounded-xl border border-border/30 bg-muted/10 space-y-1">
+            <div className="flex items-center justify-between font-mono">
+              <span className="font-medium text-foreground">1. Equilibrio de Supervivencia:</span>
+              <span className="font-semibold text-foreground">{formatCurrency(fijosMensuales)}</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Cubre únicamente el préstamo BCP, luz e internet. La empresa sobrevive pero los socios no perciben sueldo (S/ 0).
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl border border-border/30 bg-muted/10 space-y-1">
+            <div className="flex items-center justify-between font-mono">
+              <span className="font-medium text-foreground">2. Equilibrio Digno (Con Sueldos):</span>
+              <span className="font-semibold text-foreground">{formatCurrency(metaFacturacionConSueldos)}</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              {ventasFaltantesMeta === 0
+                ? '¡Meta mensual superada! El volumen comercial paga todos los fijos y los sueldos íntegros de ambos socios.'
+                : `Faltan ${formatCurrency(ventasFaltantesMeta)} (~${pedidosFaltantesMeta} pedidos promedio de S/ 50) para que ambos socios cobren sin recurrir al colchón de capital.`}
             </p>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 5. TABLA DE AUDITORÍA & EVOLUCIÓN HISTÓRICA (SIN SCROLL HORIZONTAL)       */}
+      {/* 6. CHECKLIST DE SEGURIDAD PRE-RETIRO & PROFIT FIRST 3D                     */}
       {/* ========================================================================= */}
-      <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/40">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-primary" />
-              Evolución Mensual Consolidada (Auditoría de Arrastre)
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Checklist Pre-Retiro (6 cols) */}
+        <div className="lg:col-span-6 bg-card border border-border/40 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+          <div className="flex items-center gap-2 pb-2 border-b border-border/30">
+            <CheckSquare className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+              Checklist de Seguridad Pre-Transferencia
             </h3>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Demostración cronológica de cómo el saldo anterior alimenta el acumulado de cada mes, separando costos directos, gastos operativos y compromisos blindados.
-            </p>
           </div>
-          <div className="text-xs text-muted-foreground">
-            Total Meses Auditados: <strong className="text-foreground">{initialData.meses.length}</strong>
+          <p className="text-[11px] text-muted-foreground">
+            Verificaciones automáticas de prudencia antes de transferir dinero del taller a cuentas personales:
+          </p>
+
+          <div className="space-y-1.5 text-xs">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/15 border border-border/25">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>1. Cuota Préstamo BCP & Servicios provisionados</span>
+              </div>
+              <span className="font-mono text-xs">{formatCurrency(activeMes.totalBlindadosMes)}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/15 border border-border/25">
+              <div className="flex items-center gap-2">
+                {colchonRestante >= 0 ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                )}
+                <span>2. Reserva fija intacta tras el retiro proyectado</span>
+              </div>
+              <span className="font-mono text-xs">{formatCurrency(activeMes.reservaObligaciones)}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/15 border border-border/25">
+              <div className="flex items-center gap-2">
+                {activeMes.utilidadMes > 0 ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                )}
+                <span>3. Utilidad operativa positiva en los últimos 30 días</span>
+              </div>
+              <span className="font-mono text-xs">+{formatCurrency(activeMes.utilidadMes)}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/15 border border-border/25">
+              <div className="flex items-center gap-2">
+                {runwayDiasPostRetiro >= 15 ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                )}
+                <span>4. Pista de liquidez segura (&gt; 15 días)</span>
+              </div>
+              <span className="font-mono text-xs">{runwayDiasPostRetiro} días</span>
+            </div>
           </div>
         </div>
 
-        {/* Tabla Responsiva adaptada sin scroll horizontal (layout fluido) */}
-        <div className="w-full">
-          {/* Encabezados visibles en desktop */}
-          <div className="hidden lg:grid grid-cols-12 gap-2 px-3 py-2 bg-muted/30 rounded-xl text-[11px] font-semibold text-muted-foreground border border-border/50 mb-2">
-            <div className="col-span-2">Período / Mes</div>
-            <div className="col-span-1 text-right">Saldo Inicial</div>
-            <div className="col-span-2 text-right">Ventas Cobradas</div>
-            <div className="col-span-1 text-right">Compras Mat.</div>
-            <div className="col-span-2 text-right">Gastos Operativos</div>
-            <div className="col-span-2 text-right">Gastos Blindados</div>
-            <div className="col-span-1 text-right">Utilidad Mes</div>
-            <div className="col-span-1 text-right">Saldo Acum.</div>
+        {/* Regla Profit First Adaptada a Taller 3D (6 cols) */}
+        <div className="lg:col-span-6 bg-card border border-border/40 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+          <div className="flex items-center gap-2 pb-2 border-b border-border/30">
+            <PieChart className="w-4 h-4 text-muted-foreground" />
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+              Regla de Distribución &quot;Profit First&quot; en 3D
+            </h3>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Distribución teórica recomendada de cada S/ 100 cobrados por impresiones 3D:
+          </p>
+
+          <div className="space-y-1.5 text-xs">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/15 border border-border/25 font-mono">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-zinc-400 shrink-0" />
+                <span className="font-sans">35% Materiales & Bobinas de Filamento / Cajas</span>
+              </div>
+              <span className="text-muted-foreground font-semibold">S/ 35</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/15 border border-border/25 font-mono">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-zinc-600 shrink-0" />
+                <span className="font-sans">30% Gastos Blindados (Cuota BCP, Luz Taller, Internet)</span>
+              </div>
+              <span className="text-muted-foreground font-semibold">S/ 30</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/15 border border-border/25 font-mono">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                <span className="font-sans">25% Sueldos de Fundadores (Compensación Operativa)</span>
+              </div>
+              <span className="text-muted-foreground font-semibold">S/ 25</span>
+            </div>
+
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/15 border border-border/25 font-mono">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                <span className="font-sans">10% Fondo Capex & Repuestos (Boquillas, Planchas PEI)</span>
+              </div>
+              <span className="text-muted-foreground font-semibold">S/ 10</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 7. TABLA DE AUDITORÍA HISTÓRICA DE ARRASTRE                               */}
+      {/* ========================================================================= */}
+      <div className="bg-card border border-border/40 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-2 border-b border-border/30">
+          <div>
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-muted-foreground" />
+              <h2 className="text-sm font-semibold text-foreground tracking-tight">
+                Auditoría Histórica de Arrastre de Caja
+              </h2>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Demostración cronológica de cómo el saldo anterior alimenta el acumulado de cada mes.
+            </p>
+          </div>
+          <div className="text-xs font-mono text-muted-foreground">
+            {initialData.meses.length} meses auditados
+          </div>
+        </div>
+
+        {/* Tabla Minimalista Desktop */}
+        <div className="w-full overflow-hidden">
+          <div className="hidden lg:grid grid-cols-12 gap-2 px-3 py-2 bg-muted/25 rounded-lg text-[10px] font-mono uppercase tracking-wider text-muted-foreground border border-border/25 mb-1.5">
+            <div className="col-span-2">Período</div>
+            <div className="col-span-1 text-right">Saldo Inic.</div>
+            <div className="col-span-2 text-right">Ventas Cobr.</div>
+            <div className="col-span-1 text-right">Compras</div>
+            <div className="col-span-2 text-right">Operativos</div>
+            <div className="col-span-2 text-right">Blindados</div>
+            <div className="col-span-1 text-right">Utilidad</div>
+            <div className="col-span-1 text-right">Caja Final</div>
           </div>
 
-          {/* Filas */}
-          <div className="space-y-2">
+          <div className="space-y-1">
             {initialData.meses.map((m) => {
               const isSelected = m.mesKey === selectedMesKey
 
@@ -671,128 +858,74 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
                   key={m.mesKey}
                   onClick={() => setSelectedMesKey(m.mesKey)}
                   className={cn(
-                    'p-3.5 rounded-xl border transition-all cursor-pointer text-xs',
+                    'p-3 rounded-xl border transition-all cursor-pointer text-xs',
                     isSelected
-                      ? 'bg-primary/5 border-primary/40 shadow-xs'
-                      : 'bg-card border-border/50 hover:bg-muted/30'
+                      ? 'bg-muted/40 border-border/60 shadow-2xs'
+                      : 'bg-card border-border/25 hover:bg-muted/20'
                   )}
                 >
-                  {/* Vista Desktop (Grid fluido de 12 columnas sin scroll horizontal) */}
+                  {/* Fila Desktop */}
                   <div className="hidden lg:grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-2 font-semibold text-foreground flex flex-col justify-center truncate">
-                      <div className="flex items-center gap-1.5 truncate">
-                        <span className={cn('w-2 h-2 rounded-full shrink-0', isSelected ? 'bg-primary' : 'bg-transparent')} />
-                        <span className="truncate">{m.nombreMes}</span>
-                      </div>
-                      {m.inyeccionCapital > 0 && (
-                        <span className="text-[10px] text-sky-600 dark:text-sky-400 font-medium pl-3.5 truncate tabular-nums">
-                          +{formatCurrency(m.inyeccionCapital)} financiamiento
-                        </span>
-                      )}
+                    <div className="col-span-2 font-medium text-foreground flex items-center gap-1.5 truncate">
+                      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', isSelected ? 'bg-foreground' : 'bg-transparent')} />
+                      <span className="truncate">{m.nombreMes}</span>
                     </div>
 
-                    <div className="col-span-1 text-right font-mono font-medium text-muted-foreground tabular-nums">
+                    <div className="col-span-1 text-right font-mono text-muted-foreground tabular-nums">
                       {formatCurrency(m.saldoInicial)}
                     </div>
 
-                    <div className="col-span-2 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    <div className="col-span-2 text-right font-mono font-medium text-foreground tabular-nums">
                       +{formatCurrency(m.ventasCobradas)}
                     </div>
 
-                    <div className="col-span-1 text-right font-mono font-medium text-amber-600 dark:text-amber-400 tabular-nums">
+                    <div className="col-span-1 text-right font-mono text-muted-foreground tabular-nums">
                       -{formatCurrency(m.comprasDirectas)}
                     </div>
 
-                    <div className="col-span-2 text-right font-mono font-medium text-orange-600 dark:text-orange-400 tabular-nums">
+                    <div className="col-span-2 text-right font-mono text-muted-foreground tabular-nums">
                       -{formatCurrency(m.gastosOperativos)}
                     </div>
 
-                    <div className="col-span-2 text-right font-mono font-medium text-rose-600 dark:text-rose-400 tabular-nums">
+                    <div className="col-span-2 text-right font-mono text-muted-foreground tabular-nums">
                       -{formatCurrency(m.totalBlindadosMes)}
                     </div>
 
-                    <div className="col-span-1 text-right">
-                      <span
-                        className={cn(
-                          'font-mono font-semibold block tabular-nums',
-                          m.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                        )}
-                      >
+                    <div className="col-span-1 text-right font-mono font-medium tabular-nums">
+                      <span className={m.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}>
                         {m.utilidadMes >= 0 ? '+' : ''}{formatCurrency(m.utilidadMes)}
                       </span>
                     </div>
 
-                    <div className="col-span-1 text-right font-mono font-bold text-foreground tabular-nums">
+                    <div className="col-span-1 text-right font-mono font-semibold text-foreground tabular-nums">
                       {formatCurrency(m.saldoAcumulado)}
                     </div>
                   </div>
 
-                  {/* Vista Móvil / Tablet Compacta (Cards fluidas sin scroll) */}
-                  <div className="lg:hidden space-y-2">
-                    <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
-                      <span className="font-semibold text-foreground text-sm">
-                        {m.nombreMes}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'text-[10px] font-mono tabular-nums',
-                          m.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'text-rose-600 dark:text-rose-400 border-rose-500/20'
-                        )}
-                      >
-                        {m.margenOperativoPct}% Margen
-                      </Badge>
+                  {/* Fila Móvil */}
+                  <div className="lg:hidden space-y-1.5">
+                    <div className="flex items-center justify-between pb-1 border-b border-border/25">
+                      <span className="font-semibold text-foreground text-xs">{m.nombreMes}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{m.margenOperativoPct}% margen</span>
                     </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+                    <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
                       <div>
-                        <span className="text-muted-foreground block">Ventas Cobradas:</span>
-                        <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                          +{formatCurrency(m.ventasCobradas)}
-                        </span>
-                      </div>
-                      {m.inyeccionCapital > 0 && (
-                        <div>
-                          <span className="text-sky-600 dark:text-sky-400 block font-medium">Inyección / Préstamo:</span>
-                          <span className="font-mono font-semibold text-sky-600 dark:text-sky-400 tabular-nums">
-                            +{formatCurrency(m.inyeccionCapital)}
-                          </span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-muted-foreground block">Compras Material:</span>
-                        <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
-                          -{formatCurrency(m.comprasDirectas)}
-                        </span>
+                        <span className="text-muted-foreground block text-[10px]">Ventas Cobradas:</span>
+                        <span className="text-foreground">+{formatCurrency(m.ventasCobradas)}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground block">Gastos Operativos:</span>
-                        <span className="font-mono font-semibold text-orange-600 dark:text-orange-400 tabular-nums">
-                          -{formatCurrency(m.gastosOperativos)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground block">Gastos Blindados:</span>
-                        <span className="font-mono font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
-                          -{formatCurrency(m.totalBlindadosMes)}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground block">Utilidad del Mes:</span>
-                        <span
-                          className={cn(
-                            'font-mono font-semibold tabular-nums',
-                            m.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-                          )}
-                        >
+                        <span className="text-muted-foreground block text-[10px]">Utilidad Mes:</span>
+                        <span className={m.utilidadMes >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600'}>
                           {m.utilidadMes >= 0 ? '+' : ''}{formatCurrency(m.utilidadMes)}
                         </span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground block">Saldo Acumulado:</span>
-                        <span className="font-mono font-bold text-foreground tabular-nums">
-                          {formatCurrency(m.saldoAcumulado)}
-                        </span>
+                        <span className="text-muted-foreground block text-[10px]">Gastos Blindados:</span>
+                        <span className="text-muted-foreground">-{formatCurrency(m.totalBlindadosMes)}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[10px]">Caja Final:</span>
+                        <span className="font-semibold text-foreground">{formatCurrency(m.saldoAcumulado)}</span>
                       </div>
                     </div>
                   </div>
@@ -801,27 +934,6 @@ export function RentabilidadSueldosView({ initialData }: RentabilidadSueldosView
             })}
           </div>
         </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 6. GUÍA CONCEPTUAL RÁPIDA (REGLAS DE ORO FINANCIERAS)                     */}
-      {/* ========================================================================= */}
-      <div className="bg-muted/20 border border-border/60 rounded-2xl p-5 text-xs text-muted-foreground space-y-2">
-        <div className="font-semibold text-foreground flex items-center gap-1.5">
-          <Info className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          <span>Reglas de Oro del Asesor Financiero para la Asignación de Sueldos:</span>
-        </div>
-        <ul className="list-disc pl-5 space-y-1 leading-relaxed">
-          <li>
-            <strong>Nunca retires el 100% de la utilidad acumulada:</strong> Siempre mantén como mínimo una reserva equivalente a 1 mes de obligaciones fijas (luz, internet, cuota BCP, alquiler).
-          </li>
-          <li>
-            <strong>El sueldo del operador es costo, no dividendo:</strong> Si trabajas activamente en el taller, fija un sueldo mensual realista dentro de tu capacidad segura y transfiérelo a tu cuenta personal con fecha fija.
-          </li>
-          <li>
-            <strong>Monitorea el P&L mensual vs la Caja:</strong> Puedes tener meses con baja utilidad pero estar protegido por el saldo acumulado anterior; sin embargo, si la utilidad del mes es negativa por 2 meses consecutivos, debes revisar tus precios de venta o recortar gastos variables de inmediato.
-          </li>
-        </ul>
       </div>
     </div>
   )

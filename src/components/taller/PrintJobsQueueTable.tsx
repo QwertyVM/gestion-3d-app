@@ -48,40 +48,21 @@ export function PrintJobsQueueTable({
 
   const totalUds = piezas.reduce((acc, p) => acc + p.cantidad, 0)
 
-  // Identidad cromática semántica por contenedor según fase de producción
-  const stageContainerClasses = {
-    PENDIENTE: 'border-l-4 border-l-amber-500 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
-    EN_PRODUCCION: 'border-l-4 border-l-blue-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
-    EN_TALLER: 'border-l-4 border-l-indigo-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
-    EMPAQUETANDO: 'border-l-4 border-l-orange-500 rounded-xl overflow-hidden border border-border bg-card shadow-xs',
-    LISTO_ENTREGA: 'border-l-4 border-l-emerald-600 rounded-xl overflow-hidden border border-border bg-card shadow-xs'
-  }[etapa]
+  // Contenedor minimalista con hairline borders
+  const stageContainerClasses = 'rounded-2xl overflow-hidden border border-border/40 bg-card shadow-2xs'
+  const stageHeaderClasses = 'bg-muted/15 border-b border-border/30'
 
-  const stageHeaderClasses = {
-    PENDIENTE: 'bg-amber-500/[0.04]',
-    EN_PRODUCCION: 'bg-blue-500/[0.04]',
-    EN_TALLER: 'bg-indigo-500/[0.04]',
-    EMPAQUETANDO: 'bg-orange-500/[0.04]',
-    LISTO_ENTREGA: 'bg-emerald-500/[0.04]'
-  }[etapa]
-
-  // Indicador dot coloreado de alto contraste
+  // Indicador dot coloreado discreto
   const stageDot = {
-    PENDIENTE: <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mr-2 shrink-0 inline-block shadow-2xs" />,
-    EN_PRODUCCION: <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse mr-2 shrink-0 inline-block shadow-2xs" />,
-    EN_TALLER: <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 mr-2 inline-block shrink-0 shadow-2xs" />,
-    EMPAQUETANDO: <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse mr-2 shrink-0 inline-block shadow-2xs" />,
-    LISTO_ENTREGA: <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 mr-2 shrink-0 inline-block shadow-2xs" />
+    PENDIENTE: <span className="w-2 h-2 rounded-full bg-amber-500 mr-2 shrink-0 inline-block" />,
+    EN_PRODUCCION: <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse mr-2 shrink-0 inline-block" />,
+    EN_TALLER: <span className="w-2 h-2 rounded-full bg-indigo-500 mr-2 inline-block shrink-0" />,
+    EMPAQUETANDO: <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse mr-2 shrink-0 inline-block" />,
+    LISTO_ENTREGA: <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shrink-0 inline-block" />
   }[etapa]
 
-  // Estilos de badge para el encabezado
-  const stageHeaderBadgeStyle = {
-    PENDIENTE: 'border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-300',
-    EN_PRODUCCION: 'border-blue-500/25 bg-blue-500/10 text-blue-800 dark:text-blue-300',
-    EN_TALLER: 'border-indigo-500/25 bg-indigo-500/10 text-indigo-800 dark:text-indigo-300',
-    EMPAQUETANDO: 'border-orange-500/25 bg-orange-500/10 text-orange-800 dark:text-orange-300',
-    LISTO_ENTREGA: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
-  }[etapa]
+  // Estilos de badge discretos
+  const stageHeaderBadgeStyle = 'border-border/30 bg-muted/40 text-muted-foreground font-mono text-[10px]'
 
   const stageHeaderIcon = {
     PENDIENTE: <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />,
@@ -103,27 +84,27 @@ export function PrintJobsQueueTable({
   return (
     <div className={`${stageContainerClasses} transition-all duration-200`}>
       {/* Encabezado de Sección con Jerarquía y Tinte Semántico */}
-      <div className={`p-4 sm:p-4.5 border-b border-border/70 ${stageHeaderClasses} flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
+      <div className={`p-3.5 sm:p-4 ${stageHeaderClasses} flex flex-col sm:flex-row sm:items-center justify-between gap-2.5`}>
         {/* Lado Izquierdo: Dot, Título, Badge de Conteo y Subtítulo Operacional */}
         <div>
           <div className="flex items-center flex-wrap gap-2">
             <div className="flex items-center">
               {stageDot}
-              <h3 className="text-base font-bold text-foreground tracking-tight">
+              <h3 className="text-sm font-semibold text-foreground tracking-tight">
                 {titulo}
               </h3>
             </div>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${stageHeaderBadgeStyle}`}>
+            <span className={`px-1.5 py-0.2 rounded-md font-mono text-[10px] font-semibold border ${stageHeaderBadgeStyle}`}>
               {badgeCount}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-[11px] text-muted-foreground mt-0.5">
             {subtitulo}
           </p>
         </div>
 
         {/* Lado Derecho: Badge temático superior derecho */}
-        <div className={`border px-3 py-1 rounded-xl text-xs font-semibold flex items-center gap-1.5 self-start sm:self-auto shadow-2xs ${stageHeaderBadgeStyle}`}>
+        <div className={`border px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 self-start sm:self-auto shadow-2xs ${stageHeaderBadgeStyle}`}>
           {stageHeaderIcon}
           <span>{badgeLabel}</span>
         </div>

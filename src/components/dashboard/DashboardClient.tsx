@@ -248,14 +248,14 @@ export function DashboardClient({
   const router = useRouter()
   const { is3D } = useBusiness()
 
-  // Default al Mes Actual (Este Mes)
+  // Default al Mes Actual (Este Mes) y Vista Integral Unificada
   const [dateRange, setDateRange] = useState<DateRange>(() => getPresetDateRange('ESTE_MES'))
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [chartMode, setChartMode] = useState<'DIARIO' | 'ACUMULADO'>('DIARIO')
   const [soloDiasConVentas, setSoloDiasConVentas] = useState(true)
   const [rankingArticulosMode, setRankingArticulosMode] = useState<'RENTABILIDAD' | 'VOLUMEN'>('RENTABILIDAD')
   const [rankingTab, setRankingTab] = useState<'CLIENTES' | 'ARTICULOS'>('CLIENTES')
-  const [dashboardView, setDashboardView] = useState<'FINANZAS' | 'COMERCIAL' | 'INTEGRAL'>('FINANZAS')
+  const [dashboardView, setDashboardView] = useState<'FINANZAS' | 'COMERCIAL' | 'INTEGRAL'>('INTEGRAL')
 
   // Drawer de Detalle del Cliente
   const [selectedClienteDrawer, setSelectedClienteDrawer] = useState<string | null>(null)
@@ -1155,70 +1155,13 @@ export function DashboardClient({
       />
 
       {/* ========================================================================= */}
-      {/* 3. SELECTOR DE ENFOQUE ANALÍTICO (SEGMENTED CONTROL MINIMALISTA)          */}
-      {/* ========================================================================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-border/50">
-        <div className="inline-flex items-center p-0.5 rounded-xl bg-muted/40 border border-border/60 self-start">
-          <button
-            type="button"
-            onClick={() => setDashboardView('FINANZAS')}
-            aria-label="Finanzas y Flujo de Caja"
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-              dashboardView === 'FINANZAS'
-                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5 text-primary" />
-            <span>Finanzas & Flujo</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setDashboardView('COMERCIAL')}
-            aria-label="Comercial y Clientes"
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-              dashboardView === 'COMERCIAL'
-                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Users className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-            <span>Comercial & Clientes</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setDashboardView('INTEGRAL')}
-            aria-label="Vista Completa"
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
-              dashboardView === 'INTEGRAL'
-                ? 'bg-card text-foreground font-semibold shadow-2xs border border-border/50'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="hidden sm:inline">Vista Completa</span>
-          </button>
-        </div>
-
-        <span className="text-[11px] text-muted-foreground hidden sm:inline">
-          {dashboardView === 'FINANZAS' 
-            ? 'Márgenes netos y desglose de caja del período' 
-            : dashboardView === 'COMERCIAL' 
-            ? 'Rankings de demanda y canales de captación' 
-            : 'Módulos financieros y comerciales consolidados'}
-        </span>
-      </div>
-
-      {/* ========================================================================= */}
       {/* 4. BLOQUE FINANCIERO (GRÁFICO DE MÁRGENES + DESGLOSE DE FONDOS Y COSTOS)  */}
       {/* ========================================================================= */}
       {(dashboardView === 'FINANZAS' || dashboardView === 'INTEGRAL') && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* Gráfico Margen Real por Pedido & Curva Acumulada (7 cols) */}
-          <Card className="lg:col-span-7 bg-card border border-border/60 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[420px]">
-            <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
+          <Card className="lg:col-span-7 bg-card border border-border/40 shadow-2xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[400px]">
+            <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/30">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -1229,7 +1172,7 @@ export function DashboardClient({
                       <button
                         type="button"
                         onClick={() => setSoloDiasConVentas(!soloDiasConVentas)}
-                        className="text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 border border-border/50 px-2 py-0.5 rounded-md font-medium cursor-pointer transition-colors"
+                        className="text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 border border-border/40 px-2 py-0.5 rounded-md font-medium cursor-pointer transition-colors"
                         title="Alternar entre ver solo días con ventas o todo el calendario"
                       >
                         {soloDiasConVentas ? '⚡ Días con venta' : '📅 Todo el mes'}
@@ -1244,13 +1187,13 @@ export function DashboardClient({
                 </div>
 
                 {/* Selector Simplificado: [ Margen Diario | Acumulado ] */}
-                <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shrink-0 self-start sm:self-auto">
+                <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/40 shrink-0 self-start sm:self-auto">
                   <button
                     type="button"
                     onClick={() => setChartMode('DIARIO')}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap ${
                       chartMode === 'DIARIO'
-                        ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                        ? 'bg-card text-foreground font-semibold border border-border/40 shadow-2xs'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -1261,7 +1204,7 @@ export function DashboardClient({
                     onClick={() => setChartMode('ACUMULADO')}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer whitespace-nowrap ${
                       chartMode === 'ACUMULADO'
-                        ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                        ? 'bg-card text-foreground font-semibold border border-border/40 shadow-2xs'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -1304,11 +1247,11 @@ export function DashboardClient({
       {(dashboardView === 'COMERCIAL' || dashboardView === 'INTEGRAL') && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* RANKINGS DEL PERÍODO (6 cols): [ Top Clientes ] [ Top Artículos ] */}
-          <Card className="lg:col-span-6 bg-card border border-border/60 shadow-xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[360px]">
-            <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/60">
+          <Card className="lg:col-span-6 bg-card border border-border/40 shadow-2xs rounded-2xl overflow-hidden flex flex-col justify-between min-h-[360px]">
+            <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/30">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-amber-500" />
+                  <Trophy className="h-4 w-4 text-muted-foreground" />
                   <CardTitle className="text-sm font-semibold tracking-tight text-foreground">
                     Rankings del Período
                   </CardTitle>
@@ -1316,13 +1259,13 @@ export function DashboardClient({
 
                 {/* Selector de Rankings: [ Top Clientes | Top Artículos ] */}
                 <div className="flex items-center gap-2 self-start sm:self-auto">
-                  <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/60 shrink-0">
+                  <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/40 border border-border/40 shrink-0">
                     <button
                       type="button"
                       onClick={() => setRankingTab('CLIENTES')}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                         rankingTab === 'CLIENTES'
-                          ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                          ? 'bg-card text-foreground font-semibold border border-border/40 shadow-2xs'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -1334,7 +1277,7 @@ export function DashboardClient({
                       onClick={() => setRankingTab('ARTICULOS')}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                         rankingTab === 'ARTICULOS'
-                          ? 'bg-card text-foreground font-semibold border border-border/50 shadow-2xs'
+                          ? 'bg-card text-foreground font-semibold border border-border/40 shadow-2xs'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -1369,7 +1312,7 @@ export function DashboardClient({
                   <span className="text-muted-foreground text-[10px] uppercase font-semibold tracking-wider">
                     Ordenar por:
                   </span>
-                  <div className="inline-flex items-center p-0.5 rounded-md bg-muted/30 border border-border/50">
+                  <div className="inline-flex items-center p-0.5 rounded-md bg-muted/30 border border-border/40">
                     <button
                       type="button"
                       onClick={() => setRankingArticulosMode('RENTABILIDAD')}
@@ -1397,7 +1340,7 @@ export function DashboardClient({
               )}
             </CardHeader>
 
-            <CardContent className="p-0 flex-1 divide-y divide-border/40">
+            <CardContent className="p-0 flex-1 divide-y divide-border/30">
               {rankingTab === 'CLIENTES' ? (
                 topClientesDinamico.length === 0 ? (
                   <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
@@ -1406,12 +1349,6 @@ export function DashboardClient({
                   </div>
                 ) : (
                   topClientesDinamico.map((c, index) => {
-                    const rankClass = 
-                      index === 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
-                      index === 1 ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30' :
-                      index === 2 ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' :
-                      'bg-muted/60 text-muted-foreground border-border/60'
-
                     return (
                       <div 
                         key={`${c.cliente}-${index}`}
@@ -1420,11 +1357,11 @@ export function DashboardClient({
                         title={`Ver estado de cuenta de ${formatClienteNombre(c.cliente)}`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-mono font-bold border shrink-0 ${rankClass}`}>
-                            {index + 1}
+                          <span className="font-mono text-xs font-semibold text-muted-foreground/60 w-5 tabular-nums text-center shrink-0">
+                            {String(index + 1).padStart(2, '0')}
                           </span>
 
-                          <div className="w-8 h-8 rounded-full bg-muted border border-border/60 text-muted-foreground text-xs font-semibold flex items-center justify-center shrink-0 group-hover:border-primary/40 group-hover:text-primary transition-colors">
+                          <div className="w-8 h-8 rounded-full bg-muted border border-border/40 text-muted-foreground text-xs font-semibold flex items-center justify-center shrink-0 group-hover:border-foreground/30 group-hover:text-foreground transition-colors">
                             {getInitials(c.cliente)}
                           </div>
 
@@ -1439,7 +1376,7 @@ export function DashboardClient({
                               {c.canalPreferido && (
                                 <>
                                   <span>•</span>
-                                  <span className="px-1.5 py-0.2 rounded bg-secondary text-secondary-foreground text-[10px] font-medium border border-border/40">
+                                  <span className="px-1.5 py-0.2 rounded bg-muted/40 text-muted-foreground text-[10px] font-medium border border-border/30">
                                     {c.canalPreferido}
                                   </span>
                                 </>
@@ -1454,11 +1391,11 @@ export function DashboardClient({
                           </div>
                           <div>
                             {c.saldoPendiente > 0 ? (
-                              <span className="text-[10px] font-medium font-mono text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-md inline-block tabular-nums">
+                              <span className="text-[10px] font-medium font-mono text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded tabular-nums inline-block">
                                 Debe {formatCurrency(c.saldoPendiente)}
                               </span>
                             ) : (
-                              <span className="text-[10px] font-medium font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md inline-block">
+                              <span className="text-[10px] font-mono text-muted-foreground/70 inline-block">
                                 Al día
                               </span>
                             )}
@@ -1476,30 +1413,24 @@ export function DashboardClient({
                   </div>
                 ) : (
                   topArticulosDinamico.map((art, index) => {
-                    const rankClass = 
-                      index === 0 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30' :
-                      index === 1 ? 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30' :
-                      index === 2 ? 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' :
-                      'bg-muted/60 text-muted-foreground border-border/60'
-
                     return (
                       <div 
                         key={`${art.id}-${index}`}
                         className="px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-mono font-bold border shrink-0 ${rankClass}`}>
-                            {index + 1}
+                          <span className="font-mono text-xs font-semibold text-muted-foreground/60 w-5 tabular-nums text-center shrink-0">
+                            {String(index + 1).padStart(2, '0')}
                           </span>
 
                           {art.imageUrl ? (
                             <img 
                               src={art.imageUrl} 
                               alt={art.nombreModelo} 
-                              className="w-8 h-8 rounded-lg object-cover border border-border/60 shrink-0" 
+                              className="w-8 h-8 rounded-lg object-cover border border-border/40 shrink-0" 
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded-lg bg-muted border border-border/60 flex items-center justify-center shrink-0 text-muted-foreground">
+                            <div className="w-8 h-8 rounded-lg bg-muted border border-border/40 flex items-center justify-center shrink-0 text-muted-foreground">
                               <Package className="h-3.5 w-3.5 stroke-[1.5]" />
                             </div>
                           )}
@@ -1515,7 +1446,7 @@ export function DashboardClient({
                               {art.lineaCategoria && (
                                 <>
                                   <span>•</span>
-                                  <span className="px-1.5 py-0.2 rounded bg-secondary text-secondary-foreground text-[10px] font-medium border border-border/40">
+                                  <span className="px-1.5 py-0.2 rounded bg-muted/40 text-muted-foreground text-[10px] font-medium border border-border/30">
                                     {art.lineaCategoria}
                                   </span>
                                 </>
@@ -1525,7 +1456,7 @@ export function DashboardClient({
                         </div>
 
                         <div className="text-right shrink-0 space-y-0.5">
-                          <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums font-mono tracking-tight">
+                          <div className="text-xs font-semibold text-foreground tabular-nums font-mono tracking-tight">
                             +{formatCurrency(art.gananciaNeta || 0)}
                           </div>
                           <div className="text-[10px] font-medium font-mono text-muted-foreground tabular-nums">
