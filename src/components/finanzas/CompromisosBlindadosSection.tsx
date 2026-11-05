@@ -24,6 +24,7 @@ export interface BcpLoanData {
   montoCuota: number
   capitalRestante: number
   pagada: boolean
+  cuotaMesActual?: CuotaDetalle | null
   cuotaSeptiembre?: CuotaDetalle | null
   cuotaOctubre?: CuotaDetalle | null
   historialPagos?: ItemHistorialPago[]
@@ -68,10 +69,21 @@ export function CompromisosBlindadosSection({
   const [modalHistorialAbierto, setModalHistorialAbierto] = useState(false)
   const [itemHistorial, setItemHistorial] = useState<HistorialModalItem | null>(null)
 
-  const mesActual = mesNombre || 'Octubre'
+  const mesActual = mesNombre || 'Noviembre'
   const mesFormateado = mesActual.charAt(0).toUpperCase() + mesActual.slice(1)
 
-  // Cuotas BCP normalizadas
+  // Cuota BCP del mes activo (Renovación automática mensual)
+  const cuotaMes = bcpData.cuotaMesActual || {
+    numeroCuota: bcpData.cuotaActual || (bcpData.pagada ? 2 : 3),
+    mes: mesFormateado,
+    anio: 2026,
+    monto: bcpData.montoCuota || 388.68,
+    pagada: bcpData.pagada,
+    fechaPago: null,
+    vencimiento: `Finales de ${mesFormateado}`,
+  }
+
+  // Referencias a cuotas pasadas para historial
   const cuotaSep = bcpData.cuotaSeptiembre || {
     numeroCuota: 1,
     mes: 'Septiembre',
@@ -87,8 +99,8 @@ export function CompromisosBlindadosSection({
     mes: 'Octubre',
     anio: 2026,
     monto: bcpData.montoCuota || 388.68,
-    pagada: bcpData.pagada,
-    fechaPago: null,
+    pagada: true,
+    fechaPago: '28 oct. 2026',
     vencimiento: '31 de Octubre',
   }
 
@@ -327,8 +339,8 @@ export function CompromisosBlindadosSection({
   }
 
   const totalActivos = (tienePrestamoBCP ? 1 : 0) + partidasBlindadas.length
-  const cuotasPagadasBCP = bcpData.historialPagos?.length || (cuotaOct.pagada ? 2 : cuotaSep.pagada ? 1 : 0)
-  const totalAbonadoBCP = (bcpData.historialPagos || []).reduce((acc, h) => acc + h.monto, 0) || (cuotaSep.pagada ? cuotaSep.monto : 0)
+  const cuotasPagadasBCP = bcpData.historialPagos?.length || (cuotaMes.pagada ? cuotaMes.numeroCuota : Math.max(0, (cuotaMes.numeroCuota || 1) - 1))
+  const totalAbonadoBCP = (bcpData.historialPagos || []).reduce((acc, h) => acc + h.monto, 0) || (bcpData.totalCuotas ? bcpData.montoCuota * cuotasPagadasBCP : 0)
 
   return (
     <>
@@ -386,24 +398,24 @@ export function CompromisosBlindadosSection({
               categoria="FINANCIERO"
               montoMensual={bcpData.montoCuota}
               mesActivoNombre={mesFormateado}
-              vencimientoTexto="Vence: 31 de Octubre"
-              cuotaNumero={2}
+              vencimientoTexto={cuotaMes.vencimiento || `Vence: Fin de ${mesFormateado}`}
+              cuotaNumero={cuotaMes.numeroCuota}
               totalCuotas={bcpData.totalCuotas || 24}
               capitalRestante={bcpData.capitalRestante}
               cuotasPagadas={cuotasPagadasBCP}
-              estaPagada={Boolean(cuotaOct.pagada)}
-              montoPagadoMes={cuotaOct.monto}
-              fechaPagoMes={cuotaOct.fechaPago || undefined}
+              estaPagada={Boolean(cuotaMes.pagada)}
+              montoPagadoMes={cuotaMes.monto}
+              fechaPagoMes={cuotaMes.fechaPago || undefined}
               detalleDerechaTexto={`${cuotasPagadasBCP}/${bcpData.totalCuotas || 24} pagadas • Cap. Rest: S/ ${(bcpData.capitalRestante || 7631.12).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              onPagar={() => handleAbrirPagarPrestamo(2, mesFormateado)}
+              onPagar={() => handleAbrirPagarPrestamo(cuotaMes.numeroCuota, mesFormateado)}
               onRevertir={() =>
                 handleAbrirRevertir({
                   tipo: 'PRESTAMO',
-                  numeroCuota: 2,
+                  numeroCuota: cuotaMes.numeroCuota,
                   concepto: 'Préstamo BCP',
                   mes: `Cuota de ${mesFormateado}`,
-                  monto: cuotaOct.monto,
-                  inversionId: cuotaOct.inversionId,
+                  monto: cuotaMes.monto,
+                  inversionId: cuotaMes.inversionId,
                 })
               }
               onVerHistorial={handleAbrirHistorialPrestamo}
@@ -415,16 +427,11 @@ export function CompromisosBlindadosSection({
           {/* ========================================================================= */}
           {partidasBlindadas.map((partida) => {
             const montoPresupuestado = Number(partida.monto || partida.presupuesto || 0)
-            const estaPagadoOct = Boolean(partida.pagado)
-            const montoPagadoOct = Number(partida.montoPagadoReal || montoPresupuestado)
-            const sepPagada = Boolean(
-              partida.cuotaSeptiembre?.pagada ||
-              (partida.montoSeptiembreReal && Number(partida.montoSeptiembreReal) > 0)
-            )
-
+            const estaPagada = Boolean(partida.pagado)
+            const montoPagado = Number(partida.montoPagadoReal || montoPresupuestado)
             const totalPagosRealizados =
               partida.totalPagos ??
-              (partida.historialPagos?.length || (sepPagada ? 1 : 0) + (estaPagadoOct ? 1 : 0))
+              (partida.historialPagos?.length || (estaPagada ? 1 : 0))
 
             const esLuz = partida.concepto.toLowerCase().includes('luz')
 
@@ -443,9 +450,9 @@ export function CompromisosBlindadosSection({
                 categoria={partida.categoria}
                 montoMensual={montoPresupuestado}
                 mesActivoNombre={mesFormateado}
-                vencimientoTexto={esLuz ? 'Débito: 28 de cada mes' : `Vence: 31 de ${mesFormateado}`}
-                estaPagada={estaPagadoOct}
-                montoPagadoMes={montoPagadoOct}
+                vencimientoTexto={partida.vencimiento || (esLuz ? 'Débito: 28 de cada mes' : `Vence: Fin de ${mesFormateado}`)}
+                estaPagada={estaPagada}
+                montoPagadoMes={montoPagado}
                 fechaPagoMes={partida.fechaPago || undefined}
                 cuotasPagadas={totalPagosRealizados}
                 detalleDerechaTexto={
@@ -460,7 +467,7 @@ export function CompromisosBlindadosSection({
                     partidaId: partida.id,
                     concepto: partida.concepto,
                     mes: `Cuota de ${mesFormateado}`,
-                    monto: montoPagadoOct,
+                    monto: montoPagado,
                     inversionId: partida.inversionId,
                   })
                 }

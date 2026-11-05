@@ -169,6 +169,7 @@ export interface PartidaPresupuesto {
   montoPagadoReal?: number | null
   fechaPago?: string | null
   vencimiento?: string
+  cuotaMesActual?: CuotaDetalle | null
   cuotaSeptiembre?: CuotaDetalle | null
   cuotaOctubre?: CuotaDetalle | null
   historialPagos?: ItemHistorialPago[]
@@ -467,6 +468,7 @@ export function CashFlowHubView({
     montoCuota: cuotaMontoValor,
     capitalRestante: saldoCapitalRestante,
     pagada: estaCuotaPagada,
+    cuotaMesActual: datosPresupuesto?.prestamoInfo?.cuotaMesActual,
     cuotaSeptiembre: datosPresupuesto?.prestamoInfo?.cuotaSeptiembre,
     cuotaOctubre: datosPresupuesto?.prestamoInfo?.cuotaOctubre,
     historialPagos: datosPresupuesto?.prestamoInfo?.historialPagos
@@ -1779,7 +1781,7 @@ export function CashFlowHubView({
         onSavePartida={handleSavePartidaBlindada}
         onDeletePartida={handleDeletePartidaBlindada}
         gastoLibreActual={gastoLibreHoy}
-        mesNombre="Octubre"
+        mesNombre={MESES_ES[currentDate.getMonth()] || datosPresupuesto?.mesActivo || 'Noviembre'}
       />
 
       {/* ========================================================================= */}

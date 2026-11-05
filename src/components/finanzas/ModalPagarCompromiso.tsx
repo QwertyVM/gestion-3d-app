@@ -68,9 +68,30 @@ export function ModalPagarCompromiso({
   compromiso,
   onConfirmarPago,
 }: ModalPagarCompromisoProps) {
+  // Períodos dinámicos calculados en base a la fecha actual
+  const ahora = new Date()
+  const mesActualIdx = ahora.getMonth()
+  const anioActual = ahora.getFullYear()
+  const mesesNombres = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ]
+  const mesActualNombre = mesesNombres[mesActualIdx]
+  const ultimoDiaActual = new Date(anioActual, mesActualIdx + 1, 0).getDate()
+  const periodoActualDefault = `${mesActualNombre} ${anioActual}`
+  const fechaActualDefault = `${anioActual}-${String(mesActualIdx + 1).padStart(2, '0')}-${String(ultimoDiaActual).padStart(2, '0')}`
+
+  const fechaAnt = new Date(anioActual, mesActualIdx - 1, 1)
+  const mesAntIdx = fechaAnt.getMonth()
+  const anioAnt = fechaAnt.getFullYear()
+  const mesAntNombre = mesesNombres[mesAntIdx]
+  const ultimoDiaAnt = new Date(anioAnt, mesAntIdx + 1, 0).getDate()
+  const periodoAntDefault = `${mesAntNombre} ${anioAnt}`
+  const fechaAntDefault = `${anioAnt}-${String(mesAntIdx + 1).padStart(2, '0')}-${String(ultimoDiaAnt).padStart(2, '0')}`
+
   const [monto, setMonto] = useState('')
-  const [mesPeriodo, setMesPeriodo] = useState('Octubre 2026')
-  const [fechaPago, setFechaPago] = useState('2026-10-31')
+  const [mesPeriodo, setMesPeriodo] = useState(periodoActualDefault)
+  const [fechaPago, setFechaPago] = useState(fechaActualDefault)
   const [metodoPago, setMetodoPago] = useState('BCP')
   const [notas, setNotas] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -78,18 +99,18 @@ export function ModalPagarCompromiso({
   useEffect(() => {
     if (compromiso && open) {
       setMonto(compromiso.montoSugerido.toFixed(2))
-      const targetPeriodo = compromiso.mesPeriodo || 'Octubre 2026'
+      const targetPeriodo = compromiso.mesPeriodo || periodoActualDefault
       setMesPeriodo(targetPeriodo)
 
-      if (targetPeriodo.toLowerCase().includes('septiembre') || compromiso.numeroCuota === 1) {
-        setFechaPago('2026-09-30')
+      if (targetPeriodo.toLowerCase().includes(mesAntNombre.toLowerCase())) {
+        setFechaPago(fechaAntDefault)
       } else {
-        setFechaPago('2026-10-31')
+        setFechaPago(fechaActualDefault)
       }
       setMetodoPago('BCP')
       setNotas('')
     }
-  }, [compromiso, open])
+  }, [compromiso, open, periodoActualDefault, fechaActualDefault, fechaAntDefault, mesAntNombre])
 
   if (!compromiso) return null
 
@@ -166,7 +187,7 @@ export function ModalPagarCompromiso({
           <p className="text-[11px] leading-relaxed">
             {compromiso.tipoCompromiso === 'PRESTAMO'
               ? 'Registra la amortización de cuota del préstamo BCP. Asentará el egreso financiero en caja y actualizará el saldo capital.'
-              : 'Puedes registrar pagos manualmente para Septiembre, Octubre o cualquier período según tus recibos reales.'}
+              : `Puedes registrar pagos manualmente para ${periodoActualDefault}, ${periodoAntDefault} o cualquier período según tus recibos reales.`}
           </p>
         </div>
 
@@ -180,25 +201,25 @@ export function ModalPagarCompromiso({
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleSeleccionarPeriodo('Octubre 2026', '2026-10-31')}
+                onClick={() => handleSeleccionarPeriodo(periodoActualDefault, fechaActualDefault)}
                 className={`text-xs py-2 px-3 rounded-xl border text-center font-semibold transition-all cursor-pointer ${
-                  mesPeriodo === 'Octubre 2026'
+                  mesPeriodo === periodoActualDefault
                     ? 'bg-primary text-primary-foreground border-primary shadow-xs'
                     : 'bg-card hover:bg-secondary border-border text-foreground'
                 }`}
               >
-                Octubre 2026 (En curso)
+                {periodoActualDefault} (En curso)
               </button>
               <button
                 type="button"
-                onClick={() => handleSeleccionarPeriodo('Septiembre 2026', '2026-09-30')}
+                onClick={() => handleSeleccionarPeriodo(periodoAntDefault, fechaAntDefault)}
                 className={`text-xs py-2 px-3 rounded-xl border text-center font-semibold transition-all cursor-pointer ${
-                  mesPeriodo === 'Septiembre 2026'
+                  mesPeriodo === periodoAntDefault
                     ? 'bg-primary text-primary-foreground border-primary shadow-xs'
                     : 'bg-card hover:bg-secondary border-border text-foreground'
                 }`}
               >
-                Septiembre 2026 (Mes anterior)
+                {periodoAntDefault} (Mes anterior)
               </button>
             </div>
           </div>
